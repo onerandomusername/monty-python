@@ -1,5 +1,95 @@
+import asyncio
+import logging
 import re
-from typing import Optional
+from functools import partial
+from typing import Optional, Sequence
+
+import discord
+
+from bot.bot import bot
+from bot.constants import Emojis
+
+log = logging.getLogger(__name__)
+
+
+def reaction_check(
+    reaction: discord.Reaction,
+    user: discord.abc.User,
+    *,
+    message_id: int,
+    allowed_emoji: Sequence[str],
+    allowed_users: Sequence[int],
+) -> bool:
+    """
+    Check if a reaction's emoji and author are allowed and the message is `message_id`.
+    If the user is not allowed, remove the reaction. Ignore reactions made by the bot.
+    If `allow_mods` is True, allow users with moderator roles even if they're not in `allowed_users`.
+    """
+    right_reaction = (
+        user != bot.user and reaction.message.id == message_id and str(reaction.emoji) in allowed_emoji
+    )
+    if not right_reaction:
+        return False
+
+    if user.id in allowed_users:
+        log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
+        return True
+    else:
+        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+        bot.loop.create_task(
+            reaction.message.remove_reaction(reaction.emoji, user),
+            suppressed_exceptions=(discord.HTTPException,),
+            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}",
+        )
+        return False
+
+
+async def wait_for_deletion(
+    message: discord.Message,
+    user_ids: Sequence[int],
+    deletion_emojis: Sequence[str] = (Emojis.trashcan,),
+    timeout: float = 60 * 5,
+    attach_emojis: bool = True,
+) -> None:
+    """
+    Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
+    If `timeout` expires then reactions are cleared to indicate the option to delete has expired.
+    An `attach_emojis` bool may be specified to determine whether to attach the given
+    `deletion_emojis` to the message in the given `context`.
+    An `allow_mods` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
+    the message.
+    """
+    if message.guild is None:
+        raise ValueError("Message must be sent on a guild")
+
+    if attach_emojis:
+        for emoji in deletion_emojis:
+            try:
+                await message.add_reaction(emoji)
+            except discord.NotFound:
+                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+                return
+
+    check = partial(
+        reaction_check,
+        message_id=message.id,
+        allowed_emoji=deletion_emojis,
+        allowed_users=user_ids,
+    )
+
+    try:
+        try:
+            await bot.wait_for("reaction_add", check=check, timeout=timeout)
+        except asyncio.TimeoutError:
+            try:
+                await message.clear_reactions()
+            except discord.Forbidden:
+                # no permissions to delete reactions
+                pass
+        else:
+            await message.delete()
+    except discord.NotFound:
+        log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
