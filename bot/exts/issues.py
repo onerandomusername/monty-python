@@ -164,12 +164,17 @@ class Issues(commands.Cog):
         self,
         ctx: commands.Context,
         numbers: commands.Greedy[int],
-        repository: str = "sir-lancebot",
-        user: str = "python-discord",
+        repository: str = "modmail",
+        user: str = "discord-modmail",
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
         # Remove duplicates
         numbers = set(numbers)
+
+        # check if its empty, send help if it is
+        if len(numbers) == 0:
+            await invoke_help_command(ctx)
+            return
 
         if len(numbers) > MAXIMUM_ISSUES:
             embed = discord.Embed(
@@ -222,7 +227,7 @@ class Issues(commands.Cog):
                 result = await self.fetch_issues(
                     int(repo_issue.number),
                     repo_issue.repository,
-                    repo_issue.organisation or "python-discord",
+                    repo_issue.organisation or "discord-modmail",
                 )
                 if isinstance(result, IssueState):
                     links.append(result)
@@ -230,7 +235,7 @@ class Issues(commands.Cog):
         if not links:
             return
 
-        resp = self.format_embed(links, "python-discord")
+        resp = self.format_embed(links, "discord-modmail")
         await message.channel.send(embed=resp)
 
 

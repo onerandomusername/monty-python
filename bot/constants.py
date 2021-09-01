@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 
 class Client(NamedTuple):
     name = "Sir Lancebot"
-    prefix = environ.get("PREFIX", ".")
+    prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-bot"
@@ -62,6 +62,15 @@ class Emojis:
     trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
     ok_hand = ":ok_hand:"
     hand_raised = "\U0001F64B"
+
+    # These icons are from Github's repo https://github.com/primer/octicons/
+    issue_open = "<:issue_open:882464248951877682>"
+    issue_closed = "<:issue_closed:882464248972865536>"
+    issue_draft = "<:issue_draft:882464249337774130>"  # Not currently used by Github, but here for future.
+    pull_request_open = "<:pull_open:882464248721182842>"
+    pull_request_closed = "<:pull_closed:882464248989638676>"
+    pull_request_draft = "<:pull_draft:882464249065136138>"
+    pull_request_merged = "<:pull_merged:882464249119645787>"
 
     number_emojis = {
         1: "\u0031\ufe0f\u20e3",

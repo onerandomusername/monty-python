@@ -122,7 +122,8 @@ class CommandErrorHandler(commands.Cog):
         if isinstance(error, APIError):
             await ctx.send(
                 embed=self.error_embed(
-                    f"There was an error when communicating with the {error.api}",
+                    f"There was an error when communicating with the {error.api}."
+                    + (f"\n{error.error_msg}" if error.error_msg is not None else ""),
                     NEGATIVE_REPLIES,
                 )
             )

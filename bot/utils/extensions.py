@@ -35,7 +35,7 @@ def walk_extensions() -> Iterator[str]:
 
 async def invoke_help_command(ctx: Context) -> None:
     """Invoke the help command or default help command if help extensions is not loaded."""
-    if "bot.exts.evergreen.help" in ctx.bot.extensions:
+    if "bot.exts.help" in ctx.bot.extensions:
         help_command = ctx.bot.get_command("help")
         await ctx.invoke(help_command, ctx.command.qualified_name)
         return

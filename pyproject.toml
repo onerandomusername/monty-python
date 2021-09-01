@@ -12,17 +12,12 @@ aiohttp = "~=3.7"
 arrow = "~=1.0.3"
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
-deepdiff = "~=4.0"
-"discord.py" = "~=1.7.3"
+"discord.py" = { url = "https://github.com/Rapptz/discord.py/archive/master.zip" }
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
 rapidfuzz = "~=1.4"
-lxml = "~=4.4"
-markdownify = "==0.6.1"
-more_itertools = "~=8.2"
 python-dateutil = "~=2.8"
 python-frontmatter = "~=1.0.0"
-pyyaml = "~=5.1"
 
 [tool.poetry.dev-dependencies]
 coverage = "~=5.0"
