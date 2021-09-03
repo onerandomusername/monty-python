@@ -7,7 +7,8 @@ from typing import Dict, NamedTuple
 
 __all__ = (
     "Client",
-    "CloudAHK" "Colours",
+    "CloudAHK",
+    "Colours",
     "Emojis",
     "Icons",
     "Tokens",

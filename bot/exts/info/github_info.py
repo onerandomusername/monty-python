@@ -23,9 +23,9 @@ BAD_RESPONSE = {
 
 GITHUB_API_URL = "https://api.github.com"
 
-REPOSITORY_ENDPOINT = GITHUB_API_URL + "/orgs/{org}/repos?per_page=100&type=public"
-ISSUE_ENDPOINT = GITHUB_API_URL + "/repos/{user}/{repository}/issues/{number}"
-PR_ENDPOINT = GITHUB_API_URL + "/repos/{user}/{repository}/pulls/{number}"
+REPOSITORY_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
+ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
+PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
 
 
 REQUEST_HEADERS = {
