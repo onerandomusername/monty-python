@@ -5,13 +5,13 @@ import re
 import unicodedata
 from typing import Tuple
 
-from discord import Embed, Object, utils
-from discord.ext.commands import (BadArgument, Cog, Context, clean_content,
-                                  command)
-from bot.utils.pagination import LinePaginator
-from bot.bot import Bot
-from discord import Colour
+from discord import Colour, Embed, Object, utils
+from discord.ext.commands import BadArgument, Cog, Context, command
 from discord.utils import DISCORD_EPOCH
+
+from bot.bot import Bot
+from bot.utils.pagination import LinePaginator
+
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class CharInfo(Cog):
         if len(characters) > 50:
             await ctx.send("Too many characters ({len(characters)}/50)")
 
-        def get_info(char: str) -> Tuple[str, str, ]:
+        def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
             if len(digit) <= 4:
                 u_code = f"\\u{digit:>04}"

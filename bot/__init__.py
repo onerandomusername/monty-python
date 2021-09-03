@@ -20,6 +20,7 @@ from bot.command import Command
 from bot.constants import Client
 from bot.group import Group
 
+
 # Configure the "TRACE" logging level (e.g. "log.trace(message)")
 logging.TRACE = 5
 logging.addLevelName(logging.TRACE, "TRACE")

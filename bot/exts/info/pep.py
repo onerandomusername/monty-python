@@ -10,6 +10,7 @@ from discord.ext.commands import Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Tokens
 
+
 log = logging.getLogger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"

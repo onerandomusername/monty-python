@@ -9,6 +9,7 @@ import discord
 from bot.bot import bot
 from bot.constants import Emojis
 
+
 log = logging.getLogger(__name__)
 
 
@@ -25,9 +26,7 @@ def reaction_check(
     If the user is not allowed, remove the reaction. Ignore reactions made by the bot.
     If `allow_mods` is True, allow users with moderator roles even if they're not in `allowed_users`.
     """
-    right_reaction = (
-        user != bot.user and reaction.message.id == message_id and str(reaction.emoji) in allowed_emoji
-    )
+    right_reaction = user != bot.user and reaction.message.id == message_id and str(reaction.emoji) in allowed_emoji
     if not right_reaction:
         return False
 

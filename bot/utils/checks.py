@@ -1,19 +1,8 @@
-import datetime
 import logging
-from typing import Callable, Container, Iterable, Optional
+from typing import Optional
 
-from discord.ext.commands import (
-    BucketType,
-    CheckFailure,
-    Cog,
-    Command,
-    CommandOnCooldown,
-    Context,
-    Cooldown,
-    CooldownMapping,
-)
+from discord.ext.commands import CheckFailure
 
-from bot import constants
 
 log = logging.getLogger(__name__)
 

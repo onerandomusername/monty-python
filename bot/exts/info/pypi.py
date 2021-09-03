@@ -2,14 +2,14 @@ import itertools
 import logging
 import random
 import re
-from contextlib import suppress
 
-from discord import Embed, NotFound
+from discord import Embed
 from discord.ext.commands import Cog, Context, command
 from discord.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
+
 
 URL = "https://pypi.org/pypi/{package}/json"
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
@@ -37,9 +37,7 @@ class PyPi(Cog):
         error = True
 
         if characters := re.search(ILLEGAL_CHARACTERS, package):
-            embed.description = (
-                f"Illegal character(s) passed into command: '{escape_markdown(characters.group(0))}'"
-            )
+            embed.description = f"Illegal character(s) passed into command: '{escape_markdown(characters.group(0))}'"
 
         else:
             async with self.bot.http_session.get(URL.format(package=package)) as response:

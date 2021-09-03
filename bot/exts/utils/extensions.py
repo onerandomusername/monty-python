@@ -9,9 +9,10 @@ from discord.ext.commands import Context, group
 
 from bot import exts
 from bot.bot import Bot
-from bot.constants import Client, Emojis
+from bot.constants import Client
 from bot.utils.extensions import EXTENSIONS, invoke_help_command, unqualify
 from bot.utils.pagination import LinePaginator
+
 
 log = logging.getLogger(__name__)
 

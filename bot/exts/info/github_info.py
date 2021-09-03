@@ -5,15 +5,14 @@ import typing as t
 from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import quote, quote_plus
-from wsgiref import headers
 
 import discord
 from discord.ext import commands
 
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, Emojis, Tokens
-from bot.exts.utils.extensions import invoke_help_command
 from bot.utils.extensions import invoke_help_command
+
 
 BAD_RESPONSE = {
     403: "Rate limit has been hit! Please try again later!",
@@ -109,7 +108,8 @@ class GithubInfo(commands.Cog):
         """Fetches a user's GitHub information."""
         async with ctx.typing():
             user_data = await self.fetch_data(
-                f"{GITHUB_API_URL}/users/{quote_plus(username)}", headers=REQUEST_HEADERS
+                f"{GITHUB_API_URL}/users/{quote_plus(username)}",
+                headers=REQUEST_HEADERS,
             )
 
             # User_data will not have a message key if the user exists
@@ -198,9 +198,7 @@ class GithubInfo(commands.Cog):
             return
 
         async with ctx.typing():
-            repo_data = await self.fetch_data(
-                f"{GITHUB_API_URL}/repos/{quote(repo)}", headers=REQUEST_HEADERS
-            )
+            repo_data = await self.fetch_data(f"{GITHUB_API_URL}/repos/{quote(repo)}", headers=REQUEST_HEADERS)
 
             # There won't be a message key if this repo exists
             if "message" in repo_data:
@@ -235,12 +233,8 @@ class GithubInfo(commands.Cog):
             icon_url=repo_owner["avatar_url"],
         )
 
-        repo_created_at = datetime.strptime(repo_data["created_at"], "%Y-%m-%dT%H:%M:%SZ").strftime(
-            "%d/%m/%Y"
-        )
-        last_pushed = datetime.strptime(repo_data["pushed_at"], "%Y-%m-%dT%H:%M:%SZ").strftime(
-            "%d/%m/%Y at %H:%M"
-        )
+        repo_created_at = datetime.strptime(repo_data["created_at"], "%Y-%m-%dT%H:%M:%SZ").strftime("%d/%m/%Y")
+        last_pushed = datetime.strptime(repo_data["pushed_at"], "%Y-%m-%dT%H:%M:%SZ").strftime("%d/%m/%Y at %H:%M")
 
         embed.set_footer(
             text=(

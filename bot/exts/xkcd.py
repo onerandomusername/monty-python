@@ -10,6 +10,7 @@ from discord.ext.commands import Cog, Context, command
 from bot.bot import Bot
 from bot.constants import Colours
 
+
 log = logging.getLogger(__name__)
 
 COMIC_FORMAT = re.compile(r"latest|[0-9]+")

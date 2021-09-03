@@ -9,6 +9,7 @@ from discord.ext.commands import Context, Paginator
 
 from bot.constants import Emojis
 
+
 FIRST_EMOJI = "\u23EE"  # [:track_previous:]
 LEFT_EMOJI = "\u2B05"  # [:arrow_left:]
 RIGHT_EMOJI = "\u27A1"  # [:arrow_right:]
@@ -135,8 +136,7 @@ class LinePaginator(Paginator):
                         # Reaction is on this message
                         reaction_.message.id == message.id,
                         # Reaction is one of the pagination emotes
-                        str(reaction_.emoji)
-                        in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
+                        str(reaction_.emoji) in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
                         # Reaction was not made by the Bot
                         user_.id != ctx.bot.user.id,
                         # There were no restrictions
@@ -233,9 +233,7 @@ class LinePaginator(Paginator):
                 await message.remove_reaction(reaction.emoji, user)
                 current_page = len(paginator.pages) - 1
 
-                log.debug(
-                    f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}"
-                )
+                log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
                 embed.description = ""
                 await message.edit(embed=embed)
@@ -254,9 +252,7 @@ class LinePaginator(Paginator):
                     continue
 
                 current_page -= 1
-                log.debug(
-                    f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}"
-                )
+                log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
                 embed.description = ""
                 await message.edit(embed=embed)
@@ -277,9 +273,7 @@ class LinePaginator(Paginator):
                     continue
 
                 current_page += 1
-                log.debug(
-                    f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}"
-                )
+                log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
                 embed.description = ""
                 await message.edit(embed=embed)
@@ -363,8 +357,7 @@ class ImagePaginator(Paginator):
                     # Reaction is on the same message sent
                     reaction_.message.id == message.id,
                     # The reaction is part of the navigation menu
-                    str(reaction_.emoji)
-                    in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
+                    str(reaction_.emoji) in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
                     # The reactor is not a bot
                     not member.bot,
                 )
@@ -462,9 +455,7 @@ class ImagePaginator(Paginator):
             embed.set_image(url=image)
 
             embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-            log.debug(
-                f"Got {reaction_type} page reaction - changing to page {current_page + 1}/{len(paginator.pages)}"
-            )
+            log.debug(f"Got {reaction_type} page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
             await message.edit(embed=embed)
 

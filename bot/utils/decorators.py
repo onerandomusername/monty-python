@@ -1,5 +1,3 @@
-import asyncio
-import functools
 import logging
 import random
 import typing as t
@@ -9,9 +7,10 @@ from weakref import WeakValueDictionary
 
 from discord import Colour, Embed
 from discord.ext import commands
-from discord.ext.commands import CheckFailure, Command, Context
+from discord.ext.commands import CheckFailure, Context
 
 from bot.constants import ERROR_REPLIES
+
 
 ONE_DAY = 24 * 60 * 60
 
@@ -98,8 +97,7 @@ def locked() -> t.Union[t.Callable, None]:
 
                 log.debug("User tried to invoke a locked command.")
                 embed.description = (
-                    "You're already using this command. Please wait until "
-                    "it is done before you use it again."
+                    "You're already using this command. Please wait until " "it is done before you use it again."
                 )
                 embed.title = random.choice(ERROR_REPLIES)
                 await ctx.send(embed=embed)

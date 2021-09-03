@@ -11,6 +11,7 @@ from bot import constants
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, Colours
 
+
 ERROR_MESSAGE = f"""
 Unknown cheat sheet. Please try to reformulate your query.
 
@@ -86,9 +87,7 @@ class CheatSheet(commands.Cog):
         async with ctx.typing():
             search_string = quote_plus(" ".join(search_terms))
 
-            async with self.bot.http_session.get(
-                URL.format(search=search_string), headers=HEADERS
-            ) as response:
+            async with self.bot.http_session.get(URL.format(search=search_string), headers=HEADERS) as response:
                 result = ANSI_RE.sub("", await response.text()).translate(ESCAPE_TT)
 
             is_embed, description = self.result_fmt(URL.format(search=search_string), result)

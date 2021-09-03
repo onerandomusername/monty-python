@@ -2,6 +2,7 @@ import logging
 import pkgutil
 from typing import Iterator
 
+
 __all__ = ("get_package_names",)
 
 log = logging.getLogger(__name__)

@@ -12,6 +12,7 @@ from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, RedirectOutp
 from bot.utils.decorators import InChannelCheckFailure, InMonthCheckFailure
 from bot.utils.exceptions import APIError, UserNotPlayingError
 
+
 log = logging.getLogger(__name__)
 
 
@@ -94,7 +95,7 @@ class CommandErrorHandler(commands.Cog):
         if isinstance(error, commands.NoPrivateMessage):
             await ctx.send(
                 embed=self.error_embed(
-                    f"This command can only be used in a server.",
+                    "This command can only be used in a server.",
                     NEGATIVE_REPLIES,
                 )
             )
@@ -110,9 +111,7 @@ class CommandErrorHandler(commands.Cog):
             return
 
         if isinstance(error, commands.CheckFailure):
-            await ctx.send(
-                embed=self.error_embed("You are not authorized to use this command.", NEGATIVE_REPLIES)
-            )
+            await ctx.send(embed=self.error_embed("You are not authorized to use this command.", NEGATIVE_REPLIES))
             return
 
         if isinstance(error, UserNotPlayingError):

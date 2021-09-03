@@ -10,6 +10,7 @@ from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, Colours, Icons
 from bot.utils.converters import WrappedMessageConverter
 
+
 log = logging.getLogger(__name__)
 
 # Number of seconds to wait for other users to bookmark the same message
@@ -63,9 +64,7 @@ class Bookmark(commands.Cog):
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
 
     @staticmethod
-    async def send_reaction_embed(
-        channel: discord.TextChannel, target_message: discord.Message
-    ) -> discord.Message:
+    async def send_reaction_embed(channel: discord.TextChannel, target_message: discord.Message) -> discord.Message:
         """Sends an embed, with a reaction, so users can react to bookmark the message too."""
         message = await channel.send(
             embed=discord.Embed(
@@ -91,17 +90,13 @@ class Bookmark(commands.Cog):
         """Send the author a link to `target_message` via DMs."""
         if not target_message:
             if not ctx.message.reference:
-                raise commands.UserInputError(
-                    "You must either provide a valid message to bookmark, or reply to one."
-                )
+                raise commands.UserInputError("You must either provide a valid message to bookmark, or reply to one.")
             target_message = ctx.message.reference.resolved
 
         # Prevent users from bookmarking a message in a channel they don't have access to
         permissions = target_message.channel.permissions_for(ctx.author)
         if not permissions.read_messages:
-            log.info(
-                f"{ctx.author} tried to bookmark a message in #{target_message.channel} but has no permissions."
-            )
+            log.info(f"{ctx.author} tried to bookmark a message in #{target_message.channel} but has no permissions.")
             embed = discord.Embed(
                 title=random.choice(ERROR_REPLIES),
                 color=Colours.soft_red,

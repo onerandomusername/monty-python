@@ -99,9 +99,7 @@ class Subreddit(commands.Converter):
         if not sub.startswith("r/"):
             sub = f"r/{sub}"
 
-        resp = await ctx.bot.http_session.get(
-            "https://www.reddit.com/subreddits/search.json", params={"q": sub}
-        )
+        resp = await ctx.bot.http_session.get("https://www.reddit.com/subreddits/search.json", params={"q": sub})
 
         json = await resp.json()
         if not json["data"]["children"]:

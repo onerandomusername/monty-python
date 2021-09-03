@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from bot.bot import Bot
 
+
 HTTP_DOG_URL = "https://httpstatusdogs.com/img/{code}.jpg"
 HTTP_CAT_URL = "https://http.cat/{code}.jpg"
 

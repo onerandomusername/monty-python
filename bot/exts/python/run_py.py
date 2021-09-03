@@ -14,6 +14,7 @@ from bot.bot import Bot
 from bot.constants import CloudAHK
 from bot.utils.exceptions import APIError
 
+
 if TYPE_CHECKING:
     from discord.ext.commands import Context
 
@@ -67,10 +68,7 @@ class Eval(commands.Cog):
                     else:
                         raise APIError("python sandbox", resp.status)
             except (TimeoutError, ClientConnectionError) as e:
-                raise APIError(
-                    "python sandbox",
-                    None,
-                ) from e
+                raise APIError("python sandbox", None) from e
 
             stdout, time = result["stdout"].strip(), result["time"]
 

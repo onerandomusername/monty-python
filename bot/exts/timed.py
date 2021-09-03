@@ -40,9 +40,7 @@ class TimedCommands(commands.Cog):
         await new_ctx.command.invoke(new_ctx)
         t_end = perf_counter()
 
-        await ctx.send(
-            f"Command execution for `{new_ctx.command}` finished in {(t_end - t_start):.4f} seconds."
-        )
+        await ctx.send(f"Command execution for `{new_ctx.command}` finished in {(t_end - t_start):.4f} seconds.")
 
 
 def setup(bot: Bot) -> None:

@@ -10,6 +10,7 @@ from discord.ext import commands
 
 from bot import constants
 
+
 log = logging.getLogger(__name__)
 
 __all__ = ("Bot", "bot")
@@ -28,9 +29,7 @@ class Bot(commands.Bot):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.http_session = ClientSession(
-            connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET)
-        )
+        self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
 
     @property
     def member(self) -> Optional[discord.Member]:
@@ -105,9 +104,7 @@ class Bot(commands.Bot):
             self.all_commands.pop(alias, None)
 
 
-_intents = (
-    discord.Intents.default()
-)  # Default is all intents except for privileged ones (Members, Presences, ...)
+_intents = discord.Intents.default()  # Default is all intents except for privileged ones (Members, Presences, ...)
 _intents.bans = False
 _intents.integrations = False
 _intents.invites = False

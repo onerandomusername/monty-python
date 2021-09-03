@@ -1,14 +1,11 @@
 import asyncio
-import contextlib
 import re
 import string
-from datetime import datetime
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 import discord
 from discord.ext.commands import BadArgument, Context
 
-from bot.constants import Client
 from bot.utils.pagination import LinePaginator
 
 

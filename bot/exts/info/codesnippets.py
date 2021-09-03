@@ -11,6 +11,7 @@ from discord.ext.commands import Cog
 from bot.bot import Bot
 from bot.utils.messages import wait_for_deletion
 
+
 log = logging.getLogger(__name__)
 
 GITHUB_RE = re.compile(
@@ -79,11 +80,11 @@ class CodeSnippets(Cog):
         """Fetches a snippet from a GitHub repo."""
         # Search the GitHub API for the specified branch
         branches = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/branches", "json", headers=GITHUB_HEADERS
+            f"https://api.github.com/repos/{repo}/branches",
+            "json",
+            headers=GITHUB_HEADERS,
         )
-        tags = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_HEADERS
-        )
+        tags = await self._fetch_response(f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_HEADERS)
         refs = branches + tags
         ref, file_path = self._find_ref(path, refs)
 
@@ -95,7 +96,12 @@ class CodeSnippets(Cog):
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
     async def _fetch_github_gist_snippet(
-        self, gist_id: str, revision: str, file_path: str, start_line: str, end_line: str
+        self,
+        gist_id: str,
+        revision: str,
+        file_path: str,
+        start_line: str,
+        end_line: str,
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
         gist_json = await self._fetch_response(
@@ -122,9 +128,7 @@ class CodeSnippets(Cog):
         branches = await self._fetch_response(
             f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches", "json"
         )
-        tags = await self._fetch_response(
-            f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags", "json"
-        )
+        tags = await self._fetch_response(f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags", "json")
         refs = branches + tags
         ref, file_path = self._find_ref(path, refs)
         enc_ref = quote_plus(ref)
@@ -146,9 +150,7 @@ class CodeSnippets(Cog):
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
-    def _snippet_to_codeblock(
-        self, file_contents: str, file_path: str, start_line: str, end_line: str
-    ) -> str:
+    def _snippet_to_codeblock(self, file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
         """
         Given the entire file contents and target lines, creates a code block.
 

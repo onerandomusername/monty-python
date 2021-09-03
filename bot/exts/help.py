@@ -17,6 +17,7 @@ from bot.bot import Bot
 from bot.constants import Emojis
 from bot.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LinePaginator
 
+
 DELETE_EMOJI = Emojis.trashcan
 
 REACTIONS = {
@@ -342,9 +343,7 @@ class HelpSession:
         for category, cmds in grouped:
             await self._format_command_category(paginator, category, list(cmds))
 
-    async def _format_command_category(
-        self, paginator: LinePaginator, category: str, cmds: List[Command]
-    ) -> None:
+    async def _format_command_category(self, paginator: LinePaginator, category: str, cmds: List[Command]) -> None:
         cmds = sorted(cmds, key=lambda c: c.name)
         cat_cmds = []
         for command in cmds:

@@ -13,6 +13,7 @@ from bot.bot import Bot
 from bot.constants import Colours, Wolfram
 from bot.utils.pagination import ImagePaginator
 
+
 log = logging.getLogger(__name__)
 
 APPID = Wolfram.key
@@ -88,8 +89,7 @@ def custom_cooldown(*ignore: List[int]) -> Callable:
         if guild_rate:
             # Can't use api; cause: guild limit
             message = (
-                "The max limit of requests for the server has been reached for today.\n"
-                f"Cooldown: {int(guild_rate)}"
+                "The max limit of requests for the server has been reached for today.\n" f"Cooldown: {int(guild_rate)}"
             )
             await send_embed(ctx, message)
             return False
@@ -130,9 +130,7 @@ async def get_pod_pages(ctx: Context, bot: Bot, query: str) -> Optional[List[Tup
                 return
 
             message = "Something went wrong internally with your request, please notify staff!"
-            log.warning(
-                f"Something went wrong getting a response from wolfram: {log_full_url}, Response: {json}"
-            )
+            log.warning(f"Something went wrong getting a response from wolfram: {log_full_url}, Response: {json}")
             await send_embed(ctx, message)
             return
 

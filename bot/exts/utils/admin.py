@@ -28,6 +28,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 
+
 DISCORD_UPLOAD_LIMIT = 800000
 
 
@@ -242,9 +243,7 @@ class Admin(commands.Cog):
         await ctx.send("Enter code to execute or evaluate. `exit()` or `quit` to exit.")
 
         def check(m: Message) -> bool:
-            return (
-                m.author.id == ctx.author.id and m.channel.id == ctx.channel.id and m.content.startswith("`")
-            )
+            return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id and m.content.startswith("`")
 
         return await self._repl(ctx, variables, check)
 

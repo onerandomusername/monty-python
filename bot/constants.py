@@ -1,9 +1,7 @@
-import dataclasses
-import enum
 import logging
-from datetime import datetime
 from os import environ
-from typing import Dict, NamedTuple
+from typing import NamedTuple
+
 
 __all__ = (
     "Client",

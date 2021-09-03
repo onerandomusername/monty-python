@@ -8,6 +8,7 @@ from discord.ext import commands
 from bot import bot
 from bot.constants import Colours, Emojis
 
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.stackexchange.com/2.2/search/advanced"

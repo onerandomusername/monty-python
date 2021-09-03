@@ -7,6 +7,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.utils.randomization import RandomCycle
 
+
 SUGGESTION_FORM = ""
 
 with Path("bot/resources/evergreen/starter.yaml").open("r", encoding="utf8") as f:
@@ -24,8 +25,7 @@ with Path("bot/resources/evergreen/py_topics.yaml").open("r", encoding="utf8") a
 # Putting all topics into one dictionary and shuffling lists to reduce same-topic repetitions.
 ALL_TOPICS = {"default": STARTERS, **PY_TOPICS}
 TOPICS = {
-    channel: RandomCycle(topics or ["No topics found for this channel."])
-    for channel, topics in ALL_TOPICS.items()
+    channel: RandomCycle(topics or ["No topics found for this channel."]) for channel, topics in ALL_TOPICS.items()
 }
 
 
