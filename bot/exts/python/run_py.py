@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import re
+from asyncio import TimeoutError
 from base64 import b64encode
 from typing import TYPE_CHECKING
 
@@ -65,7 +66,7 @@ class Eval(commands.Cog):
                         result = await resp.json()
                     else:
                         raise APIError("python sandbox", resp.status)
-            except ClientConnectionError as e:
+            except (TimeoutError, ClientConnectionError) as e:
                 raise APIError(
                     "python sandbox",
                     None,

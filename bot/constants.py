@@ -90,6 +90,12 @@ class Emojis:
     x = "\U0001f1fd"
     o = "\U0001f1f4"
 
+    stackoverflow_tag = "<:stackoverflow_tag:882722838161797181>"
+    stackoverflow_views = "<:stackoverflow_views:882722838006607922>"
+
+    reddit_upvote = "<:reddit_upvote:882722837868195901>"
+    reddit_comments = "<:reddit_comments:882722838153416705>"
+
 
 class Icons:
     questionmark = "https://cdn.discordapp.com/emojis/512367613339369475.png"

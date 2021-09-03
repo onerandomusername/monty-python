@@ -6,7 +6,7 @@ from discord import Embed
 from discord.ext import commands
 
 from bot.bot import Bot
-from bot.constants import Source, Client
+from bot.constants import Client, Source
 from bot.utils.converters import SourceConverter, SourceType
 
 

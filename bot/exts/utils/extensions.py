@@ -179,9 +179,9 @@ class Extensions(commands.Cog):
 
         for ext in EXTENSIONS:
             if ext in self.bot.extensions:
-                status = Emojis.status_online
+                status = ":green_circle:"
             else:
-                status = Emojis.status_offline
+                status = ":red_circle:"
 
             path = ext.split(".")
             if len(path) > BASE_PATH_LEN + 1:

@@ -34,42 +34,44 @@ class Stackoverflow(commands.Cog):
     async def stackoverflow(self, ctx: commands.Context, *, search_query: str) -> None:
         """Sends the top 5 results of a search query from stackoverflow."""
         params = SO_PARAMS | {"q": search_query}
-        async with self.bot.http_session.get(url=BASE_URL, params=params) as response:
-            if response.status == 200:
-                data = await response.json()
-            else:
-                logger.error(f"Status code is not 200, it is {response.status}")
-                await ctx.send(embed=ERR_EMBED)
+        async with ctx.typing():
+            async with self.bot.http_session.get(url=BASE_URL, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                else:
+                    logger.error(f"Status code is not 200, it is {response.status}")
+                    await ctx.send(embed=ERR_EMBED)
+                    return
+            if not data["items"]:
+                no_search_result = Embed(
+                    title=f"No search results found for {search_query}",
+                    color=Colours.soft_red,
+                )
+                await ctx.send(embed=no_search_result)
                 return
-        if not data["items"]:
-            no_search_result = Embed(
-                title=f"No search results found for {search_query}",
-                color=Colours.soft_red,
-            )
-            await ctx.send(embed=no_search_result)
-            return
 
-        top5 = data["items"][:5]
-        encoded_search_query = quote_plus(search_query)
-        embed = Embed(
-            title="Search results - Stackoverflow",
-            url=SEARCH_URL.format(query=encoded_search_query),
-            description=f"Here are the top {len(top5)} results:",
-            color=Colours.orange,
-        )
-        for item in top5:
-            embed.add_field(
-                name=unescape(item["title"]),
-                value=(
-                    f"[{Emojis.reddit_upvote} {item['score']}    "
-                    f"{Emojis.stackoverflow_views} {item['view_count']}     "
-                    f"{Emojis.reddit_comments} {item['answer_count']}   "
-                    f"{Emojis.stackoverflow_tag} {', '.join(item['tags'][:3])}]"
-                    f"({item['link']})"
-                ),
-                inline=False,
+            top5 = data["items"][:5]
+            encoded_search_query = quote_plus(search_query)
+            embed = Embed(
+                title="Search results - Stackoverflow",
+                url=SEARCH_URL.format(query=encoded_search_query),
+                description=f"Here are the top {len(top5)} results:",
+                color=Colours.orange,
             )
-        embed.set_footer(text="View the original link for more results.")
+            for item in top5:
+                embed.add_field(
+                    name=unescape(item["title"]),
+                    value=(
+                        f"[{Emojis.reddit_upvote} {item['score']}    "
+                        f"{Emojis.stackoverflow_views} {item['view_count']}     "
+                        f"{Emojis.reddit_comments} {item['answer_count']}   "
+                        f"{Emojis.stackoverflow_tag} {', '.join(item['tags'][:3])}]"
+                        f"({item['link']})"
+                    ),
+                    inline=False,
+                )
+            embed.set_footer(text="View the original link for more results.")
+
         try:
             await ctx.send(embed=embed)
         except HTTPException:
