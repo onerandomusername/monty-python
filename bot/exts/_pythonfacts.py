@@ -6,6 +6,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import Colours
 
+
 with open("bot/resources/evergreen/python_facts.txt") as file:
     FACTS = itertools.cycle(list(file))
 
