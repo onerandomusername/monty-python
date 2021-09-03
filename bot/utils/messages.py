@@ -23,6 +23,7 @@ def reaction_check(
 ) -> bool:
     """
     Check if a reaction's emoji and author are allowed and the message is `message_id`.
+
     If the user is not allowed, remove the reaction. Ignore reactions made by the bot.
     If `allow_mods` is True, allow users with moderator roles even if they're not in `allowed_users`.
     """
@@ -52,6 +53,7 @@ async def wait_for_deletion(
 ) -> None:
     """
     Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
+
     If `timeout` expires then reactions are cleared to indicate the option to delete has expired.
     An `attach_emojis` bool may be specified to determine whether to attach the given
     `deletion_emojis` to the message in the given `context`.

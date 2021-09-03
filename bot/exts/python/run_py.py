@@ -4,25 +4,25 @@ import io
 import re
 from asyncio import TimeoutError
 from base64 import b64encode
-from typing import TYPE_CHECKING
 
 import discord
 from aiohttp.client_exceptions import ClientConnectionError
 from discord.ext import commands
+from discord.ext.commands import Context
 
 from bot.bot import Bot
 from bot.constants import CloudAHK
 from bot.utils.exceptions import APIError
 
 
-if TYPE_CHECKING:
-    from discord.ext.commands import Context
-
 DISCORD_UPLOAD_LIMIT = 8000000  # 8 MB
 
 
 class RunnableCodeConverter(commands.Converter):
-    async def convert(self, ctx, code: str):
+    """Converter for code into a runnable form."""
+
+    async def convert(self, ctx: Context, code: str) -> str:
+        """Convert either code or a link into a code source."""
         if code.startswith("https://p.ahkscript.org/"):
             url = code.replace("?p=", "?r=")
             async with ctx.http.get(url) as resp:
@@ -30,6 +30,13 @@ class RunnableCodeConverter(commands.Converter):
                     code = await resp.text()
                 else:
                     raise commands.CommandError("Failed fetching code from pastebin.")
+
+        # remove first line with backticks and highlighting lang
+        if re.match("^```.*\n", code):
+            code = code[code.find("\n") + 1 :]
+
+        # strip backticks on both sides
+        code = code.strip("`").strip()
 
         return code
 
@@ -40,21 +47,13 @@ class Eval(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def cloudahk_call(self, ctx: Context, code, lang="ahk"):
+    async def cloudahk_call(self, ctx: Context, code: str, lang: str = "ahk") -> None:
         """Call to CloudAHK to run "code" written in "lang". Replies to invoking user with stdout/runtime of code."""
-
         async with ctx.typing():
             token = "{0}:{1}".format(CloudAHK.user, CloudAHK.password)
 
             encoded = b64encode(bytes(token, "utf-8")).decode("utf-8")
             headers = {"Authorization": "Basic " + encoded}
-
-            # remove first line with backticks and highlighting lang
-            if re.match("^```.*\n", code):
-                code = code[code.find("\n") + 1 :]
-
-            # strip backticks on both sides
-            code = code.strip("`").strip()
 
             url = f"{CloudAHK.url}/{lang}/run"
 
@@ -110,11 +109,11 @@ class Eval(commands.Cog):
 
     @commands.command(aliases=("e",))
     @commands.cooldown(rate=1, per=5.0, type=commands.BucketType.user)
-    async def eval(self, ctx, *, code: RunnableCodeConverter):
+    async def eval(self, ctx: Context, *, code: RunnableCodeConverter) -> None:
         """Run python code in a sandboxed environment."""
-
         await self.cloudahk_call(ctx, code)
 
 
-def setup(bot):
+def setup(bot: Bot) -> None:
+    """Add the eval cog to the bot."""
     bot.add_cog(Eval(bot))

@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 
 class Client(NamedTuple):
+
     name = "Monty Python"
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
