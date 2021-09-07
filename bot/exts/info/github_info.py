@@ -12,6 +12,7 @@ from discord.ext import commands
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, Emojis, Tokens
 from bot.utils.extensions import invoke_help_command
+from bot.utils.messages import wait_for_deletion
 
 
 BAD_RESPONSE = {
@@ -404,7 +405,7 @@ class GithubInfo(commands.Cog):
             return
 
         resp = self.format_embed(links, "discord-modmail")
-        await message.channel.send(embed=resp)
+        await wait_for_deletion(await message.channel.send(embed=resp), (message.author.id,))
 
 
 def setup(bot: Bot) -> None:
