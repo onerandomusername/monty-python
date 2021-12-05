@@ -49,6 +49,7 @@ target-version = ['py38']
 include = '\.pyi?$'
 
 [tool.taskipy.tasks]
+export = 'poetry export --without-hashes -o requirements.txt'
 start = "python -m bot"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"

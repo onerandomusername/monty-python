@@ -97,6 +97,13 @@ class Emojis:
     reddit_comments = "<:reddit_comments:882722838153416705>"
 
 
+class Guilds:
+    disnake = 808030843078836254
+    modmail = 798235512208490526
+    cat_dev_group = 808854246119178250
+    dexp = 798235585130266654
+
+
 class Icons:
     questionmark = "https://cdn.discordapp.com/emojis/512367613339369475.png"
     bookmark = (

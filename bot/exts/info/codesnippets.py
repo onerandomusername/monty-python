@@ -8,6 +8,7 @@ import discord
 from aiohttp import ClientResponseError
 from discord.ext.commands import Cog
 
+from bot import constants
 from bot.bot import Bot
 from bot.utils.messages import wait_for_deletion
 
@@ -225,6 +226,11 @@ class CodeSnippets(Cog):
     async def on_message(self, message: discord.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
+            return
+        if message.guild is None:
+            return
+
+        if message.guild.id == constants.Guilds.disnake:
             return
 
         message_to_send = await self._parse_snippets(message.content)

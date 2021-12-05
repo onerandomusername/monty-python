@@ -93,6 +93,7 @@ class LinePaginator(Paginator):
         max_lines: Optional[int] = None,
         max_size: int = 500,
         empty: bool = True,
+        linesep: str = "\n",
         restrict_to_user: User = None,
         timeout: int = 300,
         footer_text: str = None,
@@ -145,7 +146,7 @@ class LinePaginator(Paginator):
                 )
             )
 
-        paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines)
+        paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines, linesep=linesep)
         current_page = 0
 
         if not lines:
@@ -214,14 +215,12 @@ class LinePaginator(Paginator):
                 log.debug("Got delete reaction")
                 return await message.delete()
 
-            if reaction.emoji == FIRST_EMOJI:
+            elif reaction.emoji == FIRST_EMOJI:
                 await message.remove_reaction(reaction.emoji, user)
                 current_page = 0
 
                 log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
 
-                embed.description = ""
-                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
@@ -229,14 +228,12 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await message.edit(embed=embed)
 
-            if reaction.emoji == LAST_EMOJI:
+            elif reaction.emoji == LAST_EMOJI:
                 await message.remove_reaction(reaction.emoji, user)
                 current_page = len(paginator.pages) - 1
 
                 log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
-                embed.description = ""
-                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
                 if footer_text:
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
@@ -244,7 +241,7 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await message.edit(embed=embed)
 
-            if reaction.emoji == LEFT_EMOJI:
+            elif reaction.emoji == LEFT_EMOJI:
                 await message.remove_reaction(reaction.emoji, user)
 
                 if current_page <= 0:
@@ -254,8 +251,6 @@ class LinePaginator(Paginator):
                 current_page -= 1
                 log.debug(f"Got previous page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
-                embed.description = ""
-                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
@@ -265,7 +260,7 @@ class LinePaginator(Paginator):
 
                 await message.edit(embed=embed)
 
-            if reaction.emoji == RIGHT_EMOJI:
+            elif reaction.emoji == RIGHT_EMOJI:
                 await message.remove_reaction(reaction.emoji, user)
 
                 if current_page >= len(paginator.pages) - 1:
@@ -275,8 +270,6 @@ class LinePaginator(Paginator):
                 current_page += 1
                 log.debug(f"Got next page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
 
-                embed.description = ""
-                await message.edit(embed=embed)
                 embed.description = paginator.pages[current_page]
 
                 if footer_text:
@@ -447,8 +440,6 @@ class ImagePaginator(Paginator):
                 reaction_type = "next"
 
             # Magic happens here, after page and reaction_type is set
-            embed.description = ""
-            await message.edit(embed=embed)
             embed.description = paginator.pages[current_page]
 
             image = paginator.images[current_page] or EmptyEmbed

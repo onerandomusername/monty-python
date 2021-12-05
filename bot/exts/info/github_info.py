@@ -1,6 +1,7 @@
 import logging
 import random
 import re
+import typing
 import typing as t
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,10 +10,11 @@ from urllib.parse import quote, quote_plus
 import discord
 from discord.ext import commands
 
+from bot import constants
 from bot.bot import Bot
-from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, Emojis, Tokens
 from bot.utils.extensions import invoke_help_command
 from bot.utils.messages import wait_for_deletion
+from bot.utils.pagination import LinePaginator
 
 
 BAD_RESPONSE = {
@@ -26,18 +28,24 @@ GITHUB_API_URL = "https://api.github.com"
 REPOSITORY_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
 ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
 PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
-
+LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
+LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?per_page=100"
 
 REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
 }
 
-if GITHUB_TOKEN := Tokens.github:
+if GITHUB_TOKEN := constants.Tokens.github:
     REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
-
+GUILD_WHITELIST = {
+    constants.Guilds.modmail,
+    constants.Guilds.dexp,
+    constants.Guilds.cat_dev_group,
+    constants.Guilds.disnake,
+}
 # Maximum number of issues in one message
-MAXIMUM_ISSUES = 5
+MAXIMUM_ISSUES = 6
 
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
@@ -85,6 +93,19 @@ class IssueState:
     emoji: str
 
 
+def whitelisted_autolink() -> t.Callable[[commands.Command], commands.Command]:
+    async def predicate(ctx: commands.Context) -> bool:
+        if ctx.guild is None:
+            return False
+        if ctx.guild.id in GUILD_WHITELIST:
+            return True
+        if GithubInfo.get_repository(ctx.guild) is not None:
+            return True
+        return False
+
+    return commands.check(predicate)
+
+
 class GithubInfo(commands.Cog):
     """Fetches info from GitHub."""
 
@@ -97,12 +118,39 @@ class GithubInfo(commands.Cog):
         async with self.bot.http_session.get(url, **kw) as r:
             return await r.json()
 
-    @commands.group(name="github", aliases=("gh", "git"))
+    @staticmethod
+    def get_default_user(guild: discord.Guild):
+        """Get the default user for the guild."""
+        if guild is None:
+            return "onerandomusername"
+        elif guild.id == constants.Guilds.modmail:
+            return "discord-modmail"
+        elif guild.id == constants.Guilds.cat_dev_group:
+            return "cat-dev-group"
+        elif guild.id == constants.Guilds.dexp:
+            return "bast0006"
+        elif guild.id == constants.Guilds.disnake:
+            return "DisnakeDev"
+        else:
+            return None
+
+    @staticmethod
+    def get_repository(guild: discord.Guild = None, org: str = None) -> typing.Optional[str]:
+        """Get the repository name for the guild."""
+        if guild is None:
+            return "monty-bot"
+        elif guild.id == constants.Guilds.modmail:
+            return "modmail"
+        elif guild.id == constants.Guilds.disnake:
+            return "disnake"
+        else:
+            return None
+
+    @commands.group(name="github", aliases=("gh", "git"), invoke_without_command=True)
     @commands.cooldown(3, 20, commands.BucketType.user)
     async def github_group(self, ctx: commands.Context) -> None:
         """Commands for finding information related to GitHub."""
-        if ctx.invoked_subcommand is None:
-            await invoke_help_command(ctx)
+        await invoke_help_command(ctx)
 
     @github_group.command(name="user", aliases=("userinfo",))
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
@@ -116,9 +164,9 @@ class GithubInfo(commands.Cog):
             # User_data will not have a message key if the user exists
             if "message" in user_data:
                 embed = discord.Embed(
-                    title=random.choice(NEGATIVE_REPLIES),
+                    title=random.choice(constants.NEGATIVE_REPLIES),
                     description=f"The profile for `{username}` was not found.",
-                    colour=Colours.soft_red,
+                    colour=constants.Colours.soft_red,
                 )
 
                 await ctx.send(embed=embed)
@@ -190,9 +238,9 @@ class GithubInfo(commands.Cog):
         repo = "/".join(repo)
         if repo.count("/") != 1:
             embed = discord.Embed(
-                title=random.choice(NEGATIVE_REPLIES),
+                title=random.choice(constants.NEGATIVE_REPLIES),
                 description="The repository should look like `user/reponame` or `user reponame`.",
-                colour=Colours.soft_red,
+                colour=constants.Colours.soft_red,
             )
 
             await ctx.send(embed=embed)
@@ -204,9 +252,9 @@ class GithubInfo(commands.Cog):
             # There won't be a message key if this repo exists
             if "message" in repo_data:
                 embed = discord.Embed(
-                    title=random.choice(NEGATIVE_REPLIES),
+                    title=random.choice(constants.NEGATIVE_REPLIES),
                     description="The requested repository was not found.",
-                    colour=Colours.soft_red,
+                    colour=constants.Colours.soft_red,
                 )
 
                 await ctx.send(embed=embed)
@@ -282,9 +330,9 @@ class GithubInfo(commands.Cog):
         # need from the initial API call.
         if "issues" in json_data["html_url"]:
             if json_data.get("state") == "open":
-                emoji = Emojis.issue_open
+                emoji = constants.Emojis.issue_open
             else:
-                emoji = Emojis.issue_closed
+                emoji = constants.Emojis.issue_closed
 
         # If the 'issues' key is not contained in the API response and there is no error code, then
         # we know that a PR has been requested and a call to the pulls API endpoint is necessary
@@ -294,14 +342,14 @@ class GithubInfo(commands.Cog):
             async with self.bot.http_session.get(pulls_url) as p:
                 pull_data = await p.json()
                 if pull_data["draft"]:
-                    emoji = Emojis.pull_request_draft
+                    emoji = constants.Emojis.pull_request_draft
                 elif pull_data["state"] == "open":
-                    emoji = Emojis.pull_request_open
+                    emoji = constants.Emojis.pull_request_open
                 # When 'merged_at' is not None, this means that the state of the PR is merged
                 elif pull_data["merged_at"] is not None:
-                    emoji = Emojis.pull_request_merged
+                    emoji = constants.Emojis.pull_request_merged
                 else:
-                    emoji = Emojis.pull_request_closed
+                    emoji = constants.Emojis.pull_request_closed
 
         issue_url = json_data.get("html_url")
 
@@ -318,27 +366,38 @@ class GithubInfo(commands.Cog):
 
         for result in results:
             if isinstance(result, IssueState):
-                description_list.append(f"{result.emoji} [{result.title}]({result.url})")
+                description_list.append(f"{result.emoji} [\\(#{result.number}\\) {result.title}]({result.url})")
             elif isinstance(result, FetchError):
                 description_list.append(f":x: [{result.return_code}] {result.message}")
+            else:
+                description_list.append("something internal went wrong lol.")
 
-        resp = discord.Embed(colour=Colours.bright_green, description="\n".join(description_list))
+        resp = discord.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
         embed_url = f"https://github.com/{user}/{repository}" if repository else f"https://github.com/{user}"
         resp.set_author(name="GitHub", url=embed_url)
         return resp
 
-    @github_group.command(name="issue", aliases=("pr", "pull"), root_aliases=("issue", "pull", "pr"))
+    @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
         self,
         ctx: commands.Context,
         numbers: commands.Greedy[int],
-        repository: str = "modmail",
-        user: str = "discord-modmail",
+        repository: str = None,
+        user: str = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
-        # Remove duplicates
-        numbers = set(numbers)
+        if user is None:
+            user = self.get_default_user(ctx.guild)
+            if user is None:
+                raise commands.CommandError("No user provided, a user must be provided.")
+        if repository is None:
+            repository = self.get_repository(ctx.guild)
+            if repository is None:
+                raise commands.CommandError("No user provided, a user must be provided.")
+
+        # Remove duplicates and sort
+        numbers = sorted(set(numbers))
 
         # check if its empty, send help if it is
         if len(numbers) == 0:
@@ -347,8 +406,8 @@ class GithubInfo(commands.Cog):
 
         if len(numbers) > MAXIMUM_ISSUES:
             embed = discord.Embed(
-                title=random.choice(ERROR_REPLIES),
-                color=Colours.soft_red,
+                title=random.choice(constants.ERROR_REPLIES),
+                color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
             await ctx.send(embed=embed)
@@ -356,6 +415,52 @@ class GithubInfo(commands.Cog):
 
         results = [await self.fetch_issues(number, repository, user) for number in numbers]
         await ctx.send(embed=self.format_embed(results, user, repository))
+
+    @whitelisted_autolink()
+    @github_issue.command(name="list")
+    async def list_open(self, ctx: commands.Context, query: typing.Optional[str]) -> None:
+        """List issues on the default repo matching the provided query."""
+        await ctx.trigger_typing()
+        user = self.get_default_user(ctx.guild)
+        repo = self.get_repository(ctx.guild)
+        if user is None or repo is None:
+            raise commands.CommandError("Yo something happened mate.")
+        if ctx.invoked_parents[-1].lower().startswith("iss"):
+            endpoint = LIST_ISSUES_ENDPOINT
+            open_emoji = constants.Emojis.issue_open
+            closed_emoji = constants.Emojis.issue_closed
+        else:
+            endpoint = LIST_PULLS_ENDPOINT
+            open_emoji = constants.Emojis.pull_request_open
+            closed_emoji = constants.Emojis.pull_request_closed
+        endpoint = endpoint.format(user=user, repository=repo)
+        print(endpoint)
+        json = await self.fetch_data(endpoint)
+        prs = []
+        for pull_data in json:
+            if pull_data.get("draft"):
+                emoji = constants.Emojis.pull_request_draft
+            elif pull_data["state"] == "open":
+                emoji = open_emoji
+            # When 'merged_at' is not None, this means that the state of the PR is merged
+            elif pull_data.get("merged_at") is not None:
+                emoji = constants.Emojis.pull_request_merged
+            else:
+                emoji = closed_emoji
+            prs.append(
+                IssueState(
+                    repository=repo,
+                    number=pull_data["number"],
+                    url=pull_data["html_url"],
+                    title=pull_data["title"],
+                    emoji=emoji,
+                )
+            )
+
+        embed = self.format_embed(prs, user, repo)
+        pages = embed.description.splitlines(keepends=True)
+        embed.description = ""
+        await LinePaginator.paginate(pages, ctx, embed=embed, max_size=1200, linesep="")
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: discord.Message) -> None:
@@ -371,6 +476,11 @@ class GithubInfo(commands.Cog):
         if not message.guild:
             return
 
+        if message.guild.id not in GUILD_WHITELIST:
+            return
+
+        default_org = self.get_default_user(message.guild)
+
         issues = [
             FoundIssue(*match.group("org", "repo", "number"))
             for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content))
@@ -385,8 +495,8 @@ class GithubInfo(commands.Cog):
 
             if len(issues) > MAXIMUM_ISSUES:
                 embed = discord.Embed(
-                    title=random.choice(ERROR_REPLIES),
-                    color=Colours.soft_red,
+                    title=random.choice(constants.ERROR_REPLIES),
+                    color=constants.Colours.soft_red,
                     description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
                 )
                 await message.channel.send(embed=embed, delete_after=5)
@@ -396,7 +506,7 @@ class GithubInfo(commands.Cog):
                 result = await self.fetch_issues(
                     int(repo_issue.number),
                     repo_issue.repository,
-                    repo_issue.organisation or "discord-modmail",
+                    repo_issue.organisation or default_org,
                 )
                 if isinstance(result, IssueState):
                     links.append(result)
@@ -404,7 +514,7 @@ class GithubInfo(commands.Cog):
         if not links:
             return
 
-        resp = self.format_embed(links, "discord-modmail")
+        resp = self.format_embed(links, default_org)
         await wait_for_deletion(await message.channel.send(embed=resp), (message.author.id,))
 
 

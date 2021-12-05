@@ -75,7 +75,7 @@ class CharInfo(Cog):
         lines = []
         for snowflake in snowflakes:
             created_at = int(((snowflake.id >> 22) + DISCORD_EPOCH) / 1000)
-            lines.append(f"**{snowflake.id}**\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
+            lines.append(f"**{snowflake.id}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 
