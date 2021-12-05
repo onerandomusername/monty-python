@@ -3,8 +3,8 @@ import logging
 import random
 import re
 
-from disnake import Embed
-from disnake.ext.commands import Cog, Context, command
+import disnake
+from disnake.ext import commands
 from disnake.utils import escape_markdown
 
 from bot.bot import Bot
@@ -22,16 +22,16 @@ INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 log = logging.getLogger(__name__)
 
 
-class PyPi(Cog):
+class PyPi(commands.Cog):
     """Cog for getting information about PyPi packages."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @command(name="pypi", aliases=("package", "pack", "pip"))
-    async def get_package_info(self, ctx: Context, package: str) -> None:
+    @commands.slash_command(name="pypi")
+    async def get_package_info(self, inter: disnake.ApplicationCommandInteraction, package: str) -> None:
         """Provide information about a specific package from PyPI."""
-        embed = Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
+        embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
         embed.set_thumbnail(url=PYPI_ICON)
 
         error = True
@@ -68,10 +68,10 @@ class PyPi(Cog):
                     log.trace(f"Error when fetching PyPi package: {response.status}.")
 
         if error:
-            await ctx.send(embed=embed)
+            await inter.send(embed=embed, ephemeral=True)
 
         else:
-            await ctx.send(embed=embed)
+            await inter.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

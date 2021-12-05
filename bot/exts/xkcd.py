@@ -3,9 +3,8 @@ import re
 from random import randint
 from typing import Dict, Optional, Union
 
-from disnake import Embed
-from disnake.ext import tasks
-from disnake.ext.commands import Cog, Context, command
+import disnake
+from disnake.ext import commands, tasks
 
 from bot.bot import Bot
 from bot.constants import Colours
@@ -17,7 +16,7 @@ COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"
 
 
-class XKCD(Cog):
+class XKCD(commands.Cog):
     """Retrieving XKCD comics."""
 
     def __init__(self, bot: Bot) -> None:
@@ -38,20 +37,19 @@ class XKCD(Cog):
             else:
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
-    @command(name="xkcd")
-    async def fetch_xkcd_comics(self, ctx: Context, comic: Optional[str]) -> None:
-        """
-        Getting an xkcd comic's information along with the image.
+    @commands.slash_command(name="xkcd")
+    async def fetch_xkcd_comics(self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str]) -> None:
+        """View an xkcd comic. If no comic number is provided, a random comic will be shown."""
+        embed = disnake.Embed(title=f"XKCD comic '{comic}'")
 
-        To get a random comic, don't type any number as an argument. To get the latest, type 'latest'.
-        """
-        embed = Embed(title=f"XKCD comic '{comic}'")
+        # temporary casting back to a string, until a subcommand is added for latest support
+        comic = str(comic)
 
         embed.colour = Colours.soft_red
 
         if comic and (comic := re.match(COMIC_FORMAT, comic)) is None:
             embed.description = "Comic parameter should either be an integer or 'latest'."
-            await ctx.send(embed=embed)
+            await inter.send(embed=embed, ephemeral=True)
             return
 
         comic = randint(1, self.latest_comic_info["num"]) if comic is None else comic.group(0)
@@ -66,7 +64,7 @@ class XKCD(Cog):
                     embed.title = f"XKCD comic #{comic}"
                     embed.description = f"{resp.status}: Could not retrieve xkcd comic #{comic}."
                     log.debug(f"Retrieving xkcd comic #{comic} failed with status code {resp.status}.")
-                    await ctx.send(embed=embed)
+                    await inter.send(embed=embed)
                     return
 
         embed.title = f"XKCD comic #{info['num']}"
@@ -84,7 +82,7 @@ class XKCD(Cog):
                 f"Comic can be viewed [here](https://xkcd.com/{info['num']})."
             )
 
-        await ctx.send(embed=embed)
+        await inter.send(embed=embed)
 
 
 def setup(bot: Bot) -> None:

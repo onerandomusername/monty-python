@@ -4,8 +4,9 @@ from email.parser import HeaderParser
 from io import StringIO
 from typing import Dict, Optional, Tuple
 
+import disnake
 from disnake import Colour, Embed
-from disnake.ext.commands import Cog, Context, command
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Tokens
@@ -15,15 +16,14 @@ log = logging.getLogger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents?ref=master"
-
+PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents"
 
 GITHUB_API_HEADERS = {}
 if Tokens.github:
     GITHUB_API_HEADERS["Authorization"] = f"token {Tokens.github}"
 
 
-class PythonEnhancementProposals(Cog):
+class PythonEnhancementProposals(commands.Cog):
     """Cog for displaying information about PEPs."""
 
     def __init__(self, bot: Bot):
@@ -134,27 +134,24 @@ class PythonEnhancementProposals(Cog):
                 False,
             )
 
-    @command(name="pep", aliases=("get_pep", "p"))
-    async def pep_command(self, ctx: Context, pep_number: int) -> None:
-        """Fetches information about a PEP and sends it to the channel."""
-        # Trigger typing in chat to show users that bot is responding
-        await ctx.trigger_typing()
-
+    @commands.slash_command(name="pep")
+    async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: int) -> None:
+        """Fetch information about a PEP."""
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
-        if pep_number == 0:
+        if number == 0:
             pep_embed = self.get_pep_zero_embed()
             success = True
         else:
             success = False
-            if not (pep_embed := await self.validate_pep_number(pep_number)):
-                pep_embed, success = await self.get_pep_embed(pep_number)
+            if not (pep_embed := await self.validate_pep_number(number)):
+                pep_embed, success = await self.get_pep_embed(number)
 
-        await ctx.send(embed=pep_embed)
         if success:
-            log.trace(f"PEP {pep_number} getting and sending finished successfully. Increasing stat.")
-            self.bot.stats.incr(f"pep_fetches.{pep_number}")
+            await inter.send(embed=pep_embed)
+            log.trace(f"PEP {number} getting and sending finished successfully. Increasing stat.")
         else:
-            log.trace(f"Getting PEP {pep_number} failed. Error embed sent.")
+            await inter.send(embed=pep_embed, ephemeral=True)
+            log.trace(f"Getting PEP {number} failed. Error embed sent.")
 
 
 def setup(bot: Bot) -> None:

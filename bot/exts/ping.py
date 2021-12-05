@@ -1,4 +1,4 @@
-from disnake import Embed
+import disnake
 from disnake.ext import commands
 
 from bot import start_time
@@ -12,16 +12,16 @@ class Ping(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.command(name="ping")
-    async def ping(self, ctx: commands.Context) -> None:
+    @commands.slash_command()
+    async def ping(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Ping the bot to see its latency and state."""
-        embed = Embed(
+        embed = disnake.Embed(
             title=":ping_pong: Pong!",
             colour=Colours.bright_green,
             description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
         )
 
-        await ctx.send(embed=embed)
+        await inter.send(embed=embed)
 
     # Originally made in 70d2170a0a6594561d59c7d080c4280f1ebcd70b by lemon & gdude2002
     @commands.command(name="uptime")
