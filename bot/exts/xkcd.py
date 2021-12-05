@@ -3,9 +3,9 @@ import re
 from random import randint
 from typing import Dict, Optional, Union
 
-from discord import Embed
-from discord.ext import tasks
-from discord.ext.commands import Cog, Context, command
+from disnake import Embed
+from disnake.ext import tasks
+from disnake.ext.commands import Cog, Context, command
 
 from bot.bot import Bot
 from bot.constants import Colours

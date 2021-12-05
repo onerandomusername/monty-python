@@ -1,7 +1,7 @@
 import itertools
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import Colours
@@ -20,7 +20,7 @@ class PythonFacts(commands.Cog):
     @commands.command(name="pythonfact", aliases=("pyfact",))
     async def get_python_fact(self, ctx: commands.Context) -> None:
         """Sends a Random fun fact about Python."""
-        embed = discord.Embed(title="Python Facts", description=next(FACTS), colour=next(COLORS))
+        embed = disnake.Embed(title="Python Facts", description=next(FACTS), colour=next(COLORS))
         embed.add_field(name="Suggestions", value=f"Suggest more facts [here!]({PYFACTS_DISCUSSION})")
         await ctx.send(embed=embed)
 

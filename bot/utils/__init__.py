@@ -3,8 +3,8 @@ import re
 import string
 from typing import List, Optional
 
-import discord
-from discord.ext.commands import BadArgument, Context
+import disnake
+from disnake.ext.commands import BadArgument, Context
 
 from bot.utils.pagination import LinePaginator
 
@@ -16,7 +16,7 @@ async def disambiguate(
     timeout: float = 30,
     entries_per_page: int = 20,
     empty: bool = False,
-    embed: Optional[discord.Embed] = None,
+    embed: Optional[disnake.Embed] = None,
 ) -> str:
     """
     Has the user choose between multiple entries in case one could not be chosen automatically.
@@ -34,12 +34,12 @@ async def disambiguate(
 
     choices = (f"{index}: {entry}" for index, entry in enumerate(entries, start=1))
 
-    def check(message: discord.Message) -> bool:
+    def check(message: disnake.Message) -> bool:
         return message.content.isdecimal() and message.author == ctx.author and message.channel == ctx.channel
 
     try:
         if embed is None:
-            embed = discord.Embed()
+            embed = disnake.Embed()
 
         coro1 = ctx.bot.wait_for("message", check=check, timeout=timeout)
         coro2 = LinePaginator.paginate(

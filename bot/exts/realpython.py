@@ -2,8 +2,8 @@ import logging
 from html import unescape
 from urllib.parse import quote_plus
 
-from discord import Embed
-from discord.ext import commands
+from disnake import Embed
+from disnake.ext import commands
 
 from bot import bot
 from bot.constants import Colours

@@ -4,7 +4,7 @@ import re
 from functools import partial
 from typing import Optional, Sequence
 
-import discord
+import disnake
 
 from bot.bot import bot
 from bot.constants import Emojis
@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 
 
 def reaction_check(
-    reaction: discord.Reaction,
-    user: discord.abc.User,
+    reaction: disnake.Reaction,
+    user: disnake.abc.User,
     *,
     message_id: int,
     allowed_emoji: Sequence[str],
@@ -38,14 +38,14 @@ def reaction_check(
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         bot.loop.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(discord.HTTPException,),
+            suppressed_exceptions=(disnake.HTTPException,),
             name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}",
         )
         return False
 
 
 async def wait_for_deletion(
-    message: discord.Message,
+    message: disnake.Message,
     user_ids: Sequence[int],
     deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
@@ -67,7 +67,7 @@ async def wait_for_deletion(
         for emoji in deletion_emojis:
             try:
                 await message.add_reaction(emoji)
-            except discord.NotFound:
+            except disnake.NotFound:
                 log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
                 return
 
@@ -84,12 +84,12 @@ async def wait_for_deletion(
         except asyncio.TimeoutError:
             try:
                 await message.clear_reactions()
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 # no permissions to delete reactions
                 pass
         else:
             await message.delete()
-    except discord.NotFound:
+    except disnake.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
 

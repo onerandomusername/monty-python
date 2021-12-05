@@ -4,8 +4,8 @@ from datetime import datetime
 from html import unescape
 from typing import List
 
-from discord import Color, Embed, TextChannel
-from discord.ext import commands
+from disnake import Color, Embed, TextChannel
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.utils import LinePaginator

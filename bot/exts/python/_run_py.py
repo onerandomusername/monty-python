@@ -8,8 +8,8 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
-from discord import HTTPException, Message, NotFound, Reaction, User
-from discord.ext.commands import Cog, Context, command, guild_only
+from disnake import HTTPException, Message, NotFound, Reaction, User
+from disnake.ext.commands import Cog, Context, command, guild_only
 
 from bot.bot import Bot
 from bot.constants import URLs
@@ -77,6 +77,7 @@ class Snekbox(Cog):
     def prepare_input(code: str) -> str:
         """
         Extract code from the Markdown, format it, and insert it into the code template.
+
         If there is any code block, ignore text outside the code block.
         Use the first code block, but prefer a fenced code block.
         If there are several fenced code blocks, concatenate only the fenced code blocks.

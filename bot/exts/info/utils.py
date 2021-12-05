@@ -5,9 +5,9 @@ import re
 import unicodedata
 from typing import Tuple
 
-from discord import Colour, Embed, Object, utils
-from discord.ext.commands import BadArgument, Cog, Context, command
-from discord.utils import DISCORD_EPOCH
+from disnake import Colour, Embed, Object, utils
+from disnake.ext.commands import BadArgument, Cog, Context, command
+from disnake.utils import DISCORD_EPOCH
 
 from bot.bot import Bot
 from bot.utils.pagination import LinePaginator

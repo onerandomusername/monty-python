@@ -3,10 +3,10 @@ import logging
 import socket
 from typing import Optional
 
-import discord
+import disnake
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
-from discord import DiscordException
-from discord.ext import commands
+from disnake import DiscordException
+from disnake.ext import commands
 
 from bot import constants
 
@@ -32,7 +32,7 @@ class Bot(commands.Bot):
         self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
 
     @property
-    def member(self) -> Optional[discord.Member]:
+    def member(self) -> Optional[disnake.Member]:
         """Retrieves the guild member object for the bot."""
         guild = self.get_guild(constants.Client.guild)
         if guild is None:
@@ -104,7 +104,7 @@ class Bot(commands.Bot):
             self.all_commands.pop(alias, None)
 
 
-_intents = discord.Intents.default()  # Default is all intents except for privileged ones (Members, Presences, ...)
+_intents = disnake.Intents.default()  # Default is all intents except for privileged ones (Members, Presences, ...)
 _intents.bans = False
 _intents.integrations = False
 _intents.invites = False
@@ -115,7 +115,7 @@ loop = asyncio.get_event_loop()
 
 bot = Bot(
     command_prefix=constants.Client.prefix,
-    activity=discord.Game(name=f"Commands: {constants.Client.prefix}help"),
-    allowed_mentions=discord.AllowedMentions(everyone=False),
+    activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
+    allowed_mentions=disnake.AllowedMentions(everyone=False),
     intents=_intents,
 )

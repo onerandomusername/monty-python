@@ -4,9 +4,9 @@ import textwrap
 from typing import Any, Coroutine, List, Tuple
 from urllib.parse import quote_plus
 
-import discord
+import disnake
 from aiohttp import ClientResponseError
-from discord.ext.commands import Cog
+from disnake.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
@@ -41,7 +41,7 @@ BITBUCKET_RE = re.compile(
 
 class CodeSnippets(Cog):
     """
-    Cog that parses and sends code snippets to Discord.
+    Cog that parses and sends code snippets to disnake.
 
     Matches each message against a regex and prints the contents of all matched snippets.
     """
@@ -223,7 +223,7 @@ class CodeSnippets(Cog):
         return "\n".join(map(lambda x: x[1], sorted(all_snippets)))
 
     @Cog.listener()
-    async def on_message(self, message: discord.Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
             return
@@ -239,10 +239,10 @@ class CodeSnippets(Cog):
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
             try:
                 await message.edit(suppress=True)
-            except discord.NotFound:
+            except disnake.NotFound:
                 # Don't send snippets if the original message was deleted.
                 return
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 # we're missing permissions to edit the message to remove the embed
                 # its fine, since this bot is public and shouldn't require that.
                 pass

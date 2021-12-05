@@ -2,10 +2,10 @@ import asyncio
 import logging
 from typing import Iterable, List, Optional, Tuple
 
-from discord import Embed, Member, Reaction
-from discord.abc import User
-from discord.embeds import EmptyEmbed
-from discord.ext.commands import Context, Paginator
+from disnake import Embed, Member, Reaction
+from disnake.abc import User
+from disnake.embeds import EmptyEmbed
+from disnake.ext.commands import Context, Paginator
 
 from bot.constants import Emojis
 
@@ -37,7 +37,7 @@ class LinePaginator(Paginator):
         linesep: str = "\n",
     ):
         """
-        Overrides the Paginator.__init__ from inside discord.ext.commands.
+        Overrides the Paginator.__init__ from inside disnake.ext.commands.
 
         `prefix` and `suffix` will be prepended and appended respectively to every page.
 
@@ -58,7 +58,7 @@ class LinePaginator(Paginator):
 
         If the line exceeds the `max_size` then a RuntimeError is raised.
 
-        Overrides the Paginator.add_line from inside discord.ext.commands in order to allow
+        Overrides the Paginator.add_line from inside disnake.ext.commands in order to allow
         configuration of the maximum number of lines per page.
 
         If `empty` is True, an empty line will be placed after the a given `line`.

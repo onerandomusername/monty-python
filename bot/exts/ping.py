@@ -1,5 +1,5 @@
-from discord import Embed
-from discord.ext import commands
+from disnake import Embed
+from disnake.ext import commands
 
 from bot import start_time
 from bot.bot import Bot

@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import quote, quote_plus
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot import constants
 from bot.bot import Bot
@@ -94,6 +94,8 @@ class IssueState:
 
 
 def whitelisted_autolink() -> t.Callable[[commands.Command], commands.Command]:
+    """Decorator to whitelist a guild for automatic linking."""
+
     async def predicate(ctx: commands.Context) -> bool:
         if ctx.guild is None:
             return False
@@ -119,7 +121,7 @@ class GithubInfo(commands.Cog):
             return await r.json()
 
     @staticmethod
-    def get_default_user(guild: discord.Guild):
+    def get_default_user(guild: disnake.Guild) -> typing.Optional["str"]:
         """Get the default user for the guild."""
         if guild is None:
             return "onerandomusername"
@@ -135,7 +137,7 @@ class GithubInfo(commands.Cog):
             return None
 
     @staticmethod
-    def get_repository(guild: discord.Guild = None, org: str = None) -> typing.Optional[str]:
+    def get_repository(guild: disnake.Guild = None, org: str = None) -> typing.Optional[str]:
         """Get the repository name for the guild."""
         if guild is None:
             return "monty-bot"
@@ -163,7 +165,7 @@ class GithubInfo(commands.Cog):
 
             # User_data will not have a message key if the user exists
             if "message" in user_data:
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title=random.choice(constants.NEGATIVE_REPLIES),
                     description=f"The profile for `{username}` was not found.",
                     colour=constants.Colours.soft_red,
@@ -186,10 +188,10 @@ class GithubInfo(commands.Cog):
             else:
                 blog = "No website link available."
 
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title=f"`{user_data['login']}`'s GitHub profile info",
                 description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
-                colour=discord.Colour.blurple(),
+                colour=disnake.Colour.blurple(),
                 url=user_data["html_url"],
                 timestamp=datetime.strptime(user_data["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
             )
@@ -237,7 +239,7 @@ class GithubInfo(commands.Cog):
         """
         repo = "/".join(repo)
         if repo.count("/") != 1:
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title=random.choice(constants.NEGATIVE_REPLIES),
                 description="The repository should look like `user/reponame` or `user reponame`.",
                 colour=constants.Colours.soft_red,
@@ -251,7 +253,7 @@ class GithubInfo(commands.Cog):
 
             # There won't be a message key if this repo exists
             if "message" in repo_data:
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title=random.choice(constants.NEGATIVE_REPLIES),
                     description="The requested repository was not found.",
                     colour=constants.Colours.soft_red,
@@ -260,10 +262,10 @@ class GithubInfo(commands.Cog):
                 await ctx.send(embed=embed)
                 return
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             title=repo_data["name"],
             description=repo_data["description"],
-            colour=discord.Colour.blurple(),
+            colour=disnake.Colour.blurple(),
             url=repo_data["html_url"],
         )
 
@@ -360,7 +362,7 @@ class GithubInfo(commands.Cog):
         results: t.List[t.Union[IssueState, FetchError]],
         user: str,
         repository: t.Optional[str] = None,
-    ) -> discord.Embed:
+    ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
 
@@ -372,7 +374,7 @@ class GithubInfo(commands.Cog):
             else:
                 description_list.append("something internal went wrong lol.")
 
-        resp = discord.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
+        resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
         embed_url = f"https://github.com/{user}/{repository}" if repository else f"https://github.com/{user}"
         resp.set_author(name="GitHub", url=embed_url)
@@ -405,7 +407,7 @@ class GithubInfo(commands.Cog):
             return
 
         if len(numbers) > MAXIMUM_ISSUES:
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title=random.choice(constants.ERROR_REPLIES),
                 color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
@@ -463,7 +465,7 @@ class GithubInfo(commands.Cog):
         await LinePaginator.paginate(pages, ctx, embed=embed, max_size=1200, linesep="")
 
     @commands.Cog.listener("on_message")
-    async def on_message_automatic_issue_link(self, message: discord.Message) -> None:
+    async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
         """
         Automatic issue linking.
 
@@ -494,7 +496,7 @@ class GithubInfo(commands.Cog):
             issues = set(issues)
 
             if len(issues) > MAXIMUM_ISSUES:
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title=random.choice(constants.ERROR_REPLIES),
                     color=constants.Colours.soft_red,
                     description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",

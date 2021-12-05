@@ -3,9 +3,9 @@ import logging
 import random
 import re
 
-from discord import Embed
-from discord.ext.commands import Cog, Context, command
-from discord.utils import escape_markdown
+from disnake import Embed
+from disnake.ext.commands import Cog, Context, command
+from disnake.utils import escape_markdown
 
 from bot.bot import Bot
 from bot.constants import NEGATIVE_REPLIES, Colours, RedirectOutput

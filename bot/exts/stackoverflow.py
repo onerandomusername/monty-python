@@ -2,8 +2,8 @@ import logging
 from html import unescape
 from urllib.parse import quote_plus
 
-from discord import Embed, HTTPException
-from discord.ext import commands
+from disnake import Embed, HTTPException
+from disnake.ext import commands
 
 from bot import bot
 from bot.constants import Colours, Emojis
@@ -25,7 +25,7 @@ ERR_EMBED = Embed(
 
 
 class Stackoverflow(commands.Cog):
-    """Contains command to interact with stackoverflow from discord."""
+    """Contains command to interact with stackoverflow from disnake."""
 
     def __init__(self, bot: bot.Bot):
         self.bot = bot

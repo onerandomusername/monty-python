@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import yaml
-from discord import Color, Embed
-from discord.ext import commands
+from disnake import Color, Embed
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.utils.randomization import RandomCycle

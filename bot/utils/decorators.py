@@ -5,9 +5,9 @@ from asyncio import Lock
 from functools import wraps
 from weakref import WeakValueDictionary
 
-from discord import Colour, Embed
-from discord.ext import commands
-from discord.ext.commands import CheckFailure, Context
+from disnake import Colour, Embed
+from disnake.ext import commands
+from disnake.ext.commands import CheckFailure, Context
 
 from bot.constants import ERROR_REPLIES
 

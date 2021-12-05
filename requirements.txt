@@ -7,7 +7,7 @@ cffi==1.15.0
 chardet==4.0.0; python_full_version >= "3.8.0" and python_version >= "3.6"
 colorama==0.4.4; sys_platform == "win32"
 coloredlogs==14.3; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.5.0")
-discord.py @ https://github.com/Rapptz/discord.py/archive/master.zip ; python_full_version >= "3.8.0"
+disnake==2.2.2; python_full_version >= "3.8.0"
 emoji==0.6.0
 feedparser==6.0.8; python_version >= "3.6"
 humanfriendly==10.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.5.0"
@@ -22,5 +22,5 @@ pyyaml==6.0; python_version >= "3.6"
 rapidfuzz==1.8.3; python_version >= "2.7"
 sgmllib3k==1.0.0; python_version >= "3.6"
 six==1.16.0; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.6"
-typing-extensions==4.0.0; python_version >= "3.6" and python_full_version >= "3.8.0"
+typing-extensions==4.0.1; python_version >= "3.6" and python_full_version >= "3.8.0"
 yarl==1.7.2; python_version >= "3.6" and python_full_version >= "3.8.0"

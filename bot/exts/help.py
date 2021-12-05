@@ -5,11 +5,11 @@ import logging
 from contextlib import suppress
 from typing import List, NamedTuple, Union
 
-from discord import Colour, Embed, HTTPException, Message, Reaction, User
-from discord.ext import commands
-from discord.ext.commands import CheckFailure
-from discord.ext.commands import Cog as DiscordCog
-from discord.ext.commands import Command, Context
+from disnake import Colour, Embed, HTTPException, Message, Reaction, User
+from disnake.ext import commands
+from disnake.ext.commands import CheckFailure
+from disnake.ext.commands import Cog as DiscordCog
+from disnake.ext.commands import Command, Context
 from rapidfuzz import process
 
 from bot import constants
@@ -61,7 +61,7 @@ class HelpSession:
     Expected attributes include:
         * title: str
             The title of the help message.
-        * query: Union[discord.ext.commands.Bot, discord.ext.commands.Command]
+        * query: Union[disnake.ext.commands.Bot, disnake.ext.commands.Command]
         * description: str
             The description of the query.
         * pages: list[str]

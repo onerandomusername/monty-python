@@ -5,8 +5,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from discord import Color, Embed, Emoji
-from discord.ext import commands
+from disnake import Color, Embed, Emoji
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, Colours

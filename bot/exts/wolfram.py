@@ -4,10 +4,10 @@ from typing import Callable, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import arrow
-import discord
-from discord import Embed
-from discord.ext import commands
-from discord.ext.commands import BucketType, Cog, Context, check, group
+import disnake
+from disnake import Embed
+from disnake.ext import commands
+from disnake.ext.commands import BucketType, Cog, Context, check, group
 
 from bot.bot import Bot
 from bot.constants import Colours, Wolfram
@@ -36,7 +36,7 @@ async def send_embed(
     colour: int = Colours.soft_red,
     footer: str = None,
     img_url: str = None,
-    f: discord.File = None,
+    f: disnake.File = None,
 ) -> None:
     """Generate & send a response embed with Wolfram as the author."""
     embed = Embed(colour=colour)
@@ -181,7 +181,7 @@ class Wolfram(Cog):
                 status = response.status
                 image_bytes = await response.read()
 
-            f = discord.File(BytesIO(image_bytes), filename="image.png")
+            f = disnake.File(BytesIO(image_bytes), filename="image.png")
             image_url = "attachment://image.png"
 
             if status == 501:

@@ -24,9 +24,9 @@ from pprint import pprint
 from types import FunctionType
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
-import discord
-from discord.ext import commands
-from discord.ext.commands import Context
+import disnake
+from disnake.ext import commands
+from disnake.ext.commands import Context
 
 
 DISCORD_UPLOAD_LIMIT = 800000
@@ -38,18 +38,18 @@ def create_file_obj(
     name: str = "results",
     ext: str = "txt",
     spoiler: bool = False,
-) -> discord.File:
+) -> disnake.File:
     """Create a discord file object, raising an exception if it is too big to upload."""
     encoded = input.encode(encoding)
     if len(encoded) > DISCORD_UPLOAD_LIMIT:
         raise Exception("file is too large to upload")
     fp = io.BytesIO(encoded)
     filename = f"{name}.{ext}"
-    return discord.File(fp=fp, filename=filename, spoiler=spoiler)
+    return disnake.File(fp=fp, filename=filename, spoiler=spoiler)
 
 
 if TYPE_CHECKING:
-    from discord import Message
+    from disnake import Message
 
     from bot.bot import Bot
 
@@ -113,18 +113,18 @@ class Admin(commands.Cog):
         ctx: commands.Context,
         resp: str = None,
         error: Exception = None,
-    ) -> discord.Message:
+    ) -> disnake.Message:
         """Send a nicely formatted eval response."""
         if resp is None and error is None:
             return await ctx.send(
                 "No output.",
-                allowed_mentions=discord.AllowedMentions(replied_user=False),
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
                 reference=ctx.message.to_reference(fail_if_not_exists=False),
             )
-        resp_file: discord.File = None
+        resp_file: disnake.File = None
         # for now, we're not gonna handle exceptions as files
         # unless, for some reason, it has a ``` in it
-        error_file: discord.File = None
+        error_file: disnake.File = None
         total_len = 0
         fmt_resp: str = "```py\n{0}```"
         fmt_err: str = "\nAn error occured. Unforunate.```py\n{0}```"
@@ -147,7 +147,7 @@ class Admin(commands.Cog):
         if total_len > MESSAGE_LIMIT or resp_file:
             log.debug("rats we gotta upload as a file")
 
-            resp_file: discord.File = create_file_obj(resp, ext="py")
+            resp_file: disnake.File = create_file_obj(resp, ext="py")
         else:
             # good job, not a file
             log.debug("sending response as plaintext")
@@ -160,7 +160,7 @@ class Admin(commands.Cog):
         return await ctx.send(
             out,
             files=files,
-            allowed_mentions=discord.AllowedMentions(replied_user=False),
+            allowed_mentions=disnake.AllowedMentions(replied_user=False),
             reference=ctx.message.to_reference(fail_if_not_exists=False),
         )
 
@@ -210,7 +210,7 @@ class Admin(commands.Cog):
             error = "".join(error).strip()
         try:
             await ctx.message.add_reaction("\u2705")
-        except discord.HTTPException:
+        except disnake.HTTPException:
             pass
         log.trace(f"result: {result}")
         if result is not None:
@@ -307,9 +307,9 @@ class Admin(commands.Cog):
                         await ctx.send("Content too big to be printed.")
                     else:
                         await ctx.send(fmt)
-            except discord.Forbidden:
+            except disnake.Forbidden:
                 pass
-            except discord.HTTPException as e:
+            except disnake.HTTPException as e:
                 await ctx.send(f"Unexpected error: `{e}`")
 
 

@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from random import choice
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot.bot import Bot
 
@@ -34,7 +34,7 @@ class HTTPStatusCodes(commands.Cog):
     @http_status_group.command(name="cat")
     async def http_cat(self, ctx: commands.Context, code: int) -> None:
         """Sends an embed with an image of a cat, portraying the status code."""
-        embed = discord.Embed(title=f"**Status: {code}**")
+        embed = disnake.Embed(title=f"**Status: {code}**")
         url = HTTP_CAT_URL.format(code=code)
 
         try:
@@ -62,7 +62,7 @@ class HTTPStatusCodes(commands.Cog):
             await self.http_cat(ctx, code)
             return
 
-        embed = discord.Embed(title=f"**Status: {code}**")
+        embed = disnake.Embed(title=f"**Status: {code}**")
         url = HTTP_DOG_URL.format(code=code)
 
         try:

@@ -4,8 +4,8 @@ import math
 import random
 from typing import Iterable, Union
 
-from discord import Embed, Message
-from discord.ext import commands
+from disnake import Embed, Message
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, RedirectOutput

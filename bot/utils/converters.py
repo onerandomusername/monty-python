@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import Tuple, Union
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 
 class WrappedMessageConverter(commands.MessageConverter):
     """A converter that handles embed-suppressed links like <http://example.com>."""
 
-    async def convert(self, ctx: commands.Context, argument: str) -> discord.Message:
+    async def convert(self, ctx: commands.Context, argument: str) -> disnake.Message:
         """Wrap the commands.MessageConverter to handle <> delimited message links."""
         # It's possible to wrap a message in [<>] as well, and it's supported because its easy
         if argument.startswith("[") and argument.endswith("]"):

@@ -3,7 +3,7 @@ import inspect
 import pkgutil
 from typing import Iterator, NoReturn
 
-from discord.ext.commands import Context
+from disnake.ext.commands import Context
 
 from bot import exts
 

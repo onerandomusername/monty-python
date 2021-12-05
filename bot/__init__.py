@@ -14,7 +14,7 @@ from functools import partial, partialmethod
 from pathlib import Path
 
 import arrow
-from discord.ext import commands
+from disnake.ext import commands
 
 from bot.command import Command
 from bot.constants import Client
@@ -68,7 +68,7 @@ if root.handlers:
         root.removeHandler(handler)
 
 # Silence irrelevant loggers
-logging.getLogger("discord").setLevel(logging.ERROR)
+logging.getLogger("disnake").setLevel(logging.ERROR)
 logging.getLogger("websockets").setLevel(logging.ERROR)
 logging.getLogger("PIL").setLevel(logging.ERROR)
 logging.getLogger("matplotlib").setLevel(logging.ERROR)
@@ -88,7 +88,7 @@ if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-# Monkey-patch discord.py decorators to use the both the Command and Group subclasses which supports root aliases.
+# Monkey-patch disnake.py decorators to use the both the Command and Group subclasses which supports root aliases.
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=Command)
 commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=Command)

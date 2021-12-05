@@ -3,8 +3,8 @@ import logging
 import random
 import typing as t
 
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, Colours, Icons
@@ -25,9 +25,9 @@ class Bookmark(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    def build_bookmark_dm(target_message: discord.Message, title: str) -> discord.Embed:
+    def build_bookmark_dm(target_message: disnake.Message, title: str) -> disnake.Embed:
         """Build the embed to DM the bookmark requester."""
-        embed = discord.Embed(title=title, description=target_message.content, colour=Colours.soft_green)
+        embed = disnake.Embed(title=title, description=target_message.content, colour=Colours.soft_green)
         embed.add_field(
             name="Wanna give it a visit?",
             value=f"[Visit original message]({target_message.jump_url})",
@@ -38,9 +38,9 @@ class Bookmark(commands.Cog):
         return embed
 
     @staticmethod
-    def build_error_embed(user: discord.Member) -> discord.Embed:
+    def build_error_embed(user: disnake.Member) -> disnake.Embed:
         """Builds an error embed for when a bookmark requester has DMs disabled."""
-        return discord.Embed(
+        return disnake.Embed(
             title=random.choice(ERROR_REPLIES),
             description=f"{user.mention}, please enable your DMs to receive the bookmark.",
             colour=Colours.soft_red,
@@ -48,26 +48,26 @@ class Bookmark(commands.Cog):
 
     async def action_bookmark(
         self,
-        channel: discord.TextChannel,
-        user: discord.Member,
-        target_message: discord.Message,
+        channel: disnake.TextChannel,
+        user: disnake.Member,
+        target_message: disnake.Message,
         title: str,
     ) -> None:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
         try:
             embed = self.build_bookmark_dm(target_message, title)
             await user.send(embed=embed)
-        except discord.Forbidden:
+        except disnake.Forbidden:
             error_embed = self.build_error_embed(user)
             await channel.send(embed=error_embed)
         else:
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
 
     @staticmethod
-    async def send_reaction_embed(channel: discord.TextChannel, target_message: discord.Message) -> discord.Message:
+    async def send_reaction_embed(channel: disnake.TextChannel, target_message: disnake.Message) -> disnake.Message:
         """Sends an embed, with a reaction, so users can react to bookmark the message too."""
         message = await channel.send(
-            embed=discord.Embed(
+            embed=disnake.Embed(
                 description=(
                     f"React with {BOOKMARK_EMOJI} to be sent your very own bookmark to "
                     f"[this message]({target_message.jump_url})."
@@ -97,7 +97,7 @@ class Bookmark(commands.Cog):
         permissions = target_message.channel.permissions_for(ctx.author)
         if not permissions.read_messages:
             log.info(f"{ctx.author} tried to bookmark a message in #{target_message.channel} but has no permissions.")
-            embed = discord.Embed(
+            embed = disnake.Embed(
                 title=random.choice(ERROR_REPLIES),
                 color=Colours.soft_red,
                 description="You don't have permission to view this channel.",
@@ -105,7 +105,7 @@ class Bookmark(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        def event_check(reaction: discord.Reaction, user: discord.Member) -> bool:
+        def event_check(reaction: disnake.Reaction, user: disnake.Member) -> bool:
             """Make sure that this reaction is what we want to operate on."""
             return (
                 # Conditions for a successful pagination:

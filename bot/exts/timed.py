@@ -1,8 +1,8 @@
 from copy import copy
 from time import perf_counter
 
-from discord import Message
-from discord.ext import commands
+from disnake import Message
+from disnake.ext import commands
 
 from bot.bot import Bot
 
