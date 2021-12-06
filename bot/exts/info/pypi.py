@@ -30,7 +30,13 @@ class PyPi(commands.Cog):
 
     @commands.slash_command(name="pypi")
     async def get_package_info(self, inter: disnake.ApplicationCommandInteraction, package: str) -> None:
-        """Provide information about a specific package from PyPI."""
+        """
+        Provide information about a specific package from PyPI.
+
+        Parameters
+        ----------
+        package: The package on pypi to get information about.
+        """
         embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
         embed.set_thumbnail(url=PYPI_ICON)
 

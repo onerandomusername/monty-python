@@ -13,6 +13,17 @@ from bot import constants
 
 log = logging.getLogger(__name__)
 
+try:
+    import dotenv
+except ModuleNotFoundError:
+    TEST_GUILDS = None
+else:
+    TEST_GUILDS = dotenv.get_key(".env", "TEST_GUILDS")
+    if TEST_GUILDS:
+        TEST_GUILDS = [int(x.strip()) for x in TEST_GUILDS.split(",")]
+        log.info("TEST_GUILDS FOUND")
+
+
 __all__ = ("Bot", "bot")
 
 
@@ -28,6 +39,9 @@ class Bot(commands.Bot):
     name = constants.Client.name
 
     def __init__(self, **kwargs):
+        if TEST_GUILDS:
+            kwargs["test_guilds"] = TEST_GUILDS
+            log.warn("registering as test_guilds")
         super().__init__(**kwargs)
         self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
 

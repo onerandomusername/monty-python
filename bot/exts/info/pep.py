@@ -136,7 +136,13 @@ class PythonEnhancementProposals(commands.Cog):
 
     @commands.slash_command(name="pep")
     async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: int) -> None:
-        """Fetch information about a PEP."""
+        """
+        Fetch information about a PEP.
+
+        Parameters
+        ----------
+        number: number of the pep, example: 0
+        """
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if number == 0:
             pep_embed = self.get_pep_zero_embed()

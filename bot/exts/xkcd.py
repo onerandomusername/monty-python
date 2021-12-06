@@ -38,12 +38,21 @@ class XKCD(commands.Cog):
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
     @commands.slash_command(name="xkcd")
-    async def fetch_xkcd_comics(self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str]) -> None:
-        """View an xkcd comic. If no comic number is provided, a random comic will be shown."""
+    async def fetch_xkcd_comics(
+        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None
+    ) -> None:
+        """
+        View an xkcd comic.
+
+        Parameters
+        ----------
+        comic: number or 'latest'. Leave empty to show a random comic.
+        """
         embed = disnake.Embed(title=f"XKCD comic '{comic}'")
 
         # temporary casting back to a string, until a subcommand is added for latest support
-        comic = str(comic)
+        if comic is not None:
+            comic = str(comic)
 
         embed.colour = Colours.soft_red
 
