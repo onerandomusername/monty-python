@@ -9,6 +9,11 @@ import coloredlogs
 from bot.constants import Client
 
 
+def get_logger(*args, **kwargs) -> logging.Logger:
+    """Stub method for logging.getLogger."""
+    return logging.getLogger(*args, **kwargs)
+
+
 def setup() -> None:
     """Set up loggers."""
     # Configure the "TRACE" logging level (e.g. "log.trace(message)")
