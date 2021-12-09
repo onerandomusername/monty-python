@@ -10,6 +10,7 @@ __all__ = (
     "Emojis",
     "Icons",
     "Tokens",
+    "RedisConfig",
     "Wolfram",
     "RedirectOutput",
     "ERROR_REPLIES",
@@ -27,6 +28,7 @@ class Client(NamedTuple):
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-bot"
+    trace_loggers = environ.get("BOT_TRACE_LOGGERS")
 
 
 class CloudAHK:
@@ -114,6 +116,13 @@ class Icons:
 
 class Tokens(NamedTuple):
     github = environ.get("GITHUB_TOKEN")
+
+
+class RedisConfig(NamedTuple):
+    host = environ.get("REDISHOST", "redis.default.svc.cluster.local")
+    port = environ.get("REDISPORT", 6379)
+    password = environ.get("REDISPASSWORD")
+    use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
 
 
 class Wolfram(NamedTuple):

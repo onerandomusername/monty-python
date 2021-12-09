@@ -3,6 +3,7 @@ import logging
 import socket
 from typing import Optional
 
+import async_rediscache
 import disnake
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
 from disnake import DiscordException
@@ -38,11 +39,12 @@ class Bot(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, **kwargs):
+    def __init__(self, redis_session: async_rediscache.RedisSession, **kwargs):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
         super().__init__(**kwargs)
+        self.redis_session = redis_session
         self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
 
     @property
@@ -125,9 +127,20 @@ _intents.invites = False
 _intents.typing = False
 _intents.webhooks = False
 
+redis_session = async_rediscache.RedisSession(
+    address=(constants.RedisConfig.host, constants.RedisConfig.port),
+    password=constants.RedisConfig.password,
+    minsize=1,
+    maxsize=20,
+    use_fakeredis=constants.RedisConfig.use_fakeredis,
+    global_namespace="monty-python",
+)
+
 loop = asyncio.get_event_loop()
+loop.run_until_complete(redis_session.connect())
 
 bot = Bot(
+    redis_session=redis_session,
     command_prefix=constants.Client.prefix,
     activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
     allowed_mentions=disnake.AllowedMentions(everyone=False),
