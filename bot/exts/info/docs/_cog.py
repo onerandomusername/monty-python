@@ -11,6 +11,7 @@ import aiohttp
 import disnake
 from disnake.ext import commands
 
+from bot import constants
 from bot.bot import Bot
 from bot.constants import RedirectOutput
 from bot.converters import PackageName, allowed_strings
@@ -53,19 +54,24 @@ class DocDict(TypedDict):
 
 PACKAGES: list[DocDict] = [
     {
-        "package": "disnake",
-        "base_url": "https://docs.disnake.dev/en/latest/",
-        "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
-    },
-    {
         "package": "python",
         "base_url": "https://docs.python.org/3/",
         "inventory_url": "https://docs.python.org/3/objects.inv",
     },
     {
+        "package": "disnake",
+        "base_url": "https://docs.disnake.dev/en/latest/",
+        "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
+    },
+    {
         "package": "aiohttp",
         "base_url": "https://docs.aiohttp.org/en/stable/",
         "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
+    },
+    {
+        "package": "arrow",
+        "base_url": "https://arrow.readthedocs.io/en/latest/",
+        "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
     },
 ]
 
@@ -115,6 +121,38 @@ class DocCog(commands.Cog):
             name="Doc inventory init",
             event_loop=self.bot.loop,
         )
+
+    def _get_default_completion(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        guild: disnake.Guild = None,
+    ) -> list[str]:
+        if guild and guild.id == constants.Guilds.disnake:
+            return ["disnake", "disnake.ext.commands", "disnake.ext.tasks"]
+
+        return [
+            "__future__",
+            "asyncio",
+            "dataclasses",
+            "datetime",
+            "enum",
+            "html",
+            "http",
+            "importlib",
+            "inspect",
+            "json",
+            "logging",
+            "os",
+            "pathlib",
+            "textwrap",
+            "time",
+            "traceback",
+            "typing",
+            "unittest",
+            "warnings",
+            "zipfile",
+            "zipimport",
+        ]
 
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def init_refresh_inventory(self) -> None:
@@ -280,7 +318,9 @@ class DocCog(commands.Cog):
 
         return symbol_name, doc_item
 
-    async def get_symbol_markdown(self, doc_item: DocItem) -> str:
+    async def get_symbol_markdown(
+        self, doc_item: DocItem, inter: Optional[disnake.ApplicationCommandInteraction] = None
+    ) -> str:
         """
         Get the Markdown from the symbol `doc_item` refers to.
 
@@ -290,6 +330,9 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
+            if inter:
+                log.debug("Deferring interaction since contents are not cached.")
+                await inter.response.defer()
             log.debug(f"Redis cache miss with {doc_item}.")
             try:
                 markdown = await self.item_fetcher.get_markdown(doc_item)
@@ -306,7 +349,11 @@ class DocCog(commands.Cog):
                 return "Unable to parse the requested symbol."
         return markdown
 
-    async def create_symbol_embed(self, symbol_name: str) -> Optional[disnake.Embed]:
+    async def create_symbol_embed(
+        self,
+        symbol_name: str,
+        inter: Optional[disnake.ApplicationCommandInteraction] = None,
+    ) -> Optional[disnake.Embed]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -316,7 +363,6 @@ class DocCog(commands.Cog):
         """
         log.trace(f"Building embed for symbol `{symbol_name}`")
         if not self.refresh_event.is_set():
-            # await inter.defer()
             log.debug("Waiting for inventories to be refreshed before processing item.")
             await self.refresh_event.wait()
         # Ensure a refresh can't run in case of a context switch until the with block is exited
@@ -337,19 +383,25 @@ class DocCog(commands.Cog):
             embed = disnake.Embed(
                 title=disnake.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
-                description=await self.get_symbol_markdown(doc_item),
+                description=await self.get_symbol_markdown(doc_item, inter=inter),
             )
             embed.set_footer(text=footer_text)
             return embed
 
     @commands.group(name="docs", aliases=("doc",), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, symbol_name: Optional[str]) -> None:
+    async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
-        await self.get_command(ctx, symbol_name=symbol_name)
+        await self.docs_get_command(ctx, search=search)
 
     @commands.slash_command(name="docs")
     async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, search: Optional[str]) -> None:
-        """Gives you a documentation link for a provided entry."""
+        """
+        Gives you a documentation link for a provided entry.
+
+        Parameters
+        ----------
+        search: the object to view the docs
+        """
         if not search:
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
@@ -365,8 +417,7 @@ class DocCog(commands.Cog):
 
         else:
             symbol = search.strip("`")
-            await inter.response.defer()
-            doc_embed = await self.create_symbol_embed(symbol)
+            doc_embed = await self.create_symbol_embed(symbol, inter)
 
             if doc_embed is None:
                 await inter.send("No documentation found for the requested symbol.", ephemeral=True)
@@ -381,11 +432,12 @@ class DocCog(commands.Cog):
         self, inter: disnake.Interaction, input: str, *, _recurse: bool = True, _levels: int = 0
     ) -> list[str]:
         """Autocomplete for the search param for documentation."""
-        completion = set()
+        log.info(f"Received autocomplete inter by {inter.author}: {input}")
         compare_len = len(input.rstrip("."))
-        # input = input.lower()
+        completion = set()
         if not input:
-            return ["Start typing to search..."]
+            return self._get_default_completion(inter, inter.guild)
+
         for item in self.doc_symbols:
             if not item.startswith(input):
                 continue
