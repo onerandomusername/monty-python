@@ -24,11 +24,11 @@ class Ping(commands.Cog):
         await inter.send(embed=embed)
 
     # Originally made in 70d2170a0a6594561d59c7d080c4280f1ebcd70b by lemon & gdude2002
-    @commands.command(name="uptime")
-    async def uptime(self, ctx: commands.Context) -> None:
+    @commands.slash_command(name="uptime")
+    async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Get the current uptime of the bot."""
         timestamp = round(float(start_time.format("X")))
-        await ctx.send(f"Start time: <t:{timestamp}:R>")
+        await inter.send(f"Start time: <t:{timestamp}:R>")
 
 
 def setup(bot: Bot) -> None:

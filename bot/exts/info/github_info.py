@@ -1,3 +1,4 @@
+import copy
 import logging
 import random
 import re
@@ -8,10 +9,10 @@ from datetime import datetime
 from urllib.parse import quote, quote_plus
 
 import disnake
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 
 from bot import constants
-from bot.bot import Bot
+from bot.bot import TEST_GUILDS, Bot
 from bot.utils.extensions import invoke_help_command
 from bot.utils.messages import wait_for_deletion
 from bot.utils.pagination import LinePaginator
@@ -25,7 +26,8 @@ BAD_RESPONSE = {
 
 GITHUB_API_URL = "https://api.github.com"
 
-REPOSITORY_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
+ORG_REPOS_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
+USER_REPOS_ENDPOINT = f"{GITHUB_API_URL}/users/{{user}}/repos?per_page=100&type=public"
 ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
 PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
 LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
@@ -54,12 +56,39 @@ AUTOMATIC_REGEX = re.compile(
 )
 
 
+def get_default_user(guild_id: int) -> typing.Optional[str]:
+    """Get default user per guild_id."""
+    if guild_id is None:
+        return "onerandomusername"
+    elif guild_id == constants.Guilds.modmail:
+        return "discord-modmail"
+    elif guild_id == constants.Guilds.cat_dev_group:
+        return "cat-dev-group"
+    elif guild_id == constants.Guilds.dexp:
+        return "bast0006"
+    elif guild_id == constants.Guilds.disnake:
+        return "DisnakeDev"
+    else:
+        return None
+
+
+ORGS_REPOS: dict[str, list[str]] = dict.fromkeys(
+    [
+        "discord-modmail",
+        "DisnakeDev",
+        "bast0006",
+        "cat-dev-group",
+    ]
+)
+
 CODE_BLOCK_RE = re.compile(
     r"^`([^`\n]+)`" r"|```(.+?)```",  # Inline codeblock  # Multiline codeblock
     re.DOTALL | re.MULTILINE,
 )
 
 log = logging.getLogger(__name__)
+
+GITHUB_GUILDS = TEST_GUILDS if TEST_GUILDS else GUILD_WHITELIST
 
 
 @dataclass
@@ -113,28 +142,39 @@ class GithubInfo(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.repos = []
+        self.repos = ORGS_REPOS
+        self.repo_refresh.start()
 
-    async def fetch_data(self, url: str, **kw) -> dict:
+    @tasks.loop(hours=4)
+    async def repo_refresh(self) -> None:
+        """Fetch and populate the repos on load."""
+        for user in self.repos:
+            url = ORG_REPOS_ENDPOINT.format(org=user)
+            resp = await self.fetch_data(url)
+            if isinstance(resp, dict) and resp.get("message"):
+                url = USER_REPOS_ENDPOINT.format(user=user)
+                resp = await self.fetch_data(url)
+            self.repos[user] = sorted(i["name"] for i in resp)
+
+    def cog_unload(self) -> None:
+        """Stop tasks on cog unload."""
+        self.repo_refresh.stop()
+
+    async def fetch_data(self, url: str, **kw) -> t.Union[dict, str, list, typing.Any]:
         """Retrieve data as a dictionary."""
+        log.debug(f"fetching {url}")
+        if kw.get("headers"):
+            kw["headers"] = copy.copy(kw["headers"])
+            kw["headers"].update(REQUEST_HEADERS)
+        else:
+            kw["headers"] = REQUEST_HEADERS
         async with self.bot.http_session.get(url, **kw) as r:
             return await r.json()
 
     @staticmethod
     def get_default_user(guild: disnake.Guild) -> typing.Optional["str"]:
         """Get the default user for the guild."""
-        if guild is None:
-            return "onerandomusername"
-        elif guild.id == constants.Guilds.modmail:
-            return "discord-modmail"
-        elif guild.id == constants.Guilds.cat_dev_group:
-            return "cat-dev-group"
-        elif guild.id == constants.Guilds.dexp:
-            return "bast0006"
-        elif guild.id == constants.Guilds.disnake:
-            return "DisnakeDev"
-        else:
-            return None
+        return get_default_user(guild.id)
 
     @staticmethod
     def get_repository(guild: disnake.Guild = None, org: str = None) -> typing.Optional[str]:
@@ -310,7 +350,6 @@ class GithubInfo(commands.Cog):
         Returns IssueState on success, FetchError on failure.
         """
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
-        pulls_url = PR_ENDPOINT.format(user=user, repository=repository, number=number)
         log.trace(f"Querying GH issues API: {url}")
 
         async with self.bot.http_session.get(url, headers=REQUEST_HEADERS) as r:
@@ -326,34 +365,30 @@ class GithubInfo(commands.Cog):
         elif r.status != 200:
             return FetchError(r.status, "Error while fetching issue.")
 
-        # The initial API request is made to the issues API endpoint, which will return information
-        # if the issue or PR is present. However, the scope of information returned for PRs differs
-        # from issues: if the 'issues' key is present in the response then we can pull the data we
-        # need from the initial API call.
-        if "issues" in json_data["html_url"]:
+        # Since all pulls are issues, all of the data exists as a result of an issue request
+        # This means that we don't need to make a second request, since the necessary data
+        # of if the pull was merged or not is returned in the json body under pull_request.merged_at
+        # If the 'pull_request' key is contained in the API response and there is no error code, then
+        # we know that a PR has been requested and a call to the pulls API endpoint may be necessary
+        # to get the desired information for the PR.
+        if pull_data := json_data.get("pull_request"):
+            issue_url = pull_data["html_url"]
+            if json_data["draft"]:
+                emoji = constants.Emojis.pull_request_draft
+            elif json_data["state"] == "open":
+                emoji = constants.Emojis.pull_request_open
+            # When 'merged_at' is not None, this means that the state of the PR is merged
+            elif pull_data["merged_at"] is not None:
+                emoji = constants.Emojis.pull_request_merged
+            else:
+                emoji = constants.Emojis.pull_request_closed
+        else:
+            # this is a definite issue and not a pull request, and should be treated as such
+            issue_url = json_data["html_url"]
             if json_data.get("state") == "open":
                 emoji = constants.Emojis.issue_open
             else:
                 emoji = constants.Emojis.issue_closed
-
-        # If the 'issues' key is not contained in the API response and there is no error code, then
-        # we know that a PR has been requested and a call to the pulls API endpoint is necessary
-        # to get the desired information for the PR.
-        else:
-            log.trace(f"PR provided, querying GH pulls API for additional information: {pulls_url}")
-            async with self.bot.http_session.get(pulls_url) as p:
-                pull_data = await p.json()
-                if pull_data["draft"]:
-                    emoji = constants.Emojis.pull_request_draft
-                elif pull_data["state"] == "open":
-                    emoji = constants.Emojis.pull_request_open
-                # When 'merged_at' is not None, this means that the state of the PR is merged
-                elif pull_data["merged_at"] is not None:
-                    emoji = constants.Emojis.pull_request_merged
-                else:
-                    emoji = constants.Emojis.pull_request_closed
-
-        issue_url = json_data.get("html_url")
 
         return IssueState(repository, number, issue_url, json_data.get("title", ""), emoji)
 
@@ -399,7 +434,7 @@ class GithubInfo(commands.Cog):
                 raise commands.CommandError("No user provided, a user must be provided.")
 
         # Remove duplicates and sort
-        numbers = sorted(set(numbers))
+        numbers = dict.fromkeys(numbers)
 
         # check if its empty, send help if it is
         if len(numbers) == 0:
@@ -413,7 +448,8 @@ class GithubInfo(commands.Cog):
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
             await ctx.send(embed=embed)
-            await invoke_help_command(ctx)
+            if isinstance(ctx, commands.Context):
+                await invoke_help_command(ctx)
 
         results = [await self.fetch_issues(number, repository, user) for number in numbers]
         await ctx.send(embed=self.format_embed(results, user, repository))
@@ -481,6 +517,16 @@ class GithubInfo(commands.Cog):
         if message.guild.id not in GUILD_WHITELIST:
             return
 
+        perms = message.channel.permissions_for(message.guild.me)
+        if isinstance(message.channel, disnake.Thread):
+            req_perm = "send_messages_in_threads"
+        else:
+            req_perm = "send_messages"
+        if not getattr(perms, req_perm):
+            print(perms)
+            log.warn("I don't have send perms.")
+            return
+
         default_org = self.get_default_user(message.guild)
 
         issues = [
@@ -518,6 +564,61 @@ class GithubInfo(commands.Cog):
 
         resp = self.format_embed(links, default_org)
         await wait_for_deletion(await message.channel.send(embed=resp), (message.author.id,))
+
+    @commands.slash_command(guild_ids=GITHUB_GUILDS)
+    async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Helpful commands for viewing information about this guild's github projects."""
+        pass
+
+    @github.sub_command("pull")
+    async def github_pull_slash(self, inter: disnake.ApplicationCommandInteraction, num: int, repo: str = None) -> None:
+        """
+        Get information about a provided pull request.
+
+        Parameters
+        ----------
+        num: the number of the pull request
+        repo: the repo to get the pull request from
+        """
+        user = self.get_default_user(inter.guild)
+        repository = repo or self.get_repository(inter.guild, user)
+        repository = repository.rsplit("/", 1)[-1]
+        await self.github_issue.callback(self, inter, [num], repository=repository, user=user)
+
+    @github_pull_slash.autocomplete("repo")
+    async def github_pull_autocomplete(self, inter: disnake.Interaction, query: str) -> list[str]:
+        """Autocomplete for github command."""
+        user = self.get_default_user(inter.guild)
+        resp = []
+        for repo in self.repos[user]:
+            resp.append(f"{user}/{repo}")
+        return resp
+
+    @github.sub_command("issue")
+    async def github_issue_slash(
+        self, inter: disnake.ApplicationCommandInteraction, num: int, repo: str = None
+    ) -> None:
+        """
+        Get information about a provided issue.
+
+        Parameters
+        ----------
+        num: the number of the issue
+        repo: the repo to get the issue from
+        """
+        user = self.get_default_user(inter.guild)
+        repository = repo or self.get_repository(inter.guild, user)
+        repository = repository.rsplit("/", 1)[-1]
+        await self.github_issue.callback(self, inter, [num], repository=repository, user=user)
+
+    @github_issue_slash.autocomplete("repo")
+    async def github_issue_autocomplete(self, inter: disnake.Interaction, query: str) -> list[str]:
+        """Autocomplete for issue command."""
+        user = self.get_default_user(inter.guild)
+        resp = []
+        for repo in self.repos[user]:
+            resp.append(f"{user}/{repo}")
+        return resp
 
 
 def setup(bot: Bot) -> None:
