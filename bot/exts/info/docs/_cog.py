@@ -55,8 +55,8 @@ class DocDict(TypedDict):
 PACKAGES: list[DocDict] = [
     {
         "package": "python",
-        "base_url": "https://docs.python.org/3/",
-        "inventory_url": "https://docs.python.org/3/objects.inv",
+        "base_url": "https://docs.python.org/3.10/",
+        "inventory_url": "https://docs.python.org/3.10/objects.inv",
     },
     {
         "package": "disnake",
@@ -72,6 +72,16 @@ PACKAGES: list[DocDict] = [
         "package": "arrow",
         "base_url": "https://arrow.readthedocs.io/en/latest/",
         "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "dislash",
+        "base_url": "https://dislashpy.readthedocs.io/en/latest/",
+        "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "rich",
+        "base_url": "https://rich.readthedocs.io/en/latest/",
+        "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
     },
 ]
 
