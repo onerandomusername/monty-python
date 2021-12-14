@@ -5,6 +5,7 @@ import re
 import unicodedata
 from typing import Tuple
 
+import disnake
 from disnake import Colour, Embed, Object, utils
 from disnake.ext import commands
 from disnake.ext.commands import BadArgument, Cog, Context, command
@@ -24,7 +25,7 @@ class CharInfo(Cog):
         self.bot = bot
 
     @commands.slash_command(name="char-info")
-    async def charinfo(self, ctx: Context, characters: str) -> None:
+    async def charinfo(self, ctx: disnake.ApplicationCommandInteraction, characters: str) -> None:
         """Shows you information on up to 50 unicode characters."""
         match = re.match(r"<(a?):(\w+):(\d+)>", characters)
         if match:
