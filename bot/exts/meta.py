@@ -6,8 +6,8 @@ from bot.bot import Bot
 from bot.constants import Colours
 
 
-class Ping(commands.Cog):
-    """Get info about the bot's ping and uptime."""
+class Meta(commands.Cog):
+    """Get meta information about the bot."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
@@ -30,7 +30,18 @@ class Ping(commands.Cog):
         timestamp = round(float(start_time.format("X")))
         await inter.send(f"Start time: <t:{timestamp}:R>")
 
+    @commands.command()
+    async def invite(self, ctx: commands.Context, guild: disnake.Object = disnake.utils.MISSING) -> None:
+        """Send an invite link to add me."""
+        url = disnake.utils.oauth_url(
+            self.bot.user.id,
+            scopes=["bot", "applications.commands"],
+            permissions=disnake.Permissions(412317248704),
+            guild=guild,
+        )
+        await ctx.send(f"<{url}>")
+
 
 def setup(bot: Bot) -> None:
     """Load the Ping cog."""
-    bot.add_cog(Ping(bot))
+    bot.add_cog(Meta(bot))
