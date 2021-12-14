@@ -6,7 +6,6 @@ import disnake
 from disnake import Embed
 from disnake.ext import commands
 
-from bot import constants
 from bot.bot import Bot
 from bot.constants import Client, Source
 from bot.utils.converters import SourceConverter, SourceType
@@ -33,7 +32,7 @@ class BotSource(commands.Cog):
         embed = self.build_embed(source_item)
         await ctx.send(embed=embed)
 
-    @commands.slash_command(name="source", guild_ids=[constants.Guilds.modmail])
+    @commands.slash_command(name="source")
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
         """Get the source of my commands and cogs."""
         if item is not None:
