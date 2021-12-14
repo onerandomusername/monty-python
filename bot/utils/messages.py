@@ -81,7 +81,7 @@ async def wait_for_deletion(
     button = disnake.ui.Button(
         label="Delete",
         emoji=Emojis.trashcan,
-        style=disnake.ButtonStyle.red,
+        style=disnake.ButtonStyle.grey,
         custom_id=DELETE_ID,
     )
     view.add_item(button)

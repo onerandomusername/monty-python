@@ -22,7 +22,7 @@ class DeleteView(disnake.ui.View):
         super().__init__(timeout=timeout)
 
     @disnake.ui.button(
-        label="Delete", custom_id=VIEW_DELETE_ID, style=disnake.ButtonStyle.red, emoji=constants.Emojis.trashcan
+        label="Delete", custom_id=VIEW_DELETE_ID, style=disnake.ButtonStyle.grey, emoji=constants.Emojis.trashcan
     )
     async def button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
         """Delete a message when a button is pressed if the user is okay to delete it."""
