@@ -10,7 +10,7 @@ from disnake.ext.commands import Cog
 
 from bot import constants
 from bot.bot import Bot
-from bot.utils.messages import wait_for_deletion
+from bot.utils.delete import get_view
 
 
 log = logging.getLogger(__name__)
@@ -247,7 +247,7 @@ class CodeSnippets(Cog):
                 # its fine, since this bot is public and shouldn't require that.
                 pass
 
-            await wait_for_deletion(await destination.send(message_to_send), (message.author.id,))
+        await destination.send(message_to_send, view=get_view(message))
 
 
 def setup(bot: Bot) -> None:

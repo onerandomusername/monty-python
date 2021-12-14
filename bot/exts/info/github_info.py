@@ -13,8 +13,8 @@ from disnake.ext import commands, tasks
 
 from bot import constants
 from bot.bot import TEST_GUILDS, Bot
+from bot.utils.delete import get_view
 from bot.utils.extensions import invoke_help_command
-from bot.utils.messages import wait_for_deletion
 from bot.utils.pagination import LinePaginator
 
 
@@ -563,7 +563,7 @@ class GithubInfo(commands.Cog):
             return
 
         resp = self.format_embed(links, default_org)
-        await wait_for_deletion(await message.channel.send(embed=resp), (message.author.id,))
+        await message.channel.send(embed=resp, view=get_view(message))
 
     @commands.slash_command(guild_ids=GITHUB_GUILDS)
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:

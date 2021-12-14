@@ -17,8 +17,8 @@ from bot.constants import RedirectOutput
 from bot.converters import PackageName, allowed_strings
 from bot.log import get_logger
 from bot.utils import scheduling
+from bot.utils.delete import get_view
 from bot.utils.lock import SharedEvent, lock
-from bot.utils.messages import wait_for_deletion
 from bot.utils.pagination import LinePaginator
 from bot.utils.scheduling import Scheduler
 
@@ -433,9 +433,7 @@ class DocCog(commands.Cog):
                 await inter.send("No documentation found for the requested symbol.", ephemeral=True)
 
             else:
-                await inter.send(embed=doc_embed)
-                msg = await inter.original_message()
-                await wait_for_deletion(msg, (inter.author.id,))
+                await inter.send(embed=doc_embed, view=get_view(inter))
 
     @docs_get_command.autocomplete("search")
     async def search_autocomplete(

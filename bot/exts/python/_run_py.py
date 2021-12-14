@@ -14,7 +14,7 @@ from disnake.ext.commands import Cog, Context, command, guild_only
 from bot.bot import Bot
 from bot.constants import URLs
 from bot.utils import send_to_paste_service
-from bot.utils.messages import wait_for_deletion
+from bot.utils.delete import get_view
 
 
 log = logging.getLogger(__name__)
@@ -213,8 +213,7 @@ class Snekbox(Cog):
             if filter_triggered:
                 response = await ctx.send("Attempt to circumvent filter detected. Moderator team has been alerted.")
             else:
-                response = await ctx.send(msg)
-            self.bot.loop.create_task(wait_for_deletion(response, (ctx.author.id,)))
+                response = await ctx.send(msg, view=get_view(ctx))
 
             log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
         return response

@@ -10,6 +10,7 @@ from disnake import DiscordException
 from disnake.ext import commands
 
 from bot import constants
+from bot.utils.delete import DeleteView
 
 
 log = logging.getLogger(__name__)
@@ -61,6 +62,11 @@ class Bot(commands.Bot):
 
         if self.http_session:
             await self.http_session.close()
+
+    async def connect(self, *, reconnect: bool = True) -> None:
+        """Connect the bot. This serves to add the persistent view. Look at the super to see the full docs."""
+        self.add_view(DeleteView())
+        return await super().connect(reconnect=reconnect)
 
     def add_cog(self, cog: commands.Cog) -> None:
         """
