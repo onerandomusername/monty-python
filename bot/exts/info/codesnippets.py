@@ -247,7 +247,7 @@ class CodeSnippets(Cog):
                 # its fine, since this bot is public and shouldn't require that.
                 pass
 
-        await destination.send(message_to_send, view=get_view(message))
+            await destination.send(message_to_send, view=get_view(message))
 
 
 def setup(bot: Bot) -> None:
