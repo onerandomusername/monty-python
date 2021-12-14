@@ -88,6 +88,11 @@ PACKAGES: list[DocDict] = [
         "base_url": "https://click.palletsprojects.com/en/8.0.x/",
         "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
     },
+    {
+        "package": "pytest",
+        "base_url": "https://docs.pytest.org/en/6.2.x/",
+        "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
+    },
 ]
 
 
