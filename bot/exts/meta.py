@@ -28,7 +28,7 @@ class Meta(commands.Cog):
     async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Get the current uptime of the bot."""
         timestamp = round(float(start_time.format("X")))
-        await inter.send(f"Start time: <t:{timestamp}:R>")
+        await inter.send(embed=disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)"))
 
     @commands.command()
     async def invite(self, ctx: commands.Context, guild: disnake.Object = disnake.utils.MISSING) -> None:
