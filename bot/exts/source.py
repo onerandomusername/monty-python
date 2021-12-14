@@ -36,6 +36,10 @@ class BotSource(commands.Cog):
             callback = inspect.unwrap(source_item.callback)
             src = callback.__code__
             filename = src.co_filename
+        elif isinstance(source_item, (commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand)):
+            meth = inspect.unwrap(source_item.callback)
+            src = meth.__code__
+            filename = src.co_filename
         else:
             src = type(source_item)
             try:
@@ -67,6 +71,12 @@ class BotSource(commands.Cog):
         if isinstance(source_object, commands.Command):
             description = source_object.short_doc
             title = f"Command: {source_object.qualified_name}"
+        elif isinstance(source_object, commands.InvokableSlashCommand):
+            title = f"Slash Command: {source_object.qualified_name}"
+            description = source_object.description
+        elif isinstance(source_object, (commands.SubCommand, commands.SubCommandGroup)):
+            title = f"Slash Sub-Command: {source_object.qualified_name}"
+            description = source_object.option
         else:
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]

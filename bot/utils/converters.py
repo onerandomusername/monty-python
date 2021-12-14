@@ -47,7 +47,13 @@ class CoordinateConverter(commands.Converter):
         return x, y
 
 
-SourceType = Union[commands.Command, commands.Cog]
+SourceType = Union[
+    commands.Command,
+    commands.Cog,
+    commands.InvokableSlashCommand,
+    commands.SubCommand,
+    commands.SubCommandGroup,
+]
 
 
 class SourceConverter(commands.Converter):
@@ -64,7 +70,11 @@ class SourceConverter(commands.Converter):
         if cmd:
             return cmd
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command or Cog.")
+        cmd = ctx.bot.get_slash_command(argument)
+        if cmd:
+            return cmd
+
+        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, slash command, or Cog.")
 
 
 class DateConverter(commands.Converter):
