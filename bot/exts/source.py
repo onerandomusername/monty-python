@@ -2,9 +2,11 @@ import inspect
 from pathlib import Path
 from typing import Optional, Tuple
 
+import disnake
 from disnake import Embed
 from disnake.ext import commands
 
+from bot import constants
 from bot.bot import Bot
 from bot.constants import Client, Source
 from bot.utils.converters import SourceConverter, SourceType
@@ -15,7 +17,7 @@ class BotSource(commands.Cog):
 
     @commands.command(name="source", aliases=("src",))
     async def source_command(self, ctx: commands.Context, *, source_item: SourceConverter = None) -> None:
-        """Display information and a GitHub link to the source code of a command, tag, or cog."""
+        """Display information and a GitHub link to the source code of a command or cog."""
         if not source_item:
             embed = Embed(title=f"{Client.name}'s GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
@@ -23,8 +25,18 @@ class BotSource(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        embed = await self.build_embed(source_item)
+        embed = self.build_embed(source_item)
         await ctx.send(embed=embed)
+
+    @commands.slash_command(name="source", guild_ids=[constants.Guilds.modmail])
+    async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
+        """Get the source of my commands and cogs."""
+        if item is not None:
+            try:
+                item = await SourceConverter().convert(inter, item)
+            except commands.BadArgument as e:
+                await inter.response.send_message(str(e), ephemeral=True)
+        await self.source_command(inter, source_item=item)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """
@@ -64,7 +76,7 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    async def build_embed(self, source_object: SourceType) -> Optional[Embed]:
+    def build_embed(self, source_object: SourceType) -> Optional[Embed]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
