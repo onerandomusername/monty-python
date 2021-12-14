@@ -84,9 +84,9 @@ PACKAGES: list[DocDict] = [
         "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
     },
     {
-        "package": "bs4",
-        "base_url": "https://www.crummy.com/software/BeautifulSoup/bs4/doc/",
-        "inventory_url": "https://www.crummy.com/software/BeautifulSoup/bs4/doc/objects.inv",
+        "package": "click",
+        "base_url": "https://click.palletsprojects.com/en/8.0.x/",
+        "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
     },
 ]
 
