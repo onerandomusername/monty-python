@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 from functools import partial
 from typing import Optional, Sequence
@@ -8,9 +7,15 @@ import disnake
 
 from bot.bot import bot
 from bot.constants import Emojis
+from bot.log import get_logger
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
+DELETE_ID = "wait_for_deletion_trash"
+
+
+def _check(user: disnake.abc.User, *, message_id: int, allowed_users: Sequence[int], allow_mods: bool = True) -> bool:
+    return user.id in allowed_users
 
 
 def reaction_check(
@@ -30,10 +35,10 @@ def reaction_check(
     right_reaction = user != bot.user and reaction.message.id == message_id and str(reaction.emoji) in allowed_emoji
     if not right_reaction:
         return False
+    res = _check(user, message_id=message_id, allowed_users=allowed_users)
 
-    if user.id in allowed_users:
+    if res:
         log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
-        return True
     else:
         log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         bot.loop.create_task(
@@ -41,54 +46,71 @@ def reaction_check(
             suppressed_exceptions=(disnake.HTTPException,),
             name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}",
         )
+    return res
+
+
+def interaction_check(
+    inter: disnake.MessageInteraction,
+    *,
+    message_id: int,
+    allowed_component_ids: Sequence[str],
+    allowed_users: Sequence[int],
+) -> bool:
+    """Check an interaction, see reaction_check for more info."""
+    if inter.type != disnake.InteractionType.component:
         return False
+    if inter.data.custom_id not in allowed_component_ids and inter.message.id != message_id:
+        return False
+    res = _check(inter.user, message_id=message_id, allowed_users=allowed_users)
+    return res
 
 
 async def wait_for_deletion(
     message: disnake.Message,
     user_ids: Sequence[int],
-    deletion_emojis: Sequence[str] = (Emojis.trashcan,),
     timeout: float = 60 * 5,
-    attach_emojis: bool = True,
 ) -> None:
     """
     Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
 
-    If `timeout` expires then reactions are cleared to indicate the option to delete has expired.
-    An `attach_emojis` bool may be specified to determine whether to attach the given
-    `deletion_emojis` to the message in the given `context`.
-    An `allow_mods` bool may also be specified to allow anyone with a role in `MODERATION_ROLES` to delete
-    the message.
+    If `timeout` expires then the button is edited to indicate the option to delete has expired.
     """
     if message.guild is None:
         raise ValueError("Message must be sent on a guild")
-
-    if attach_emojis:
-        for emoji in deletion_emojis:
-            try:
-                await message.add_reaction(emoji)
-            except disnake.NotFound:
-                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
-                return
+    view = disnake.ui.View(timeout=timeout)
+    button = disnake.ui.Button(
+        label="Delete",
+        emoji=Emojis.trashcan,
+        style=disnake.ButtonStyle.red,
+        custom_id=DELETE_ID,
+    )
+    view.add_item(button)
+    try:
+        await message.edit(view=view)
+    except disnake.NotFound:
+        log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+        return
 
     check = partial(
-        reaction_check,
+        interaction_check,
         message_id=message.id,
-        allowed_emoji=deletion_emojis,
+        allowed_component_ids=(DELETE_ID,),
         allowed_users=user_ids,
     )
 
     try:
-        try:
-            await bot.wait_for("reaction_add", check=check, timeout=timeout)
-        except asyncio.TimeoutError:
+        while True:
             try:
-                await message.clear_reactions()
-            except disnake.Forbidden:
-                # no permissions to delete reactions
-                pass
-        else:
-            await message.delete()
+                inter: disnake.MessageInteraction = await bot.bot.bot.wait_for("interaction", timeout=timeout)
+            except asyncio.TimeoutError:
+                button.disabled = True
+                await message.edit(view=view)
+            else:
+                # we must run the check here so we can respond to the interaction
+                if not check(inter):
+                    await inter.response.send_message("You do not have permissions to delete this.", ephemeral=True)
+                    continue
+                await message.delete()
     except disnake.NotFound:
         log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
 
