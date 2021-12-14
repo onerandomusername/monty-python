@@ -181,6 +181,7 @@ class PyPi(commands.Cog):
         embed = disnake.Embed(description="", title=f"PYPI Package Search: {query}")
         embed.url = str(query_url)
         # packages = sorted(packages, key=lambda pack: pack.name)
+        packages = packages[:max_results]
         for num, pack in enumerate(packages):
             embed.description += (
                 f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
