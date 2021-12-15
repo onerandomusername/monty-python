@@ -437,7 +437,10 @@ class DocCog(commands.Cog):
 
         else:
             symbol = search.strip("`")
-            doc_embed = await self.create_symbol_embed(symbol, inter)
+            if isinstance(inter, disnake.Interaction):
+                doc_embed = await self.create_symbol_embed(symbol, inter)
+            else:
+                doc_embed = await self.create_symbol_embed(symbol)
 
             if doc_embed is None:
                 await inter.send("No documentation found for the requested symbol.", ephemeral=True)
