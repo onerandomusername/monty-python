@@ -5,7 +5,7 @@ import sys
 import textwrap
 from collections import defaultdict
 from types import SimpleNamespace
-from typing import Dict, NamedTuple, Optional, Tuple, TypedDict, Union
+from typing import Dict, Literal, NamedTuple, Optional, Tuple, TypedDict, Union
 
 import aiohttp
 import disnake
@@ -14,7 +14,7 @@ from disnake.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.constants import RedirectOutput
-from bot.converters import PackageName, allowed_strings
+from bot.converters import PackageName
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.delete import get_view
@@ -507,11 +507,11 @@ class DocCog(commands.Cog):
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.is_owner()
     async def clear_cache_command(
-        self, ctx: commands.Context, package_name: Union[PackageName, allowed_strings("*")]  # noqa: F722
+        self, ctx: commands.Context, package_name: Union[PackageName, Literal["*"]]  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         if await doc_cache.delete(package_name):
-            await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete()
+            await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")
