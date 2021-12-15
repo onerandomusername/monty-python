@@ -533,15 +533,15 @@ source = ["Cython (>=0.29.7)"]
 
 [[package]]
 name = "markdownify"
-version = "0.10.0"
+version = "0.6.1"
 description = "Convert HTML to markdown."
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
-beautifulsoup4 = ">=4.9,<5"
-six = ">=1.15,<2"
+beautifulsoup4 = "*"
+six = "*"
 
 [[package]]
 name = "mccabe"
@@ -1026,7 +1026,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "3c1522d2d166f0cc32346e5b91003882034710eb1257f53722e1df25d57625d5"
+content-hash = "685496794898b53e1d9b95a1455a5933a91fd66eef4cb31c652f862186e044ec"
 
 [metadata.files]
 aiodns = [
@@ -1434,8 +1434,8 @@ lxml = [
     {file = "lxml-4.7.0.tar.gz", hash = "sha256:543fcbf500b95568d0944d28677fb9cd076d80876f90aa0cbba09040418924f8"},
 ]
 markdownify = [
-    {file = "markdownify-0.10.0-py3-none-any.whl", hash = "sha256:4b26e2ed7c1113efdf4faa5b31f67ac101dd0c1770979c21e34b20b95a99ef8c"},
-    {file = "markdownify-0.10.0.tar.gz", hash = "sha256:ba7a5eb2a278ef216d77e5abdf4274e8fd816f9a7e80de6a5fb441fada52eaf3"},
+    {file = "markdownify-0.6.1-py3-none-any.whl", hash = "sha256:7489fd5c601536996a376c4afbcd1dd034db7690af807120681461e82fbc0acc"},
+    {file = "markdownify-0.6.1.tar.gz", hash = "sha256:31d7c13ac2ada8bfc7535a25fee6622ca720e1b5f2d4a9cbc429d167c21f886d"},
 ]
 mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
