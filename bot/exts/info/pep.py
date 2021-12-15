@@ -186,6 +186,7 @@ class PythonEnhancementProposals(commands.Cog):
             number = int(number)
         except ValueError:
             await inter.send("You must send an integer pep number.", ephemeral=True)
+            return
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if number == 0:
             pep_embed = self.get_pep_zero_embed()
@@ -205,21 +206,18 @@ class PythonEnhancementProposals(commands.Cog):
     @pep_command.autocomplete("number")
     async def pep_number_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, str]:
         """Completion for pep numbers."""
-        try:
-            _ = int(query)
-        except ValueError:
+        if not query:
             # return some fun peps
-            interesting_peps = [0, 8, 257, 528]
+            interesting_peps = [0, 8, 257, 517, 528, 619]
             resp = {}
             for title, pep in self.autocomplete.items():
                 if int(pep) in interesting_peps:
                     resp[title] = str(pep)
             return {x: y for x, y in sorted(resp.items(), key=lambda x: int(x[1]))}
         peps: dict[str, int] = {}
-        query = str(query)
+        query = str(query).lower()
         for title, num in self.autocomplete.items():
-            num = str(num)
-            if query not in num:
+            if query not in title.lower():
                 continue
             peps[title] = num
             if len(peps) >= 11:
