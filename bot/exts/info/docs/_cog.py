@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import functools
 import sys
 import textwrap
 from collections import defaultdict
@@ -414,6 +416,11 @@ class DocCog(commands.Cog):
         await self.docs_get_command(ctx, search=search)
 
     @commands.slash_command(name="docs")
+    async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
+        """Search python package documentation."""
+        pass
+
+    @slash_docs.sub_command("item")
     async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, search: Optional[str]) -> None:
         """
         Gives you a documentation link for a provided entry.
@@ -443,24 +450,31 @@ class DocCog(commands.Cog):
                 doc_embed = await self.create_symbol_embed(symbol)
 
             if doc_embed is None:
-                await inter.send("No documentation found for the requested symbol.", ephemeral=True)
+                await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
 
             else:
                 await inter.send(embed=doc_embed, view=get_view(inter))
 
-    @docs_get_command.autocomplete("search")
-    async def search_autocomplete(
-        self, inter: disnake.Interaction, input: str, *, _recurse: bool = True, _levels: int = 0
+    async def _docs_autocomplete(
+        self,
+        inter: disnake.Interaction,
+        query: str,
+        *,
+        _recurse: bool = True,
+        _levels: int = 0,
+        return_query: bool = False,
     ) -> list[str]:
         """Autocomplete for the search param for documentation."""
-        log.info(f"Received autocomplete inter by {inter.author}: {input}")
-        compare_len = len(input.rstrip("."))
+        log.info(f"Received autocomplete inter by {inter.author}: {query}")
+        max_completion = 20
+
+        compare_len = len(query.rstrip("."))
         completion = set()
-        if not input:
+        if not query:
             return self._get_default_completion(inter, inter.guild)
 
         for item in self.doc_symbols:
-            if not item.startswith(input):
+            if not item.startswith(query):
                 continue
 
             # only keep items that aren't instantly delimited
@@ -468,18 +482,59 @@ class DocCog(commands.Cog):
                 continue
 
             completion.add(item)
-            if len(completion) >= 20:
+            if len(completion) >= max_completion:
                 break
 
         if _recurse and len(completion) < 2:
             # run the entire completion again
             completion.update(
-                set(await self.search_autocomplete(inter, input=input, _levels=_levels + 1, _recurse=False))
+                set(await self._docs_autocomplete(inter, query=query, _levels=_levels + 1, _recurse=False))
             )
 
         completion = list(sorted(completion))
         # log.debug('Options: ' + str(completion))
+        if return_query:
+            completion.insert(0, query)
+            completion = completion[:max_completion]
         return completion
+
+    docs_get_command.autocomplete("search")(copy.copy(_docs_autocomplete))
+
+    @slash_docs.sub_command(name="list")
+    async def slash_docs_search(self, inter: disnake.AppCmdInter, query: str) -> None:
+        """
+        [BETA] Search documentation and provide a list of results.
+
+        Parameters
+        ----------
+        query: search query
+        """
+        compare_len = len(query.rstrip("."))
+        results = {}
+        for key, item in self.doc_symbols.items():
+            if not key.startswith(query):
+                continue
+
+            # only keep items that aren't instantly delimited
+            if key[compare_len:].count(".") >= 2:
+                continue
+
+            results[key] = item.url
+            if len(results) >= 10:
+                break
+        # if no results
+        if not results:
+            await inter.response.send_message(f"No documentation results found for `{query}`.", ephemeral=True)
+        # construct embed
+        results = {key: val for key, val in sorted(results.items(), key=lambda x: x[0])}
+
+        embed = disnake.Embed(title=f"Results for {query}")
+        embed.description = ""
+        for res, url in results.items():
+            embed.description += f"[`{res}`]({url})\n"
+        await inter.response.send_message(embed=embed, view=get_view(inter))
+
+    slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, return_query=True))
 
     @staticmethod
     def base_url_from_inventory_url(inventory_url: str) -> str:
