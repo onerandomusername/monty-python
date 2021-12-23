@@ -1,12 +1,6 @@
 from typing import Optional
 
 
-class UserNotPlayingError(Exception):
-    """Raised when users try to use game commands when they are not playing."""
-
-    pass
-
-
 class APIError(Exception):
     """Raised when an external API (eg. Wikipedia) returns an error response."""
 
