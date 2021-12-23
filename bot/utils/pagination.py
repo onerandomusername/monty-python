@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Iterable, List, Optional, Tuple
 
+import disnake
 from disnake import Embed, Member, Reaction
 from disnake.abc import User
 from disnake.embeds import EmptyEmbed
@@ -15,8 +16,14 @@ LEFT_EMOJI = "\u2B05"  # [:arrow_left:]
 RIGHT_EMOJI = "\u27A1"  # [:arrow_right:]
 LAST_EMOJI = "\u23ED"  # [:track_next:]
 DELETE_EMOJI = Emojis.trashcan  # [:trashcan:]
-
-PAGINATION_EMOJI = (FIRST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LAST_EMOJI, DELETE_EMOJI)
+CUSTOM_ID_PREFIX = "paginator_page_"
+PAGINATION_EMOJI: dict[str, str] = {
+    "first": FIRST_EMOJI,
+    "prev": LEFT_EMOJI,
+    "next": RIGHT_EMOJI,
+    "last": LAST_EMOJI,
+    "stop": DELETE_EMOJI,
+}
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +89,14 @@ class LinePaginator(Paginator):
             self._current_page.append("")
             self._count += 1
 
+    @staticmethod
+    def strip_custom_id(custom_id: str) -> Optional[str]:
+        """Remove paginator custom id prefix."""
+        if not custom_id.startswith(CUSTOM_ID_PREFIX):
+            return None
+
+        return custom_id[len(CUSTOM_ID_PREFIX) :]
+
     @classmethod
     async def paginate(
         cls,
@@ -121,25 +136,27 @@ class LinePaginator(Paginator):
         ... )
         """
 
-        def event_check(reaction_: Reaction, user_: Member) -> bool:
+        def event_check(inter: disnake.MessageInteraction) -> bool:
             """Make sure that this reaction is what we want to operate on."""
             no_restrictions = (
                 # Pagination is not restricted
                 not restrict_to_user
                 # The reaction was by a whitelisted user
-                or user_.id == restrict_to_user.id
+                or inter.author.id == restrict_to_user.id
             )
+            # check the custom_id is valid
+            name = cls.strip_custom_id(inter.data.custom_id)
 
             return (
                 # Conditions for a successful pagination:
                 all(
                     (
-                        # Reaction is on this message
-                        reaction_.message.id == message.id,
+                        # name is not None
+                        name is not None,
+                        # Interaction is on this message
+                        inter.message.id == message.id,
                         # Reaction is one of the pagination emotes
-                        str(reaction_.emoji) in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
-                        # Reaction was not made by the Bot
-                        user_.id != ctx.bot.user.id,
+                        name in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
                         # There were no restrictions
                         no_restrictions,
                     )
@@ -182,41 +199,44 @@ class LinePaginator(Paginator):
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
             await ctx.send(embed=embed)
             return
+
+        if footer_text:
+            embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
         else:
-            if footer_text:
-                embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
-            else:
-                embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-            log.trace(f"Setting embed footer to '{embed.footer.text}'")
+            embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
+        log.trace(f"Setting embed footer to '{embed.footer.text}'")
 
-            if url:
-                embed.url = url
-                log.trace(f"Setting embed url to '{url}'")
+        if url:
+            embed.url = url
+            log.trace(f"Setting embed url to '{url}'")
 
-            log.debug("Sending first page to channel...")
-            message = await ctx.send(embed=embed)
-
-        log.debug("Adding emoji reactions to message...")
-
-        for emoji in PAGINATION_EMOJI:
+        log.debug("Creating view for message...")
+        view = disnake.ui.View()
+        for id, emoji in PAGINATION_EMOJI.items():
             # Add all the applicable emoji to the message
             log.trace(f"Adding reaction: {repr(emoji)}")
-            await message.add_reaction(emoji)
+            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.gray, custom_id=id, emoji=emoji))
+
+        log.debug("Sending first page to channel...")
+        message = await ctx.send(embed=embed, view=view)
 
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for("reaction_add", timeout=timeout, check=event_check)
-                log.trace(f"Got reaction: {reaction}")
+                inter: disnake.MessageInteraction = await ctx.bot.wait_for(
+                    "message_interaction", timeout=timeout, check=event_check
+                )
+                log.trace(f"Got interaction: {inter}")
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            if str(reaction.emoji) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode
-                log.debug("Got delete reaction")
+            if (
+                PAGINATION_EMOJI.get(inter.data.custom_id) == DELETE_EMOJI
+            ):  # Note: DELETE_EMOJI is a string and not unicode
+                log.debug("Got delete inter")
                 return await message.delete()
 
-            elif reaction.emoji == FIRST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
+            elif PAGINATION_EMOJI.get(inter.data.custom_id) == FIRST_EMOJI:
                 current_page = 0
 
                 log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
@@ -226,10 +246,9 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
+                await inter.response.edit_message(embed=embed)
 
-            elif reaction.emoji == LAST_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
+            elif PAGINATION_EMOJI.get(inter.data.custom_id) == LAST_EMOJI:
                 current_page = len(paginator.pages) - 1
 
                 log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
@@ -239,13 +258,13 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"{footer_text} (Page {current_page + 1}/{len(paginator.pages)})")
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
-                await message.edit(embed=embed)
+                await inter.response.edit_message(embed=embed)
 
-            elif reaction.emoji == LEFT_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
+            elif PAGINATION_EMOJI.get(inter.data.custom_id) == LEFT_EMOJI:
 
                 if current_page <= 0:
                     log.debug("Got previous page reaction, but we're on the first page - ignoring")
+                    await inter.response.defer()
                     continue
 
                 current_page -= 1
@@ -258,13 +277,13 @@ class LinePaginator(Paginator):
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
-                await message.edit(embed=embed)
+                await inter.response.edit_message(embed=embed)
 
-            elif reaction.emoji == RIGHT_EMOJI:
-                await message.remove_reaction(reaction.emoji, user)
+            elif PAGINATION_EMOJI.get(inter.data.custom_id) == RIGHT_EMOJI:
 
                 if current_page >= len(paginator.pages) - 1:
                     log.debug("Got next page reaction, but we're on the last page - ignoring")
+                    await inter.response.defer()
                     continue
 
                 current_page += 1
@@ -277,10 +296,10 @@ class LinePaginator(Paginator):
                 else:
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
 
-                await message.edit(embed=embed)
+                await inter.response.edit_message(embed=embed)
 
         log.debug("Ending pagination and clearing reactions...")
-        await message.clear_reactions()
+        await message.edit(view=None)
 
 
 class ImagePaginator(Paginator):

@@ -3,9 +3,9 @@ import asyncio
 import itertools
 import logging
 from contextlib import suppress
-from typing import List, NamedTuple, Union
+from typing import List, NamedTuple, Optional, Union
 
-from disnake import Colour, Embed, HTTPException, Message, Reaction, User
+import disnake
 from disnake.ext import commands
 from disnake.ext.commands import CheckFailure
 from disnake.ext.commands import Cog as DiscordCog
@@ -19,13 +19,13 @@ from bot.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJ
 
 
 DELETE_EMOJI = Emojis.trashcan
-
-REACTIONS = {
-    FIRST_EMOJI: "first",
-    LEFT_EMOJI: "back",
-    RIGHT_EMOJI: "next",
-    LAST_EMOJI: "end",
-    DELETE_EMOJI: "stop",
+CUSTOM_ID_PREFIX = "paginator_page"
+PAGINATION_EMOJI: dict[str, str] = {
+    "first": FIRST_EMOJI,
+    "back": LEFT_EMOJI,
+    "next": RIGHT_EMOJI,
+    "end": LAST_EMOJI,
+    "stop": DELETE_EMOJI,
 }
 
 
@@ -168,6 +168,14 @@ class HelpSession:
         await asyncio.sleep(seconds)
         await self.stop()
 
+    @staticmethod
+    def strip_custom_id(custom_id: str) -> Optional[str]:
+        """Remove paginator custom id prefix."""
+        if not custom_id.startswith(CUSTOM_ID_PREFIX):
+            return None
+
+        return custom_id[len(CUSTOM_ID_PREFIX) :]
+
     def reset_timeout(self) -> None:
         """Cancels the original timeout task and sets it again from the start."""
         # cancel original if it exists
@@ -178,34 +186,32 @@ class HelpSession:
         # recreate the timeout task
         self._timeout_task = self._bot.loop.create_task(self.timeout())
 
-    async def on_reaction_add(self, reaction: Reaction, user: User) -> None:
+    async def on_message_interaction(self, inter: disnake.MessageInteraction) -> None:
         """Event handler for when reactions are added on the help message."""
         # ensure it was the relevant session message
-        if reaction.message.id != self.message.id:
+        if inter.message.id != self.message.id:
+            return
+        name = self.strip_custom_id(inter.data.custom_id)
+        if name is None or name not in PAGINATION_EMOJI:
             return
 
         # ensure it was the session author who reacted
-        if user.id != self.author.id:
-            return
-
-        emoji = str(reaction.emoji)
-
-        # check if valid action
-        if emoji not in REACTIONS:
+        if inter.author.id != self.author.id:
+            await inter.response.defer()
             return
 
         self.reset_timeout()
 
         # Run relevant action method
-        action = getattr(self, f"do_{REACTIONS[emoji]}", None)
-        if action:
-            await action()
+        action = getattr(self, f"do_{name}", None)
+        if not action:
+            return
+        self.inter = inter
+        await action()
+        if not inter.response.is_done():
+            await inter.response.defer()
 
-        # remove the added reaction to prep for re-use
-        with suppress(HTTPException):
-            await self.message.remove_reaction(reaction, user)
-
-    async def on_message_delete(self, message: Message) -> None:
+    async def on_message_delete(self, message: disnake.Message) -> None:
         """Closes the help session when the help message is deleted."""
         if message.id == self.message.id:
             await self.stop()
@@ -214,22 +220,10 @@ class HelpSession:
         """Sets up the help session pages, events, message and reactions."""
         await self.build_pages()
 
-        self._bot.add_listener(self.on_reaction_add)
+        self._bot.add_listener(self.on_message_interaction)
         self._bot.add_listener(self.on_message_delete)
 
         await self.update_page()
-        self.add_reactions()
-
-    def add_reactions(self) -> None:
-        """Adds the relevant reactions to the help message based on if pagination is required."""
-        # if paginating
-        if len(self._pages) > 1:
-            for reaction in REACTIONS:
-                self._bot.loop.create_task(self.message.add_reaction(reaction))
-
-        # if single-page
-        else:
-            self._bot.loop.create_task(self.message.add_reaction(DELETE_EMOJI))
 
     def _category_key(self, cmd: Command) -> str:
         """
@@ -406,9 +400,9 @@ class HelpSession:
         short_doc = command.short_doc or "No details provided"
         return [f"{info}\n*{short_doc}*"]
 
-    def embed_page(self, page_number: int = 0) -> Embed:
-        """Returns an Embed with the requested page formatted within."""
-        embed = Embed()
+    def embed_page(self, page_number: int = 0) -> disnake.Embed:
+        """Returns an disnake.Embed with the requested page formatted within."""
+        embed = disnake.Embed()
 
         if isinstance(self.query, (commands.Command, Cog)) and page_number > 0:
             title = f'Command Help | "{self.query.name}"'
@@ -430,9 +424,16 @@ class HelpSession:
         embed_page = self.embed_page(page_number)
 
         if not self.message:
-            self.message = await self.destination.send(embed=embed_page)
+            # build view and send it
+            view = disnake.ui.View()
+            for id, emoji in PAGINATION_EMOJI.items():
+                view.add_item(
+                    disnake.ui.Button(style=disnake.ButtonStyle.gray, custom_id=CUSTOM_ID_PREFIX + id, emoji=emoji)
+                )
+            self.message = await self.destination.send(embed=embed_page, view=view)
         else:
-            await self.message.edit(embed=embed_page)
+            await self.inter.response.edit_message(embed=embed_page)
+            del self.inter
 
     @classmethod
     async def start(cls, ctx: Context, *command, **options) -> "HelpSession":
@@ -456,11 +457,11 @@ class HelpSession:
 
     async def stop(self) -> None:
         """Stops the help session, removes event listeners and attempts to delete the help message."""
-        self._bot.remove_listener(self.on_reaction_add)
+        self._bot.remove_listener(self.on_message_interaction)
         self._bot.remove_listener(self.on_message_delete)
 
         # ignore if permission issue, or the message doesn't exist
-        with suppress(HTTPException, AttributeError):
+        with suppress(disnake.HTTPException, AttributeError):
             if self._cleanup:
                 await self.message.delete()
             else:
@@ -502,7 +503,7 @@ class HelpSession:
 
 
 class Help(DiscordCog):
-    """Custom Embed Pagination Help feature."""
+    """Custom disnake.Embed Pagination Help feature."""
 
     @commands.command("help")
     async def new_help(self, ctx: Context, *commands) -> None:
@@ -510,8 +511,8 @@ class Help(DiscordCog):
         try:
             await HelpSession.start(ctx, *commands)
         except HelpQueryNotFound as error:
-            embed = Embed()
-            embed.colour = Colour.red()
+            embed = disnake.Embed()
+            embed.colour = disnake.Colour.red()
             embed.title = str(error)
 
             if error.possible_matches:
