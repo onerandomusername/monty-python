@@ -10,7 +10,7 @@ from disnake.ext import commands
 from bot.bot import Bot
 from bot.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, RedirectOutput
 from bot.utils.decorators import InChannelCheckFailure, InMonthCheckFailure
-from bot.utils.exceptions import APIError, UserNotPlayingError
+from bot.utils.exceptions import APIError
 
 
 log = logging.getLogger(__name__)
@@ -112,10 +112,6 @@ class CommandErrorHandler(commands.Cog):
 
         if isinstance(error, commands.CheckFailure):
             await ctx.send(embed=self.error_embed("You are not authorized to use this command.", NEGATIVE_REPLIES))
-            return
-
-        if isinstance(error, UserNotPlayingError):
-            await ctx.send("Game not found.")
             return
 
         if isinstance(error, APIError):
