@@ -115,6 +115,16 @@ class Icons:
     )
 
 
+class URLs:
+    paste_service = environ.get("PASTE_SERVICE")
+    snekbox_eval_api = environ.get("SNEKBOX_EVAL_URL")
+    snekbox_auth = environ.get("SNEKBOX_AUTH")
+
+
+class Paste:
+    alias_url: bool = environ.get("PASTE_ALIAS_URL", False)
+
+
 class Tokens(NamedTuple):
     github = environ.get("GITHUB_TOKEN")
 
