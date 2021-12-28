@@ -55,11 +55,11 @@ class DocDict(TypedDict):
 
 
 PACKAGES: list[DocDict] = [
-    {
-        "package": "python",
-        "base_url": "https://docs.python.org/3.10/",
-        "inventory_url": "https://docs.python.org/3.10/objects.inv",
-    },
+    # {
+    #     "package": "python",
+    #     "base_url": "https://docs.python.org/3.10/",
+    #     "inventory_url": "https://docs.python.org/3.10/objects.inv",
+    # },
     {
         "package": "disnake",
         "base_url": "https://docs.disnake.dev/en/latest/",
@@ -70,37 +70,43 @@ PACKAGES: list[DocDict] = [
         "base_url": "https://nextcord.readthedocs.io/en/latest/",
         "inventory_url": "https://nextcord.readthedocs.io/en/latest/objects.inv",
     },
-    {
-        "package": "aiohttp",
-        "base_url": "https://docs.aiohttp.org/en/stable/",
-        "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
-    },
-    {
-        "package": "arrow",
-        "base_url": "https://arrow.readthedocs.io/en/latest/",
-        "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "dislash",
-        "base_url": "https://dislashpy.readthedocs.io/en/latest/",
-        "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "rich",
-        "base_url": "https://rich.readthedocs.io/en/latest/",
-        "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "click",
-        "base_url": "https://click.palletsprojects.com/en/8.0.x/",
-        "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
-    },
-    {
-        "package": "pytest",
-        "base_url": "https://docs.pytest.org/en/6.2.x/",
-        "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
-    },
+    # {
+    #     "package": "aiohttp",
+    #     "base_url": "https://docs.aiohttp.org/en/stable/",
+    #     "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
+    # },
+    # {
+    #     "package": "arrow",
+    #     "base_url": "https://arrow.readthedocs.io/en/latest/",
+    #     "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
+    # },
+    # {
+    #     "package": "dislash",
+    #     "base_url": "https://dislashpy.readthedocs.io/en/latest/",
+    #     "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
+    # },
+    # {
+    #     "package": "rich",
+    #     "base_url": "https://rich.readthedocs.io/en/latest/",
+    #     "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
+    # },
+    # {
+    #     "package": "click",
+    #     "base_url": "https://click.palletsprojects.com/en/8.0.x/",
+    #     "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
+    # },
+    # {
+    #     "package": "pytest",
+    #     "base_url": "https://docs.pytest.org/en/6.2.x/",
+    #     "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
+    # },
 ]
+
+BLACKLIST: dict[int, set[str]] = {}
+BLACKLIST_MAPPING: dict[int, list[str]] = {
+    constants.Guilds.disnake: ["nextcord"],
+    constants.Guilds.nextcord: ["disnake"],
+}
 
 
 class DocItem(NamedTuple):
@@ -190,7 +196,13 @@ class DocCog(commands.Cog):
         # await self.bot.wait_until_guild_available()
         await self.refresh_inventories()
 
-    def update_single(self, package_name: str, base_url: str, inventory: InventoryDict) -> None:
+    def update_single(
+        self,
+        package_name: str,
+        base_url: str,
+        inventory: InventoryDict,
+        blacklist_guilds: list[int] = None,
+    ) -> None:
         """
         Build the inventory for a single package.
 
@@ -223,6 +235,12 @@ class DocCog(commands.Cog):
                     symbol_id,
                 )
                 self.doc_symbols[symbol_name] = doc_item
+                if blacklist_guilds:
+                    for guild_id in blacklist_guilds:
+                        if BLACKLIST.get(guild_id) is None:
+                            BLACKLIST[guild_id] = set()
+                        BLACKLIST[guild_id].add(symbol_name)
+
                 self.item_fetcher.add_item(doc_item)
 
         log.trace(f"Fetched inventory for {package_name}.")
@@ -261,7 +279,16 @@ class DocCog(commands.Cog):
         else:
             if not base_url:
                 base_url = self.base_url_from_inventory_url(inventory_url)
-            self.update_single(api_package_name, base_url, package)
+            # determine blacklist
+            blacklist_guilds = []
+            for g, packs in BLACKLIST_MAPPING.items():
+                if api_package_name in packs:
+                    blacklist_guilds.append(g)
+
+            if blacklist_guilds:
+                print(blacklist_guilds)
+
+            self.update_single(api_package_name, base_url, package, blacklist_guilds)
 
     def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
         """
@@ -478,6 +505,8 @@ class DocCog(commands.Cog):
 
         compare_len = len(query.rstrip("."))
         completion = set()
+
+        blacklist = BLACKLIST.get(inter.guild_id)
         if not query:
             return self._get_default_completion(inter, inter.guild)
 
@@ -487,6 +516,10 @@ class DocCog(commands.Cog):
 
             # only keep items that aren't instantly delimited
             if item[compare_len:].count(".") >= 2 + _levels:
+                continue
+
+            # apply blacklist
+            if blacklist and item in blacklist:
                 continue
 
             completion.add(item)
