@@ -102,6 +102,7 @@ class Emojis:
 class Guilds:
     disnake = 808030843078836254
     modmail = 798235512208490526
+    nextcord = 881118111967883295
     cat_dev_group = 808854246119178250
     dexp = 798235585130266654
 

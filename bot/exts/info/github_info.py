@@ -45,6 +45,7 @@ GUILD_WHITELIST = {
     constants.Guilds.dexp,
     constants.Guilds.cat_dev_group,
     constants.Guilds.disnake,
+    constants.Guilds.nextcord,
 }
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
@@ -68,6 +69,8 @@ def get_default_user(guild_id: int) -> typing.Optional[str]:
         return "bast0006"
     elif guild_id == constants.Guilds.disnake:
         return "DisnakeDev"
+    elif guild_id == constants.Guilds.nextcord:
+        return "nextcord"
     else:
         return None
 
@@ -78,6 +81,7 @@ ORGS_REPOS: dict[str, list[str]] = dict.fromkeys(
         "DisnakeDev",
         "bast0006",
         "cat-dev-group",
+        "nextcord",
     ]
 )
 
@@ -145,7 +149,7 @@ class GithubInfo(commands.Cog):
         self.repos = ORGS_REPOS
         self.repo_refresh.start()
 
-    @tasks.loop(hours=4)
+    @tasks.loop(hours=6)
     async def repo_refresh(self) -> None:
         """Fetch and populate the repos on load."""
         for user in self.repos:
@@ -185,6 +189,8 @@ class GithubInfo(commands.Cog):
             return "modmail"
         elif guild.id == constants.Guilds.disnake:
             return "disnake"
+        elif guild.id == constants.Guilds.nextcord:
+            return "nextcord"
         else:
             return None
 
@@ -539,7 +545,7 @@ class GithubInfo(commands.Cog):
 
             log.trace(f"Found {issues = }")
             # Remove duplicates
-            issues = set(issues)
+            issues = dict.fromkeys(issues, None).keys()
 
             if len(issues) > MAXIMUM_ISSUES:
                 embed = disnake.Embed(
@@ -563,6 +569,7 @@ class GithubInfo(commands.Cog):
             return
 
         resp = self.format_embed(links, default_org)
+        log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
         await message.channel.send(embed=resp, view=get_view(message))
 
     @commands.slash_command(guild_ids=GITHUB_GUILDS)

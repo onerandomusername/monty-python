@@ -66,6 +66,11 @@ PACKAGES: list[DocDict] = [
         "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
     },
     {
+        "package": "nextcord",
+        "base_url": "https://nextcord.readthedocs.io/en/latest/",
+        "inventory_url": "https://nextcord.readthedocs.io/en/latest/objects.inv",
+    },
+    {
         "package": "aiohttp",
         "base_url": "https://docs.aiohttp.org/en/stable/",
         "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
@@ -149,8 +154,11 @@ class DocCog(commands.Cog):
         inter: disnake.ApplicationCommandInteraction,
         guild: disnake.Guild = None,
     ) -> list[str]:
-        if guild and guild.id == constants.Guilds.disnake:
-            return ["disnake", "disnake.ext.commands", "disnake.ext.tasks"]
+        if guild:
+            if guild.id == constants.Guilds.disnake:
+                return ["disnake", "disnake.ext.commands", "disnake.ext.tasks"]
+            elif guild.id == constants.Guilds.nextcord:
+                return ["nextcord", "nextcord.ext.commands", "nextcord.ext.tasks"]
 
         return [
             "__future__",
