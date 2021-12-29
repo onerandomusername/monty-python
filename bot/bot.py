@@ -126,7 +126,7 @@ class Bot(commands.Bot):
             self.all_commands.pop(alias, None)
 
 
-_intents = disnake.Intents.default()  # Default is all intents except for privileged ones (Members, Presences, ...)
+_intents = disnake.Intents.all()  # Default is all intents except for privileged ones (Members, Presences, ...)
 _intents.bans = False
 _intents.integrations = False
 _intents.invites = False
