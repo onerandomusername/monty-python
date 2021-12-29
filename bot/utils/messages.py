@@ -131,3 +131,8 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
     else:
         return username  # Empty string or None
+
+
+def format_user(user: disnake.abc.User) -> str:
+    """Return a string for `user` which has their mention and ID."""
+    return f"{user.mention} (`{user.id}`)"

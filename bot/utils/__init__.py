@@ -8,6 +8,15 @@ from disnake.ext.commands import BadArgument, Context
 
 from bot.utils.pagination import LinePaginator
 
+from .helpers import pad_base64
+
+
+__all__ = [
+    "disambiguate",
+    "replace_many",
+    "pad_base64",
+]
+
 
 async def disambiguate(
     ctx: Context,
