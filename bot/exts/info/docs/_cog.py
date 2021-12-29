@@ -55,11 +55,11 @@ class DocDict(TypedDict):
 
 
 PACKAGES: list[DocDict] = [
-    # {
-    #     "package": "python",
-    #     "base_url": "https://docs.python.org/3.10/",
-    #     "inventory_url": "https://docs.python.org/3.10/objects.inv",
-    # },
+    {
+        "package": "python",
+        "base_url": "https://docs.python.org/3.10/",
+        "inventory_url": "https://docs.python.org/3.10/objects.inv",
+    },
     {
         "package": "disnake",
         "base_url": "https://docs.disnake.dev/en/latest/",
@@ -70,36 +70,36 @@ PACKAGES: list[DocDict] = [
         "base_url": "https://nextcord.readthedocs.io/en/latest/",
         "inventory_url": "https://nextcord.readthedocs.io/en/latest/objects.inv",
     },
-    # {
-    #     "package": "aiohttp",
-    #     "base_url": "https://docs.aiohttp.org/en/stable/",
-    #     "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
-    # },
-    # {
-    #     "package": "arrow",
-    #     "base_url": "https://arrow.readthedocs.io/en/latest/",
-    #     "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
-    # },
-    # {
-    #     "package": "dislash",
-    #     "base_url": "https://dislashpy.readthedocs.io/en/latest/",
-    #     "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
-    # },
-    # {
-    #     "package": "rich",
-    #     "base_url": "https://rich.readthedocs.io/en/latest/",
-    #     "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
-    # },
-    # {
-    #     "package": "click",
-    #     "base_url": "https://click.palletsprojects.com/en/8.0.x/",
-    #     "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
-    # },
-    # {
-    #     "package": "pytest",
-    #     "base_url": "https://docs.pytest.org/en/6.2.x/",
-    #     "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
-    # },
+    {
+        "package": "aiohttp",
+        "base_url": "https://docs.aiohttp.org/en/stable/",
+        "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
+    },
+    {
+        "package": "arrow",
+        "base_url": "https://arrow.readthedocs.io/en/latest/",
+        "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "dislash",
+        "base_url": "https://dislashpy.readthedocs.io/en/latest/",
+        "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "rich",
+        "base_url": "https://rich.readthedocs.io/en/latest/",
+        "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "click",
+        "base_url": "https://click.palletsprojects.com/en/8.0.x/",
+        "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
+    },
+    {
+        "package": "pytest",
+        "base_url": "https://docs.pytest.org/en/6.2.x/",
+        "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
+    },
 ]
 
 BLACKLIST: dict[int, set[str]] = {}
@@ -445,7 +445,7 @@ class DocCog(commands.Cog):
             embed.set_footer(text=footer_text)
             return embed
 
-    @commands.group(name="docs", aliases=("doc",), invoke_without_command=True)
+    @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
         await self.docs_get_command(ctx, search=search)
