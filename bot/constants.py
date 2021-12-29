@@ -31,10 +31,20 @@ class Client(NamedTuple):
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
 
 
+DEBUG_MODE = Client.debug
+
+
 class CloudAHK:
     url = environ.get("CLOUDAHK_URL", None)
     user = environ.get("CLOUDAHK_USER", None)
     password = environ.get("CLOUDAHK_PASS", None)
+
+
+class CodeBlock:
+    channel_whitelist: list[int] = []
+    cooldown_channels: list[int] = []
+    cooldown_seconds: int = 300
+    minimum_lines: int = 4
 
 
 class Colours:
