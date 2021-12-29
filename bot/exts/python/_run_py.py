@@ -15,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import URLs
 from bot.utils import send_to_paste_service
 from bot.utils.delete import get_view
+from bot.utils.extensions import invoke_help_command
 
 
 log = logging.getLogger(__name__)
@@ -283,7 +284,7 @@ class Snekbox(Cog):
             return
 
         if not code:  # None or empty string
-            await ctx.send_help(ctx.command)
+            await invoke_help_command(ctx)
             return
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")

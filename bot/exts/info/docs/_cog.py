@@ -61,14 +61,14 @@ PACKAGES: list[DocDict] = [
         "inventory_url": "https://docs.python.org/3.10/objects.inv",
     },
     {
-        "package": "disnake",
-        "base_url": "https://docs.disnake.dev/en/latest/",
-        "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
-    },
-    {
         "package": "nextcord",
         "base_url": "https://nextcord.readthedocs.io/en/latest/",
         "inventory_url": "https://nextcord.readthedocs.io/en/latest/objects.inv",
+    },
+    {
+        "package": "disnake",
+        "base_url": "https://docs.disnake.dev/en/latest/",
+        "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
     },
     {
         "package": "aiohttp",
