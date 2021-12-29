@@ -13,9 +13,11 @@ import asyncio
 import inspect
 import io
 import logging
+import os
 import sys
 import textwrap
 import traceback
+import typing
 import typing as t
 from contextlib import redirect_stdout
 
@@ -24,12 +26,26 @@ from pprint import pprint
 from types import FunctionType
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
+import arrow
 import disnake
 from disnake.ext import commands
 from disnake.ext.commands import Context
 
 
 DISCORD_UPLOAD_LIMIT = 800000
+
+globals_to_import = {
+    "disnake": disnake,
+    "typing": typing,
+    "commands": commands,
+    "pprint": pprint,
+    "textwrap": textwrap,
+    "os": os,
+    "sys": sys,
+    "io": io,
+    "asyncio": asyncio,
+    "arrow": arrow,
+}
 
 
 def create_file_obj(
@@ -72,6 +88,10 @@ class Admin(commands.Cog):
 
     def cleanup_code(self, content: str) -> str:
         """Automatically removes code blocks from the code."""
+        if snekbox := self.bot.get_cog("Snekbox"):
+            return snekbox.prepare_input(content)
+        # fall back to legacy if Snekbox cog does not exist
+
         # remove ```py\n```
         if content.startswith("```") and content.endswith("```"):
             content = "\n".join(content.split("\n")[1:-1])
@@ -127,7 +147,7 @@ class Admin(commands.Cog):
         error_file: disnake.File = None
         total_len = 0
         fmt_resp: str = "```py\n{0}```"
-        fmt_err: str = "\nAn error occured. Unforunate.```py\n{0}```"
+        fmt_err: str = "\nAn error occured. Unfortunate.```py\n{0}```"
         out = ""
         files = []
 
@@ -180,8 +200,7 @@ class Admin(commands.Cog):
             "_": self._last_result,
         }
 
-        env.update(globals())
-        log.trace("updated globals")
+        env.update(globals_to_import)
         code = self.cleanup_code(code)
         log.trace(f"body: {code}")
         stdout = io.StringIO()
