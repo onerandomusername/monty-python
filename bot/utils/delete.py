@@ -40,7 +40,7 @@ def get_view(
 ) -> DeleteView:
     """Get a view that will work based on the content."""
     if isinstance(ctx, disnake.ApplicationCommandInteraction):
-        view = DeleteView()
+        view = DeleteView(user=ctx.author, timeout=300)
     else:
-        view = DeleteView(user=ctx.author, timeout=60)
+        view = DeleteView(user=ctx.author, timeout=300)
     return view

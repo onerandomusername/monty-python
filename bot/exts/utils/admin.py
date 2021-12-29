@@ -31,6 +31,8 @@ import disnake
 from disnake.ext import commands
 from disnake.ext.commands import Context
 
+from bot.utils.delete import get_view
+
 
 DISCORD_UPLOAD_LIMIT = 800000
 
@@ -140,6 +142,7 @@ class Admin(commands.Cog):
                 "No output.",
                 allowed_mentions=disnake.AllowedMentions(replied_user=False),
                 reference=ctx.message.to_reference(fail_if_not_exists=False),
+                view=get_view(ctx),
             )
         resp_file: disnake.File = None
         # for now, we're not gonna handle exceptions as files
@@ -182,6 +185,7 @@ class Admin(commands.Cog):
             files=files,
             allowed_mentions=disnake.AllowedMentions(replied_user=False),
             reference=ctx.message.to_reference(fail_if_not_exists=False),
+            view=get_view(ctx),
         )
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])

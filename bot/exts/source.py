@@ -9,6 +9,7 @@ from disnake.ext import commands
 from bot.bot import Bot
 from bot.constants import Client, Source
 from bot.utils.converters import SourceConverter, SourceType
+from bot.utils.delete import get_view
 
 
 class BotSource(commands.Cog):
@@ -26,11 +27,11 @@ class BotSource(commands.Cog):
             embed = Embed(title=f"{Client.name}'s GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
             embed.set_thumbnail(url=Source.github_avatar_url)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed, view=get_view(ctx))
             return
 
         embed = self.build_embed(source_item)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, view=get_view(ctx))
 
     @commands.slash_command(name="source")
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
@@ -48,13 +49,13 @@ class BotSource(commands.Cog):
 
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, commands.Command):
-            callback = inspect.unwrap(source_item.callback)
-            src = callback.__code__
-            filename = src.co_filename
-        elif isinstance(source_item, (commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand)):
+        if isinstance(source_item, (commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand)):
             meth = inspect.unwrap(source_item.callback)
             src = meth.__code__
+            filename = src.co_filename
+        elif isinstance(source_item, commands.Command):
+            callback = inspect.unwrap(source_item.callback)
+            src = callback.__code__
             filename = src.co_filename
         else:
             src = type(source_item)
