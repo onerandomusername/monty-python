@@ -8,10 +8,11 @@ from typing import Tuple
 import disnake
 from disnake import Colour, Embed, Object, utils
 from disnake.ext import commands
-from disnake.ext.commands import BadArgument, Cog, Context, command
+from disnake.ext.commands import BadArgument, Cog, Context
 from disnake.utils import DISCORD_EPOCH
 
 from bot.bot import Bot
+from bot.utils.delete import get_view
 from bot.utils.pagination import LinePaginator
 
 
@@ -59,7 +60,7 @@ class CharInfo(Cog):
         embed.description = "\n".join(char_list)
         await ctx.send(embed=embed)
 
-    @command(aliases=("snf", "snfl", "sf"))
+    @commands.command(aliases=("snf", "snfl", "sf"))
     async def snowflake(self, ctx: Context, *snowflakes: Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
@@ -80,6 +81,33 @@ class CharInfo(Cog):
             lines.append(f"**{snowflake.id}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
+
+    @commands.slash_command(name="snowflake")
+    async def slash_snowflake(
+        self,
+        inter: disnake.AppCommandInteraction,
+        snowflake: str,
+    ) -> None:
+        """
+        [BETA] Get creation date of a snowflake.
+
+        Parameters
+        ----------
+        snowflake: The snowflake.
+        """
+        try:
+            snowflake = int(snowflake)
+        except ValueError:
+            await inter.send("`snowflake` must be an integer!", ephemeral=True)
+            return
+        embed = Embed(colour=Colour.blue())
+        embed.set_author(
+            name="Snowflake",
+            icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
+        )
+        created_at = int(((snowflake >> 22) + DISCORD_EPOCH) / 1000)
+        embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
+        await inter.send(embed=embed, view=get_view(inter))
 
     # @command(aliases=("poll",))
     # async def vote(
