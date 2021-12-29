@@ -98,7 +98,6 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         res = channel.guild and channel.guild.id in WHITELISTED_GUILDS
-        print("valid channel:", res)
         return res
 
     async def send_instructions(self, message: disnake.Message, instructions: str) -> None:
@@ -139,9 +138,9 @@ class CodeBlockCog(Cog, name="Code Block"):
         if not msg.guild:
             return
 
-        if not msg.channel.permissions_for(msg.channel.me).send_messages or (
+        if not msg.channel.permissions_for(msg.guild.me).send_messages or (
             isinstance(msg.channel, disnake.Thread)
-            and not msg.channel.permissions_for(msg.channel.me).send_messages_in_threads
+            and not msg.channel.permissions_for(msg.guild.me).send_messages_in_threads
         ):
             return
 
