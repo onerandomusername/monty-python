@@ -6,16 +6,24 @@ ENV PIP_NO_CACHE_DIR=false
 # Create the working directory
 WORKDIR /bot
 
-# copy requirements so they can be installed
-COPY requirements.txt .
-
 # Install project dependencies
+
+# as we have a git dep, install git
+RUN apt update && apt install git -y
+
+RUN pip install -U pip wheel setuptools
+RUN pip install poetry==1.1.12
+
+# export requirements after copying req files
+COPY pyproject.toml poetry.lock ./
+RUN poetry export --without-hashes > requirements.txt
+RUN pip uninstall poetry -y
 RUN pip install -r requirements.txt
 
 # Copy the source code in next to last to optimize rebuilding the image
 COPY . .
 
 # install the package using pep 517
-RUN pip install . --no-deps --use-feature=in-tree-build
+RUN pip install . --no-deps
 
 CMD ["python", "-m", "bot"]
