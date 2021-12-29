@@ -101,7 +101,7 @@ async def wait_for_deletion(
     try:
         while True:
             try:
-                inter: disnake.MessageInteraction = await bot.wait_for("interaction", timeout=timeout)
+                inter: disnake.MessageInteraction = await bot.wait_for("button_interaction", timeout=timeout)
             except asyncio.TimeoutError:
                 button.disabled = True
                 await message.edit(view=view)
