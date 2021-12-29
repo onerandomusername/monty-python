@@ -24,6 +24,7 @@ sphobjinv = "^2.1"
 beautifulsoup4 = "^4.10.0"
 markdownify = "==0.6.1"
 lxml = "^4.6.4"
+Pillow = "^8.4.0"
 
 
 [tool.poetry.dev-dependencies]
