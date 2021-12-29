@@ -133,8 +133,9 @@ class PythonEnhancementProposals(commands.Cog):
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed
         pep_embed = Embed(
-            title=f"**PEP {pep_nr} - {pep_header['Title']}**",
-            description=f"[Link]({BASE_PEP_URL}{pep_nr:04})",
+            title=pep_header["Title"],
+            url=f"{BASE_PEP_URL}{pep_nr:04}",
+            description=f"PEP {pep_nr}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
