@@ -38,6 +38,11 @@ BITBUCKET_RE = re.compile(
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
+BLACKLIST = [
+    constants.Guilds.disnake,
+    constants.Guilds.nextcord,
+]
+
 
 class CodeSnippets(Cog):
     """
@@ -227,10 +232,8 @@ class CodeSnippets(Cog):
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
             return
-        if message.guild is None:
-            return
 
-        if message.guild.id == constants.Guilds.disnake:
+        if not message.guild or message.guild.id in BLACKLIST:
             return
 
         message_to_send = await self._parse_snippets(message.content)
