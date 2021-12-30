@@ -10,6 +10,7 @@ from disnake import DiscordException
 from disnake.ext import commands
 
 from bot import constants
+from bot.config import Database
 from bot.utils.delete import DeleteView
 
 
@@ -47,6 +48,8 @@ class Bot(commands.Bot):
         super().__init__(**kwargs)
         self.redis_session = redis_session
         self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
+
+        self.db = Database()
 
     @property
     def member(self) -> Optional[disnake.Member]:
@@ -152,3 +155,5 @@ bot = Bot(
     allowed_mentions=disnake.AllowedMentions(everyone=False),
     intents=_intents,
 )
+
+loop.run_until_complete(bot.db.async_init())

@@ -16,7 +16,7 @@ from disnake.ext import commands
 from bot import constants
 from bot.bot import Bot
 from bot.constants import RedirectOutput
-from bot.converters import PackageName
+from bot.converters import Inventory, PackageName, ValidURL
 from bot.log import get_logger
 from bot.utils import scheduling
 from bot.utils.delete import get_view
@@ -45,6 +45,8 @@ FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 COMMAND_LOCK_SINGLETON = "inventory refresh"
 
+CONFIG_DOC_PREFIX = "global.documentation.inventories"
+
 
 class DocDict(TypedDict):
     """Documentation source attributes."""
@@ -53,54 +55,6 @@ class DocDict(TypedDict):
     base_url: str
     inventory_url: str
 
-
-PACKAGES: list[DocDict] = [
-    {
-        "package": "python",
-        "base_url": "https://docs.python.org/3.10/",
-        "inventory_url": "https://docs.python.org/3.10/objects.inv",
-    },
-    {
-        "package": "nextcord",
-        "base_url": "https://nextcord.readthedocs.io/en/latest/",
-        "inventory_url": "https://nextcord.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "disnake",
-        "base_url": "https://docs.disnake.dev/en/latest/",
-        "inventory_url": "https://docs.disnake.dev/en/latest/objects.inv",
-    },
-    {
-        "package": "aiohttp",
-        "base_url": "https://docs.aiohttp.org/en/stable/",
-        "inventory_url": "https://docs.aiohttp.org/en/stable/objects.inv",
-    },
-    {
-        "package": "arrow",
-        "base_url": "https://arrow.readthedocs.io/en/latest/",
-        "inventory_url": "https://arrow.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "dislash",
-        "base_url": "https://dislashpy.readthedocs.io/en/latest/",
-        "inventory_url": "https://dislashpy.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "rich",
-        "base_url": "https://rich.readthedocs.io/en/latest/",
-        "inventory_url": "https://rich.readthedocs.io/en/latest/objects.inv",
-    },
-    {
-        "package": "click",
-        "base_url": "https://click.palletsprojects.com/en/8.0.x/",
-        "inventory_url": "https://click.palletsprojects.com/en/8.0.x/objects.inv",
-    },
-    {
-        "package": "pytest",
-        "base_url": "https://docs.pytest.org/en/6.2.x/",
-        "inventory_url": "https://docs.pytest.org/en/6.2.x/objects.inv",
-    },
-]
 
 BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
@@ -353,9 +307,24 @@ class DocCog(commands.Cog):
         self.renamed_symbols.clear()
         await self.item_fetcher.clear()
 
+        async def get_packages() -> list[dict[str, str]]:
+            _, res = await self.bot.db.list_keys(CONFIG_DOC_PREFIX + ".")
+            res = [x["name"] for x in res["result"]["keys"]]
+            _, kv = await self.bot.db.fetch_keys(*res)
+            kv: dict[str, str] = kv["config"]
+            packages = {}
+            for pack, value in kv.items():
+                pack = pack[len(CONFIG_DOC_PREFIX) + 1 :]
+                if len(spl := pack.split(".", 1)) > 1:
+                    packages.setdefault(spl[0], {})[spl[1]] = value
+                else:
+                    packages.setdefault(spl[0], {})["package"] = spl[0]
+
+            return packages.values()
+
         coros = [
             self.update_or_reschedule_inventory(package["package"], package["base_url"], package["inventory_url"])
-            for package in PACKAGES
+            for package in await get_packages()
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
@@ -581,6 +550,66 @@ class DocCog(commands.Cog):
     def base_url_from_inventory_url(inventory_url: str) -> str:
         """Get a base url from the url to an objects inventory by removing the last path segment."""
         return inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
+
+    @docs_group.command(name="setdoc", aliases=("s",))
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
+    @commands.is_owner()
+    async def set_command(
+        self,
+        ctx: commands.Context,
+        package_name: PackageName,
+        inventory: Inventory,
+        base_url: ValidURL = "",
+    ) -> None:
+        """
+        Adds a new documentation metadata object to the site's database.
+
+        The database will update the object, should an existing item with the specified `package_name` already exist.
+        If the base url is not specified, a default created by removing the last segment of the inventory url is used.
+
+        Example:
+            !docs setdoc \
+                    python \
+                    https://docs.python.org/3/objects.inv
+        """
+        if base_url and not base_url.endswith("/"):
+            raise commands.BadArgument("The base url must end with a slash.")
+        inventory_url, inventory_dict = inventory
+        prefix = f"{CONFIG_DOC_PREFIX}.{package_name}"
+        body = {
+            prefix: package_name,
+            f"{prefix}.base_url": str(base_url),
+            f"{prefix}.inventory_url": str(inventory_url),
+        }
+        await self.bot.db.put_keys(**body)
+
+        log.info(
+            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
+            + "\n".join(f"{key}: {value}" for key, value in body.items())
+        )
+
+        if not base_url:
+            base_url = self.base_url_from_inventory_url(inventory_url)
+        self.update_single(package_name, base_url, inventory_dict)
+        await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
+
+    @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
+    @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
+    @commands.is_owner()
+    async def delete_command(self, ctx: commands.Context, package_name: PackageName) -> None:
+        """
+        Removes the specified package from the database.
+
+        Example:
+            !docs deletedoc aiohttp
+        """
+        status, keys = await self.bot.db.list_keys(f"{CONFIG_DOC_PREFIX}.{package_name}")
+        await self.bot.db.delete_keys(*{x["name"] for x in keys["result"]["keys"]})
+
+        async with ctx.typing():
+            await self.refresh_inventories()
+            await doc_cache.delete(package_name)
+        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.is_owner()

@@ -2,6 +2,8 @@ import logging
 from os import environ
 from typing import NamedTuple
 
+import yarl
+
 
 __all__ = (
     "Client",
@@ -32,6 +34,11 @@ class Client(NamedTuple):
 
 
 DEBUG_MODE = Client.debug
+
+
+class Database:
+    auth_token = environ.get("CONFIG_AUTH")
+    url = yarl.URL(environ.get("CONFIG_ROOT"))
 
 
 class CloudAHK:
