@@ -215,7 +215,13 @@ class LinePaginator(Paginator):
         for id, emoji in PAGINATION_EMOJI.items():
             # Add all the applicable emoji to the message
             log.trace(f"Adding reaction: {repr(emoji)}")
-            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.gray, custom_id=id, emoji=emoji))
+            view.add_item(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.gray,
+                    custom_id=CUSTOM_ID_PREFIX + id,
+                    emoji=emoji,
+                )
+            )
 
         log.debug("Sending first page to channel...")
         message = await ctx.send(embed=embed, view=view)
@@ -230,13 +236,13 @@ class LinePaginator(Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            if (
-                PAGINATION_EMOJI.get(inter.data.custom_id) == DELETE_EMOJI
-            ):  # Note: DELETE_EMOJI is a string and not unicode
+            event_name = cls.strip_custom_id(inter.data.custom_id)
+
+            if PAGINATION_EMOJI.get(event_name) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode
                 log.debug("Got delete inter")
                 return await message.delete()
 
-            elif PAGINATION_EMOJI.get(inter.data.custom_id) == FIRST_EMOJI:
+            elif PAGINATION_EMOJI.get(event_name) == FIRST_EMOJI:
                 current_page = 0
 
                 log.debug(f"Got first page reaction - changing to page 1/{len(paginator.pages)}")
@@ -248,7 +254,7 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await inter.response.edit_message(embed=embed)
 
-            elif PAGINATION_EMOJI.get(inter.data.custom_id) == LAST_EMOJI:
+            elif PAGINATION_EMOJI.get(event_name) == LAST_EMOJI:
                 current_page = len(paginator.pages) - 1
 
                 log.debug(f"Got last page reaction - changing to page {current_page + 1}/{len(paginator.pages)}")
@@ -260,7 +266,7 @@ class LinePaginator(Paginator):
                     embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")
                 await inter.response.edit_message(embed=embed)
 
-            elif PAGINATION_EMOJI.get(inter.data.custom_id) == LEFT_EMOJI:
+            elif PAGINATION_EMOJI.get(event_name) == LEFT_EMOJI:
 
                 if current_page <= 0:
                     log.debug("Got previous page reaction, but we're on the first page - ignoring")
@@ -279,7 +285,7 @@ class LinePaginator(Paginator):
 
                 await inter.response.edit_message(embed=embed)
 
-            elif PAGINATION_EMOJI.get(inter.data.custom_id) == RIGHT_EMOJI:
+            elif PAGINATION_EMOJI.get(event_name) == RIGHT_EMOJI:
 
                 if current_page >= len(paginator.pages) - 1:
                     log.debug("Got next page reaction, but we're on the last page - ignoring")
