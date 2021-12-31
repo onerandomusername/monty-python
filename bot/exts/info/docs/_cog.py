@@ -454,7 +454,10 @@ class DocCog(commands.Cog):
                 doc_embed = await self.create_symbol_embed(symbol)
 
             if doc_embed is None:
-                await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
+                if isinstance(inter, disnake.ApplicationCommandInteraction):
+                    await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
+                else:
+                    await inter.send(f"No documentation found for `{search}`.")
 
             else:
                 await inter.send(embed=doc_embed, view=get_view(inter))
