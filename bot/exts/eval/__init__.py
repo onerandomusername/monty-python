@@ -7,6 +7,7 @@ from functools import partial
 from signal import Signals
 from typing import Optional, Tuple
 
+import aiohttp
 from disnake import HTTPException, Message, NotFound, Reaction, User
 from disnake.ext.commands import Cog, Context, command, guild_only
 
@@ -14,6 +15,7 @@ from bot.bot import Bot
 from bot.constants import Guilds, Paste, URLs
 from bot.log import get_logger
 from bot.utils import scheduling
+from bot.utils.exceptions import APIError
 from bot.utils.extensions import invoke_help_command
 from bot.utils.messages import wait_for_deletion
 from bot.utils.services import send_to_paste_service
@@ -62,8 +64,11 @@ class Snekbox(Cog):
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
         data = {"input": code}
-        async with self.bot.http_session.post(url, json=data, raise_for_status=True, headers=HEADERS) as resp:
-            return await resp.json()
+        try:
+            async with self.bot.http_session.post(url, json=data, raise_for_status=True, headers=HEADERS) as resp:
+                return await resp.json()
+        except aiohttp.ClientConnectorError:
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
 
     async def upload_output(self, output: str) -> Optional[str]:
         """Upload the eval output to a paste service and return a URL to it if successful."""
