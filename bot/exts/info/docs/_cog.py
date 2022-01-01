@@ -606,8 +606,19 @@ class DocCog(commands.Cog):
         Example:
             !docs deletedoc aiohttp
         """
-        status, keys = await self.bot.db.list_keys(f"{CONFIG_DOC_PREFIX}.{package_name}")
-        await self.bot.db.delete_keys(*{x["name"] for x in keys["result"]["keys"]})
+        status, resp = await self.bot.db.fetch_keys(f"{CONFIG_DOC_PREFIX}.{package_name}")
+        keys = resp["config"].values()
+
+        if not keys:
+            await ctx.send(":x: No package found with that name.")
+            return
+
+        keys = {
+            f"{CONFIG_DOC_PREFIX}.{package_name}",
+            f"{CONFIG_DOC_PREFIX}.{package_name}.base_url",
+            f"{CONFIG_DOC_PREFIX}.{package_name}.inventory_url",
+        }
+        await self.bot.db.delete_keys(*keys)
 
         async with ctx.typing():
             await self.refresh_inventories()
