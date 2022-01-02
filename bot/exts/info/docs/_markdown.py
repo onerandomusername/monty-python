@@ -1,7 +1,13 @@
+import re
+from typing import Any, Optional
 from urllib.parse import urljoin
 
 from bs4.element import PageElement
-from markdownify import MarkdownConverter
+from markdownify import MarkdownConverter, escape
+
+
+# taken from version 0.6.1 of markdownify
+WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
 
 
 class DocMarkdownConverter(MarkdownConverter):
@@ -10,6 +16,11 @@ class DocMarkdownConverter(MarkdownConverter):
     def __init__(self, *, page_url: str, **options):
         super().__init__(**options)
         self.page_url = page_url
+
+    # overwritten to use our regex from version 0.6.1
+    def process_text(self, text: Optional[str]) -> Any:
+        """Process the text, using our custom regex."""
+        return escape(WHITESPACE_RE.sub(" ", text or ""))
 
     def convert_li(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""

@@ -579,6 +579,10 @@ class DocCog(commands.Cog):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
         prefix = f"{CONFIG_DOC_PREFIX}.{package_name}"
+        _, resp = await self.bot.db.fetch_keys(prefix)
+        if resp["config"].values():
+            await ctx.send(":x: That package is already added!")
+            return
         body = {
             prefix: package_name,
             f"{prefix}.base_url": str(base_url),
