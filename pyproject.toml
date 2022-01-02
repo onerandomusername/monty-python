@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "bot"
+name = "monty"
 version = "1.0.0"
 description = "Helpful bot for python, github, and discord things."
 authors = ["aru <genericusername414@gmail.com>"]
@@ -57,7 +57,7 @@ include = '\.pyi?$'
 
 [tool.taskipy.tasks]
 export = 'poetry export --without-hashes -o requirements.txt'
-start = "python -m bot"
+start = "python -m monty"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
 test-nocov = "pytest -n auto"

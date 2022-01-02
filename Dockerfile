@@ -26,4 +26,4 @@ COPY . .
 # install the package using pep 517
 RUN pip install . --no-deps
 
-CMD ["python", "-m", "bot"]
+CMD ["python", "-m", "monty"]
