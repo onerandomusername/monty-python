@@ -50,7 +50,7 @@ REEVAL_TIMEOUT = 30
 
 HEADERS = {}
 if URLs.snekbox_auth:
-    HEADERS["Authorization"] = URLs.snekbox_auth or ""
+    HEADERS["Authorization"] = URLs.snekbox_auth
 
 
 class Snekbox(Cog):
@@ -235,7 +235,7 @@ class Snekbox(Cog):
                     "message_edit", check=_predicate_eval_message_edit, timeout=REEVAL_TIMEOUT
                 )
                 await ctx.message.add_reaction(REEVAL_EMOJI)
-                await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=10)
+                await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=30)
 
                 code = await self.get_code(new_message)
                 await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)

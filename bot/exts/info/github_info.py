@@ -184,7 +184,7 @@ class GithubInfo(commands.Cog):
     def get_repository(guild: disnake.Guild = None, org: str = None) -> typing.Optional[str]:
         """Get the repository name for the guild."""
         if guild is None:
-            return "monty-bot"
+            return "monty-python"
         elif guild.id == constants.Guilds.modmail:
             return "modmail"
         elif guild.id == constants.Guilds.disnake:

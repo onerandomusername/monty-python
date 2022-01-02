@@ -147,7 +147,7 @@ class Tokens(NamedTuple):
 
 
 class RedisConfig(NamedTuple):
-    host = environ.get("REDISHOST", "redis.default.svc.cluster.local")
+    host = environ.get("REDISHOST", "redis")
     port = environ.get("REDISPORT", 6379)
     password = environ.get("REDISPASSWORD")
     use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
