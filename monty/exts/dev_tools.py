@@ -100,6 +100,14 @@ class DevTools(commands.Cog):
             ephemeral=ephemeral,
         )
 
+    @commands.message_command(name="View raw text")
+    async def view_raw(self, inter: disnake.MessageCommandInteraction) -> None:
+        """View the raw of a message."""
+        escaped = inter.target.content.replace("``", "`\u200b`")
+        if len(escaped) > 2000:
+            escaped = "Uh oh! This message was too long to get the raw."
+        await inter.send(f"```\n{escaped}\n```", ephemeral=True)
+
 
 def setup(bot: Monty) -> None:
     """Add the devtools cog to the bot."""
