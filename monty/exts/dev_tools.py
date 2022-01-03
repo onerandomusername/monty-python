@@ -18,6 +18,8 @@ class DevTools(commands.Cog):
         permissions: str = None,
         guild: str = None,
         include_applications_commands: bool = True,
+        raw_link: bool = False,
+        ephemeral: bool = False,
     ) -> None:
         """
         [BETA] Generate an invite to add a bot to a guild. NOTE: may not work on all bots.
@@ -28,6 +30,8 @@ class DevTools(commands.Cog):
         permissions: Value of permissions to pre-fill with
         guild: ID of the guild to pre-fill the invite.
         include_applications_commands: Whether or not to include the applications.commands scope.
+        raw_link: Instead of a fancy button, I'll give you the raw link.
+        ephemeral: Whether or not to send an ephemeral response.
         """
         if client_id:
             try:
@@ -48,7 +52,6 @@ class DevTools(commands.Cog):
         else:
             permissions = disnake.Permissions(read_messages=True)
 
-        print("guild ", guild)
         if guild is not None:
             try:
                 guild = disnake.Object(guild)
@@ -57,7 +60,6 @@ class DevTools(commands.Cog):
                 return
         else:
             guild = disnake.utils.MISSING
-        print("guild ", guild)
 
         # validated all of the input, now see if client_id exists
         try:
@@ -78,18 +80,24 @@ class DevTools(commands.Cog):
         )
         message = " ".join(
             [
-                "Click below to invite",
+                "Click below to invite" if not raw_link else "Click the following link to invite",
                 "me" if client_id == inter.bot.user.id else user.mention,
                 "to the specified guild!" if guild else "to your guild!",
             ]
         )
+        if raw_link:
+            message += f"\n{url}"
+            components = disnake.utils.MISSING
+        else:
+            components = (
+                disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"),
+            )
 
         await inter.response.send_message(
             message,
-            components=disnake.ui.Button(
-                url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"
-            ),
             allowed_mentions=disnake.AllowedMentions.none(),
+            components=components,
+            ephemeral=ephemeral,
         )
 
 
