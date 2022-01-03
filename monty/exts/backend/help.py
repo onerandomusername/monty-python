@@ -15,8 +15,11 @@ from rapidfuzz import process
 from monty import constants
 from monty.bot import Bot
 from monty.constants import Emojis
+from monty.metadata import ExtMetadata
 from monty.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LinePaginator
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 DELETE_EMOJI = Emojis.trashcan
 CUSTOM_ID_PREFIX = "paginator_page"

@@ -10,9 +10,12 @@ from disnake.ext.commands import Context, group
 from monty import exts
 from monty.bot import Bot
 from monty.constants import Client
+from monty.metadata import ExtMetadata
 from monty.utils.extensions import EXTENSIONS, invoke_help_command, unqualify
 from monty.utils.pagination import LinePaginator
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 log = logging.getLogger(__name__)
 

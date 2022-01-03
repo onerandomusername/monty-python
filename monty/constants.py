@@ -31,6 +31,9 @@ class Client(NamedTuple):
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-bot"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
+    extensions = environ.get("BOT_EXTENSIONS", None) and {
+        ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")
+    }
 
 
 DEBUG_MODE = Client.debug

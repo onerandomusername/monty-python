@@ -12,6 +12,7 @@ from disnake.ext import commands
 from monty import constants
 from monty.config import Database
 from monty.utils.delete import DeleteView
+from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
 log = logging.getLogger(__name__)
@@ -63,6 +64,8 @@ class Monty(commands.Bot):
         """Close sessions when bot is shutting down."""
         await super().close()
 
+        await self.db.close()
+
         if self.http_session:
             await self.http_session.close()
 
@@ -70,6 +73,22 @@ class Monty(commands.Bot):
         """Connect the bot. This serves to add the persistent view. Look at the super to see the full docs."""
         self.add_view(DeleteView())
         return await super().connect(reconnect=reconnect)
+
+    def load_extensions(self) -> None:
+        """Load all extensions as released by walk_extensions()."""
+        if constants.Client.extensions:
+            log.warning("Not loading all extensions as per environment settings.")
+        EXTENSIONS.update(walk_extensions())
+        for ext, metadata in walk_extensions():
+            if not constants.Client.extensions:
+                self.load_extension(ext)
+                continue
+
+            if metadata.core or ext in constants.Client.extensions:
+                self.load_extension(ext)
+                continue
+            log.trace(f"SKIPPING loading {ext} as per environment variables.")
+        log.info("Completed loading extensions.")
 
     def add_cog(self, cog: commands.Cog) -> None:
         """

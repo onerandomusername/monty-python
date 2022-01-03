@@ -7,8 +7,10 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
+from monty.metadata import ExtMetadata
 
 
+EXT_METADATA = ExtMetadata(core=True)
 logger = logging.getLogger(__name__)
 
 

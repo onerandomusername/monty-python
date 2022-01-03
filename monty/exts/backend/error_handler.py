@@ -9,9 +9,12 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, RedirectOutput
+from monty.metadata import ExtMetadata
 from monty.utils.decorators import InChannelCheckFailure, InMonthCheckFailure
 from monty.utils.exceptions import APIError
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 log = logging.getLogger(__name__)
 

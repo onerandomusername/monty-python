@@ -31,9 +31,11 @@ import disnake
 from disnake.ext import commands
 from disnake.ext.commands import Context
 
+from monty.metadata import ExtMetadata
 from monty.utils.delete import get_view
 
 
+EXT_METADATA = ExtMetadata(core=True)
 DISCORD_UPLOAD_LIMIT = 800000
 
 globals_to_import = {
