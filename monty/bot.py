@@ -30,7 +30,7 @@ else:
 __all__ = ("Bot", "bot")
 
 
-class Bot(commands.Bot):
+class Monty(commands.Bot):
     """
     Base bot instance.
 
@@ -129,6 +129,9 @@ class Bot(commands.Bot):
             self.all_commands.pop(alias, None)
 
 
+# temp: for backwards compatibilty
+Bot = Monty
+
 _intents = disnake.Intents.all()  # Default is all intents except for privileged ones (Members, Presences, ...)
 _intents.bans = False
 _intents.integrations = False
@@ -148,7 +151,7 @@ redis_session = async_rediscache.RedisSession(
 loop = asyncio.get_event_loop()
 loop.run_until_complete(redis_session.connect())
 
-bot = Bot(
+bot = Monty(
     redis_session=redis_session,
     command_prefix=constants.Client.prefix,
     activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
