@@ -66,7 +66,7 @@ class DevTools(commands.Cog):
 
         # validated all of the input, now see if client_id exists
         try:
-            user = await inter.bot.fetch_user(client_id)
+            user = inter.bot.get_user(client_id) or await inter.bot.fetch_user(client_id)
         except disnake.NotFound:
             await inter.send("Sorry, that user does not exist.", ephemeral=True)
             return
