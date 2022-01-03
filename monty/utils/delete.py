@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Sequence, Union
 
 import disnake
 import disnake.ext.commands
@@ -12,35 +12,32 @@ VIEW_DELETE_ID = "wait_for_deletion_interaction_trash"
 class DeleteView(disnake.ui.View):
     """This should only be used on responses from interactions."""
 
-    def __init__(self, user: disnake.User = disnake.utils.MISSING, *, timeout: float = None):
-        if user is disnake.utils.MISSING:
-            self.use_application_command = True
-            self.user_id = None
+    def __init__(self, users: Union[disnake.User, int, Sequence[Union[disnake.User, int]]], *, timeout: float = 500):
+        if isinstance(users, Sequence):
+            self.user_ids = {getattr(user, "id", user) for user in users}
         else:
-            self.user_id = user.id
-            self.use_application_command = False
+            self.user_ids = {getattr(users, "id", users)}
         super().__init__(timeout=timeout)
 
     @disnake.ui.button(
-        label="Delete", custom_id=VIEW_DELETE_ID, style=disnake.ButtonStyle.grey, emoji=constants.Emojis.trashcan
+        custom_id=VIEW_DELETE_ID,
+        style=disnake.ButtonStyle.grey,
+        emoji=constants.Emojis.trashcan,
     )
-    async def button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
+    async def delete_button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
         """Delete a message when a button is pressed if the user is okay to delete it."""
-        if self.use_application_command and not inter.message.type == disnake.MessageType.application_command:
-            return
-        check_author = self.user_id or inter.message.interaction.user.id
-        if check_author == inter.author.id:
+        if inter.author.id in self.user_ids:
             await inter.message.delete()
+            self.deleted = True
+            self.stop()
         else:
             await inter.response.send_message("This isn't for you!", ephemeral=True)
 
+    async def on_timeout(self) -> None:
+        """Disable the button on timeout."""
+        self.delete_button.disabled = True
 
-def get_view(
-    ctx: Union[disnake.ApplicationCommandInteraction, disnake.ext.commands.Context, disnake.Message]
-) -> DeleteView:
+
+def get_view(ctx: Union[disnake.Interaction, disnake.ext.commands.Context, disnake.Message]) -> DeleteView:
     """Get a view that will work based on the content."""
-    if isinstance(ctx, disnake.ApplicationCommandInteraction):
-        view = DeleteView(user=ctx.author, timeout=300)
-    else:
-        view = DeleteView(user=ctx.author, timeout=300)
-    return view
+    return DeleteView(users=ctx.author, timeout=300)

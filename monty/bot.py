@@ -11,7 +11,6 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.config import Database
-from monty.utils.delete import DeleteView
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -68,11 +67,6 @@ class Monty(commands.Bot):
 
         if self.http_session:
             await self.http_session.close()
-
-    async def connect(self, *, reconnect: bool = True) -> None:
-        """Connect the bot. This serves to add the persistent view. Look at the super to see the full docs."""
-        self.add_view(DeleteView())
-        return await super().connect(reconnect=reconnect)
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""

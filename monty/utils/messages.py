@@ -1,13 +1,11 @@
-import asyncio
 import re
-from functools import partial
 from typing import Optional, Sequence
 
 import disnake
 
 from monty.bot import bot
-from monty.constants import Emojis
 from monty.log import get_logger
+from monty.utils.delete import DeleteView
 
 
 log = get_logger(__name__)
@@ -77,42 +75,17 @@ async def wait_for_deletion(
     """
     if message.guild is None:
         raise ValueError("Message must be sent on a guild")
-    view = disnake.ui.View(timeout=timeout)
-    button = disnake.ui.Button(
-        label="Delete",
-        emoji=Emojis.trashcan,
-        style=disnake.ButtonStyle.grey,
-        custom_id=DELETE_ID,
-    )
-    view.add_item(button)
+    view = DeleteView(user_ids)
     try:
         await message.edit(view=view)
     except disnake.NotFound:
         log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
         return
 
-    check = partial(
-        interaction_check,
-        message_id=message.id,
-        allowed_component_ids=(DELETE_ID,),
-        allowed_users=user_ids,
-    )
-
-    try:
-        while True:
-            try:
-                inter: disnake.MessageInteraction = await bot.wait_for("button_interaction", timeout=timeout)
-            except asyncio.TimeoutError:
-                button.disabled = True
-                await message.edit(view=view)
-            else:
-                # we must run the check here so we can respond to the interaction
-                if not check(inter):
-                    await inter.response.send_message("You do not have permissions to delete this.", ephemeral=True)
-                    continue
-                await message.delete()
-    except disnake.NotFound:
-        log.trace(f"wait_for_deletion: message {message.id} deleted prematurely.")
+    await view.wait()
+    if getattr(view, "deleted", False):
+        return
+    await message.edit(view=view)
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
