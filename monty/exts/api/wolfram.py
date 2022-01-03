@@ -284,4 +284,7 @@ class Wolfram(Cog):
 
 def setup(bot: Bot) -> None:
     """Load the Wolfram cog."""
+    if not APPID:
+        log.warning("Wolfram cog not loaded because key not set.")
+        return
     bot.add_cog(Wolfram(bot))
