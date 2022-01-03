@@ -98,7 +98,7 @@ class Bookmark(commands.Cog):
     @commands.command(name="bookmark", aliases=("bm", "pin"))
     async def bookmark(
         self,
-        ctx: typing.Union[commands.Context, disnake.ApplicationCommandInteraction],
+        ctx: typing.Union[commands.Context, disnake.Interaction],
         target_message: Optional[WrappedMessageConverter],
         *,
         title: str = "Bookmark",
@@ -150,7 +150,10 @@ class Bookmark(commands.Cog):
 
     @commands.slash_command(name="bm", description="Bookmark a message.")
     async def bookmark_slash(
-        self, inter: disnake.ApplicationCommandInteraction, message: str, title: str = "Bookmark"
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        message: str,
+        title: str = "Bookmark",
     ) -> None:
         """
         Bookmark a message.
@@ -167,6 +170,11 @@ class Bookmark(commands.Cog):
             await inter.send("That message is not valid, or I do not have permissions to read it.", ephemeral=True)
             return
         await self.bookmark(inter, message, title=title)
+
+    @commands.message_command(name="Bookmark")
+    async def message_bookmark(self, inter: disnake.MessageCommandInteraction) -> None:
+        """Bookmark a message with a message command."""
+        await self.bookmark(inter, inter.target)
 
 
 def setup(bot: Bot) -> None:
