@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import dataclasses
 import functools
 import sys
 import textwrap
 from collections import defaultdict
 from types import SimpleNamespace
-from typing import Dict, Literal, NamedTuple, Optional, Tuple, TypedDict, Union
+from typing import Dict, Literal, Optional, Tuple, TypedDict, Union
 
 import aiohttp
 import disnake
@@ -63,7 +64,8 @@ BLACKLIST_MAPPING: dict[int, list[str]] = {
 }
 
 
-class DocItem(NamedTuple):
+@dataclasses.dataclass(unsafe_hash=True)
+class DocItem:
     """Holds inventory symbol information."""
 
     package: str  # Name of the package name the symbol is from
@@ -71,6 +73,7 @@ class DocItem(NamedTuple):
     base_url: str  # Absolute path to to which the relative path resolves, same for all items with the same package
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
+    attributes: list["DocItem"] = dataclasses.field(default_factory=list, hash=False)
 
     @property
     def url(self) -> str:
@@ -195,6 +198,8 @@ class DocCog(commands.Cog):
                             BLACKLIST[guild_id] = set()
                         BLACKLIST[guild_id].add(symbol_name)
 
+                if parent := self.doc_symbols.get(symbol_name.rsplit(".", 1)[0]):
+                    parent.attributes.append(doc_item)
                 self.item_fetcher.add_item(doc_item)
 
         log.trace(f"Fetched inventory for {package_name}.")
