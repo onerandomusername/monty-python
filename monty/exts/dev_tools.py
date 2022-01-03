@@ -49,6 +49,9 @@ class DevTools(commands.Cog):
                 await inter.response.send_message("Permissions must be an integer.", ephemeral=True)
                 return
             permissions = disnake.Permissions(permissions)
+        elif client_id == inter.bot.user.id:
+            # todo: make this a constant
+            permissions = disnake.Permissions(412317248704)
         else:
             permissions = disnake.Permissions(read_messages=True)
 
@@ -89,8 +92,8 @@ class DevTools(commands.Cog):
             message += f"\n{url}"
             components = disnake.utils.MISSING
         else:
-            components = (
-                disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"),
+            components = disnake.ui.Button(
+                url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"
             )
 
         await inter.response.send_message(
