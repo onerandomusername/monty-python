@@ -76,7 +76,8 @@ class InternalLogger(commands.Cog):
                 author=inter.author,
                 channel=inter.channel,
                 content=str({opt.name: opt.value for opt in inter.data.options}).replace("\n", " "),
-            )
+            ),
+            exc_info=error,
         )
 
 
