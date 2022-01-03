@@ -41,11 +41,12 @@ if GITHUB_TOKEN := constants.Tokens.github:
     REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 GUILD_WHITELIST = {
-    constants.Guilds.modmail,
-    constants.Guilds.dexp,
-    constants.Guilds.cat_dev_group,
-    constants.Guilds.disnake,
-    constants.Guilds.nextcord,
+    constants.Guilds.modmail: "discord-modmail",
+    constants.Guilds.dexp: "bast0006",
+    constants.Guilds.cat_dev_group: "cat-dev-group",
+    constants.Guilds.disnake: "DisnakeDev",
+    constants.Guilds.nextcord: "nextcord",
+    constants.Guilds.testing: "onerandomusername",
 }
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
@@ -59,31 +60,8 @@ AUTOMATIC_REGEX = re.compile(
 
 def get_default_user(guild_id: int) -> typing.Optional[str]:
     """Get default user per guild_id."""
-    if guild_id is None:
-        return "onerandomusername"
-    elif guild_id == constants.Guilds.modmail:
-        return "discord-modmail"
-    elif guild_id == constants.Guilds.cat_dev_group:
-        return "cat-dev-group"
-    elif guild_id == constants.Guilds.dexp:
-        return "bast0006"
-    elif guild_id == constants.Guilds.disnake:
-        return "DisnakeDev"
-    elif guild_id == constants.Guilds.nextcord:
-        return "nextcord"
-    else:
-        return None
+    return guild_id and GUILD_WHITELIST.get(guild_id)
 
-
-ORGS_REPOS: dict[str, list[str]] = dict.fromkeys(
-    [
-        "discord-modmail",
-        "DisnakeDev",
-        "bast0006",
-        "cat-dev-group",
-        "nextcord",
-    ]
-)
 
 CODE_BLOCK_RE = re.compile(
     r"^`([^`\n]+)`" r"|```(.+?)```",  # Inline codeblock  # Multiline codeblock
@@ -146,13 +124,17 @@ class GithubInfo(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.repos = ORGS_REPOS
+        self.repos: dict[str, list[str]] = {}
         self.repo_refresh.start()
 
     @tasks.loop(hours=6)
     async def repo_refresh(self) -> None:
         """Fetch and populate the repos on load."""
-        for user in self.repos:
+        await self.bot.wait_until_ready()
+        for guild, user in GUILD_WHITELIST.items():
+            print(guild, user)
+            if not self.bot.get_guild(guild):
+                continue
             url = ORG_REPOS_ENDPOINT.format(org=user)
             resp = await self.fetch_data(url)
             if isinstance(resp, dict) and resp.get("message"):
