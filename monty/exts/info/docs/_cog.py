@@ -87,8 +87,12 @@ class DocItem:
 class DocView(DeleteView):
     """View for documentation objects."""
 
-    def __init__(self, ctx: disnake.Message, bot: Monty, docitem: DocItem, og_embed: disnake.Embed):
-        super().__init__(users=ctx.author, timeout=300)
+    def __init__(
+        self, inter: Union[disnake.Interaction, commands.Context], bot: Monty, docitem: DocItem, og_embed: disnake.Embed
+    ):
+        super().__init__(
+            users=inter.author, initial_inter=inter if isinstance(inter, disnake.Interaction) else None, timeout=300
+        )
         self.bot = bot
         self.attributes = docitem.attributes
         self.docitem = docitem
@@ -98,6 +102,7 @@ class DocView(DeleteView):
             self.children.pop(i)
             return
         self.set_up_attribute_select()
+        self.set_link_button()
 
     def set_up_attribute_select(self) -> None:
         """Set up the attribute select menu."""
@@ -111,6 +116,13 @@ class DocView(DeleteView):
             )
 
         self.attribute_select.placeholder += f" of {self.docitem.group} {self.docitem.symbol_name}"
+
+    def set_link_button(self, url: str = None) -> None:
+        """Set the link button to the provided url, or the default url."""
+        if not hasattr(self, "go_to_doc"):
+            self.go_to_doc = disnake.ui.Button(style=disnake.ButtonStyle.url, url="", label="Open docs")
+            self.add_item(self.go_to_doc)
+        self.go_to_doc.url = url or (self.docitem.url + "#" + self.docitem.symbol_id)
 
     async def doc_check(self, inter: disnake.Interaction) -> bool:
         """
@@ -128,19 +140,20 @@ class DocView(DeleteView):
         """Allow selecting an attribute of the initial view."""
         if not await self.doc_check(inter):
             return
-        new_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0], inter))[0]
-
+        new_embed: disnake.Embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0], inter))[0]
+        self.set_link_button(new_embed.url)
         if inter.response.is_done():
-            await inter.edit_original_message(embed=new_embed)
+            await inter.edit_original_message(embed=new_embed, view=self)
         else:
-            await inter.response.edit_message(embed=new_embed)
+            await inter.response.edit_message(embed=new_embed, view=self)
 
-    @disnake.ui.button(label="Home", custom_id=CUSTOM_ID_PREFIX + "home", row=1)
+    @disnake.ui.button(label="Home", custom_id=CUSTOM_ID_PREFIX + "home", row=1, style=disnake.ButtonStyle.blurple)
     async def return_home(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
         """Reset to the home embed."""
         if not await self.doc_check(inter):
             return
-        await inter.response.edit_message(embed=self.og_embed)
+        self.set_link_button()
+        await inter.response.edit_message(embed=self.og_embed, view=self)
 
     def disable(self) -> None:
         """Disable all attributes in this view."""
