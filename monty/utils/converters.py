@@ -66,11 +66,11 @@ class SourceConverter(commands.Converter):
         if cog:
             return cog
 
-        cmd = ctx.bot.get_command(argument)
+        cmd = ctx.bot.get_slash_command(argument)
         if cmd:
             return cmd
 
-        cmd = ctx.bot.get_slash_command(argument)
+        cmd = ctx.bot.get_command(argument)
         if cmd:
             return cmd
 
