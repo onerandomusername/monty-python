@@ -15,12 +15,12 @@ import disnake
 from disnake.ext import commands
 
 from monty import constants
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import RedirectOutput
 from monty.converters import Inventory, PackageName, ValidURL
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView, get_view
 from monty.utils.lock import SharedEvent, lock
 from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
@@ -63,6 +63,8 @@ BLACKLIST_MAPPING: dict[int, list[str]] = {
     constants.Guilds.nextcord: ["disnake"],
 }
 
+CUSTOM_ID_PREFIX = "docs_"
+
 
 @dataclasses.dataclass(unsafe_hash=True)
 class DocItem:
@@ -81,6 +83,54 @@ class DocItem:
         return self.base_url + self.relative_url_path
 
 
+class DocView(DeleteView):
+    """View for documentation objects."""
+
+    def __init__(self, ctx: disnake.abc.Messageable, bot: Monty, docitem: DocItem, og_embed: disnake.Embed = None):
+        super().__init__(users=ctx.author, timeout=300)
+        self.bot = bot
+        self.attributes = docitem.attributes
+        self.docitem = docitem
+        self.og_embed = og_embed
+        if not self.attributes:
+            i = self.children.index(self.attribute_select)
+            self.children.pop(i)
+            return
+        self.set_up_attribute_select()
+
+    def set_up_attribute_select(self) -> None:
+        """Set up the attribute select menu."""
+        for attr in self.attributes[:20]:
+            self.attribute_select.add_option(
+                label=attr.symbol_id,
+                value=attr.symbol_id,
+                description=attr.symbol_id,
+            )
+        self.attribute_select.placeholder += f" of {self.docitem.symbol_id}"
+
+    @disnake.ui.select(placeholder="Attributes", custom_id=CUSTOM_ID_PREFIX + "attributes", row=0)
+    async def attribute_select(self, select: disnake.ui.Select, inter: disnake.MessageInteraction) -> None:
+        """Allow selecting an attribute of the initial view."""
+        new_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0]))[0]
+        await inter.response.edit_message(embed=new_embed)
+
+    @disnake.ui.button(label="Home", custom_id=CUSTOM_ID_PREFIX + "home", row=1)
+    async def return_home(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
+        """Reset to the home embed."""
+        if not self.og_embed:
+            await inter.response.defer()
+            self.og_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(self.docitem.symbol_id))[0]
+            await inter.edit_original_message(embed=self.og_embed)
+            return
+        await inter.response.edit_message(embed=self.og_embed)
+
+    def disable(self) -> None:
+        """Disable all attributes in this view."""
+        for c in self.children:
+            if hasattr(c, "disabled"):
+                c.disabled = True
+
+
 def defaultdict_factory() -> defaultdict:
     """Factory method for defaultdicts."""
     return defaultdict(defaultdict_factory)
@@ -89,7 +139,7 @@ def defaultdict_factory() -> defaultdict:
 class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         # Contains URLs to documentation home pages.
         # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}
@@ -198,7 +248,7 @@ class DocCog(commands.Cog):
                             BLACKLIST[guild_id] = set()
                         BLACKLIST[guild_id].add(symbol_name)
 
-                if parent := self.doc_symbols.get(symbol_name.rsplit(".", 1)[0]):
+                if (parent := self.doc_symbols.get(symbol_name.rsplit(".", 1)[0])) and parent.package == package_name:
                     parent.attributes.append(doc_item)
                 self.item_fetcher.add_item(doc_item)
 
@@ -384,7 +434,7 @@ class DocCog(commands.Cog):
         self,
         symbol_name: str,
         inter: Optional[disnake.ApplicationCommandInteraction] = None,
-    ) -> Optional[disnake.Embed]:
+    ) -> Optional[tuple[disnake.Embed, DocItem]]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -417,7 +467,7 @@ class DocCog(commands.Cog):
                 description=await self.get_symbol_markdown(doc_item, inter=inter),
             )
             embed.set_footer(text=footer_text)
-            return embed
+            return embed, doc_item
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
@@ -454,18 +504,23 @@ class DocCog(commands.Cog):
         else:
             symbol = search.strip("`")
             if isinstance(inter, disnake.Interaction):
-                doc_embed = await self.create_symbol_embed(symbol, inter)
+                res = await self.create_symbol_embed(symbol, inter)
             else:
-                doc_embed = await self.create_symbol_embed(symbol)
+                res = await self.create_symbol_embed(symbol)
 
-            if doc_embed is None:
-                if isinstance(inter, disnake.ApplicationCommandInteraction):
+            if not res:
+                if isinstance(inter, disnake.Interaction):
                     await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
                 else:
                     await inter.send(f"No documentation found for `{search}`.")
+                return
 
-            else:
-                await inter.send(embed=doc_embed, view=get_view(inter))
+            doc_embed, doc_item = res
+            view = DocView(inter, self.bot, doc_item)
+            await inter.send(embed=doc_embed, view=view)
+            await view.wait()
+            view.disable()
+            await inter.edit_original_message(view=view)
 
     async def _docs_autocomplete(
         self,
