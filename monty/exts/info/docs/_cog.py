@@ -20,8 +20,9 @@ from monty.constants import RedirectOutput
 from monty.converters import Inventory, PackageName, ValidURL
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.delete import DeleteView, get_view
+from monty.utils.delete import DeleteView
 from monty.utils.lock import SharedEvent, lock
+from monty.utils.messages import wait_for_deletion
 from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
 
@@ -648,7 +649,10 @@ class DocCog(commands.Cog):
         embed.description = ""
         for res, url in results.items():
             embed.description += f"[`{res}`]({url})\n"
-        await inter.response.send_message(embed=embed, view=get_view(inter))
+
+        view = DeleteView(inter.author, inter)
+        await inter.response.send_message(embed=embed, view=view)
+        await wait_for_deletion(inter, view=view, end=view)
 
     slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, return_query=True))
 

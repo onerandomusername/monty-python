@@ -10,7 +10,8 @@ from disnake.ext.commands import Cog
 
 from monty import constants
 from monty.bot import Bot
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -250,7 +251,8 @@ class CodeSnippets(Cog):
                 # its fine, since this bot is public and shouldn't require that.
                 pass
 
-            await destination.send(message_to_send, view=get_view(message))
+            view = DeleteView(message.author)
+            await wait_for_deletion(await destination.send(message_to_send, view=view), view=view)
 
 
 def setup(bot: Bot) -> None:

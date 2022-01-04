@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import disnake
 
@@ -64,28 +64,39 @@ def interaction_check(
 
 
 async def wait_for_deletion(
-    message: disnake.Message,
-    user_ids: Sequence[int],
-    timeout: float = 60 * 5,
+    message_or_inter: Union[disnake.Message, disnake.Interaction],
+    user_ids: Sequence[int] = None,
+    *,
+    view: DeleteView = None,
 ) -> None:
     """
     Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
 
     If `timeout` expires then the button is edited to indicate the option to delete has expired.
     """
-    if message.guild is None:
-        raise ValueError("Message must be sent on a guild")
-    view = DeleteView(user_ids)
-    try:
-        await message.edit(view=view)
-    except disnake.NotFound:
-        log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+    if isinstance(message_or_inter, disnake.Message):
+        message = message_or_inter
+
+        if user_ids:
+            if message.guild is None:
+                raise ValueError("Message must be sent on a guild")
+            view = DeleteView(user_ids)
+            try:
+                await message.edit(view=view)
+            except disnake.NotFound:
+                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
+                return
+
+    timed_out = await view.wait()
+    print(timed_out, view.deleted, view.delete_button.disabled, message_or_inter)
+    if view.deleted:
         return
 
-    await view.wait()
-    if getattr(view, "deleted", False):
-        return
-    await message.edit(view=view)
+    view.delete_button.disabled = True
+    if isinstance(message_or_inter, disnake.Interaction):
+        await message_or_inter.edit_original_message(view=view)
+    else:
+        await message.edit(view=view)
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:

@@ -9,7 +9,8 @@ from disnake.ext import commands
 from monty.bot import Bot
 from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 class BotSource(commands.Cog):
@@ -23,15 +24,28 @@ class BotSource(commands.Cog):
         source_item: SourceConverter = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command or cog."""
+
+        async def send_message(embed: disnake.Embed) -> None:
+            if isinstance(ctx, disnake.Interaction):
+                view = DeleteView(ctx.author, ctx)
+                await ctx.send(embed=embed, view=view)
+                await wait_for_deletion(ctx, view=view)
+            else:
+                view = DeleteView(ctx.author)
+                msg = await ctx.send(embed=embed, view=view)
+                print(isinstance(msg, disnake.Message))
+                await wait_for_deletion(msg, view=view)
+            return
+
         if not source_item:
             embed = Embed(title=f"{Client.name}'s GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
             embed.set_thumbnail(url=Source.github_avatar_url)
-            await ctx.send(embed=embed, view=get_view(ctx))
+            await send_message(embed)
             return
 
         embed = self.build_embed(source_item)
-        await ctx.send(embed=embed, view=get_view(ctx))
+        await send_message(embed)
 
     @commands.slash_command(name="source")
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:

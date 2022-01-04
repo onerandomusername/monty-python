@@ -12,7 +12,8 @@ from disnake.ext.commands import BadArgument, Cog, Context
 from disnake.utils import DISCORD_EPOCH
 
 from monty.bot import Bot
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 from monty.utils.pagination import LinePaginator
 
 
@@ -107,7 +108,9 @@ class CharInfo(Cog):
         )
         created_at = int(((snowflake >> 22) + DISCORD_EPOCH) / 1000)
         embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
-        await inter.send(embed=embed, view=get_view(inter))
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=embed, view=view)
+        await wait_for_deletion(inter, view=view)
 
     # @command(aliases=("poll",))
     # async def vote(

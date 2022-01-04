@@ -25,6 +25,7 @@ class DeleteView(disnake.ui.View):
             self.user_ids = {getattr(users, "id", users)}
         self.inter = initial_inter
         super().__init__(timeout=timeout)
+        self.deleted = False
 
     @disnake.ui.button(
         custom_id=VIEW_DELETE_ID,

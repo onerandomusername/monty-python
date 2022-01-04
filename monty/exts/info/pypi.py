@@ -14,7 +14,8 @@ from disnake.utils import escape_markdown
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 BASE_PYPI_URL = "https://pypi.org"
@@ -101,7 +102,9 @@ class PyPi(commands.Cog):
             await inter.send(embed=embed, ephemeral=True)
 
         else:
-            await inter.send(embed=embed, view=get_view(inter))
+            view = DeleteView(inter.author, inter)
+            await inter.send(embed=embed, view=view)
+            await wait_for_deletion(inter, view=view)
 
     def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
@@ -195,8 +198,9 @@ class PyPi(commands.Cog):
 
         if not len(embed.description):
             embed.description = "Sorry, no results found."
-
-        await inter.send(embed=embed, view=get_view(inter))
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=embed, view=view)
+        await wait_for_deletion(inter, view=view)
 
     async def cog_slash_command_error(self, inter: disnake.ApplicationCommandInteraction, error: Exception) -> None:
         """TODO: Handle a few local errors until a full error handlers is written."""
