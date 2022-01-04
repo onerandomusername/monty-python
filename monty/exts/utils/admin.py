@@ -32,7 +32,8 @@ from disnake.ext import commands
 from disnake.ext.commands import Context
 
 from monty.metadata import ExtMetadata
-from monty.utils.delete import get_view
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 EXT_METADATA = ExtMetadata(core=True)
@@ -137,14 +138,18 @@ class Admin(commands.Cog):
         ctx: commands.Context,
         resp: str = None,
         error: Exception = None,
-    ) -> disnake.Message:
+    ) -> None:
         """Send a nicely formatted eval response."""
         if resp is None and error is None:
-            return await ctx.send(
-                "No output.",
-                allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                reference=ctx.message.to_reference(fail_if_not_exists=False),
-                view=get_view(ctx),
+            view = DeleteView(ctx.author)
+            await wait_for_deletion(
+                await ctx.send(
+                    "No output.",
+                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                    reference=ctx.message.to_reference(fail_if_not_exists=False),
+                    view=view,
+                ),
+                view=view,
             )
         resp_file: disnake.File = None
         # for now, we're not gonna handle exceptions as files
@@ -182,12 +187,16 @@ class Admin(commands.Cog):
         for f in resp_file, error_file:
             if f is not None:
                 files.append(f)
-        return await ctx.send(
-            out,
-            files=files,
-            allowed_mentions=disnake.AllowedMentions(replied_user=False),
-            reference=ctx.message.to_reference(fail_if_not_exists=False),
-            view=get_view(ctx),
+        view = DeleteView(ctx.author)
+        await wait_for_deletion(
+            await ctx.send(
+                out,
+                files=files,
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                reference=ctx.message.to_reference(fail_if_not_exists=False),
+                view=view,
+            ),
+            view=view,
         )
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])
@@ -244,8 +253,7 @@ class Admin(commands.Cog):
         if result.rstrip("\n") == "":
             result = None
         self._last_result = result
-        msg = await self._send_stdout(ctx=ctx, resp=result, error=error)
-        return msg
+        await self._send_stdout(ctx=ctx, resp=result, error=error)
 
     @commands.command(pass_context=True, hidden=True)
     async def repl(self, ctx: Context) -> None:

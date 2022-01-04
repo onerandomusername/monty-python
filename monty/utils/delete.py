@@ -47,8 +47,3 @@ class DeleteView(disnake.ui.View):
     async def on_timeout(self) -> None:
         """Disable the button on timeout."""
         self.delete_button.disabled = True
-
-
-def get_view(ctx: Union[disnake.Interaction, disnake.ext.commands.Context, disnake.Message]) -> DeleteView:
-    """Get a view that will work based on the content."""
-    return DeleteView(users=ctx.author, timeout=300)
