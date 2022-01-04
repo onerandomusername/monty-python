@@ -75,6 +75,7 @@ class DocItem:
     base_url: str  # Absolute path to to which the relative path resolves, same for all items with the same package
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
+    symbol_name: str  # The key in the dictionary where this is found
     attributes: list["DocItem"] = dataclasses.field(default_factory=list, hash=False)
 
     @property
@@ -86,7 +87,7 @@ class DocItem:
 class DocView(DeleteView):
     """View for documentation objects."""
 
-    def __init__(self, ctx: disnake.abc.Messageable, bot: Monty, docitem: DocItem, og_embed: disnake.Embed = None):
+    def __init__(self, ctx: disnake.Message, bot: Monty, docitem: DocItem, og_embed: disnake.Embed):
         super().__init__(users=ctx.author, timeout=300)
         self.bot = bot
         self.attributes = docitem.attributes
@@ -100,27 +101,44 @@ class DocView(DeleteView):
 
     def set_up_attribute_select(self) -> None:
         """Set up the attribute select menu."""
-        for attr in self.attributes[:20]:
+        for attr in self.attributes[:25]:
+            if attr == self.docitem:
+                continue
             self.attribute_select.add_option(
-                label=attr.symbol_id,
-                value=attr.symbol_id,
-                description=attr.symbol_id,
+                label=attr.symbol_name.removeprefix(self.docitem.symbol_name),
+                description=attr.group,
+                value=attr.symbol_name,
             )
-        self.attribute_select.placeholder += f" of {self.docitem.symbol_id}"
+
+        self.attribute_select.placeholder += f" of {self.docitem.group} {self.docitem.symbol_name}"
+
+    async def doc_check(self, inter: disnake.Interaction) -> bool:
+        """
+        Check if the interaction author is whitelisted.
+
+        Due to this sharing the delete button, this check must be independent.
+        """
+        if inter.author.id not in self.user_ids:
+            await inter.send("You can press these, but they won't do anything for you!", ephemeral=True)
+            return False
+        return True
 
     @disnake.ui.select(placeholder="Attributes", custom_id=CUSTOM_ID_PREFIX + "attributes", row=0)
     async def attribute_select(self, select: disnake.ui.Select, inter: disnake.MessageInteraction) -> None:
         """Allow selecting an attribute of the initial view."""
-        new_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0]))[0]
-        await inter.response.edit_message(embed=new_embed)
+        if not await self.doc_check(inter):
+            return
+        new_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0], inter))[0]
+
+        if inter.response.is_done():
+            await inter.edit_original_message(embed=new_embed)
+        else:
+            await inter.response.edit_message(embed=new_embed)
 
     @disnake.ui.button(label="Home", custom_id=CUSTOM_ID_PREFIX + "home", row=1)
     async def return_home(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
         """Reset to the home embed."""
-        if not self.og_embed:
-            await inter.response.defer()
-            self.og_embed = (await self.bot.get_cog("DocCog").create_symbol_embed(self.docitem.symbol_id))[0]
-            await inter.edit_original_message(embed=self.og_embed)
+        if not await self.doc_check(inter):
             return
         await inter.response.edit_message(embed=self.og_embed)
 
@@ -240,6 +258,7 @@ class DocCog(commands.Cog):
                     base_url,
                     sys.intern(relative_url_path),
                     symbol_id,
+                    symbol_name,
                 )
                 self.doc_symbols[symbol_name] = doc_item
                 if blacklist_guilds:
@@ -472,22 +491,17 @@ class DocCog(commands.Cog):
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
-        await self.docs_get_command(ctx, search=search)
+        await self._docs_get_command(ctx, search=search)
 
     @commands.slash_command(name="docs")
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""
         pass
 
-    @slash_docs.sub_command("item")
-    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, search: Optional[str]) -> None:
-        """
-        Gives you a documentation link for a provided entry.
+    async def _docs_get_command(
+        self, inter: Union[disnake.ApplicationCommandInteraction, commands.Context], search: Optional[str]
+    ) -> None:
 
-        Parameters
-        ----------
-        search: the object to view the docs
-        """
         if not search:
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
@@ -516,11 +530,27 @@ class DocCog(commands.Cog):
                 return
 
             doc_embed, doc_item = res
-            view = DocView(inter, self.bot, doc_item)
-            await inter.send(embed=doc_embed, view=view)
+            view = DocView(inter, self.bot, doc_item, doc_embed)
+            msg = await inter.send(embed=doc_embed, view=view)
             await view.wait()
             view.disable()
-            await inter.edit_original_message(view=view)
+            if getattr(view, "deleted", False):
+                return
+            if msg is not None:
+                await msg.edit(view=view)
+            else:
+                await inter.edit_original_message(view=view)
+
+    @slash_docs.sub_command("item")
+    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, search: Optional[str]) -> None:
+        """
+        Gives you a documentation link for a provided entry.
+
+        Parameters
+        ----------
+        search: the object to view the docs
+        """
+        await self._docs_get_command(inter, search)
 
     async def _docs_autocomplete(
         self,
