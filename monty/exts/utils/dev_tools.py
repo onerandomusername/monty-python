@@ -19,7 +19,7 @@ class DevTools(commands.Cog):
         guild: str = None,
         include_applications_commands: bool = True,
         raw_link: bool = False,
-        ephemeral: bool = False,
+        ephemeral: bool = True,
     ) -> None:
         """
         [BETA] Generate an invite to add a bot to a guild. NOTE: may not work on all bots.
