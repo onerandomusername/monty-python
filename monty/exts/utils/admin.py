@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import builtins
 import inspect
 import io
 import logging
@@ -51,6 +52,7 @@ globals_to_import = {
     "asyncio": asyncio,
     "arrow": arrow,
 }
+globals_to_import.update(builtins.__dict__)
 
 
 def create_file_obj(
