@@ -544,7 +544,9 @@ class DocCog(commands.Cog):
                 if isinstance(inter, disnake.Interaction):
                     await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
                 else:
-                    await inter.send(f"No documentation found for `{search}`.")
+                    await inter.send(
+                        f"No documentation found for `{search}`.", allowed_mentions=disnake.AllowedMentions.none()
+                    )
                 return
 
             doc_embed, doc_item = res
