@@ -48,6 +48,7 @@ GUILD_WHITELIST = {
     constants.Guilds.disnake: "DisnakeDev",
     constants.Guilds.nextcord: "nextcord",
     constants.Guilds.testing: "onerandomusername",
+    constants.Guilds.gurkult: "gurkult",
 }
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
@@ -174,6 +175,8 @@ class GithubInfo(commands.Cog):
             return "disnake"
         elif guild.id == constants.Guilds.nextcord:
             return "nextcord"
+        elif guild.id == constants.Guilds.gurkult:
+            return "gurkult"
         else:
             return None
 
@@ -558,7 +561,7 @@ class GithubInfo(commands.Cog):
 
     @commands.slash_command(guild_ids=GITHUB_GUILDS)
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Helpful commands for viewing information about this guild's github projects."""
+        """Helpful commands for viewing information about whitelisted guild's github projects."""
         pass
 
     @github.sub_command("pull")
