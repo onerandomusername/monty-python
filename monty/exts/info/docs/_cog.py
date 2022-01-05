@@ -100,11 +100,14 @@ class DocView(DeleteView):
         self.og_embed = og_embed
 
         self.set_link_button()
-        if not self.attributes:
+
+        self.set_up_attribute_select()
+        if not self.attribute_select.options:
             i = self.children.index(self.attribute_select)
             self.children.pop(i)
+            i = self.children.index(self.return_home)
+            self.children.pop(i)
             return
-        self.set_up_attribute_select()
 
     def set_up_attribute_select(self) -> None:
         """Set up the attribute select menu."""
