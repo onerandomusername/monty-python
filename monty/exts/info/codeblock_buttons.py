@@ -85,6 +85,10 @@ class CodeButtons(commands.Cog):
         if not reaction.message.guild:
             return
 
+        # DO ignore bots on reaction add
+        if user.bot:
+            return
+
         if user.id == self.bot.user.id:
             return
 
@@ -115,8 +119,21 @@ class CodeButtons(commands.Cog):
         }
         await message.channel.trigger_typing()
         async with self.bot.http_session.post(self.black_endpoint, json=json) as resp:
+            if resp.status != 200:
+                logger.error("Black endpoint returned not a 200")
+                await message.channel.send(
+                    "Something went wrong internally when formatting the code. Please report this."
+                )
+                return
             json: dict = await resp.json()
         formatted = json["formatted_code"].strip()
+        if json["source_code"].strip() == formatted:
+            logger.debug("code was formatted with black but no changes were made.")
+            await message.reply(
+                "Formatted with black but no changes were made! :ok_hand:",
+                fail_if_not_exists=False,
+            )
+            return
         paste = await self.get_snekbox().upload_output(formatted, "python")
         if not paste:
             await message.channel.send("Sorry, something went wrong!")
