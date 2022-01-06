@@ -12,6 +12,9 @@ from typing import Dict, Literal, Optional, Tuple, TypedDict, Union
 
 import aiohttp
 import disnake
+import rapidfuzz
+import rapidfuzz.fuzz
+import rapidfuzz.process
 from disnake.ext import commands
 
 from monty import constants
@@ -60,7 +63,7 @@ class DocDict(TypedDict):
 
 BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
-    constants.Guilds.disnake: ["nextcord"],
+    constants.Guilds.testing: ["nextcord"],
     constants.Guilds.nextcord: ["disnake"],
 }
 
@@ -278,7 +281,7 @@ class DocCog(commands.Cog):
                     symbol_id,
                     symbol_name,
                 )
-                self.doc_symbols[symbol_name] = doc_item
+                self.doc_symbols[sys.intern(symbol_name)] = doc_item
                 if blacklist_guilds:
                     for guild_id in blacklist_guilds:
                         if BLACKLIST.get(guild_id) is None:
@@ -361,7 +364,7 @@ class DocCog(commands.Cog):
 
             if rename_extant:
                 # Instead of renaming the current symbol, rename the symbol with which it conflicts.
-                self.doc_symbols[new_name] = self.doc_symbols[symbol_name]
+                self.doc_symbols[sys.intern(new_name)] = self.doc_symbols[symbol_name]
                 return symbol_name
             else:
                 return new_name
@@ -535,6 +538,7 @@ class DocCog(commands.Cog):
 
         else:
             symbol = search.strip("`")
+            symbol = (await self._docs_autocomplete(inter, symbol))[0]
             if isinstance(inter, disnake.Interaction):
                 res = await self.create_symbol_embed(symbol, inter)
             else:
@@ -592,49 +596,48 @@ class DocCog(commands.Cog):
         inter: disnake.Interaction,
         query: str,
         *,
-        _recurse: bool = True,
-        _levels: int = 0,
-        return_query: bool = False,
+        count: int = 24,
     ) -> list[str]:
         """Autocomplete for the search param for documentation."""
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
-        max_completion = 20
-
-        compare_len = len(query.rstrip("."))
-        completion = set()
-
-        blacklist = BLACKLIST.get(inter.guild_id)
         if not query:
             return self._get_default_completion(inter, inter.guild)
+        # ----------------------------------------------------
+        blacklist = BLACKLIST_MAPPING.get(inter.guild_id)
 
-        for item in self.doc_symbols:
-            if not item.startswith(query):
-                continue
+        query = query.strip()
 
-            # only keep items that aren't instantly delimited
-            if item[compare_len:].count(".") >= 2 + _levels:
-                continue
+        def processor(sentence: str) -> str:
+            if (sym := self.doc_symbols.get(sentence)) and sym.package in blacklist:
+                return ""
+            else:
+                return sentence
 
-            # apply blacklist
-            if blacklist and item in blacklist:
-                continue
+        # further fuzzy search by using rapidfuzz ratio matching
+        fuzzed = rapidfuzz.process.extract(
+            query=query,
+            choices=self.doc_symbols.keys(),
+            scorer=rapidfuzz.fuzz.ratio,
+            processor=processor if blacklist else None,
+            limit=count,
+        )
 
-            completion.add(item)
-            if len(completion) >= max_completion:
-                break
+        tweak = []
+        lower_query = query.lower()
+        for _, (name, score, _) in enumerate(fuzzed):
+            lower = name.lower()
 
-        if _recurse and len(completion) < 2:
-            # run the entire completion again
-            completion.update(
-                set(await self._docs_autocomplete(inter, query=query, _levels=_levels + 1, _recurse=False))
-            )
+            if lower == query:
+                score += 50
 
-        completion = list(sorted(completion))
-        # log.debug('Options: ' + str(completion))
-        if return_query:
-            completion.insert(0, query)
-            completion = completion[:max_completion]
-        return completion
+            if lower_query in lower:
+                score += 20
+
+            tweak.append((name, score))
+
+        tweak = list(sorted(tweak, key=lambda v: v[1], reverse=True))
+
+        return list(name for name, _ in tweak)
 
     docs_get_command.autocomplete("search")(copy.copy(_docs_autocomplete))
 
@@ -673,9 +676,9 @@ class DocCog(commands.Cog):
 
         view = DeleteView(inter.author, inter)
         await inter.response.send_message(embed=embed, view=view)
-        await wait_for_deletion(inter, view=view, end=view)
+        await wait_for_deletion(inter, view=view)
 
-    slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, return_query=True))
+    slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete))
 
     @staticmethod
     def base_url_from_inventory_url(inventory_url: str) -> str:
