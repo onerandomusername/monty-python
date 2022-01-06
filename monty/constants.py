@@ -85,6 +85,8 @@ class Emojis:
     ok_hand = ":ok_hand:"
     hand_raised = "\U0001F64B"
     black = "<:black_format:928530654143066143>"
+    upload = "\U0001f4dd"
+    snekbox = "\U0001f40d"
 
     # These icons are from Github's repo https://github.com/primer/octicons/
     issue_open = "<:issue_open:882464248951877682>"

@@ -210,7 +210,7 @@ class Snekbox(Cog):
 
         Return the bot response.
         """
-        async with ctx.typing():
+        async with ctx.channel.typing():
             results = await self.post_eval(code)
             msg, error = self.get_results_message(results)
 

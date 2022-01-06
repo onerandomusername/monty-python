@@ -8,6 +8,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Emojis, URLs
+from monty.utils.services import send_to_paste_service
 
 
 if TYPE_CHECKING:
@@ -33,7 +34,11 @@ class CodeButtons(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.messages: dict[int, CodeblockMessage] = {}
-        self.actions = {Emojis.black: self.format_black}
+        self.actions = {
+            Emojis.upload: self.upload_to_paste,
+            Emojis.black: self.format_black,
+            Emojis.snekbox: self.run_in_snekbox,
+        }
         self.black_endpoint = URLs.black_formatter
 
     @commands.Cog.listener()
@@ -148,6 +153,22 @@ class CodeButtons(commands.Cog):
             fail_if_not_exists=False,
             components=button,
         )
+
+    async def upload_to_paste(self, message: disnake.Message) -> None:
+        """Upload the message to the paste service."""
+        await message.channel.trigger_typing()
+        url = await send_to_paste_service(self.messages[message.id].parsed_code, extension="python")
+        button = disnake.ui.Button(
+            style=disnake.ButtonStyle.url,
+            label="Click to open in workbin",
+            url=url,
+        )
+        await message.reply("I've uploaded this message to paste, you can view it here:", components=button)
+
+    async def run_in_snekbox(self, message: disnake.Message) -> None:
+        """Run the specified message in snekbox."""
+        code = self.messages[message.id].parsed_code
+        await self.get_snekbox().send_eval(message, code)
 
 
 def setup(bot: Bot) -> None:
