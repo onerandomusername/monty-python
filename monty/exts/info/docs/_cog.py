@@ -538,12 +538,23 @@ class DocCog(commands.Cog):
 
         else:
             symbol = search.strip("`")
-            symbol = (await self._docs_autocomplete(inter, symbol))[0]
-            if isinstance(inter, disnake.Interaction):
-                res = await self.create_symbol_embed(symbol, inter)
+            no_match = False
+            for sym in [symbol, symbol.split()[0]]:
+                sym = await self._docs_autocomplete(inter, sym, threshold=60)
+                if sym:
+                    sym = sym[0]
+                    break
             else:
-                res = await self.create_symbol_embed(symbol)
+                no_match = True
+                sym = None
 
+            res = None
+            if not no_match:
+                if isinstance(inter, disnake.Interaction):
+                    res = await self.create_symbol_embed(sym, inter)
+                else:
+                    res = await self.create_symbol_embed(sym)
+            symbol = symbol.split()[0]
             if not res:
                 error_text = f"No documentation found for `{symbol}`."
 
@@ -597,6 +608,7 @@ class DocCog(commands.Cog):
         query: str,
         *,
         count: int = 24,
+        threshold: int = 45,
     ) -> list[str]:
         """Autocomplete for the search param for documentation."""
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
@@ -637,7 +649,12 @@ class DocCog(commands.Cog):
 
         tweak = list(sorted(tweak, key=lambda v: v[1], reverse=True))
 
-        return list(name for name, _ in tweak)
+        res = []
+        for name, score in tweak:
+            if score < threshold:
+                break
+            res.append(name)
+        return res
 
     docs_get_command.autocomplete("search")(copy.copy(_docs_autocomplete))
 
