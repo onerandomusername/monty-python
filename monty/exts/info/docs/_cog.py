@@ -541,12 +541,27 @@ class DocCog(commands.Cog):
                 res = await self.create_symbol_embed(symbol)
 
             if not res:
+                error_text = f"No documentation found for `{symbol}`."
+
+                async def maybe_docs(package: str) -> Optional[str]:
+
+                    if (pypi := self.bot.get_cog("PyPi")) is None:
+                        return None
+                    if pypi.check_characters(symbol):
+                        return None
+                    json = await pypi.fetch_package(symbol.split(".")[0])
+                    if not json:
+                        return None
+                    info = json["info"]
+                    docs = info.get("docs_url") or info["project_urls"].get("Documentation")
+                    if docs:
+                        return "\n" + f"You may find what you're looking for at <{docs}>"
+
+                error_text += await maybe_docs(symbol) or ""
                 if isinstance(inter, disnake.Interaction):
-                    await inter.send(f"No documentation found for `{search}`.", ephemeral=True)
+                    await inter.send(error_text, ephemeral=True)
                 else:
-                    await inter.send(
-                        f"No documentation found for `{search}`.", allowed_mentions=disnake.AllowedMentions.none()
-                    )
+                    await inter.send(error_text, allowed_mentions=disnake.AllowedMentions.none())
                 return
 
             doc_embed, doc_item = res

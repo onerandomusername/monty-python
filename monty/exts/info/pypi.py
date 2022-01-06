@@ -5,6 +5,7 @@ import logging
 import random
 import re
 from dataclasses import dataclass
+from typing import Optional
 
 import bs4
 import disnake
@@ -48,6 +49,18 @@ class PyPi(commands.Cog):
         self.searches = {}
         self.fetch_lock = asyncio.Lock()
 
+    @staticmethod
+    def check_characters(package: str) -> Optional[re.Match]:
+        """Check if the package is valid."""
+        return re.search(ILLEGAL_CHARACTERS, package)
+
+    async def fetch_package(self, package: str) -> Optional[str]:
+        """Fetch a package from pypi."""
+        async with self.bot.http_session.get(URL.format(package=package)) as response:
+            if response.status == 200 and response.content_type == "application/json":
+                return await response.json()
+            return None
+
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Useful commands for info about packages on pypi."""
@@ -67,36 +80,31 @@ class PyPi(commands.Cog):
 
         error = True
 
-        if characters := re.search(ILLEGAL_CHARACTERS, package):
+        if characters := self.check_characters(package):
             embed.description = f"Illegal character(s) passed into command: '{escape_markdown(characters.group(0))}'"
 
         else:
-            async with self.bot.http_session.get(URL.format(package=package)) as response:
-                if response.status == 404:
-                    embed.description = "Package could not be found."
+            response_json = await self.fetch_package(package)
+            if response_json:
 
-                elif response.status == 200 and response.content_type == "application/json":
-                    response_json = await response.json()
-                    info = response_json["info"]
+                info = response_json["info"]
 
-                    embed.title = f"{info['name']} v{info['version']}"
+                embed.title = f"{info['name']} v{info['version']}"
 
-                    embed.url = info["package_url"]
-                    embed.colour = next(PYPI_COLOURS)
+                embed.url = info["package_url"]
+                embed.colour = next(PYPI_COLOURS)
 
-                    summary = escape_markdown(info["summary"])
+                summary = escape_markdown(info["summary"])
 
-                    # Summary could be completely empty, or just whitespace.
-                    if summary and not summary.isspace():
-                        embed.description = summary
-                    else:
-                        embed.description = "No summary provided."
-
-                    error = False
-
+                # Summary could be completely empty, or just whitespace.
+                if summary and not summary.isspace():
+                    embed.description = summary
                 else:
-                    embed.description = "There was an error when fetching your PyPi package."
-                    log.trace(f"Error when fetching PyPi package: {response.status}.")
+                    embed.description = "No summary provided."
+
+                error = False
+            else:
+                embed.description = "Package could not be found."
 
         if error:
             await inter.send(embed=embed, ephemeral=True)
