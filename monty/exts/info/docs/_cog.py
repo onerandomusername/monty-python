@@ -63,8 +63,8 @@ class DocDict(TypedDict):
 
 BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
-    constants.Guilds.testing: ["nextcord"],
-    constants.Guilds.nextcord: ["disnake"],
+    constants.Guilds.disnake: ["nextcord"],
+    constants.Guilds.nextcord: ["disnake", "dislash"],
 }
 
 CUSTOM_ID_PREFIX = "docs_"
