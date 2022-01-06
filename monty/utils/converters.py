@@ -68,7 +68,8 @@ class SourceConverter(commands.Converter):
 
         cmd = ctx.bot.get_slash_command(argument)
         if cmd:
-            return cmd
+            if cmd.guild_ids and ctx.guild and ctx.guild.id in cmd.guild_ids:
+                return cmd
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
