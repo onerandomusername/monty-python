@@ -81,7 +81,7 @@ class CodeButtons(commands.Cog):
         if not message.guild:
             return
 
-        if not (perms := message.channel.permissions_for(message.guild.me)).add_reactions and perms.send_messages:
+        if not ((perms := message.channel.permissions_for(message.guild.me)).add_reactions and perms.send_messages):
             return
 
         no_paste = False
