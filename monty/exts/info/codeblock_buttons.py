@@ -47,7 +47,7 @@ class CodeButtons(commands.Cog):
         if not message.guild:
             return
 
-        if not message.channel.permissions_for(message.guild.me).add_reactions:
+        if not (perms := message.channel.permissions_for(message.guild.me)).add_reactions and perms.send_messages:
             return
 
         if not (snekbox := self.get_snekbox()):
