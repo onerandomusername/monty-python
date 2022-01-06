@@ -25,7 +25,6 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
     if PASTE_DISABLED:
         return "Sorry, paste isn't configured!"
 
-    extension = extension and f".{extension}"
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
     paste_url = URLs.paste_service.format(key="api/new")
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
@@ -55,7 +54,7 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
         elif "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
-            paste_link = URLs.paste_service.format(key=f'?id={response_json["key"]}') + "&language=none"
+            paste_link = URLs.paste_service.format(key=f'?id={response_json["key"]}') + f"&language={extension}"
 
             return paste_link
 

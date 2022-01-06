@@ -5,7 +5,7 @@ import re
 import textwrap
 from functools import partial
 from signal import Signals
-from typing import Optional, Tuple
+from typing import Optional, Tuple, overload
 
 import aiohttp
 from disnake import HTTPException, Message, NotFound, Reaction, User
@@ -70,17 +70,27 @@ class Snekbox(Cog):
         except aiohttp.ClientConnectorError:
             raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
 
-    async def upload_output(self, output: str) -> Optional[str]:
+    async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
         """Upload the eval output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
         if len(output) > MAX_PASTE_LEN:
             log.info("Full output is too long to upload")
-            return "too long to upload"
-        return await send_to_paste_service(output, extension="txt")
+            return None
+        return await send_to_paste_service(output, extension=extension)
+
+    @overload
+    @staticmethod
+    def prepare_input(code: str, *, require_fenced: bool = False) -> str:
+        ...
+
+    @overload
+    @staticmethod
+    def prepare_input(code: str, *, require_fenced: bool = True) -> Optional[str]:
+        ...
 
     @staticmethod
-    def prepare_input(code: str) -> str:
+    def prepare_input(code: str, *, require_fenced: bool = False) -> Optional[str]:
         """
         Extract code from the Markdown, format it, and insert it into the code template.
 
@@ -101,6 +111,8 @@ class Snekbox(Cog):
                     info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
                 else:
                     info = f"{delim}-enclosed inline code"
+        elif require_fenced:
+            return None
         else:
             code = RAW_CODE_REGEX.fullmatch(code).group("code")
             info = "unformatted or badly formatted code"
@@ -164,7 +176,7 @@ class Snekbox(Cog):
             output = output.replace("<!@", "<!@\u200B")  # Zero-width space
 
         if ESCAPE_REGEX.findall(output):
-            paste_link = await self.upload_output(original_output)
+            paste_link = await self.upload_output(original_output) or "too long to upload"
             return "Code block escape attempt detected; will not output result", paste_link
 
         truncated = False
@@ -186,7 +198,7 @@ class Snekbox(Cog):
             output = f"{output[:1000]}\n... (truncated - too long)"
 
         if truncated:
-            paste_link = await self.upload_output(original_output)
+            paste_link = await self.upload_output(original_output) or "too long to upload"
 
         output = output or "[No output]"
 

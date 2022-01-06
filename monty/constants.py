@@ -84,6 +84,7 @@ class Emojis:
     trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
     ok_hand = ":ok_hand:"
     hand_raised = "\U0001F64B"
+    black = "<:black_format:928530654143066143>"
 
     # These icons are from Github's repo https://github.com/primer/octicons/
     issue_open = "<:issue_open:882464248951877682>"
@@ -141,6 +142,8 @@ class URLs:
     paste_service = environ.get("PASTE_SERVICE")
     snekbox_eval_api = environ.get("SNEKBOX_EVAL_URL")
     snekbox_auth = environ.get("SNEKBOX_AUTH")
+    black_formatter = environ.get("BLACK_API")
+    black_playground = environ.get("BLACK_PLAYGROUND", "https://black.vercel.app/")
 
 
 class Paste:

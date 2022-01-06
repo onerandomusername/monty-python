@@ -10,6 +10,7 @@ from monty.bot import Bot
 from monty.exts.filters.token_remover import TokenRemover
 from monty.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from monty.exts.info.codeblock._instructions import get_instructions
+from monty.exts.info.codeblock._parsing import is_python_code
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import has_lines
@@ -63,6 +64,11 @@ class CodeBlockCog(Cog, name="Code Block"):
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
+
+    @staticmethod
+    def is_python_code(content: str) -> bool:
+        """Determine if the content is valid python code."""
+        return is_python_code(content)
 
     @staticmethod
     def create_embed(instructions: str) -> disnake.Embed:
