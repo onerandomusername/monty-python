@@ -603,7 +603,7 @@ class DocCog(commands.Cog):
         if not query:
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
-        blacklist = BLACKLIST_MAPPING.get(inter.guild_id)
+        blacklist = BLACKLIST_MAPPING.get(inter.guild and inter.guild.id or inter.guild_id)
 
         query = query.strip()
 
