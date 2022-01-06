@@ -1,13 +1,15 @@
 import asyncio
 import dataclasses
 import logging
+import re
+import urllib.parse
 from typing import TYPE_CHECKING, Optional, Union
 
 import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import Emojis, URLs
+from monty.constants import Emojis, Paste, URLs
 from monty.utils.services import send_to_paste_service
 
 
@@ -18,6 +20,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 180
+
+PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
 
 
 @dataclasses.dataclass
@@ -41,6 +45,36 @@ class CodeButtons(commands.Cog):
         }
         self.black_endpoint = URLs.black_formatter
 
+    def get_code(self, content: str) -> Optional[str]:
+        """Get the code from the provided content. Parses codeblocks and assures its python code."""
+        if not (snekbox := self.get_snekbox()):
+            logger.trace("Could not parse message as the snekbox cog is not loaded.")
+            return None
+        code = snekbox.prepare_input(content, require_fenced=True)
+        if not code or code.count("\n") < 2:
+            logger.trace("Parsed message but either no code was found or was too short.")
+            return None
+        # not required, but recommended
+        if (codeblock := self.get_codeblock_cog()) and not codeblock.is_python_code(code):
+            logger.trace("Code blocks exist but they are not python code.")
+            return None
+        return code
+
+    async def check_paste_link(self, content: str) -> Optional[str]:
+        """Fetch code from a paste link."""
+        match = PASTE_REGEX.search(content)
+        if not match:
+            return None
+        parsed_url = urllib.parse.urlparse(match.group(), scheme="https")
+        query_strings = urllib.parse.parse_qs(parsed_url.query)
+        id = query_strings["id"][0]
+        url = Paste.raw_paste_endpoint.format(key=id)
+        print(url)
+        async with self.bot.http_session.get(url) as resp:
+            if resp.status != 200:
+                return None
+            return await resp.text()
+
     @commands.Cog.listener()
     async def on_message(self, message: disnake.Message) -> None:
         """See if a message matches the pattern."""
@@ -50,25 +84,27 @@ class CodeButtons(commands.Cog):
         if not (perms := message.channel.permissions_for(message.guild.me)).add_reactions and perms.send_messages:
             return
 
-        if not (snekbox := self.get_snekbox()):
-            logger.trace("Could not parse message as the snekbox cog is not loaded.")
-            return None
-        code = snekbox.prepare_input(message.content, require_fenced=True)
-        if not code or code.count("\n") < 2:
-            logger.trace("Parsed message but either no code was found or was too short.")
-            return None
-        # not required, but recommended
-        if (codeblock := self.get_codeblock_cog()) and not codeblock.is_python_code(code):
-            logger.trace("Code blocks exist but they are not python code.")
+        no_paste = False
+        code = self.get_code(message.content)
+
+        if not code:
+            # don't despair, it could be a paste link
+            code = await self.check_paste_link(message.content)
+            no_paste = True
+
+        if not code:
             return
 
         logger.debug("Adding reactions since message passes.")
-        for react in self.actions.keys():
-            await message.add_reaction(react)
+        actions = {*self.actions.keys()}
+        if no_paste:
+            actions.remove(Emojis.upload)
         self.messages[message.id] = CodeblockMessage(
             code,
-            {*self.actions.keys()},
+            actions,
         )
+        for react in actions:
+            await message.add_reaction(react)
 
         await asyncio.sleep(TIMEOUT)
 
@@ -105,7 +141,6 @@ class CodeButtons(commands.Cog):
             return
         meth = self.actions[str(reaction.emoji)]
         await meth(reaction.message)
-        self.messages.pop(reaction.message.id)
         await reaction.message.remove_reaction(reaction, reaction.message.guild.me)
 
     def get_snekbox(self) -> Optional["Snekbox"]:

@@ -149,7 +149,8 @@ class URLs:
 
 
 class Paste:
-    alias_url: bool = environ.get("PASTE_ALIAS_URL", False)
+    alias_url: bool = bool(environ.get("PASTE_ALIAS_URL", False))
+    raw_paste_endpoint: str = environ.get("PASTE_SERVICE_RAW", "")
 
 
 class Tokens(NamedTuple):
