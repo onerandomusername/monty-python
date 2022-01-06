@@ -166,7 +166,7 @@ class DocView(DeleteView):
     def disable(self) -> None:
         """Disable all attributes in this view."""
         for c in self.children:
-            if hasattr(c, "disabled"):
+            if hasattr(c, "disabled") and c.is_dispatchable():
                 c.disabled = True
 
 
