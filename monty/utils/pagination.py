@@ -135,33 +135,35 @@ class LinePaginator(Paginator):
         ...     ctx, embed
         ... )
         """
+        restrict_to_user = restrict_to_user or ctx.author
 
         def event_check(inter: disnake.MessageInteraction) -> bool:
             """Make sure that this reaction is what we want to operate on."""
-            no_restrictions = (
-                # Pagination is not restricted
-                not restrict_to_user
+            user_valid = (
+                # Pagination is restricted
+                restrict_to_user
                 # The reaction was by a whitelisted user
-                or inter.author.id == restrict_to_user.id
+                and inter.author.id == restrict_to_user.id
             )
             # check the custom_id is valid
             name = cls.strip_custom_id(inter.data.custom_id)
-
-            return (
+            print(user_valid)
+            check = all(
                 # Conditions for a successful pagination:
-                all(
-                    (
-                        # name is not None
-                        name is not None,
-                        # Interaction is on this message
-                        inter.message.id == message.id,
-                        # Reaction is one of the pagination emotes
-                        name in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
-                        # There were no restrictions
-                        no_restrictions,
-                    )
+                (
+                    # name is not None
+                    name is not None,
+                    # Reaction is one of the pagination emotes
+                    name in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
+                    # User is allowed
+                    user_valid,
                 )
             )
+            if not check and inter.message.id == message.id:
+                ctx.bot.loop.create_task(
+                    inter.response.send_message("Hey! This isn't yours to interact with!", ephemeral=True)
+                )
+            return check and inter.message.id == message.id
 
         paginator = cls(prefix=prefix, suffix=suffix, max_size=max_size, max_lines=max_lines, linesep=linesep)
         current_page = 0
