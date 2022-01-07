@@ -519,6 +519,22 @@ class DocCog(commands.Cog):
         """Search python package documentation."""
         pass
 
+    async def maybe_pypi_docs(self, package: str) -> tuple[bool, Optional[str]]:
+        """Find the documentation url on pypi for a given package."""
+        if (pypi := self.bot.get_cog("PyPi")) is None:
+            return False, None
+        if pypi.check_characters(package):
+            return False, None
+        json = await pypi.fetch_package(package.split(".")[0])
+        if not json:
+            return False, None
+        info = json["info"]
+        docs = info.get("docs_url") or info["project_urls"].get("Documentation")
+        if docs:
+            return True, docs
+
+        return False, info.get("home_page") or info["project_urls"].get("Homepage")
+
     async def _docs_get_command(
         self, inter: Union[disnake.ApplicationCommandInteraction, commands.Context], search: Optional[str]
     ) -> None:
@@ -558,21 +574,9 @@ class DocCog(commands.Cog):
             if not res:
                 error_text = f"No documentation found for `{symbol}`."
 
-                async def maybe_docs(package: str) -> Optional[str]:
-
-                    if (pypi := self.bot.get_cog("PyPi")) is None:
-                        return None
-                    if pypi.check_characters(symbol):
-                        return None
-                    json = await pypi.fetch_package(symbol.split(".")[0])
-                    if not json:
-                        return None
-                    info = json["info"]
-                    docs = info.get("docs_url") or info["project_urls"].get("Documentation")
-                    if docs:
-                        return "\n" + f"You may find what you're looking for at <{docs}>"
-
-                error_text += await maybe_docs(symbol) or ""
+                maybe_docs = await self.maybe_pypi_docs(symbol)
+                if maybe_docs[0]:
+                    error_text += f"\nYou may find what you're looking for at <{maybe_docs[1]}>"
                 if isinstance(inter, disnake.Interaction):
                     await inter.send(error_text, ephemeral=True)
                 else:
@@ -591,8 +595,8 @@ class DocCog(commands.Cog):
             else:
                 await inter.edit_original_message(view=view)
 
-    @slash_docs.sub_command("item")
-    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, search: Optional[str]) -> None:
+    @slash_docs.sub_command("view")
+    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: Optional[str]) -> None:
         """
         Gives you a documentation link for a provided entry.
 
@@ -600,7 +604,7 @@ class DocCog(commands.Cog):
         ----------
         search: the object to view the docs
         """
-        await self._docs_get_command(inter, search)
+        await self._docs_get_command(inter, query)
 
     async def _docs_autocomplete(
         self,
@@ -656,7 +660,7 @@ class DocCog(commands.Cog):
             res.append(name)
         return res
 
-    docs_get_command.autocomplete("search")(copy.copy(_docs_autocomplete))
+    docs_get_command.autocomplete("query")(copy.copy(_docs_autocomplete))
 
     @slash_docs.sub_command(name="list")
     async def slash_docs_search(self, inter: disnake.AppCmdInter, query: str) -> None:
@@ -696,6 +700,55 @@ class DocCog(commands.Cog):
         await wait_for_deletion(inter, view=view)
 
     slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete))
+
+    @slash_docs.sub_command(name="find_url")
+    async def slash_docs_find_url(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        package: str,
+    ) -> None:
+        """
+        Find a package's documentation from the existing inventories or pypi.
+
+        Parameters
+        ----------
+        package: Uses the internal information, checks pypi otherwise.
+        """
+        if not (pypi := self.bot.get_cog("PyPi")):
+            await inter.send("Sorry, I'm unable to process this at the moment!", ephemeral=True)
+            return
+
+        if characters := pypi.check_characters(package):
+            await inter.send(
+                f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'",
+                ephemeral=True,
+            )
+            return
+
+        def get_link(package: str) -> Optional[str]:
+            if package in self.base_urls:
+                return self.base_urls[package]
+
+            if package in self.doc_symbols:
+                return self.doc_symbols[package].url
+
+            return None
+
+        link = get_link(package)
+        if not link:
+            # check pypi
+            res = await self.maybe_pypi_docs(package)
+            if res[0]:
+                link = res[1]
+
+        if link:
+            await inter.send(f"Found documentation for {package} at <{link}>.")
+            return
+        else:
+            msg = f"No docs found for {package}."
+            if res[1]:
+                msg += f"\nHowever, I did find this homepage while looking: <{res[1]}>."
+            await inter.send(msg)
 
     @staticmethod
     def base_url_from_inventory_url(inventory_url: str) -> str:
