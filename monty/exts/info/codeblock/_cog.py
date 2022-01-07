@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Optional
 
@@ -19,7 +20,10 @@ from monty.utils.messages import wait_for_deletion
 
 log = get_logger(__name__)
 
-WHITELISTED_GUILDS = [constants.Guilds.disnake, constants.Guilds.nextcord]
+WHITELISTED_GUILDS = [constants.Guilds.disnake, constants.Guilds.nextcord, constants.Guilds.testing]
+
+# seconds until the delete button is shown
+DELETE_PAUSE = 7
 
 
 class CodeBlockCog(Cog, name="Code Block"):
@@ -120,6 +124,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
+        await asyncio.sleep(DELETE_PAUSE)
         scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
 
     def should_parse(self, message: disnake.Message) -> bool:
