@@ -92,6 +92,14 @@ class PyPi(commands.Cog):
                 embed.title = f"{info['name']} v{info['version']}"
 
                 embed.url = info["package_url"]
+
+                try:
+                    release_info = response_json["releases"][info["version"]]
+                    embed.set_footer(text="Last updated")
+                    embed.timestamp = disnake.utils.parse_time(release_info[0]["upload_time"])
+                except Exception:
+                    pass
+
                 embed.colour = next(PYPI_COLOURS)
 
                 summary = escape_markdown(info["summary"])
