@@ -95,10 +95,16 @@ class CodeButtons(commands.Cog):
         if not code:
             return
 
+        # check the code is less than a specific length
+        if len(code) > 100_000:
+            logger.debug("Not adding reactions since the paste is way too long")
+            return
+
         logger.debug("Adding reactions since message passes.")
         actions = {*self.actions.keys()}
         if no_paste:
             actions.remove(Emojis.upload)
+
         self.messages[message.id] = CodeblockMessage(
             code,
             actions,
@@ -140,8 +146,8 @@ class CodeButtons(commands.Cog):
             print(reaction.emoji)
             return
         meth = self.actions[str(reaction.emoji)]
-        await meth(reaction.message)
         await reaction.message.remove_reaction(reaction, reaction.message.guild.me)
+        await meth(reaction.message)
 
     def get_snekbox(self) -> Optional["Snekbox"]:
         """Get the Snekbox cog. This method serves for typechecking."""
@@ -203,6 +209,7 @@ class CodeButtons(commands.Cog):
     async def run_in_snekbox(self, message: disnake.Message) -> None:
         """Run the specified message in snekbox."""
         code = self.messages[message.id].parsed_code
+
         await self.get_snekbox().send_eval(message, code)
 
 
