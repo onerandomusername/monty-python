@@ -133,8 +133,6 @@ class PyPi(commands.Cog):
         all_results = parsed.find_all("a", class_="package-snippet", limit=MAX_RESULTS)
         log.info(f"all_results len {len(all_results)}")
         for result in all_results:
-            with open("dump.html", "w") as f:
-                f.write(str(result))
 
             name = getattr(result.find(class_="package-snippet__name", recursive=True), "text", None)
             version = getattr(result.find(class_="package-snippet__version", recursive=True), "text", None)

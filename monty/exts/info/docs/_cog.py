@@ -533,7 +533,8 @@ class DocCog(commands.Cog):
         if docs:
             return True, docs
 
-        return False, info.get("home_page") or info["project_urls"].get("Homepage")
+        project_urls = info["project_urls"]
+        return False, info.get("home_page") or project_urls.get("Homepage") or project_urls.get("Home")
 
     async def _docs_get_command(
         self, inter: Union[disnake.ApplicationCommandInteraction, commands.Context], search: Optional[str]
