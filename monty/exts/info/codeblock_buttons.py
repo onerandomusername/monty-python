@@ -23,6 +23,8 @@ TIMEOUT = 180
 
 PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
 
+MAX_LEN = 20_000
+
 
 @dataclasses.dataclass
 class CodeblockMessage:
@@ -96,7 +98,7 @@ class CodeButtons(commands.Cog):
             return
 
         # check the code is less than a specific length
-        if len(code) > 100_000:
+        if len(code) > MAX_LEN:
             logger.debug("Not adding reactions since the paste is way too long")
             return
 
