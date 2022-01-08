@@ -509,6 +509,15 @@ class DocCog(commands.Cog):
             embed.set_footer(text=footer_text)
             return embed, doc_item
 
+    def _get_link_from_inventories(self, package: str) -> Optional[str]:
+        if package in self.base_urls:
+            return self.base_urls[package]
+
+        if package in self.doc_symbols:
+            return self.doc_symbols[package].url
+
+        return None
+
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
     async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
         """Look up documentation for Python symbols."""
@@ -537,7 +546,10 @@ class DocCog(commands.Cog):
         return False, info.get("home_page") or project_urls.get("Homepage") or project_urls.get("Home")
 
     async def _docs_get_command(
-        self, inter: Union[disnake.ApplicationCommandInteraction, commands.Context], search: Optional[str]
+        self,
+        inter: Union[disnake.ApplicationCommandInteraction, commands.Context],
+        search: Optional[str],
+        maybe_start: bool = True,
     ) -> None:
 
         if not search:
@@ -556,7 +568,10 @@ class DocCog(commands.Cog):
         else:
             symbol = search.strip("`")
             no_match = False
-            for sym in [symbol, symbol.split()[0]]:
+            tries = [symbol]
+            if maybe_start:
+                tries.append(symbol.split()[0])
+            for sym in tries:
                 sym = await self._docs_autocomplete(inter, sym, threshold=60)
                 if sym:
                     sym = sym[0]
@@ -571,13 +586,15 @@ class DocCog(commands.Cog):
                     res = await self.create_symbol_embed(sym, inter)
                 else:
                     res = await self.create_symbol_embed(sym)
-            symbol = symbol.split()[0]
             if not res:
                 error_text = f"No documentation found for `{symbol}`."
 
-                maybe_docs = await self.maybe_pypi_docs(symbol)
-                if maybe_docs[0]:
-                    error_text += f"\nYou may find what you're looking for at <{maybe_docs[1]}>"
+                maybe_package = symbol.split()[0]
+                maybe_docs = (
+                    self._get_link_from_inventories(maybe_package) or (await self.maybe_pypi_docs(maybe_package))[1]
+                )
+                if maybe_docs:
+                    error_text += f"\nYou may find what you're looking for at <{maybe_docs}>"
                 if isinstance(inter, disnake.Interaction):
                     await inter.send(error_text, ephemeral=True)
                 else:
@@ -605,7 +622,7 @@ class DocCog(commands.Cog):
         ----------
         search: the object to view the docs
         """
-        await self._docs_get_command(inter, query)
+        await self._docs_get_command(inter, query, maybe_start=False)
 
     async def _docs_autocomplete(
         self,
@@ -726,16 +743,7 @@ class DocCog(commands.Cog):
             )
             return
 
-        def get_link(package: str) -> Optional[str]:
-            if package in self.base_urls:
-                return self.base_urls[package]
-
-            if package in self.doc_symbols:
-                return self.doc_symbols[package].url
-
-            return None
-
-        link = get_link(package)
+        link = self._get_link_from_inventories(package)
         if not link:
             # check pypi
             res = await self.maybe_pypi_docs(package)
