@@ -10,7 +10,7 @@ from disnake.ext import commands
 from disnake.ext.commands import CheckFailure
 from disnake.ext.commands import Cog as DiscordCog
 from disnake.ext.commands import Command, Context
-from rapidfuzz import process
+from rapidfuzz import fuzz, process
 
 from monty import constants
 from monty.bot import Bot
@@ -162,9 +162,9 @@ class HelpSession:
         # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
 
-        result = process.extract(query, choices, score_cutoff=90)
+        result = process.extract(query, choices, score_cutoff=60, scorer=fuzz.ratio)
 
-        raise HelpQueryNotFound(f'Query "{query}" not found.', dict(result))
+        raise HelpQueryNotFound(f'Query "{query}" not found.', {choice: score for choice, score, pos in result})
 
     async def timeout(self, seconds: int = 30) -> None:
         """Waits for a set number of seconds, then stops the help session."""
