@@ -131,7 +131,7 @@ class CodeButtons(commands.Cog):
         await inter.send(msg, components=button)
 
     @commands.command(name="paste", aliases=("p",))
-    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message) -> None:
+    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message = None) -> None:
         """Paste the contents of the provided message on workbin."""
         if not message:
             if not ctx.message.reference:
