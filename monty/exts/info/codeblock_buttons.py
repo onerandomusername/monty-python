@@ -95,28 +95,100 @@ class CodeButtons(commands.Cog):
         """Get the Codeblock cog. This method serves for typechecking."""
         return self.bot.get_cog("Code Block")
 
-    @commands.message_command(name="Upload to Workbin")
-    async def upload_to_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
-        """Upload the message to the paste service."""
+    async def _upload_to_workbin(
+        self, message: disnake.Message, *, provide_link: bool = False
+    ) -> tuple[bool, str, Optional[str]]:
         success, code, is_paste = await self.parse_code(
-            inter.target.content,
+            message.content,
             require_fenced=False,
             check_is_python=False,
         )
         if not success:
-            await inter.send("This message does not have any code to extract.", ephemeral=True)
-            return
+            return False, "This message does not have any code to extract.", None
         if is_paste:
-            await inter.send("This is already a paste link.", ephemeral=True)
-            return
+            return False, "This is already a paste link.", None
 
         url = await send_to_paste_service(code, extension="python")
+        if provide_link:
+            msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here:"
+        else:
+            msg = "I've uploaded this message to paste, you can view it here:"
+        return True, msg, url
+        ...
+
+    @commands.message_command(name="Upload to Workbin")
+    async def message_command_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
+        """Upload the message to the paste service."""
+        success, msg, url = await self._upload_to_workbin(inter.target)
+        if not success:
+            await inter.send(msg, ephemeral=True)
+            return
         button = disnake.ui.Button(
             style=disnake.ButtonStyle.url,
             label="Click to open in workbin",
             url=url,
         )
-        await inter.send("I've uploaded this message to paste, you can view it here:", components=button)
+        await inter.send(msg, components=button)
+
+    @commands.command(name="paste", aliases=("p",))
+    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message) -> None:
+        """Paste the contents of the provided message on workbin."""
+        if not message:
+            if not ctx.message.reference:
+                raise commands.UserInputError(
+                    "You must either provide a valid message to bookmark, or reply to one."
+                    "\n\nThe lookup strategy for a message is as follows (in order):"
+                    "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
+                    "\n2. Lookup by message ID (the message **must** be in the context channel)"
+                    "\n3. Lookup by message URL"
+                )
+            message = ctx.message.reference.resolved
+
+        success, msg, url = await self._upload_to_workbin(message)
+
+        if not success:
+            await ctx.send(msg)
+            return
+        button = None
+        if url:
+
+            button = disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=url,
+            )
+        await ctx.send(msg, components=button)
+
+    @commands.slash_command(name="paste", description="Paste a message to the workbin.")
+    async def slash_paste(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        message: str,
+    ) -> None:
+        """
+        Paste a messages contents to workbin..
+
+        Parameters
+        ----------
+        message: A message to paste. This can be a link or id.
+        """
+        inter.channel_id = inter.channel.id
+        try:
+            message = await commands.MessageConverter().convert(inter, message)
+        except (commands.MessageNotFound, commands.ChannelNotFound, commands.ChannelNotReadable):
+            await inter.send("That message is not valid, or I do not have permissions to read it.", ephemeral=True)
+            return
+
+        success, msg, url = await self._upload_to_workbin(message, provide_link=True)
+        if not success:
+            await inter.send(msg, ephemeral=True)
+            return
+        button = disnake.ui.Button(
+            style=disnake.ButtonStyle.url,
+            label="Click to open in workbin",
+            url=url,
+        )
+        await inter.send(msg, components=button)
 
     async def _format_black(self, message: disnake.Message) -> tuple[bool, str, Optional[str]]:
         # success, string, link
