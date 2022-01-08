@@ -118,17 +118,16 @@ class CodeButtons(commands.Cog):
         )
         await inter.send("I've uploaded this message to paste, you can view it here:", components=button)
 
-    @commands.message_command(name="Format with Black")
-    async def format_black(self, inter: disnake.MessageCommandInteraction) -> None:
-        """Format the provided message with black."""
+    async def _format_black(self, message: disnake.Message) -> tuple[bool, str, Optional[str]]:
+        # success, string, link
+
         success, code, _ = await self.parse_code(
-            inter.target.content,
+            message.content,
             require_fenced=False,
             check_is_python=False,
         )
         if not success:
-            await inter.send("This message does not have any code to extract.", ephemeral=True)
-            return
+            return False, "This message does not have any code to extract.", None
 
         json = {
             "source": code,
@@ -137,35 +136,68 @@ class CodeButtons(commands.Cog):
         async with self.bot.http_session.post(self.black_endpoint, json=json, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
                 logger.error("Black endpoint returned not a 200")
-                await inter.send(
-                    "Something went wrong internally when formatting the code. Please report this.", ephemeral=True
-                )
-                return
+                return False, "Something went wrong internally when formatting the code. Please report this.", None
+
             json: dict = await resp.json()
         formatted: str = json["formatted_code"].strip()
         if json["source_code"].strip() == formatted:
             logger.debug("code was formatted with black but no changes were made.")
-            await inter.send(
-                "Formatted with black but no changes were made! \U0001f44c",
-            )
-            return
+            return True, "Formatted with black but no changes were made! \U0001f44c", None
+
         paste = await self.get_snekbox().upload_output(formatted, "python")
         if not paste:
-            await inter.send("Sorry, something went wrong!", ephemeral=True)
-            return
-        button = disnake.ui.Button(
-            style=disnake.ButtonStyle.url,
-            label="Click to open in workbin",
-            url=paste,
-        )
+            return False, "Sorry, something went wrong!", None
 
         msg = "Formatted with black. Click the button below to view on the pastebin."
         if formatted.startswith("Cannot parse:"):
             msg = "Attempted to format with black, but an error occured. Click to view."
-        await inter.send(
-            msg,
-            components=button,
-        )
+        return True, msg, paste
+
+    @commands.message_command(name="Format with Black")
+    async def message_command_black(self, inter: disnake.MessageCommandInteraction) -> None:
+        """Format the provided message with black."""
+        success, msg, url = await self._format_black(inter.target)
+        if not success:
+            await inter.send(msg, ephemeral=True)
+            return
+        button = None
+        if url:
+
+            button = disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=url,
+            )
+        await inter.send(msg, components=button)
+
+    @commands.command(name="blackify", aliases=("black",))
+    async def prefix_black(self, ctx: commands.Context, message: disnake.Message = None) -> None:
+        """Format the provided message with black."""
+        if not message:
+            if not ctx.message.reference:
+                raise commands.UserInputError(
+                    "You must either provide a valid message to bookmark, or reply to one."
+                    "\n\nThe lookup strategy for a message is as follows (in order):"
+                    "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
+                    "\n2. Lookup by message ID (the message **must** be in the context channel)"
+                    "\n3. Lookup by message URL"
+                )
+            message = ctx.message.reference.resolved
+
+        success, msg, url = await self._format_black(message)
+
+        if not success:
+            await ctx.send(msg)
+            return
+        button = None
+        if url:
+
+            button = disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=url,
+            )
+        await ctx.send(msg, components=button)
 
     @commands.message_command(name="Run in Snekbox")
     async def run_in_snekbox(self, inter: disnake.MessageCommandInteraction) -> None:
