@@ -5,7 +5,7 @@ import re
 import textwrap
 from functools import partial
 from signal import Signals
-from typing import Optional, Tuple, overload
+from typing import Any, Optional, Tuple, overload
 
 import aiohttp
 from disnake import HTTPException, Message, NotFound, Reaction, User
@@ -204,32 +204,48 @@ class Snekbox(Cog):
 
         return output, paste_link
 
-    async def send_eval(self, ctx: Context, code: str) -> Message:
+    @overload
+    async def send_eval(self, ctx: Context, code: str, return_result: bool = True) -> tuple[str, Optional[str]]:
+        """Send eval and receive a tuple of the msg and paste link."""
+        pass
+
+    @overload
+    async def send_eval(self, ctx: Context, code: str, return_result: bool = False) -> Message:
+        """Return the bot response from an eval invocation."""
+        pass
+
+    async def send_eval(self, ctx: Context, code: str, return_result: bool = False) -> Any:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
         Return the bot response.
         """
-        async with ctx.channel.typing():
-            results = await self.post_eval(code)
-            msg, error = self.get_results_message(results)
+        if isinstance(ctx, Context):
+            await ctx.trigger_typing()
+        results = await self.post_eval(code)
+        msg, error = self.get_results_message(results)
 
-            if error:
-                output, paste_link = error, None
-            else:
-                output, paste_link = await self.format_output(results["stdout"])
-                if paste_link and Paste.alias_url and ctx.guild and ctx.guild.id == Guilds.nextcord:
-                    paste_link = paste_link.replace(".disnake.", ".nextcord.")
+        if error:
+            output, paste_link = error, None
+        else:
+            output, paste_link = await self.format_output(results["stdout"])
+            if paste_link and Paste.alias_url and ctx.guild and ctx.guild.id == Guilds.nextcord:
+                paste_link = paste_link.replace(".disnake.", ".nextcord.")
 
-            icon = self.get_status_emoji(results)
-            msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
-            if paste_link:
-                msg = f"{msg}\nFull output: {paste_link}"
+        icon = self.get_status_emoji(results)
+        msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
 
-            response = await ctx.reply(msg)
-            scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
+        log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
-            log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
+        if return_result:
+            return msg, paste_link
+
+        if paste_link:
+            msg = f"{msg}\nFull output: {paste_link}"
+
+        response = await ctx.reply(msg)
+        scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
+
         return response
 
     async def continue_eval(self, ctx: Context, response: Message) -> Optional[str]:

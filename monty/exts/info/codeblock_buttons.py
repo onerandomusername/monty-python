@@ -1,15 +1,15 @@
-import asyncio
 import dataclasses
 import logging
 import re
 import urllib.parse
 from typing import TYPE_CHECKING, Optional, Union
 
+import aiohttp
 import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import Emojis, Paste, URLs
+from monty.constants import Paste, URLs
 from monty.utils.services import send_to_paste_service
 
 
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 180
+
+AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=2.4)
 
 PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
 
@@ -39,25 +41,19 @@ class CodeButtons(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.messages: dict[int, CodeblockMessage] = {}
-        self.actions = {
-            Emojis.upload: self.upload_to_paste,
-            Emojis.black: self.format_black,
-            Emojis.snekbox: self.run_in_snekbox,
-        }
         self.black_endpoint = URLs.black_formatter
 
-    def get_code(self, content: str) -> Optional[str]:
+    def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> Optional[str]:
         """Get the code from the provided content. Parses codeblocks and assures its python code."""
         if not (snekbox := self.get_snekbox()):
             logger.trace("Could not parse message as the snekbox cog is not loaded.")
             return None
-        code = snekbox.prepare_input(content, require_fenced=True)
-        if not code or code.count("\n") < 2:
+        code = snekbox.prepare_input(content, require_fenced=require_fenced)
+        if not code:
             logger.trace("Parsed message but either no code was found or was too short.")
             return None
         # not required, but recommended
-        if (codeblock := self.get_codeblock_cog()) and not codeblock.is_python_code(code):
+        if check_is_python and (codeblock := self.get_codeblock_cog()) and not codeblock.is_python_code(code):
             logger.trace("Code blocks exist but they are not python code.")
             return None
         return code
@@ -71,85 +67,32 @@ class CodeButtons(commands.Cog):
         query_strings = urllib.parse.parse_qs(parsed_url.query)
         id = query_strings["id"][0]
         url = Paste.raw_paste_endpoint.format(key=id)
-        print(url)
-        async with self.bot.http_session.get(url) as resp:
+
+        async with self.bot.http_session.get(url, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
                 return None
             return await resp.text()
 
-    @commands.Cog.listener()
-    async def on_message(self, message: disnake.Message) -> None:
-        """See if a message matches the pattern."""
-        if not message.guild:
-            return
-
-        if not ((perms := message.channel.permissions_for(message.guild.me)).add_reactions and perms.send_messages):
-            return
-
-        no_paste = False
-        code = self.get_code(message.content)
+    async def parse_code(
+        self,
+        content: str,
+        require_fenced: bool = False,
+        check_is_python: bool = False,
+    ) -> tuple[bool, Optional[str], Optional[bool]]:
+        """Extract code out of a message or paste link within the message."""
+        is_paste = False
+        code = self.get_code(content, require_fenced=require_fenced, check_is_python=check_is_python)
 
         if not code:
             # don't despair, it could be a paste link
-            code = await self.check_paste_link(message.content)
-            no_paste = True
+            code = await self.check_paste_link(content)
+            is_paste = True
 
-        if not code:
-            return
+        # check the code is less than a specific length and it exists
+        if not code or len(code) > MAX_LEN:
+            return False, None, None
 
-        # check the code is less than a specific length
-        if len(code) > MAX_LEN:
-            logger.debug("Not adding reactions since the paste is way too long")
-            return
-
-        logger.debug("Adding reactions since message passes.")
-        actions = {*self.actions.keys()}
-        if no_paste:
-            actions.remove(Emojis.upload)
-
-        self.messages[message.id] = CodeblockMessage(
-            code,
-            actions,
-        )
-        for react in actions:
-            await message.add_reaction(react)
-
-        await asyncio.sleep(TIMEOUT)
-
-        try:
-            cb_msg = self.messages.pop(message.id)
-        except KeyError:
-            return
-        for reaction in cb_msg.reactions:
-            await message.remove_reaction(reaction, message.guild.me)
-
-    @commands.Cog.listener()
-    async def on_message_edit(self, before: disnake.Message, after: disnake.Message) -> None:
-        """Listen for edits and relay them to the on_message listener."""
-        await self.on_message(after)
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction: disnake.Reaction, user: disnake.User) -> None:
-        """Listen for reactions on codeblock messages."""
-        if not reaction.message.guild:
-            return
-
-        # DO ignore bots on reaction add
-        if user.bot:
-            return
-
-        if user.id == self.bot.user.id:
-            return
-
-        if not (code_block := self.messages.get(reaction.message.id)):
-            return
-
-        if str(reaction.emoji) not in code_block.reactions:
-            print(reaction.emoji)
-            return
-        meth = self.actions[str(reaction.emoji)]
-        await reaction.message.remove_reaction(reaction, reaction.message.guild.me)
-        await meth(reaction.message)
+        return True, code, is_paste
 
     def get_snekbox(self) -> Optional["Snekbox"]:
         """Get the Snekbox cog. This method serves for typechecking."""
@@ -159,60 +102,102 @@ class CodeButtons(commands.Cog):
         """Get the Codeblock cog. This method serves for typechecking."""
         return self.bot.get_cog("Code Block")
 
-    async def format_black(self, message: disnake.Message) -> None:
+    @commands.message_command(name="Upload to Workbin")
+    async def upload_to_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
+        """Upload the message to the paste service."""
+        success, code, is_paste = await self.parse_code(
+            inter.target.content,
+            require_fenced=False,
+            check_is_python=False,
+        )
+        if not success:
+            await inter.send("This message does not have any code to extract.", ephemeral=True)
+            return
+        if is_paste:
+            await inter.send("This is already a paste link.", ephemeral=True)
+            return
+
+        url = await send_to_paste_service(code, extension="python")
+        button = disnake.ui.Button(
+            style=disnake.ButtonStyle.url,
+            label="Click to open in workbin",
+            url=url,
+        )
+        await inter.send("I've uploaded this message to paste, you can view it here:", components=button)
+
+    @commands.message_command(name="Format with Black")
+    async def format_black(self, inter: disnake.MessageCommandInteraction) -> None:
         """Format the provided message with black."""
+        success, code, _ = await self.parse_code(
+            inter.target.content,
+            require_fenced=False,
+            check_is_python=False,
+        )
+        if not success:
+            await inter.send("This message does not have any code to extract.", ephemeral=True)
+            return
+
         json = {
-            "source": self.messages[message.id].parsed_code,
+            "source": code,
             "options": {"line_length": 110},
         }
-        await message.channel.trigger_typing()
-        async with self.bot.http_session.post(self.black_endpoint, json=json) as resp:
+        async with self.bot.http_session.post(self.black_endpoint, json=json, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
                 logger.error("Black endpoint returned not a 200")
-                await message.channel.send(
-                    "Something went wrong internally when formatting the code. Please report this."
+                await inter.send(
+                    "Something went wrong internally when formatting the code. Please report this.", ephemeral=True
                 )
                 return
             json: dict = await resp.json()
-        formatted = json["formatted_code"].strip()
+        formatted: str = json["formatted_code"].strip()
         if json["source_code"].strip() == formatted:
             logger.debug("code was formatted with black but no changes were made.")
-            await message.reply(
-                "Formatted with black but no changes were made! :ok_hand:",
-                fail_if_not_exists=False,
+            await inter.send(
+                "Formatted with black but no changes were made! \U0001f44c",
             )
             return
         paste = await self.get_snekbox().upload_output(formatted, "python")
         if not paste:
-            await message.channel.send("Sorry, something went wrong!")
+            await inter.send("Sorry, something went wrong!", ephemeral=True)
             return
         button = disnake.ui.Button(
             style=disnake.ButtonStyle.url,
             label="Click to open in workbin",
             url=paste,
         )
-        await message.reply(
-            "Formatted with black. Click the button below to view on the pastebin.",
-            fail_if_not_exists=False,
+
+        msg = "Formatted with black. Click the button below to view on the pastebin."
+        if formatted.startswith("Cannot parse:"):
+            msg = "Attempted to format with black, but an error occured. Click to view."
+        await inter.send(
+            msg,
             components=button,
         )
 
-    async def upload_to_paste(self, message: disnake.Message) -> None:
-        """Upload the message to the paste service."""
-        await message.channel.trigger_typing()
-        url = await send_to_paste_service(self.messages[message.id].parsed_code, extension="python")
-        button = disnake.ui.Button(
-            style=disnake.ButtonStyle.url,
-            label="Click to open in workbin",
-            url=url,
-        )
-        await message.reply("I've uploaded this message to paste, you can view it here:", components=button)
-
-    async def run_in_snekbox(self, message: disnake.Message) -> None:
+    @commands.message_command(name="Run in Snekbox")
+    async def run_in_snekbox(self, inter: disnake.MessageCommandInteraction) -> None:
         """Run the specified message in snekbox."""
-        code = self.messages[message.id].parsed_code
+        success, code, _ = await self.parse_code(
+            inter.target.content,
+            require_fenced=False,
+            check_is_python=False,
+        )
+        if not success:
+            await inter.send("Something went wrong, could not extract code out of specified message.", ephemeral=True)
+            return
 
-        await self.get_snekbox().send_eval(message, code)
+        await inter.response.defer()
+        msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
+
+        button = None
+        if link:
+            button = disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=link,
+            )
+
+        await inter.edit_original_message(content=msg, components=button)
 
 
 def setup(bot: Bot) -> None:
