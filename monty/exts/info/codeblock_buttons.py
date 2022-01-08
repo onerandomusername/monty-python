@@ -10,6 +10,8 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Paste, URLs
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 from monty.utils.services import send_to_paste_service
 
 
@@ -189,15 +191,17 @@ class CodeButtons(commands.Cog):
         await inter.response.defer()
         msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
 
-        button = None
+        view = DeleteView(inter.author, inter)
         if link:
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
                 url=link,
             )
+            view.add_item(button)
 
-        await inter.edit_original_message(content=msg, components=button)
+        await inter.edit_original_message(content=msg, view=view)
+        await wait_for_deletion(inter, view=view)
 
 
 def setup(bot: Bot) -> None:
