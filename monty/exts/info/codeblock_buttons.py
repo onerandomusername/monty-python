@@ -1,8 +1,7 @@
-import dataclasses
 import logging
 import re
 import urllib.parse
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import aiohttp
 import disnake
@@ -28,14 +27,6 @@ AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=2.4)
 PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
 
 MAX_LEN = 20_000
-
-
-@dataclasses.dataclass
-class CodeblockMessage:
-    """Represents a message that was already parsed to determine the code."""
-
-    parsed_code: str
-    reactions: set[Union[disnake.PartialEmoji, str]]
 
 
 class CodeButtons(commands.Cog):
@@ -185,7 +176,7 @@ class CodeButtons(commands.Cog):
             check_is_python=False,
         )
         if not success:
-            await inter.send("Something went wrong, could not extract code out of specified message.", ephemeral=True)
+            await inter.send("This message does not have any code to extract.", ephemeral=True)
             return
 
         await inter.response.defer()
