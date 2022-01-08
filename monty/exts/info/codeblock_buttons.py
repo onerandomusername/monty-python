@@ -82,13 +82,13 @@ class CodeButtons(commands.Cog):
         check_is_python: bool = False,
     ) -> tuple[bool, Optional[str], Optional[bool]]:
         """Extract code out of a message or paste link within the message."""
-        is_paste = False
-        code = self.get_code(content, require_fenced=require_fenced, check_is_python=check_is_python)
+        code = await self.check_paste_link(content)
 
-        if not code:
-            # don't despair, it could be a paste link
-            code = await self.check_paste_link(content)
+        if code:
             is_paste = True
+        else:
+            is_paste = False
+            code = self.get_code(content, require_fenced=require_fenced, check_is_python=check_is_python)
 
         # check the code is less than a specific length and it exists
         if not code or len(code) > MAX_LEN:
