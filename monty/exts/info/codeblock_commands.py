@@ -276,7 +276,7 @@ class CodeButtons(commands.Cog):
             )
         await inter.send(msg, components=button)
 
-    @commands.command(name="blackify", aliases=("black",))
+    @commands.command(name="blackify", aliases=("black", "bl"))
     async def prefix_black(self, ctx: commands.Context, message: disnake.Message = None) -> None:
         """Format the provided message with black."""
         if not message:
