@@ -20,7 +20,7 @@ ALERT_MESSAGE_TEMPLATE = (
     "mistake, please let us know."
 )
 
-WHITELIST = [Guilds.disnake, Guilds.nextcord]
+WHITELIST = [Guilds.disnake, Guilds.nextcord, Guilds.testing]
 
 log = get_logger(__name__)
 
@@ -94,6 +94,9 @@ class WebhookRemover(Cog):
     @Cog.listener()
     async def on_message_edit(self, before: Message, after: Message) -> None:
         """Check if a Discord webhook URL is in the edited message `after`."""
+        if before.content == after.content:
+            return
+
         await self.on_message(after)
 
 

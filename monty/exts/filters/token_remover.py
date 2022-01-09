@@ -47,7 +47,7 @@ TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27})
 MFA_TOKEN_RE = re.compile(r"(mfa\.[a-z0-9_-]{20,})", re.IGNORECASE)
 
 
-WHITELIST = [Guilds.disnake, Guilds.nextcord]
+WHITELIST = [Guilds.disnake, Guilds.nextcord, Guilds.testing]
 
 
 class Token(t.NamedTuple):
@@ -105,6 +105,13 @@ class TokenRemover(Cog):
 
         See: https://discordapp.com/developers/docs/reference#snowflakes
         """
+        if before.content == after.content:
+            return
+
+        if self.find_token_in_message(before):
+            # already alerted the user, no need to alert again
+            return
+
         await self.on_message(after)
 
     async def take_action(self, msg: Message, found_token: Token) -> None:
