@@ -190,7 +190,11 @@ class CodeButtons(commands.Cog):
         )
         await inter.send(msg, components=button)
 
-    async def _format_black(self, message: disnake.Message) -> tuple[bool, str, Optional[str]]:
+    async def _format_black(
+        self,
+        message: disnake.Message,
+        include_message: bool = False,
+    ) -> tuple[bool, str, Optional[str]]:
         # success, string, link
 
         success, code, _ = await self.parse_code(
@@ -212,27 +216,32 @@ class CodeButtons(commands.Cog):
 
             json: dict = await resp.json()
         formatted: str = json["formatted_code"].strip()
+        if include_message:
+            maybe_ref_link = f"[this message]({message.jump_url}) "
+        else:
+            maybe_ref_link = ""
+
         if json["source_code"].strip() == formatted:
             logger.debug("code was formatted with black but no changes were made.")
-            return True, "Formatted with black but no changes were made! \U0001f44c", None
+            return True, "Formatted " + maybe_ref_link + "with black but no changes were made! \U0001f44c", None
 
         paste = await self.get_snekbox().upload_output(formatted, "python")
         if not paste:
             return False, "Sorry, something went wrong!", None
 
-        msg = "Formatted with black. Click the button below to view on the pastebin."
+        msg = f"Formatted {maybe_ref_link}with black. Click the button below to view on the pastebin."
         if formatted.startswith("Cannot parse:"):
-            msg = "Attempted to format with black, but an error occured. Click to view."
+            msg = f"Attempted to format {maybe_ref_link}with black, but an error occured. Click to view."
         return True, msg, paste
 
     @commands.message_command(name="Format with Black")
     async def message_command_black(self, inter: disnake.MessageCommandInteraction) -> None:
         """Format the provided message with black."""
-        success, msg, url = await self._format_black(inter.target)
+        success, msg, url = await self._format_black(inter.target, include_message=True)
         if not success:
             await inter.send(msg, ephemeral=True)
             return
-        button = None
+        button = disnake.utils.MISSING
         if url:
 
             button = disnake.ui.Button(
