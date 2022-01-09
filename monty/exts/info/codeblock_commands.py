@@ -26,7 +26,7 @@ AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=2.4)
 
 PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
 
-MAX_LEN = 20_000
+MAX_LEN = 30_000
 
 
 class CodeButtons(commands.Cog):
@@ -72,6 +72,7 @@ class CodeButtons(commands.Cog):
         require_fenced: bool = False,
         check_is_python: bool = False,
         file_exts: set = None,
+        no_len_limit: bool = False,
     ) -> tuple[bool, Optional[str], Optional[bool]]:
         """Extract code out of a message's content, attachments, or paste link within the message."""
         if file_exts is None:
@@ -86,7 +87,7 @@ class CodeButtons(commands.Cog):
                     except UnicodeDecodeError:
                         content = None
                     else:
-                        if len(content) > MAX_LEN:
+                        if not no_len_limit and len(content) > MAX_LEN:
                             return False, None, None
                         else:
                             return True, content, False
@@ -123,9 +124,10 @@ class CodeButtons(commands.Cog):
             require_fenced=False,
             check_is_python=False,
             file_exts={"py", "txt", "sql", "md", "rst", "html", "css", "js", "json"},
+            no_len_limit=True,
         )
         if not success:
-            return False, "This message does not have any code to extract.", None
+            return False, "This message does not have any code to extract or is too long to process.", None
         if is_paste:
             return False, "This is already a paste link.", None
 
