@@ -131,9 +131,9 @@ class CodeButtons(commands.Cog):
 
         url = await send_to_paste_service(code, extension="python")
         if provide_link:
-            msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here:"
+            msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here: <{url}>"
         else:
-            msg = "I've uploaded this message to paste, you can view it here:"
+            msg = f"I've uploaded this message to paste, you can view it here: <{url}>"
         return True, msg, url
         ...
 
