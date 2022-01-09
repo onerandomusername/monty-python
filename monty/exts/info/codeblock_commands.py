@@ -68,11 +68,31 @@ class CodeButtons(commands.Cog):
 
     async def parse_code(
         self,
-        content: str,
+        message: disnake.Message,
         require_fenced: bool = False,
         check_is_python: bool = False,
+        file_exts: set = None,
     ) -> tuple[bool, Optional[str], Optional[bool]]:
-        """Extract code out of a message or paste link within the message."""
+        """Extract code out of a message's content, attachments, or paste link within the message."""
+        if file_exts is None:
+            file_exts = {"py", "txt"}
+
+        if message.attachments:
+            for file in message.attachments:
+                if file.filename.rsplit(".")[-1].lower() in file_exts:
+                    content = await file.read()
+                    try:
+                        content = content.decode("utf-8")
+                    except UnicodeDecodeError:
+                        content = None
+                    else:
+                        if len(content) > MAX_LEN:
+                            return False, None, None
+                        else:
+                            return True, content, False
+
+        content = message.content
+
         code = await self.check_paste_link(content)
 
         if code:
@@ -99,9 +119,10 @@ class CodeButtons(commands.Cog):
         self, message: disnake.Message, *, provide_link: bool = False
     ) -> tuple[bool, str, Optional[str]]:
         success, code, is_paste = await self.parse_code(
-            message.content,
+            message,
             require_fenced=False,
             check_is_python=False,
+            file_exts={"py", "txt", "sql", "md", "rst", "html", "css", "js", "json"},
         )
         if not success:
             return False, "This message does not have any code to extract.", None
@@ -119,7 +140,7 @@ class CodeButtons(commands.Cog):
     @commands.message_command(name="Upload to Workbin")
     async def message_command_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
         """Upload the message to the paste service."""
-        success, msg, url = await self._upload_to_workbin(inter.target)
+        success, msg, url = await self._upload_to_workbin(inter.target, provide_link=True)
         if not success:
             await inter.send(msg, ephemeral=True)
             return
@@ -198,7 +219,7 @@ class CodeButtons(commands.Cog):
         # success, string, link
 
         success, code, _ = await self.parse_code(
-            message.content,
+            message,
             require_fenced=False,
             check_is_python=False,
         )
@@ -284,7 +305,7 @@ class CodeButtons(commands.Cog):
     async def run_in_snekbox(self, inter: disnake.MessageCommandInteraction) -> None:
         """Run the specified message in snekbox."""
         success, code, _ = await self.parse_code(
-            inter.target.content,
+            inter.target,
             require_fenced=False,
             check_is_python=False,
         )
