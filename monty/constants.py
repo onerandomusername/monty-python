@@ -29,7 +29,7 @@ class Client(NamedTuple):
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
-    github_bot_repo = "https://github.com/onerandomusername/monty-bot"
+    github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
     extensions = environ.get("BOT_EXTENSIONS", None) and {
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")

@@ -26,7 +26,7 @@ def setup() -> None:
     root_logger = logging.getLogger()
 
     # Set up file logging
-    log_file = Path("logs/monty-bot.log")
+    log_file = Path("logs/monty-python.log")
     log_file.parent.mkdir(exist_ok=True)
 
     # File handler rotates logs every 5 MB
