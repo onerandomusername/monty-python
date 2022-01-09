@@ -165,11 +165,15 @@ class CodeButtons(commands.Cog):
                 )
             message = ctx.message.reference.resolved
 
+        mentions = disnake.AllowedMentions.none()
+        reference = message.to_reference(fail_if_not_exists=False)
+
         success, msg, url = await self._upload_to_workbin(message)
 
         if not success:
-            await ctx.send(msg)
+            await ctx.send(msg, reference=reference, allowed_mentions=mentions)
             return
+
         button = None
         if url:
 
@@ -178,7 +182,7 @@ class CodeButtons(commands.Cog):
                 label="Click to open in workbin",
                 url=url,
             )
-        await ctx.send(msg, components=button)
+        await ctx.send(msg, components=button, reference=reference, allowed_mentions=mentions)
 
     @commands.slash_command(name="paste", description="Paste a message to the workbin.")
     async def slash_paste(
@@ -286,11 +290,15 @@ class CodeButtons(commands.Cog):
                 )
             message = ctx.message.reference.resolved
 
+        mentions = disnake.AllowedMentions.none()
+        reference = message.to_reference(fail_if_not_exists=False)
+
         success, msg, url = await self._format_black(message)
 
         if not success:
-            await ctx.send(msg)
+            await ctx.send(msg, reference=reference, allowed_mentions=mentions)
             return
+
         button = None
         if url:
 
@@ -299,7 +307,7 @@ class CodeButtons(commands.Cog):
                 label="Click to open in workbin",
                 url=url,
             )
-        await ctx.send(msg, components=button)
+        await ctx.send(msg, components=button, reference=reference, allowed_mentions=mentions)
 
     @commands.message_command(name="Run in Snekbox")
     async def run_in_snekbox(self, inter: disnake.MessageCommandInteraction) -> None:
