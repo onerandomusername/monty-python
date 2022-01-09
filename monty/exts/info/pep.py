@@ -7,6 +7,9 @@ from typing import Dict, Optional, Tuple
 
 import bs4
 import disnake
+import rapidfuzz
+import rapidfuzz.fuzz
+import rapidfuzz.process
 from disnake import Colour, Embed
 from disnake.ext import commands
 
@@ -31,7 +34,7 @@ class PythonEnhancementProposals(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: Dict[int, str] = {}
-        self.autocomplete: dict[str, int] = {}
+        self.autocomplete: dict[str, str] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
         self.bot.loop.create_task(self.refresh_peps_urls())
@@ -83,7 +86,7 @@ class PythonEnhancementProposals(commands.Cog):
             else:
                 all_.extend(td)
 
-        self.autocomplete["0: Index of Python Enhancement Proposals"] = 0
+        self.autocomplete["0: Index of Python Enhancement Proposals"] = "0"
         for a in all_:
             if num := a.find("a"):
                 try:
@@ -92,7 +95,9 @@ class PythonEnhancementProposals(commands.Cog):
                     continue
                 title = num.parent.find_next_sibling("td")
                 if title:
-                    self.autocomplete[f"{num.text}: {title.text}"] = int(num.text)
+                    self.autocomplete[f"{num.text}: {title.text}"] = num.text
+
+        self.autocomplete = {k[0]: str(k[1]) for k in sorted(self.autocomplete.items(), key=lambda x: x[1])}
 
         log.info("Finished scraping pep0.")
 
@@ -209,23 +214,45 @@ class PythonEnhancementProposals(commands.Cog):
         """Completion for pep numbers."""
         if not query:
             # return some fun peps
-            interesting_peps = [0, 8, 257, 517, 528, 619]
+            interesting_peps = [0, 8, 257, 517, 619, 660]
             resp = {}
             for title, pep in self.autocomplete.items():
                 if int(pep) in interesting_peps:
                     resp[title] = str(pep)
             return {x: y for x, y in sorted(resp.items(), key=lambda x: int(x[1]))}
-        peps: dict[str, int] = {}
-        query = str(query).lower()
-        for title, num in self.autocomplete.items():
-            if query not in title.lower():
-                continue
-            peps[title] = num
-            if len(peps) >= 11:
-                break
-        d = {x: str(y) for x, y in sorted(peps.items(), key=lambda x: int(x[1]))}
 
-        return d
+        peps: dict[str, int] = {}
+
+        try:
+            int(query)
+        except ValueError:
+            processor = lambda x: x[0]  # noqa: E731
+            query = query.lower()
+        else:
+            processor = lambda x: x[1]  # noqa: E731
+
+        processed = rapidfuzz.process.extract(
+            (query, query),
+            self.autocomplete.items(),
+            scorer=rapidfuzz.fuzz.ratio,
+            processor=processor,
+            limit=11,
+            score_cutoff=0,
+        )
+
+        for num, ((title, pep), score, _) in enumerate(processed):
+            if num == 0:
+                top_score = score
+
+            if top_score > score + 24:
+                break
+
+            peps[title] = str(pep)
+
+        if not len(peps):
+            print("nomatch")
+
+        return peps
 
 
 def setup(bot: Bot) -> None:
