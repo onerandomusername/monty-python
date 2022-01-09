@@ -65,7 +65,13 @@ class Snekbox(Cog):
         url = URLs.snekbox_eval_api
         data = {"input": code}
         try:
-            async with self.bot.http_session.post(url, json=data, raise_for_status=True, headers=HEADERS) as resp:
+            async with self.bot.http_session.post(
+                url,
+                json=data,
+                raise_for_status=True,
+                headers=HEADERS,
+                timeout=10,
+            ) as resp:
                 return await resp.json()
         except aiohttp.ClientConnectorError:
             raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
