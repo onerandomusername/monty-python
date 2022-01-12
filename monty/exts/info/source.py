@@ -107,7 +107,7 @@ class BotSource(commands.Cog):
             description = source_object.description
         elif isinstance(source_object, (commands.SubCommand, commands.SubCommandGroup)):
             title = f"Slash Sub-Command: {source_object.qualified_name}"
-            description = source_object.option
+            description = source_object.option.description
         else:
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
