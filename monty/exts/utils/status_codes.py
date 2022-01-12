@@ -23,7 +23,7 @@ class HTTPStatusCodes(commands.Cog):
 
     @commands.group(
         name="http_status",
-        aliases=("status", "httpstatus"),
+        aliases=("status", "httpstatus", "http"),
         invoke_without_command=True,
     )
     async def http_status_group(self, ctx: commands.Context, code: int) -> None:
