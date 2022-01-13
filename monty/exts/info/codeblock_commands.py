@@ -159,7 +159,7 @@ class CodeButtons(commands.Cog):
         if not message:
             if not ctx.message.reference:
                 raise commands.UserInputError(
-                    "You must either provide a valid message to bookmark, or reply to one."
+                    "You must either provide a valid message to paste, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
@@ -234,7 +234,7 @@ class CodeButtons(commands.Cog):
 
         json = {
             "source": code,
-            "options": {"line_length": 110},
+            "options": {"line_length": 110, "fast": True},
         }
         async with self.bot.http_session.post(self.black_endpoint, json=json, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
@@ -284,7 +284,7 @@ class CodeButtons(commands.Cog):
         if not message:
             if not ctx.message.reference:
                 raise commands.UserInputError(
-                    "You must either provide a valid message to bookmark, or reply to one."
+                    "You must either provide a valid message to format with black, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
