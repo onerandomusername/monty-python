@@ -365,15 +365,15 @@ class GithubInfo(commands.Cog):
         # to get the desired information for the PR.
         if pull_data := json_data.get("pull_request"):
             issue_url = pull_data["html_url"]
-            if json_data["draft"]:
-                emoji = constants.Emojis.pull_request_draft
-            elif json_data["state"] == "open":
-                emoji = constants.Emojis.pull_request_open
             # When 'merged_at' is not None, this means that the state of the PR is merged
-            elif pull_data["merged_at"] is not None:
+            if pull_data["merged_at"] is not None:
                 emoji = constants.Emojis.pull_request_merged
-            else:
+            elif json_data["state"] == "closed":
                 emoji = constants.Emojis.pull_request_closed
+            elif json_data["draft"]:
+                emoji = constants.Emojis.pull_request_draft
+            else:
+                emoji = constants.Emojis.pull_request_open
         else:
             # this is a definite issue and not a pull request, and should be treated as such
             issue_url = json_data["html_url"]
