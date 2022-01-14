@@ -53,6 +53,9 @@ GUILD_WHITELIST = {
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
 
+# webhooks in these channels will relay autolinkers
+WHITELISTED_WEBHOOK_CHANNELS = {931380367884185681, 931379162965487617}
+
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
 AUTOMATIC_REGEX = re.compile(
@@ -499,8 +502,10 @@ class GithubInfo(commands.Cog):
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        # Ignore bots
-        if message.author.bot:
+        # Ignore bots but NOT webhooks in designated channels
+        if message.author.bot and not (
+            message.channel.id in WHITELISTED_WEBHOOK_CHANNELS and message.author.discriminator == "0000"
+        ):
             return
 
         if not message.guild:
