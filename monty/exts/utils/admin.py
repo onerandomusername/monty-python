@@ -144,15 +144,18 @@ class Admin(commands.Cog):
         """Send a nicely formatted eval response."""
         if resp is None and error is None:
             view = DeleteView(ctx.author)
-            await wait_for_deletion(
-                await ctx.send(
-                    "No output.",
-                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                    reference=ctx.message.to_reference(fail_if_not_exists=False),
+            self.bot.loop.create_task(
+                wait_for_deletion(
+                    await ctx.send(
+                        "No output.",
+                        allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                        reference=ctx.message.to_reference(fail_if_not_exists=False),
+                        view=view,
+                    ),
                     view=view,
-                ),
-                view=view,
+                )
             )
+            return
         resp_file: disnake.File = None
         # for now, we're not gonna handle exceptions as files
         # unless, for some reason, it has a ``` in it
@@ -190,25 +193,27 @@ class Admin(commands.Cog):
             if f is not None:
                 files.append(f)
         view = DeleteView(ctx.author)
-        await wait_for_deletion(
-            await ctx.send(
-                out,
-                files=files,
-                allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                reference=ctx.message.to_reference(fail_if_not_exists=False),
+        self.bot.loop.create_task(
+            wait_for_deletion(
+                await ctx.send(
+                    out,
+                    files=files,
+                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                    reference=ctx.message.to_reference(fail_if_not_exists=False),
+                    view=view,
+                ),
                 view=view,
-            ),
-            view=view,
+            )
         )
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])
-    async def _eval(self, ctx: commands.Context, *, code: str) -> None:
+    async def _eval(
+        self, ctx: Union[commands.Context, disnake.CommandInter], *, code: str, original_ctx: commands.Context = None
+    ) -> None:
         """Evaluates provided code. Owner only."""
         log.trace("command _eval executed.")
-
         env = {
             "bot": self.bot,
-            "ctx": ctx,
             "channel": ctx.channel,
             "author": ctx.author,
             "guild": ctx.guild,
@@ -216,6 +221,12 @@ class Admin(commands.Cog):
             "pprint": pprint,
             "_": self._last_result,
         }
+
+        if isinstance(ctx, disnake.Interaction):
+            env["inter"] = ctx
+            env["ctx"] = original_ctx
+        else:
+            env["ctx"] = ctx
 
         env.update(globals_to_import)
         code = self.cleanup_code(code)
@@ -245,7 +256,7 @@ class Admin(commands.Cog):
             error.pop(1)
             error = "".join(error).strip()
         try:
-            await ctx.message.add_reaction("\u2705")
+            await (original_ctx or ctx).message.add_reaction("\u2705")
         except disnake.HTTPException:
             pass
         log.trace(f"result: {result}")
@@ -255,7 +266,33 @@ class Admin(commands.Cog):
         if result.rstrip("\n") == "":
             result = None
         self._last_result = result
-        await self._send_stdout(ctx=ctx, resp=result, error=error)
+        await self._send_stdout(ctx=original_ctx or ctx, resp=result, error=error)
+
+    @commands.command(name="inter-eval")
+    async def interaction_eval(self, ctx: commands.Context, *, code: str) -> None:
+        """Sends a message with a button to evaluate code."""
+        button = disnake.ui.Button(
+            label="Evaluate", style=disnake.ButtonStyle.green, custom_id="internal_interaction_eval"
+        )
+        msg = await ctx.send(
+            "Press the below button to evaluate this code in an interaction context.", components=button
+        )
+        try:
+            inter = await self.bot.wait_for(
+                "message_interaction",
+                check=lambda inter: inter.author == ctx.author
+                and inter.component.custom_id == "internal_interaction_eval",
+                timeout=20,
+            )
+        except asyncio.TimeoutError:
+            button.disabled = True
+            await msg.edit(components=button)
+            return
+
+        try:
+            await self._eval(inter, code=code, original_ctx=ctx)
+        finally:
+            await msg.edit(content=":ok_hand:", view=None)
 
     @commands.command(pass_context=True, hidden=True)
     async def repl(self, ctx: Context) -> None:
