@@ -2,7 +2,7 @@ import asyncio
 import logging
 import random
 import typing
-from typing import Optional
+from typing import Optional, Union
 
 import disnake
 from disnake.ext import commands
@@ -62,17 +62,14 @@ class Bookmark(commands.Cog):
 
     async def action_bookmark(
         self, channel: disnake.TextChannel, user: disnake.Member, target_message: disnake.Message, title: str
-    ) -> Optional[bool]:
+    ) -> Optional[Union[bool, disnake.Embed]]:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
-        if not check_user_read_perms(user, target_message):
-            log.info(f"{user} does not have permissions in target message channel, {target_message.channel}")
-            return False
         try:
             embed = self.build_bookmark_dm(target_message, title)
             await user.send(embed=embed)
         except disnake.Forbidden:
             error_embed = self.build_error_embed(user)
-            await channel.send(embed=error_embed)
+            return error_embed
         else:
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
 
@@ -115,8 +112,33 @@ class Bookmark(commands.Cog):
                 )
             target_message = ctx.message.reference.resolved
 
-        await self.action_bookmark(ctx.channel, ctx.author, target_message, title)
+        # Prevent users from bookmarking a message in a channel they don't have access to
+        def check_perms(user: disnake.User, message: disnake.Message) -> bool:
+            permissions = message.channel.permissions_for(user)
+            if not permissions.read_message_history:
+                log.info(f"{user} tried to bookmark a message in #{message.channel} but has no permissions.")
+                return False
+            return True
 
+        if not check_perms(ctx.author, target_message):
+            embed = disnake.Embed(
+                title=random.choice(ERROR_REPLIES),
+                color=Colours.soft_red,
+                description="You don't have permission to view this channel.",
+            )
+            if isinstance(ctx, disnake.Interaction):
+                await ctx.send(embed=embed, ephemeral=True)
+            else:
+                await ctx.send(embed=embed)
+            return
+
+        result = await self.action_bookmark(ctx.channel, ctx.author, target_message, title)
+        if isinstance(result, disnake.Embed):
+            if isinstance(ctx, disnake.Interaction):
+                await ctx.send(embed=result, ephemeral=True)
+            else:
+                await ctx.reply(embed=result)
+            return
         # Keep track of who has already bookmarked, so users can't spam reactions and cause loads of DMs
         bookmarked_users = set([ctx.author.id])
         reaction_message, _ = await self.send_embed(
@@ -139,6 +161,14 @@ class Bookmark(commands.Cog):
             except asyncio.TimeoutError:
                 log.debug("Timed out waiting for a reaction")
                 break
+            if not check_perms(inter.user, target_message):
+                embed = disnake.Embed(
+                    title=random.choice(ERROR_REPLIES),
+                    color=Colours.soft_red,
+                    description="You don't have permission to view this channel.",
+                )
+                await inter.send(embed=embed, ephemeral=True)
+                continue
             if inter.author.id in bookmarked_users:
                 await inter.send("You've already bookmarked this message.", ephemeral=True)
                 continue
