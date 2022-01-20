@@ -177,8 +177,9 @@ class CodeButtons(commands.Cog):
             return
 
         button = None
-        if url:
-
+        if url and url.startswith("http", "https"):
+            if url and Paste.alias_url and ctx.guild and ctx.guild.id == Guilds.nextcord:
+                url = url.replace(".disnake.", ".nextcord.")
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
@@ -326,11 +327,10 @@ class CodeButtons(commands.Cog):
         await inter.response.defer()
         msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
 
-        if link and Paste.alias_url and inter.target.guild and inter.target.guild.id == Guilds.nextcord:
-            link = link.replace(".disnake.", ".nextcord.")
-
         view = DeleteView(inter.author, inter)
-        if link:
+        if link and link.startswith("http", "https"):
+            if link and Paste.alias_url and inter.target.guild and inter.target.guild.id == Guilds.nextcord:
+                link = link.replace(".disnake.", ".nextcord.")
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
