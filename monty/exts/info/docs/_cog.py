@@ -895,10 +895,11 @@ class DocCog(commands.Cog):
 
         await message.channel.trigger_typing()
 
-        embeds = []
+        tasks = []
         for match in matches:
-            embeds.append(await self._docs_get_command(message, match, return_embed=True))
+            tasks.append(self._docs_get_command(message, match, return_embed=True))
 
+        embeds = await asyncio.gather(*tasks)
         view = DeleteView(message.author)
         self.bot.loop.create_task(wait_for_deletion(await message.channel.send(embeds=embeds, view=view), view=view))
 
