@@ -23,6 +23,8 @@ from monty.utils.services import send_to_paste_service
 
 log = get_logger(__name__)
 
+INLINE_EVAL_REGEX = re.compile(r"\$(?P<fence>`+)(.+)(?P=fence)")
+
 ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
     r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
@@ -337,6 +339,21 @@ class Snekbox(Cog):
             if not code:
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
+
+    @Cog.listener()
+    async def on_message(self, message: Message) -> None:
+        """Evaluate code in the message automatically."""
+        if not message.guild:
+            return
+
+        if message.author.bot:
+            return
+
+        code = "\n".join([m[-1].strip() for m in INLINE_EVAL_REGEX.findall(message.content)])
+        print(code)
+        if not code:
+            return
+        await self.send_eval(message, code, return_result=False)
 
 
 def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
