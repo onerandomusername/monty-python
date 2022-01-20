@@ -4,6 +4,7 @@ import asyncio
 import copy
 import dataclasses
 import functools
+import re
 import sys
 import textwrap
 from collections import defaultdict
@@ -51,6 +52,8 @@ FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 COMMAND_LOCK_SINGLETON = "inventory refresh"
 
 CONFIG_DOC_PREFIX = "global.documentation.inventories"
+
+DOCS_LINK_REGEX = re.compile(r"!`([\w.]+)`")
 
 
 class DocDict(TypedDict):
@@ -550,6 +553,8 @@ class DocCog(commands.Cog):
         inter: Union[disnake.ApplicationCommandInteraction, commands.Context],
         search: Optional[str],
         maybe_start: bool = True,
+        *,
+        return_embed: bool = False,
     ) -> None:
 
         if not search:
@@ -586,6 +591,8 @@ class DocCog(commands.Cog):
                     res = await self.create_symbol_embed(sym, inter)
                 else:
                     res = await self.create_symbol_embed(sym)
+            if res and return_embed:
+                return res[0]
             if not res:
                 error_text = f"No documentation found for `{symbol}`."
 
@@ -871,6 +878,29 @@ class DocCog(commands.Cog):
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")
+
+    @commands.Cog.listener()
+    async def on_message(self, message: disnake.Message) -> None:
+        """Echo docs if found and they match a regex."""
+        if not message.guild:
+            return
+        if message.author.bot:
+            return
+
+        matches: list[str] = list(
+            dict.fromkeys([match for match in DOCS_LINK_REGEX.findall(message.content)][:10], None)
+        )
+        if not matches:
+            return
+
+        await message.channel.trigger_typing()
+
+        embeds = []
+        for match in matches:
+            embeds.append(await self._docs_get_command(message, match, return_embed=True))
+
+        view = DeleteView(message.author)
+        self.bot.loop.create_task(wait_for_deletion(await message.channel.send(embeds=embeds, view=view), view=view))
 
     def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
