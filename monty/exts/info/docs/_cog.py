@@ -591,8 +591,9 @@ class DocCog(commands.Cog):
                     res = await self.create_symbol_embed(sym, inter)
                 else:
                     res = await self.create_symbol_embed(sym)
-            if res and return_embed:
-                return res[0]
+            if return_embed:
+                return res[0] if res else None
+
             if not res:
                 error_text = f"No documentation found for `{symbol}`."
 
