@@ -132,6 +132,9 @@ class CodeButtons(commands.Cog):
             return False, "This is already a paste link.", None
 
         url = await send_to_paste_service(code, extension="python")
+        if url and Paste.alias_url and message.guild and message.guild.id == Guilds.nextcord:
+            url = url.replace(".disnake.", ".nextcord.")
+
         if provide_link:
             msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here: <{url}>"
         else:
@@ -146,6 +149,7 @@ class CodeButtons(commands.Cog):
         if not success:
             await inter.send(msg, ephemeral=True)
             return
+
         button = disnake.ui.Button(
             style=disnake.ButtonStyle.url,
             label="Click to open in workbin",
@@ -177,9 +181,7 @@ class CodeButtons(commands.Cog):
             return
 
         button = None
-        if url and url.startswith("http", "https"):
-            if url and Paste.alias_url and ctx.guild and ctx.guild.id == Guilds.nextcord:
-                url = url.replace(".disnake.", ".nextcord.")
+        if url and url.startswith("http"):
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
@@ -257,8 +259,11 @@ class CodeButtons(commands.Cog):
         if not paste:
             return False, "Sorry, something went wrong!", None
 
+        if Paste.alias_url and message.guild and message.guild.id == Guilds.nextcord:
+            paste = paste.replace(".disnake.", ".nextcord.")
+
         msg = f"Formatted {maybe_ref_link}with black. Click the button below to view on the pastebin."
-        if formatted.startswith("Cannot parse:"):
+        if formatted.startswith(("Cannot parse:", "unindent does not match any outer indentation level")):
             msg = f"Attempted to format {maybe_ref_link}with black, but an error occured. Click to view."
         return True, msg, paste
 
@@ -328,7 +333,7 @@ class CodeButtons(commands.Cog):
         msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
 
         view = DeleteView(inter.author, inter)
-        if link and link.startswith("http", "https"):
+        if link and link.startswith("http"):
             if link and Paste.alias_url and inter.target.guild and inter.target.guild.id == Guilds.nextcord:
                 link = link.replace(".disnake.", ".nextcord.")
             button = disnake.ui.Button(
