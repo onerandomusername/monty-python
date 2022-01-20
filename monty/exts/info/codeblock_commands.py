@@ -8,7 +8,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import Paste, URLs
+from monty.constants import Guilds, Paste, URLs
 from monty.utils.delete import DeleteView
 from monty.utils.messages import wait_for_deletion
 from monty.utils.services import send_to_paste_service
@@ -325,6 +325,9 @@ class CodeButtons(commands.Cog):
 
         await inter.response.defer()
         msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
+
+        if link and Paste.alias_url and inter.target.guild and inter.target.guild.id == Guilds.nextcord:
+            link = link.replace(".disnake.", ".nextcord.")
 
         view = DeleteView(inter.author, inter)
         if link:
