@@ -531,13 +531,16 @@ class DocCog(commands.Cog):
         """Search python package documentation."""
         pass
 
-    async def maybe_pypi_docs(self, package: str) -> tuple[bool, Optional[str]]:
+    async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, Optional[str]]:
         """Find the documentation url on pypi for a given package."""
         if (pypi := self.bot.get_cog("PyPi")) is None:
             return False, None
         if pypi.check_characters(package):
             return False, None
-        json = await pypi.fetch_package(package.split(".")[0])
+        if strip:
+            package = package.split(".")[0]
+
+        json = await pypi.fetch_package(package)
         if not json:
             return False, None
         info = json["info"]
@@ -754,7 +757,7 @@ class DocCog(commands.Cog):
         link = self._get_link_from_inventories(package)
         if not link:
             # check pypi
-            res = await self.maybe_pypi_docs(package)
+            res = await self.maybe_pypi_docs(package, strip=False)
             if res[0]:
                 link = res[1]
 
