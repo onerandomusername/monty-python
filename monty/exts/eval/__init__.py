@@ -350,7 +350,7 @@ class Snekbox(Cog):
             return
 
         code = "\n".join([m[-1].strip() for m in INLINE_EVAL_REGEX.findall(message.content)])
-        print(code)
+
         if not code:
             return
         await self.send_eval(message, code, return_result=False)
