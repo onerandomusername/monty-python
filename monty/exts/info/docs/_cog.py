@@ -9,7 +9,7 @@ import sys
 import textwrap
 from collections import defaultdict
 from types import SimpleNamespace
-from typing import Dict, Literal, Optional, Tuple, TypedDict, Union
+from typing import Any, Dict, Literal, Optional, Tuple, TypedDict, Union
 
 import aiohttp
 import disnake
@@ -558,6 +558,8 @@ class DocCog(commands.Cog):
         maybe_start: bool = True,
         *,
         return_embed: bool = False,
+        threshold: commands.Range[0, 100] = 60,
+        scorer: Any = None,
     ) -> None:
 
         if not search:
@@ -580,7 +582,7 @@ class DocCog(commands.Cog):
             if maybe_start:
                 tries.append(symbol.split()[0])
             for sym in tries:
-                sym = await self._docs_autocomplete(inter, sym, threshold=60)
+                sym = await self._docs_autocomplete(inter, sym, threshold=threshold, scorer=scorer)
                 if sym:
                     sym = sym[0]
                     break
@@ -642,6 +644,7 @@ class DocCog(commands.Cog):
         *,
         count: int = 24,
         threshold: int = 45,
+        scorer: Any = None,
     ) -> list[str]:
         """Autocomplete for the search param for documentation."""
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
@@ -662,7 +665,7 @@ class DocCog(commands.Cog):
         fuzzed = rapidfuzz.process.extract(
             query=query,
             choices=self.doc_symbols.keys(),
-            scorer=rapidfuzz.fuzz.ratio,
+            scorer=scorer or rapidfuzz.fuzz.ratio,
             processor=processor if blacklist else None,
             limit=count,
         )
@@ -700,14 +703,17 @@ class DocCog(commands.Cog):
         ----------
         query: search query
         """
-        compare_len = len(query.rstrip("."))
         results = {}
+
+        blacklist = BLACKLIST_MAPPING.get(inter.guild and inter.guild.id or inter.guild_id)
+
+        query = query.strip()
+
         for key, item in self.doc_symbols.items():
-            if not key.startswith(query):
+            if query not in key:
                 continue
 
-            # only keep items that aren't instantly delimited
-            if key[compare_len:].count(".") >= 2:
+            if blacklist and item.package in blacklist:
                 continue
 
             results[key] = item.url
