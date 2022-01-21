@@ -903,13 +903,18 @@ class DocCog(commands.Cog):
         if not matches:
             return
 
-        await message.channel.trigger_typing()
-
         tasks = []
         for match in matches:
-            tasks.append(self._docs_get_command(message, match, return_embed=True))
+            tasks.append(
+                self._docs_get_command(
+                    message, match, return_embed=True, threshold=100, scorer=rapidfuzz.fuzz.partial_ratio
+                )
+            )
 
-        embeds = await asyncio.gather(*tasks)
+        embeds = [e for e in await asyncio.gather(*tasks) if isinstance(e, disnake.Embed)]
+        if not embeds:
+            return
+
         view = DeleteView(message.author)
         self.bot.loop.create_task(wait_for_deletion(await message.channel.send(embeds=embeds, view=view), view=view))
 
