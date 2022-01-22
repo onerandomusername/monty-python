@@ -41,6 +41,15 @@ python-discord's **bot**: ([Repo](https://github.com/pythondiscord/bot))
 A majority of features were initially implemented on python-discord's **bot**, and modified to work with Monty.
 """
 
+STATS = """
+Version: `stable`
+Disnake version: `{disnake_version} {disnake_version_level}`
+
+Guilds: `{guilds}`
+Users: `{users}`
+Channels: `{channels}`
+"""
+
 COLOURS = (Colours.python_blue, Colours.python_yellow)
 
 
@@ -110,6 +119,25 @@ class Meta(commands.Cog):
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
         await inter.send(embed=e, ephemeral=True)
+
+    @monty.sub_command(name="stats")
+    async def status(self, inter: disnake.CommandInteraction) -> None:
+        """Stats about the current session."""
+        e = disnake.Embed(
+            title="Stats",
+            colour=random.choice(COLOURS),
+        )
+        e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
+
+        e.description = STATS.format(
+            disnake_version=disnake.__version__,
+            disnake_version_level=disnake.version_info.releaselevel,
+            guilds=len(self.bot.guilds),
+            users=len(self.bot.users),
+            channels=sum(len(guild.channels) for guild in self.bot.guilds),
+        )
+
+        await inter.send(embed=e)
 
 
 def setup(bot: Bot) -> None:
