@@ -1,9 +1,47 @@
+import random
+
 import disnake
 from disnake.ext import commands
 
 from monty import start_time
 from monty.bot import Bot
-from monty.constants import Colours
+from monty.constants import Client, Colours
+
+
+ABOUT = f"""
+Based off of multiple open source projects, Monty is a development tool for Discord servers.
+
+**Primary features**
+`/docs` Python documentation command
+`-eval` Evaluate Python code
+`-black` Blacken Python code
+
+**Additional features**
+- Leaked token alerting
+- Automatic github issue linking
+- Inline docs and eval
+- Automatic leaked webhook deletion
+- Codeblock detection
+
+**GitHub**: {Client.github_bot_repo}
+**Credits**: Run `/monty credits` for a list of original sources.
+**Invite**: Use `/invite` to get an invite link to add me to your server.
+"""
+
+CREDITS = """
+Monty python would not have been possible without the following open source projects:
+
+**Primary library**
+**disnake**: ([Website](https://disnake.dev))
+
+**Initial framework and features**
+python-discord's **sir-lancebot**: ([Repo](https://github.com/pythondiscord/sir-lancebot))
+python-discord's **bot**: ([Repo](https://github.com/pythondiscord/bot))
+
+A majority of features were initially implemented on python-discord's **bot**, and modified to work with Monty.
+"""
+
+COLOURS = (Colours.python_blue, Colours.python_yellow)
 
 
 class Meta(commands.Cog):
@@ -40,6 +78,38 @@ class Meta(commands.Cog):
             guild=guild,
         )
         await ctx.send(f"<{url}>")
+
+    @commands.slash_command(name="monty")
+    async def monty(self, inter: disnake.CommandInteraction) -> None:
+        """Meta commands."""
+        pass
+
+    @monty.sub_command(name="about")
+    async def about(self, inter: disnake.CommandInteraction) -> None:
+        """About monty."""
+        e = disnake.Embed(
+            title="About",
+            description=ABOUT,
+            colour=random.choice(COLOURS),
+            timestamp=start_time.datetime,
+        )
+
+        e.set_thumbnail(url=self.bot.user.display_avatar.url)
+        e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
+
+        await inter.send(embed=e)
+
+    @monty.sub_command(name="credits")
+    async def credits(self, inter: disnake.CommandInteraction) -> None:
+        """Credits of original sources."""
+        e = disnake.Embed(
+            title="Credits",
+            description=CREDITS,
+            colour=random.choice(COLOURS),
+        )
+        e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
+
+        await inter.send(embed=e, ephemeral=True)
 
 
 def setup(bot: Bot) -> None:
