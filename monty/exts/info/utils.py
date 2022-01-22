@@ -20,10 +20,10 @@ from monty.utils.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class CharInfo(Cog):
+class Utils(Cog):
     """A selection of utilities which don't have a clear category."""
 
-    def __init__(self, bot: Bot) -> CharInfo:
+    def __init__(self, bot: Bot):
         self.bot = bot
 
     @commands.slash_command(name="char-info")
@@ -112,31 +112,7 @@ class CharInfo(Cog):
         await inter.send(embed=embed, view=view)
         await wait_for_deletion(inter, view=view)
 
-    # @command(aliases=("poll",))
-    # async def vote(
-    #     self, ctx: Context, title: clean_content(fix_channel_mentions=True), *options: str
-    # ) -> None:
-    #     """
-    #     Build a quick voting poll with matching reactions with the provided options.
-
-    #     A maximum of 20 options can be provided, as Discord supports a max of 20
-    #     reactions on a single message.
-    #     """
-    #     if len(title) > 256:
-    #         raise BadArgument("The title cannot be longer than 256 characters.")
-    #     if len(options) < 2:
-    #         raise BadArgument("Please provide at least 2 options.")
-    #     if len(options) > 20:
-    #         raise BadArgument("I can only handle 20 options!")
-
-    #     codepoint_start = 127462  # represents "regional_indicator_a" unicode value
-    #     options = {chr(i): f"{chr(i)} - {v}" for i, v in enumerate(options, start=codepoint_start)}
-    #     embed = Embed(title=title, description="\n".join(options.values()))
-    #     message = await ctx.send(embed=embed)
-    #     for reaction in options:
-    #         await message.add_reaction(reaction)
-
 
 def setup(bot: Bot) -> None:
     """Load the Utils cog."""
-    bot.add_cog(CharInfo(bot))
+    bot.add_cog(Utils(bot))
