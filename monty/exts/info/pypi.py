@@ -175,7 +175,7 @@ class PyPi(commands.Cog):
         inter: disnake.ApplicationCommandInteraction,
         query: str,
         max_results: int = commands.Param(  # noqa: B008
-            default=MAX_RESULTS,
+            default=5,
             name="max-results",
             description="Max number of results shown.",
             max_value=MAX_RESULTS,
