@@ -116,9 +116,9 @@ class Colour(commands.Cog):
     async def slash_rgb(
         self,
         inter: disnake.AppCmdInter,
-        red: int = commands.param(ge=0, le=255),  # noqa: B008
-        green: int = commands.param(ge=0, le=255),  # noqa: B008
-        blue: int = commands.param(ge=0, le=255),  # noqa: B008
+        red: commands.Range[0, 255],
+        green: commands.Range[0, 255],
+        blue: commands.Range[0, 255],
     ) -> None:
         """
         RGB Format.
@@ -148,9 +148,9 @@ class Colour(commands.Cog):
     async def slash_hsv(
         self,
         inter: disnake.AppCmdInter,
-        hue: int = commands.param(ge=0, le=360),  # noqa: B008
-        sat: int = commands.param(ge=0, le=360),  # noqa: B008
-        value: int = commands.param(ge=0, le=100),  # noqa: B008
+        hue: commands.Range[0, 360],
+        sat: commands.Range[0, 360],
+        value: commands.Range[0, 100],
     ) -> None:
         """
         HSV Format.
@@ -181,9 +181,9 @@ class Colour(commands.Cog):
     async def slash_hsl(
         self,
         inter: disnake.AppCmdInter,
-        hue: int = commands.param(ge=0, le=360),  # noqa: B008
-        sat: int = commands.param(ge=0, le=360),  # noqa: B008
-        lightness: int = commands.param(ge=0, le=100),  # noqa: B008
+        hue: commands.Range[0, 360],
+        sat: commands.Range[0, 360],
+        lightness: commands.Range[0, 100],
     ) -> None:
         """
         HSL Format.
@@ -214,10 +214,10 @@ class Colour(commands.Cog):
     async def slash_cymk(
         self,
         inter: disnake.AppCmdInter,
-        cyan: int = commands.param(ge=0, le=100),  # noqa: B008
-        magenta: int = commands.param(ge=0, le=100),  # noqa: B008
-        yellow: int = commands.param(ge=0, le=100),  # noqa: B008
-        black: int = commands.param(ge=0, le=100),  # noqa: B008
+        cyan: commands.Range[0, 100],
+        magenta: commands.Range[0, 100],
+        yellow: commands.Range[0, 100],
+        black: commands.Range[0, 100],
     ) -> None:
         """
         CMYK Format.
