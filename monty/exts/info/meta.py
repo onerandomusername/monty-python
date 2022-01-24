@@ -1,11 +1,14 @@
 import random
 
 import disnake
+import psutil
 from disnake.ext import commands
 
 from monty import start_time
 from monty.bot import Bot
 from monty.constants import Client, Colours
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 ABOUT = f"""
@@ -48,6 +51,9 @@ Disnake version: `{disnake_version} {disnake_version_level}`
 Guilds: `{guilds}`
 Users: `{users}`
 Channels: `{channels}`
+
+CPU Usage: `{cpu_usage}%`
+Memory Usage: `{memory_usage}%`
 """
 
 COLOURS = (Colours.python_blue, Colours.python_yellow)
@@ -106,7 +112,9 @@ class Meta(commands.Cog):
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
 
-        await inter.send(embed=e)
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=e, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @monty.sub_command(name="credits")
     async def credits(self, inter: disnake.CommandInteraction) -> None:
@@ -135,9 +143,13 @@ class Meta(commands.Cog):
             guilds=len(self.bot.guilds),
             users=len(self.bot.users),
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
+            memory_usage=psutil.virtual_memory().percent,
+            cpu_usage=psutil.cpu_percent(),
         )
 
-        await inter.send(embed=e)
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=e, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:
