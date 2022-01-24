@@ -9,8 +9,9 @@ import sys
 import textwrap
 import typing
 from collections import ChainMap, defaultdict
+from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, Literal, Optional, Tuple, TypedDict, Union
+from typing import Any, Dict, Literal, Optional, Set, Tuple, TypedDict, Union
 
 import aiohttp
 import disnake
@@ -55,6 +56,7 @@ COMMAND_LOCK_SINGLETON = "inventory refresh"
 CONFIG_DOC_PREFIX = "global.documentation"
 CONFIG_DOC_INVENTORIES = CONFIG_DOC_PREFIX + ".inventories"
 CONFIG_DOC_WHITELIST = CONFIG_DOC_PREFIX + ".whitelist"
+CONFIG_DOC_BLACKLIST = CONFIG_DOC_PREFIX + ".blacklist"
 
 DOCS_LINK_REGEX = re.compile(r"!`([\w.]+)`")
 
@@ -189,7 +191,7 @@ class DocCog(commands.Cog):
         self.item_fetcher = _batch_parser.BatchParser()
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
-
+        self.whitelist: Dict[int, Set[str]] = {}
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
 
         self.refresh_event = asyncio.Event()
@@ -202,10 +204,35 @@ class DocCog(commands.Cog):
             event_loop=self.bot.loop,
         )
 
-    @property
+    @cached_property
     def doc_symbols(self) -> typing.ChainMap[str, DocItem]:
         """Maps symbol names to objects containing their metadata."""
+        if not self.whitelist:
+            return ChainMap(*self.doc_symbols_new.values())
+
+        # exclude whitelist
+        to_exclude = set()
+        for packages in self.whitelist.values():
+            to_exclude |= packages
+
+        res = []
+        for k, v in self.doc_symbols_new.items():
+            if k in to_exclude:
+                continue
+            res.append(v)
+
+        return ChainMap(*res)
+
+    @property
+    def doc_symbols_all(self) -> typing.ChainMap[str, DocItem]:
+        """Returns all doc symbols, even whitelisted and blacklisted ones."""
         return ChainMap(*self.doc_symbols_new.values())
+
+    def get_packages_for_guild(self, guild_id: int = None) -> typing.ChainMap[str, DocItem]:
+        """Gets packages whitelisted in the specific guild."""
+        if guild_id in self.whitelist:
+            return ChainMap(*[self.doc_symbols_new[pkg] for pkg in self.whitelist[guild_id]], self.doc_symbols)
+        return self.doc_symbols
 
     def _get_default_completion(
         self,
@@ -341,9 +368,6 @@ class DocCog(commands.Cog):
                 if api_package_name in packs:
                     blacklist_guilds.append(g)
 
-            if blacklist_guilds:
-                print(blacklist_guilds)
-
             self.update_single(api_package_name, base_url, package, blacklist_guilds)
 
     def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
@@ -355,12 +379,12 @@ class DocCog(commands.Cog):
 
         If the existing symbol was renamed or there was no conflict, the returned name is equivalent to `symbol_name`.
         """
-        if (item := self.doc_symbols.get(symbol_name)) is None:
+        if (item := self.doc_symbols_all.get(symbol_name)) is None:
             return symbol_name  # There's no conflict so it's fine to simply use the given symbol name.
 
         def rename(prefix: str, *, rename_extant: bool = False) -> str:
             new_name = f"{prefix}.{symbol_name}"
-            if new_name in self.doc_symbols:
+            if new_name in self.doc_symbols_all:
                 # If there's still a conflict, qualify the name further.
                 if rename_extant:
                     new_name = f"{item.package}.{item.group}.{symbol_name}"
@@ -371,7 +395,7 @@ class DocCog(commands.Cog):
 
             if rename_extant:
                 # Instead of renaming the current symbol, rename the symbol with which it conflicts.
-                conflicting_symbol = self.doc_symbols[symbol_name]
+                conflicting_symbol = self.doc_symbols_all[symbol_name]
                 package = conflicting_symbol.package
                 self.doc_symbols_new[package][sys.intern(new_name)] = conflicting_symbol
                 return symbol_name
@@ -399,6 +423,30 @@ class DocCog(commands.Cog):
         else:
             return rename(item.group, rename_extant=True)
 
+    async def refresh_whitelist_and_blacklist(self) -> None:
+        """Refresh internal whitelist and blacklist."""
+        _, whitelisted_guilds = await self.bot.db.list_keys(CONFIG_DOC_WHITELIST + ".")
+        whitelisted_guilds = [x["name"] for x in whitelisted_guilds["result"]["keys"]]
+        whitelist_keys = whitelisted_guilds
+
+        # _, blacklisted_guilds = await self.bot.db.list_keys(CONFIG_DOC_BLACKLIST + ".")
+        # blacklisted_guilds = [x["name"] for x in blacklisted_guilds["result"]["keys"]]
+        # blacklisted_guilds = [int(guild_id[len(CONFIG_DOC_BLACKLIST) + 1 :]) for guild_id in blacklisted_guilds]
+
+        for guild in whitelist_keys:
+            _, packages = await self.bot.db.fetch_keys(guild)
+            packages = set(list(packages["config"].values())[0].split(","))
+
+            guild_id = int(guild[len(CONFIG_DOC_WHITELIST) + 1 :])
+            self.whitelist[guild_id] = packages
+
+        # delete the cached doc_symbols
+        try:
+            del self.doc_symbols
+        except AttributeError:
+            pass
+        log.debug("Finished setting up the whitelist.")
+
     async def refresh_inventories(self) -> None:
         """Refresh internal documentation inventories."""
         self.refresh_event.clear()
@@ -410,6 +458,11 @@ class DocCog(commands.Cog):
         self.doc_symbols_new.clear()
         self.renamed_symbols.clear()
         await self.item_fetcher.clear()
+        # delete the cached doc_symbols
+        try:
+            del self.doc_symbols
+        except AttributeError:
+            pass
 
         async def get_packages() -> list[dict[str, str]]:
             _, res = await self.bot.db.list_keys(CONFIG_DOC_INVENTORIES + ".")
@@ -432,6 +485,14 @@ class DocCog(commands.Cog):
         ]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
+        log.debug("Refreshing whitelist and blacklist")
+        await self.refresh_whitelist_and_blacklist()
+        try:
+            del self.doc_symbols
+        except AttributeError:
+            pass
+        # recompute the symbols
+        self.doc_symbols
         self.refresh_event.set()
 
     def get_symbol_item(self, symbol_name: str) -> Tuple[str, Optional[DocItem]]:
@@ -441,10 +502,10 @@ class DocCog(commands.Cog):
         If the doc item is not found directly from the passed in name and the name contains a space,
         the first word of the name will be attempted to be used to get the item.
         """
-        doc_item = self.doc_symbols.get(symbol_name)
+        doc_item = self.doc_symbols_all.get(symbol_name)
         if doc_item is None and " " in symbol_name:
             symbol_name = symbol_name.split(" ", maxsplit=1)[0]
-            doc_item = self.doc_symbols.get(symbol_name)
+            doc_item = self.doc_symbols_all.get(symbol_name)
 
         return symbol_name, doc_item
 
@@ -657,12 +718,15 @@ class DocCog(commands.Cog):
         if not query:
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
-        blacklist = BLACKLIST_MAPPING.get(inter.guild and inter.guild.id or inter.guild_id)
+        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()
 
+        packages = self.get_packages_for_guild(guild_id)
+
         def processor(sentence: str) -> str:
-            if (sym := self.doc_symbols.get(sentence)) and sym.package in blacklist:
+            if (sym := self.doc_symbols_all.get(sentence)) and sym.package in blacklist:
                 return ""
             else:
                 return sentence
@@ -670,7 +734,7 @@ class DocCog(commands.Cog):
         # further fuzzy search by using rapidfuzz ratio matching
         fuzzed = rapidfuzz.process.extract(
             query=query,
-            choices=self.doc_symbols.keys(),
+            choices=packages.keys(),
             scorer=scorer or rapidfuzz.fuzz.ratio,
             processor=processor if blacklist else None,
             limit=count,
@@ -710,12 +774,14 @@ class DocCog(commands.Cog):
         query: search query
         """
         results = {}
-
-        blacklist = BLACKLIST_MAPPING.get(inter.guild and inter.guild.id or inter.guild_id)
+        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()
 
-        for key, item in self.doc_symbols.items():
+        packages = self.get_packages_for_guild(guild_id)
+
+        for key, item in packages.items():
             if query not in key:
                 continue
 
@@ -904,24 +970,23 @@ class DocCog(commands.Cog):
         Whitelist a package in a guild.
 
         Example:
-            !docs whitelist python 123456789012345678
+            -docs whitelist python 123456789012345678
         """
         if not guild_ids:
             await ctx.send(":x: You must specify at least one guild.")
             return
-        guild_ids = [g.id for g in guild_ids]
         _, keys = await self.bot.db.fetch_keys(f"{CONFIG_DOC_INVENTORIES}.{package_name}")
         keys = keys["config"]
         if not keys:
             await ctx.send(":x: No package found with that name.")
             return
 
+        guild_ids = [g.id for g in guild_ids]
         for guild_id in guild_ids:
             key_name = f"{CONFIG_DOC_WHITELIST}.{guild_id}"
             _, keys = await self.bot.db.fetch_keys(key_name)
             keys = keys["config"]
             if keys:
-                print(keys)
                 value = keys.pop(key_name)
                 if package_name in value.split(","):
                     log.debug(f"{package_name} is already whitelisted in {guild_id}")
@@ -933,7 +998,7 @@ class DocCog(commands.Cog):
             await self.bot.db.put_keys(**{key_name: value})
 
         await ctx.send(
-            f"Successfully blacklisted `{package_name}` from the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
+            f"Successfully whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
         )
 
     @commands.Cog.listener()
