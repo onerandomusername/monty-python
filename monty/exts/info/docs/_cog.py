@@ -51,7 +51,9 @@ FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 COMMAND_LOCK_SINGLETON = "inventory refresh"
 
-CONFIG_DOC_PREFIX = "global.documentation.inventories"
+CONFIG_DOC_PREFIX = "global.documentation"
+CONFIG_DOC_INVENTORIES = CONFIG_DOC_PREFIX + ".inventories"
+CONFIG_DOC_WHITELIST = CONFIG_DOC_PREFIX + ".whitelist"
 
 DOCS_LINK_REGEX = re.compile(r"!`([\w.]+)`")
 
@@ -173,11 +175,6 @@ class DocView(DeleteView):
                 c.disabled = True
 
 
-def defaultdict_factory() -> defaultdict:
-    """Factory method for defaultdicts."""
-    return defaultdict(defaultdict_factory)
-
-
 class DocCog(commands.Cog):
     """A set of commands for querying & displaying documentation."""
 
@@ -187,7 +184,6 @@ class DocCog(commands.Cog):
         self.base_urls = {}
         self.bot = bot
         self.doc_symbols: Dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
-        self.autocomplete_symbols: defaultdict[Union[dict, str]] = defaultdict_factory()
         self.item_fetcher = _batch_parser.BatchParser()
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
@@ -242,7 +238,6 @@ class DocCog(commands.Cog):
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def init_refresh_inventory(self) -> None:
         """Refresh documentation inventory on cog initialization."""
-        # await self.bot.wait_until_guild_available()
         await self.refresh_inventories()
 
     def update_single(
@@ -406,13 +401,13 @@ class DocCog(commands.Cog):
         await self.item_fetcher.clear()
 
         async def get_packages() -> list[dict[str, str]]:
-            _, res = await self.bot.db.list_keys(CONFIG_DOC_PREFIX + ".")
+            _, res = await self.bot.db.list_keys(CONFIG_DOC_INVENTORIES + ".")
             res = [x["name"] for x in res["result"]["keys"]]
             _, kv = await self.bot.db.fetch_keys(*res)
             kv: dict[str, str] = kv["config"]
             packages = {}
             for pack, value in kv.items():
-                pack = pack[len(CONFIG_DOC_PREFIX) + 1 :]
+                pack = pack[len(CONFIG_DOC_INVENTORIES) + 1 :]
                 if len(spl := pack.split(".", 1)) > 1:
                     packages.setdefault(spl[0], {})[spl[1]] = value
                 else:
@@ -805,7 +800,7 @@ class DocCog(commands.Cog):
         if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
         inventory_url, inventory_dict = inventory
-        prefix = f"{CONFIG_DOC_PREFIX}.{package_name}"
+        prefix = f"{CONFIG_DOC_INVENTORIES}.{package_name}"
         _, resp = await self.bot.db.fetch_keys(prefix)
         if resp["config"].values():
             await ctx.send(":x: That package is already added!")
@@ -837,7 +832,7 @@ class DocCog(commands.Cog):
         Example:
             !docs deletedoc aiohttp
         """
-        status, resp = await self.bot.db.fetch_keys(f"{CONFIG_DOC_PREFIX}.{package_name}")
+        status, resp = await self.bot.db.fetch_keys(f"{CONFIG_DOC_INVENTORIES}.{package_name}")
         keys = resp["config"].values()
 
         if not keys:
@@ -845,9 +840,9 @@ class DocCog(commands.Cog):
             return
 
         keys = {
-            f"{CONFIG_DOC_PREFIX}.{package_name}",
-            f"{CONFIG_DOC_PREFIX}.{package_name}.base_url",
-            f"{CONFIG_DOC_PREFIX}.{package_name}.inventory_url",
+            f"{CONFIG_DOC_INVENTORIES}.{package_name}",
+            f"{CONFIG_DOC_INVENTORIES}.{package_name}.base_url",
+            f"{CONFIG_DOC_INVENTORIES}.{package_name}.inventory_url",
         }
         await self.bot.db.delete_keys(*keys)
 
@@ -888,6 +883,47 @@ class DocCog(commands.Cog):
             await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
         else:
             await ctx.send("No keys matching the package found.")
+
+    @docs_group.command(name="whitelist", aliases=("wh",))
+    @commands.is_owner()
+    async def whitelist_command(
+        self, ctx: commands.Context, package_name: PackageName, *guild_ids: disnake.Guild
+    ) -> None:
+        """
+        Whitelist a package in a guild.
+
+        Example:
+            !docs whitelist python 123456789012345678
+        """
+        if not guild_ids:
+            await ctx.send(":x: You must specify at least one guild.")
+            return
+        guild_ids = [g.id for g in guild_ids]
+        _, keys = await self.bot.db.fetch_keys(f"{CONFIG_DOC_INVENTORIES}.{package_name}")
+        keys = keys["config"]
+        if not keys:
+            await ctx.send(":x: No package found with that name.")
+            return
+
+        for guild_id in guild_ids:
+            key_name = f"{CONFIG_DOC_WHITELIST}.{guild_id}"
+            _, keys = await self.bot.db.fetch_keys(key_name)
+            keys = keys["config"]
+            if keys:
+                print(keys)
+                value = keys.pop(key_name)
+                if package_name in value.split(","):
+                    log.debug(f"{package_name} is already whitelisted in {guild_id}")
+                    continue
+            else:
+                value = ""
+            value = ",".join(sorted([x for x in value.split(",") + [package_name] if x]))
+
+            await self.bot.db.put_keys(**{key_name: value})
+
+        await ctx.send(
+            f"Successfully blacklisted `{package_name}` from the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
+        )
 
     @commands.Cog.listener()
     async def on_message(self, message: disnake.Message) -> None:
