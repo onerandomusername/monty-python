@@ -7,7 +7,8 @@ import functools
 import re
 import sys
 import textwrap
-from collections import defaultdict
+import typing
+from collections import ChainMap, defaultdict
 from types import SimpleNamespace
 from typing import Any, Dict, Literal, Optional, Tuple, TypedDict, Union
 
@@ -183,7 +184,8 @@ class DocCog(commands.Cog):
         # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}
         self.bot = bot
-        self.doc_symbols: Dict[str, DocItem] = {}  # Maps symbol names to objects containing their metadata.
+        # the new doc_symbols that collects each package in their own dict and uses a chainmap
+        self.doc_symbols_new: Dict[str, Dict[str, DocItem]] = {}
         self.item_fetcher = _batch_parser.BatchParser()
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
@@ -199,6 +201,11 @@ class DocCog(commands.Cog):
             name="Doc inventory init",
             event_loop=self.bot.loop,
         )
+
+    @property
+    def doc_symbols(self) -> typing.ChainMap[str, DocItem]:
+        """Maps symbol names to objects containing their metadata."""
+        return ChainMap(*self.doc_symbols_new.values())
 
     def _get_default_completion(
         self,
@@ -279,14 +286,16 @@ class DocCog(commands.Cog):
                     symbol_id,
                     symbol_name,
                 )
-                self.doc_symbols[sys.intern(symbol_name)] = doc_item
+                self.doc_symbols_new.setdefault(package_name, {})[sys.intern(symbol_name)] = doc_item
                 if blacklist_guilds:
                     for guild_id in blacklist_guilds:
                         if BLACKLIST.get(guild_id) is None:
                             BLACKLIST[guild_id] = set()
                         BLACKLIST[guild_id].add(symbol_name)
 
-                if (parent := self.doc_symbols.get(symbol_name.rsplit(".", 1)[0])) and parent.package == package_name:
+                if (
+                    parent := self.doc_symbols_new[package_name].get(symbol_name.rsplit(".", 1)[0])
+                ) and parent.package == package_name:
                     parent.attributes.append(doc_item)
                 self.item_fetcher.add_item(doc_item)
 
@@ -362,7 +371,9 @@ class DocCog(commands.Cog):
 
             if rename_extant:
                 # Instead of renaming the current symbol, rename the symbol with which it conflicts.
-                self.doc_symbols[sys.intern(new_name)] = self.doc_symbols[symbol_name]
+                conflicting_symbol = self.doc_symbols[symbol_name]
+                package = conflicting_symbol.package
+                self.doc_symbols_new[package][sys.intern(new_name)] = conflicting_symbol
                 return symbol_name
             else:
                 return new_name
@@ -396,7 +407,7 @@ class DocCog(commands.Cog):
         self.inventory_scheduler.cancel_all()
 
         self.base_urls.clear()
-        self.doc_symbols.clear()
+        self.doc_symbols_new.clear()
         self.renamed_symbols.clear()
         await self.item_fetcher.clear()
 
