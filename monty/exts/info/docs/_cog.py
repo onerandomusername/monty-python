@@ -425,13 +425,11 @@ class DocCog(commands.Cog):
 
     async def refresh_whitelist_and_blacklist(self) -> None:
         """Refresh internal whitelist and blacklist."""
+        self.whitelist.clear()
+
         _, whitelisted_guilds = await self.bot.db.list_keys(CONFIG_DOC_WHITELIST + ".")
         whitelisted_guilds = [x["name"] for x in whitelisted_guilds["result"]["keys"]]
         whitelist_keys = whitelisted_guilds
-
-        # _, blacklisted_guilds = await self.bot.db.list_keys(CONFIG_DOC_BLACKLIST + ".")
-        # blacklisted_guilds = [x["name"] for x in blacklisted_guilds["result"]["keys"]]
-        # blacklisted_guilds = [int(guild_id[len(CONFIG_DOC_BLACKLIST) + 1 :]) for guild_id in blacklisted_guilds]
 
         for guild in whitelist_keys:
             _, packages = await self.bot.db.fetch_keys(guild)
@@ -961,8 +959,28 @@ class DocCog(commands.Cog):
         else:
             await ctx.send("No keys matching the package found.")
 
-    @docs_group.command(name="whitelist", aliases=("wh",))
     @commands.is_owner()
+    @docs_group.group(name="whitelist", aliases=("wh",), invoke_without_command=True)
+    async def whitelist_command_group(self, ctx: commands.Context) -> None:
+        """Whitelist command management. Limits a package to specific guilds."""
+        await self.list_whitelist(ctx)
+
+    @commands.is_owner()
+    @whitelist_command_group.command(name="list", aliases=("l",))
+    async def list_whitelist(self, ctx: commands.Context) -> None:
+        """List the whitelisted packages."""
+        if not self.whitelist:
+            await ctx.send("No packages are whitelisted.")
+            return
+        embed = disnake.Embed(title="Whitelisted packages")
+        for guild, packages in self.whitelist.items():
+            embed.add_field(self.bot.get_guild(guild).name + f" ({guild})", ", ".join(sorted(packages)))
+        view = DeleteView(ctx.author)
+        msg = await ctx.send(embed=embed, view=view)
+        self.bot.loop.create_task(wait_for_deletion(msg, view=view))
+
+    @commands.is_owner()
+    @whitelist_command_group.command(name="add", aliases=("a",))
     async def whitelist_command(
         self, ctx: commands.Context, package_name: PackageName, *guild_ids: disnake.Guild
     ) -> None:
@@ -997,8 +1015,53 @@ class DocCog(commands.Cog):
 
             await self.bot.db.put_keys(**{key_name: value})
 
+        await self.refresh_whitelist_and_blacklist()
+
         await ctx.send(
             f"Successfully whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
+        )
+
+    @commands.is_owner()
+    @whitelist_command_group.command(name="remove", aliases=("r",))
+    async def unwhitelist_command(
+        self, ctx: commands.Context, package_name: PackageName, *guild_ids: disnake.Guild
+    ) -> None:
+        """
+        Unwhitelist a package in a guild.
+
+        Example:
+            -docs unwhitelist python 123456789012345678
+        """
+        if not guild_ids:
+            await ctx.send(":x: You must specify at least one guild.")
+            return
+        _, keys = await self.bot.db.fetch_keys(f"{CONFIG_DOC_INVENTORIES}.{package_name}")
+        keys = keys["config"]
+        if not keys:
+            await ctx.send(":x: No package found with that name.")
+            return
+
+        guild_ids = [g.id for g in guild_ids]
+        for guild_id in guild_ids:
+            key_name = f"{CONFIG_DOC_WHITELIST}.{guild_id}"
+            _, keys = await self.bot.db.fetch_keys(key_name)
+            keys = keys["config"]
+            if not keys:
+                continue
+            value = keys.pop(key_name)
+            if package_name not in value.split(","):
+                log.debug(f"{package_name} is not whitelisted in {guild_id}")
+                continue
+            value = [x for x in value.split(",") if x != package_name]
+            if value:
+                await self.bot.db.put_keys(**{key_name: value})
+            else:
+                await self.bot.db.delete_keys(key_name)
+
+        await self.refresh_whitelist_and_blacklist()
+
+        await ctx.send(
+            f"Successfully de-whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
         )
 
     @commands.Cog.listener()
