@@ -392,7 +392,7 @@ class Admin(commands.Cog):
     @commands.command(aliases=("gw",))
     async def gateway(self, ctx: Context) -> None:
         """Sends current stats from the gateway."""
-        embed = disnake.Embed(title="Gateway Events", color=0x00FF00)
+        embed = disnake.Embed(title="Gateway Events")
 
         total_events = sum(self.bot.socket_events.values())
         events_per_second = total_events / (arrow.utcnow() - self.bot.start_time).total_seconds()
