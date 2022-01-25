@@ -12,16 +12,12 @@ import asyncio
 import os
 from functools import partial, partialmethod
 
-import arrow
 from disnake.ext import commands
 
 from monty import log, monkey_patches
 
 
 log.setup()
-
-# Set timestamp of when execution started (approximately)
-start_time = arrow.utcnow()
 
 # On Windows, the selector event loop is required for aiodns.
 if os.name == "nt":

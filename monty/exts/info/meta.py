@@ -4,7 +4,6 @@ import disnake
 import psutil
 from disnake.ext import commands
 
-from monty import start_time
 from monty.bot import Bot
 from monty.constants import Client, Colours
 from monty.utils.delete import DeleteView
@@ -80,7 +79,7 @@ class Meta(commands.Cog):
     @commands.slash_command(name="uptime")
     async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Get the current uptime of the bot."""
-        timestamp = round(float(start_time.format("X")))
+        timestamp = round(float(self.bot.start_time.format("X")))
         await inter.send(embed=disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)"))
 
     @commands.command()
@@ -106,7 +105,7 @@ class Meta(commands.Cog):
             title="About",
             description=ABOUT,
             colour=random.choice(COLOURS),
-            timestamp=start_time.datetime,
+            timestamp=self.bot.start_time.datetime,
         )
 
         e.set_thumbnail(url=self.bot.user.display_avatar.url)

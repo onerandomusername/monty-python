@@ -393,6 +393,13 @@ class Admin(commands.Cog):
     async def gateway(self, ctx: Context) -> None:
         """Sends current stats from the gateway."""
         embed = disnake.Embed(title="Gateway Events", color=0x00FF00)
+
+        total_events = sum(self.bot.socket_events.values())
+        events_per_second = total_events / (arrow.utcnow() - self.bot.start_time).total_seconds()
+
+        embed.description = f"Start time: {disnake.utils.format_dt(self.bot.start_time.datetime)}\n"
+        embed.description += f"Events per second: `{events_per_second:.2f}`/s\n\u200b"
+
         for event_type, count in self.bot.socket_events.most_common(21):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 

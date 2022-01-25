@@ -4,6 +4,7 @@ import logging
 import socket
 from typing import Optional
 
+import arrow
 import async_rediscache
 import disnake
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
@@ -52,14 +53,12 @@ class Monty(commands.Bot):
 
         self.db = Database()
         self.socket_events = collections.Counter()
+        self.start_time: arrow.Arrow = None
 
-    @property
-    def member(self) -> Optional[disnake.Member]:
-        """Retrieves the guild member object for the bot."""
-        guild = self.get_guild(constants.Client.guild)
-        if guild is None:
-            return None
-        return guild.me
+    async def login(self, token: str) -> None:
+        """Login to Discord and set the bot's start time."""
+        self.start_time = arrow.utcnow()
+        return await super().login(token)
 
     async def close(self) -> None:
         """Close sessions when bot is shutting down."""
