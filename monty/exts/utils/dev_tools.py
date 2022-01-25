@@ -1,5 +1,6 @@
 import disnake
 from disnake.ext import commands
+from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 
@@ -14,8 +15,8 @@ class DevTools(commands.Cog):
     async def invite(
         self,
         inter: disnake.AppCmdInter,
-        client_id: str = None,
-        permissions: str = None,
+        client_id: LargeInt,
+        permissions: Range[-1, disnake.Permissions.all().value] = None,
         guild: str = None,
         include_applications_commands: bool = True,
         raw_link: bool = False,
@@ -43,17 +44,12 @@ class DevTools(commands.Cog):
             client_id = inter.bot.user.id
 
         if permissions:
-            try:
-                permissions = int(permissions)
-            except ValueError:
-                await inter.response.send_message("Permissions must be an integer.", ephemeral=True)
-                return
             permissions = disnake.Permissions(permissions)
         elif client_id == inter.bot.user.id:
             # todo: make this a constant
             permissions = disnake.Permissions(412317248704)
         else:
-            permissions = disnake.Permissions(read_messages=True)
+            permissions = disnake.Permissions(-1)
 
         if guild is not None:
             try:
@@ -102,6 +98,14 @@ class DevTools(commands.Cog):
             components=components,
             ephemeral=ephemeral,
         )
+
+    @invite.error
+    async def invite_error(self, inter: disnake.CommandInteraction, error: Exception) -> None:
+        """Handle errors in the invite command."""
+        if isinstance(error, commands.ConversionError):
+            if isinstance(error.original, ValueError):
+                await inter.send("Client ID must be an integer.", ephemeral=True)
+                error.handled = True
 
     @commands.message_command(name="View raw text")
     async def view_raw(self, inter: disnake.MessageCommandInteraction) -> None:
