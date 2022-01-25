@@ -80,7 +80,7 @@ class Discord(commands.Cog):
         if appinfo.icon:
             embed.set_thumbnail(url=appinfo.icon.url)
 
-        embed.description = f"ID: {appinfo.id}\nPublic: {appinfo.bot_public    }\n"
+        embed.description = f"ID: `{appinfo.id}`\nPublic: `{appinfo.bot_public}`\n"
 
         if appinfo.description:
             embed.add_field("About me:", appinfo.description, inline=False)
