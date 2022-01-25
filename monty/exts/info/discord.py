@@ -83,12 +83,12 @@ class Discord(commands.Cog):
         embed.description = f"ID: {appinfo.id}\nPublic: {appinfo.bot_public    }\n"
 
         if appinfo.description:
-            embed.add_field("About me:", appinfo.description)
+            embed.add_field("About me:", appinfo.description, inline=False)
 
         flags = ""
         for flag, value in appinfo.flags:
             flags += f"{flag}:`{value}`\n"
-        embed.add_field(name="Flags", value=flags)
+        embed.add_field(name="Flags", value=flags, inline=False)
 
         await inter.send(embed=embed, ephemeral=ephemeral)
 
