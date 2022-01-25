@@ -86,7 +86,7 @@ class Discord(commands.Cog):
             embed.add_field("About me:", appinfo.description, inline=False)
 
         flags = ""
-        for flag, value in appinfo.flags:
+        for flag, value in sorted(appinfo.flags, key=lambda x: x[0]):
             flags += f"{flag}:`{value}`\n"
         embed.add_field(name="Flags", value=flags, inline=False)
 
