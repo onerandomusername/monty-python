@@ -1,4 +1,5 @@
 import asyncio
+import collections
 import logging
 import socket
 from typing import Optional
@@ -50,6 +51,7 @@ class Monty(commands.Bot):
         self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
 
         self.db = Database()
+        self.socket_events = collections.Counter()
 
     @property
     def member(self) -> Optional[disnake.Member]:

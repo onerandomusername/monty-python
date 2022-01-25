@@ -87,7 +87,7 @@ MESSAGE_LIMIT = 2000
 class Admin(commands.Cog):
     """Admin-only eval command and repr."""
 
-    def __init__(self, bot: Bot) -> Admin:
+    def __init__(self, bot: Bot):
         log.debug("loading cog Admin")
         self.bot = bot
         self._last_result = None
@@ -383,6 +383,21 @@ class Admin(commands.Cog):
                 pass
             except disnake.HTTPException as e:
                 await ctx.send(f"Unexpected error: `{e}`")
+
+    @commands.Cog.listener()
+    async def on_socket_event_type(self, event_type: str) -> None:
+        """Log events."""
+        self.bot.socket_events[event_type] += 1
+
+    @commands.command(aliases=("gw",))
+    async def gateway(self, ctx: Context) -> None:
+        """Sends current stats from the gateway."""
+        embed = disnake.Embed(title="Gateway Events", color=0x00FF00)
+        for event_type, count in self.bot.socket_events.most_common(21):
+            embed.add_field(name=event_type, value=f"{count:,}", inline=True)
+
+        view = DeleteView(ctx.author)
+        self.bot.loop.create_task(wait_for_deletion(await ctx.send(embed=embed, view=view), view=view))
 
 
 def setup(bot: Bot) -> None:
