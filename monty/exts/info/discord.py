@@ -102,7 +102,11 @@ class Discord(commands.Cog):
 
     @api.sub_command()
     async def guild_invite(
-        self, inter: disnake.CommandInteraction, invite: disnake.Invite, ephemeral: bool = True
+        self,
+        inter: disnake.CommandInteraction,
+        invite: disnake.Invite,
+        ephemeral: bool = True,
+        with_features: bool = False,
     ) -> None:
         """Get information on a guild from an invite."""
         if not invite.guild:
@@ -124,6 +128,9 @@ class Discord(commands.Cog):
         if image := (invite.guild.banner or invite.guild.splash):
             image = image.with_size(1024)
             embed.set_image(url=image.url)
+
+        if with_features:
+            embed.add_field(name="Features", value="\n".join(sorted(invite.guild.features)), inline=False)
 
         if invite.guild.icon is not None:
             embed.set_thumbnail(url=invite.guild.icon.url)
