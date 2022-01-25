@@ -119,6 +119,8 @@ class PyPi(commands.Cog):
 
         else:
             view = DeleteView(inter.author, inter)
+            if embed.url:
+                view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
             await inter.send(embed=embed, view=view)
             await wait_for_deletion(inter, view=view)
 

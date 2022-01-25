@@ -15,6 +15,8 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Tokens
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -203,8 +205,12 @@ class PythonEnhancementProposals(commands.Cog):
                 pep_embed, success = await self.get_pep_embed(number)
 
         if success:
-            await inter.send(embed=pep_embed)
-            log.trace(f"PEP {number} getting and sending finished successfully. Increasing stat.")
+            view = DeleteView(inter.author, inter)
+            if pep_embed.url:
+                view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=pep_embed.url))
+            await inter.send(embed=pep_embed, view=view)
+            self.bot.loop.create_task(wait_for_deletion(inter, view=view))
+            log.trace(f"PEP {number} getting and sending finished successfully")
         else:
             await inter.send(embed=pep_embed, ephemeral=True)
             log.trace(f"Getting PEP {number} failed. Error embed sent.")
