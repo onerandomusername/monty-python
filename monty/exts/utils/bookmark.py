@@ -19,6 +19,8 @@ TIMEOUT = 120
 BOOKMARK_EMOJI = "📌"
 CUSTOM_ID = "bookmark_add_bookmark"
 
+DELETE_CUSTOM_ID = "bookmark_delete_bookmark"
+
 
 def check_user_read_perms(user: disnake.User, target_message: disnake.Message) -> bool:
     """Prevent users from bookmarking a message in a channel they don't have access to."""
@@ -64,9 +66,12 @@ class Bookmark(commands.Cog):
         self, channel: disnake.TextChannel, user: disnake.Member, target_message: disnake.Message, title: str
     ) -> Optional[Union[bool, disnake.Embed]]:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
+        embed = self.build_bookmark_dm(target_message, title)
         try:
-            embed = self.build_bookmark_dm(target_message, title)
-            await user.send(embed=embed)
+            components = disnake.ui.Button(
+                custom_id=DELETE_CUSTOM_ID, label="Delete this bookmark", style=disnake.ButtonStyle.red
+            )
+            await user.send(embed=embed, components=components)
         except disnake.Forbidden:
             error_embed = self.build_error_embed(user)
             return error_embed
@@ -205,6 +210,15 @@ class Bookmark(commands.Cog):
     async def message_bookmark(self, inter: disnake.MessageCommandInteraction) -> None:
         """Bookmark a message with a message command."""
         await self.bookmark(inter, inter.target)
+
+    @commands.Cog.listener()
+    async def on_message_interaction(self, inter: disnake.MessageInteraction) -> None:
+        """Handle bookmark delete button interactions."""
+        if inter.data.custom_id != DELETE_CUSTOM_ID:
+            return
+
+        # these are only sent in dms so there is no reason to check the author
+        await inter.message.delete()
 
 
 def setup(bot: Bot) -> None:
