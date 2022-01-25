@@ -397,7 +397,7 @@ class Admin(commands.Cog):
         total_events = sum(self.bot.socket_events.values())
         events_per_second = total_events / (arrow.utcnow() - self.bot.start_time).total_seconds()
 
-        embed.description = f"Start time: {disnake.utils.format_dt(self.bot.start_time.datetime)}\n"
+        embed.description = f"Start time: {disnake.utils.format_dt(self.bot.start_time.datetime, 'R')}\n"
         embed.description += f"Events per second: `{events_per_second:.2f}`/s\n\u200b"
 
         for event_type, count in self.bot.socket_events.most_common(21):
