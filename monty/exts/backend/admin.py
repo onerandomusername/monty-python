@@ -400,7 +400,7 @@ class Admin(commands.Cog):
         embed.description = f"Start time: {disnake.utils.format_dt(self.bot.start_time.datetime, 'R')}\n"
         embed.description += f"Events per second: `{events_per_second:.2f}`/s\n\u200b"
 
-        for event_type, count in self.bot.socket_events.most_common(21):
+        for event_type, count in self.bot.socket_events.most_common(25):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
         view = DeleteView(ctx.author)
