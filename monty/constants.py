@@ -122,6 +122,10 @@ class Emojis:
     reddit_comments = "<:reddit_comments:882722838153416705>"
 
 
+class Endpoints:
+    app_info = environ.get("APPLICATION_INFO_ENDPOINT")
+
+
 class Guilds:
     disnake = 808030843078836254
     modmail = 798235512208490526

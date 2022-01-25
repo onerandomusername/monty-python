@@ -1,7 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import disnake
 from disnake.ext import commands
+from disnake.ext.commands import LargeInt
 
 from monty.bot import Monty
+from monty.constants import Endpoints
+
+
+if TYPE_CHECKING:
+    from disnake.types.appinfo import AppInfo
 
 
 INVITE = """
@@ -37,6 +47,58 @@ class Discord(commands.Cog):
     async def api(self, inter: disnake.CommandInteraction) -> None:
         """Commands that interact with the discord api."""
         pass
+
+    @api.sub_command(name="bot_info")
+    async def info_bot(self, inter: disnake.CommandInteraction, client_id: LargeInt, ephemeral: bool = True) -> None:
+        """[DEV] Get information on an bot from its ID. May not work with all bots."""
+        # attempt to do a precursory check on the client_id
+        try:
+            user = self.bot.get_user(client_id) or await self.bot.fetch_user(client_id)
+        except disnake.NotFound:
+            await inter.response.send_message("User not found.", ephemeral=True)
+            return
+
+        if not user.bot:
+            await inter.send("You can only run this command on bots.", ephemeral=True)
+            return
+
+        async with self.bot.http_session.get(Endpoints.app_info.format(application_id=client_id)) as resp:
+            if resp.status != 200:
+                await inter.send("Could not get bot info.", ephemeral=True)
+                return
+            data: AppInfo = await resp.json()
+
+        # add some missing attributes that we don't use but the library needs
+        data.setdefault("rpc_origins", [])
+        data["owner"] = user._to_minimal_user_json()
+
+        appinfo = disnake.AppInfo(self.bot._connection, data)
+
+        embed = disnake.Embed(
+            title=f"Bot info for {user.name}",
+        )
+        if appinfo.icon:
+            embed.set_thumbnail(url=appinfo.icon.url)
+
+        embed.description = f"ID: {appinfo.id}\nPublic: {appinfo.bot_public    }\n"
+
+        if appinfo.description:
+            embed.add_field("About me:", appinfo.description)
+
+        flags = ""
+        for flag, value in appinfo.flags:
+            flags += f"{flag}:`{value}`\n"
+        embed.add_field(name="Flags", value=flags)
+
+        await inter.send(embed=embed, ephemeral=ephemeral)
+
+    @info_bot.error
+    async def bot_info_error(self, inter: disnake.CommandInteraction, error: Exception) -> None:
+        """Handle errors in the bot_info command."""
+        if isinstance(error, commands.ConversionError):
+            if isinstance(error.original, ValueError):
+                await inter.send("Client ID must be an integer.", ephemeral=True)
+                error.handled = True
 
     @api.sub_command()
     async def guild_invite(
