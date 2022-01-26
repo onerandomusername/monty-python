@@ -112,7 +112,10 @@ class DocView(DeleteView):
 
         self.set_link_button()
 
-        self.set_up_attribute_select()
+        self.sync_attribute_dropdown()
+
+        self.attribute_select.placeholder += f" of {self.docitem.group} {self.docitem.symbol_name}"
+
         if not self.attribute_select.options:
             i = self.children.index(self.attribute_select)
             self.children.pop(i)
@@ -120,18 +123,19 @@ class DocView(DeleteView):
             self.children.pop(i)
             return
 
-    def set_up_attribute_select(self) -> None:
+    def sync_attribute_dropdown(self, current_attribute: str = None) -> None:
         """Set up the attribute select menu."""
+        self.attribute_select._underlying.options = []
         for attr in self.attributes[:25]:
             if attr == self.docitem:
                 continue
+            default = attr.symbol_name == current_attribute
             self.attribute_select.add_option(
                 label=attr.symbol_name.removeprefix(self.docitem.symbol_name),
                 description=attr.group,
                 value=attr.symbol_name,
+                default=default,
             )
-
-        self.attribute_select.placeholder += f" of {self.docitem.group} {self.docitem.symbol_name}"
 
     def set_link_button(self, url: str = None) -> None:
         """Set the link button to the provided url, or the default url."""
@@ -158,6 +162,7 @@ class DocView(DeleteView):
             return
         new_embed: disnake.Embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0], inter))[0]
         self.set_link_button(new_embed.url)
+        self.sync_attribute_dropdown(select.values[0])
         if inter.response.is_done():
             await inter.edit_original_message(embed=new_embed, view=self)
         else:
@@ -169,6 +174,7 @@ class DocView(DeleteView):
         if not await self.doc_check(inter):
             return
         self.set_link_button()
+        self.sync_attribute_dropdown()
         await inter.response.edit_message(embed=self.og_embed, view=self)
 
     def disable(self) -> None:
