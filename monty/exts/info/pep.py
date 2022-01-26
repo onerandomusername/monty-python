@@ -36,7 +36,7 @@ class PythonEnhancementProposals(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: Dict[int, str] = {}
-        self.autocomplete: dict[str, str] = {}
+        self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
         self.bot.loop.create_task(self.refresh_peps_urls())
@@ -88,18 +88,18 @@ class PythonEnhancementProposals(commands.Cog):
             else:
                 all_.extend(td)
 
-        self.autocomplete["0: Index of Python Enhancement Proposals"] = "0"
+        self.autocomplete["0: Index of Python Enhancement Proposals"] = 0
         for a in all_:
             if num := a.find("a"):
                 try:
-                    _ = int(num.text)
+                    pep_num = int(num.text)
                 except ValueError:
                     continue
                 title = num.parent.find_next_sibling("td")
                 if title:
-                    self.autocomplete[f"{num.text}: {title.text}"] = num.text
+                    self.autocomplete[f"{num.text}: {title.text}"] = pep_num
 
-        self.autocomplete = {k[0]: str(k[1]) for k in sorted(self.autocomplete.items(), key=lambda x: x[1])}
+        self.autocomplete = {k[0]: k[1] for k in sorted(self.autocomplete.items(), key=lambda x: x[1])}
 
         log.info("Finished scraping pep0.")
 
@@ -182,19 +182,14 @@ class PythonEnhancementProposals(commands.Cog):
             )
 
     @commands.slash_command(name="pep")
-    async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: str) -> None:
+    async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: int) -> None:
         """
         Fetch information about a PEP.
 
         Parameters
         ----------
-        number: number of the pep, example: 0
+        number: number or search query
         """
-        try:
-            number = int(number)
-        except ValueError:
-            await inter.send("You must send an integer pep number.", ephemeral=True)
-            return
         # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
         if number == 0:
             pep_embed = self.get_pep_zero_embed()
@@ -216,15 +211,15 @@ class PythonEnhancementProposals(commands.Cog):
             log.trace(f"Getting PEP {number} failed. Error embed sent.")
 
     @pep_command.autocomplete("number")
-    async def pep_number_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, str]:
+    async def pep_number_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, int]:
         """Completion for pep numbers."""
         if not query:
             # return some fun peps
             interesting_peps = [0, 8, 257, 517, 619, 660]
             resp = {}
             for title, pep in self.autocomplete.items():
-                if int(pep) in interesting_peps:
-                    resp[title] = str(pep)
+                if pep in interesting_peps:
+                    resp[title] = pep
             return {x: y for x, y in sorted(resp.items(), key=lambda x: int(x[1]))}
 
         peps: dict[str, int] = {}
@@ -235,7 +230,7 @@ class PythonEnhancementProposals(commands.Cog):
             processor = lambda x: x[0]  # noqa: E731
             query = query.lower()
         else:
-            processor = lambda x: x[1]  # noqa: E731
+            processor = lambda x: str(x[1])  # noqa: E731
 
         processed = rapidfuzz.process.extract(
             (query, query),
@@ -253,7 +248,7 @@ class PythonEnhancementProposals(commands.Cog):
             if top_score > score + 24:
                 break
 
-            peps[title] = str(pep)
+            peps[title] = pep
 
         if not len(peps):
             print("nomatch")
