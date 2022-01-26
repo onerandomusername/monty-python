@@ -251,7 +251,7 @@ class CodeButtons(commands.Cog):
         else:
             maybe_ref_link = ""
 
-        if json["source_code"].strip() == formatted:
+        if json["source_code"].strip() == formatted.strip():
             logger.debug("code was formatted with black but no changes were made.")
             return True, "Formatted " + maybe_ref_link + "with black but no changes were made! \U0001f44c", None
 
