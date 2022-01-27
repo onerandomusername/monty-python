@@ -22,6 +22,42 @@ CUSTOM_ID = "bookmark_add_bookmark"
 DELETE_CUSTOM_ID = "bookmark_delete_bookmark"
 
 
+class DeleteBookmarkView(disnake.ui.View):
+    """View for deleting bookmarks. Sent as a response to the delete button."""
+
+    def __init__(self, message: disnake.Message, timeout: float = 180):
+        self.message = message
+
+        super().__init__(timeout=timeout)
+
+    @disnake.ui.button(
+        label="Confirm Deletion", custom_id="bookmark_delete_bookmark_confirm", style=disnake.ButtonStyle.danger
+    )
+    async def confirm(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
+        """Delete the bookmark on confirmation."""
+        try:
+            await self.message.delete()
+        except disnake.errors.NotFound:
+            content = "You already deleted this message, nice try!"
+        else:
+            content = "Successfully deleted."
+        self.disable()
+
+        await inter.response.edit_message(content=content, view=self)
+
+    @disnake.ui.button(label="Cancel", custom_id="bookmark_delete_bookmark_cancel", style=disnake.ButtonStyle.green)
+    async def cancel(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
+        """Cancel the deletion and provide a response."""
+        self.disable()
+        await inter.response.edit_message(content="Cancelled", view=self)
+
+    def disable(self) -> None:
+        """Disable all attributes in this view."""
+        for c in self.children:
+            if hasattr(c, "disabled") and c.is_dispatchable():
+                c.disabled = True
+
+
 def check_user_read_perms(user: disnake.User, target_message: disnake.Message) -> bool:
     """Prevent users from bookmarking a message in a channel they don't have access to."""
     permissions = target_message.channel.permissions_for(user)
@@ -218,7 +254,9 @@ class Bookmark(commands.Cog):
             return
 
         # these are only sent in dms so there is no reason to check the author
-        await inter.message.delete()
+        await inter.send(
+            "Are you sure you want to delete this bookmark?", ephemeral=True, view=DeleteBookmarkView(inter.message)
+        )
 
 
 def setup(bot: Bot) -> None:
