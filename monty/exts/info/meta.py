@@ -3,6 +3,7 @@ import random
 import disnake
 import psutil
 from disnake.ext import commands
+from disnake.ext.commands import Range
 
 from monty.bot import Bot
 from monty.constants import Client, Colours
@@ -27,7 +28,7 @@ Based off of multiple open source projects, Monty is a development tool for Disc
 
 **GitHub**: {Client.github_bot_repo}
 **Credits**: Run `/monty credits` for a list of original sources.
-**Invite**: Use `/invite` to get an invite link to add me to your server.
+**Invite**: Use `/monty invite` to get an invite link to add me to your server.
 """
 
 CREDITS = """
@@ -82,17 +83,6 @@ class Meta(commands.Cog):
         timestamp = round(float(self.bot.start_time.format("X")))
         await inter.send(embed=disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)"))
 
-    @commands.command()
-    async def invite(self, ctx: commands.Context, guild: disnake.Object = disnake.utils.MISSING) -> None:
-        """Send an invite link to add me."""
-        url = disnake.utils.oauth_url(
-            self.bot.user.id,
-            scopes=["bot", "applications.commands"],
-            permissions=disnake.Permissions(412317248704),
-            guild=guild,
-        )
-        await ctx.send(f"<{url}>")
-
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
@@ -126,6 +116,27 @@ class Meta(commands.Cog):
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
         await inter.send(embed=e, ephemeral=True)
+
+    @monty.sub_command(name="invite")
+    async def invite(
+        self,
+        inter: disnake.CommandInteraction,
+        permissions: Range[-1, disnake.Permissions.all().value] = None,
+        guild: str = None,
+        raw_link: bool = False,
+        ephemeral: bool = True,
+    ) -> None:
+        """Generate an invite link to invite monty."""
+        invite_command = self.bot.get_slash_command("discord").children["api"].children["app-invite"]
+        await invite_command(
+            inter,
+            client_id=self.bot.user.id,
+            permissions=permissions,
+            guild=guild,
+            include_applications_commands=True,
+            raw_link=raw_link,
+            ephemeral=ephemeral,
+        )
 
     @monty.sub_command(name="stats")
     async def status(self, inter: disnake.CommandInteraction) -> None:
