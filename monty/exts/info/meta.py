@@ -65,24 +65,6 @@ class Meta(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @commands.slash_command()
-    async def ping(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Ping the bot to see its latency and state."""
-        embed = disnake.Embed(
-            title=":ping_pong: Pong!",
-            colour=Colours.bright_green,
-            description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
-        )
-
-        await inter.send(embed=embed)
-
-    # Originally made in 70d2170a0a6594561d59c7d080c4280f1ebcd70b by lemon & gdude2002
-    @commands.slash_command(name="uptime")
-    async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Get the current uptime of the bot."""
-        timestamp = round(float(self.bot.start_time.format("X")))
-        await inter.send(embed=disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)"))
-
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
@@ -138,6 +120,18 @@ class Meta(commands.Cog):
             ephemeral=ephemeral,
         )
 
+    @monty.sub_command()
+    async def ping(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Ping the bot to see its latency and state."""
+        embed = disnake.Embed(
+            title=":ping_pong: Pong!",
+            colour=Colours.bright_green,
+            description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
+        )
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=embed, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
+
     @monty.sub_command(name="stats")
     async def status(self, inter: disnake.CommandInteraction) -> None:
         """Stats about the current session."""
@@ -159,6 +153,16 @@ class Meta(commands.Cog):
 
         view = DeleteView(inter.author, inter)
         await inter.send(embed=e, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
+
+    @monty.sub_command()
+    async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Get the current uptime of the bot."""
+        timestamp = round(float(self.bot.start_time.format("X")))
+        embed = disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)")
+
+        view = DeleteView(inter.author, inter)
+        await inter.send(embed=embed, view=view)
         self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
