@@ -468,7 +468,11 @@ class HelpSession:
             if self._cleanup:
                 await self.message.delete()
             else:
-                await self.message.clear_reactions()
+                view = disnake.ui.View.from_message(self.message, timeout=1)
+                for child in view.children:
+                    if hasattr(child, "disabled") and child.is_dispatchable():
+                        child.disabled = True
+                await self.message.edit(view=view)
 
     @property
     def is_first_page(self) -> bool:
