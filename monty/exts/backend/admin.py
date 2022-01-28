@@ -41,6 +41,7 @@ EXT_METADATA = ExtMetadata(core=True)
 DISCORD_UPLOAD_LIMIT = 800000
 
 globals_to_import = {
+    "__builtins__": builtins,
     "disnake": disnake,
     "typing": typing,
     "commands": commands,
@@ -52,7 +53,6 @@ globals_to_import = {
     "asyncio": asyncio,
     "arrow": arrow,
 }
-globals_to_import.update(builtins.__dict__)
 
 
 def create_file_obj(
