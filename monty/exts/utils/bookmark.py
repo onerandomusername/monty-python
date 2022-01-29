@@ -120,16 +120,23 @@ class Bookmark(commands.Cog):
     ) -> typing.Tuple[disnake.Message, disnake.ui.View]:
         """Sends an embed, with a reaction, so users can react to bookmark the message too."""
         view = BookMarkView(timeout=TIMEOUT)
-        message = await ctx.send(
-            embed=disnake.Embed(
-                description=(
-                    f"Click the button below to be sent your very own bookmark to "
-                    f"[this message]({target_message.jump_url})."
-                ),
-                colour=Colours.soft_green,
+        embed = disnake.Embed(
+            description=(
+                f"Click the button below to be sent your very own bookmark to "
+                f"[this message]({target_message.jump_url})."
             ),
-            view=view,
+            colour=Colours.soft_green,
         )
+
+        if isinstance(ctx, commands.Context) and ctx.channel == target_message.channel:
+            message = await ctx.send(
+                embed=embed,
+                reference=target_message.to_reference(fail_if_not_exists=False),
+                allowed_mentions=disnake.AllowedMentions.none(),
+                view=view,
+            )
+        else:
+            message = await ctx.send(embed=embed, view=view)
 
         return message, view
 
