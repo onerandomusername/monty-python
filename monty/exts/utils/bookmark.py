@@ -261,6 +261,7 @@ class Bookmark(commands.Cog):
             return
 
         # these are only sent in dms so there is no reason to check the author
+        await inter.response.defer()
         await inter.send(
             "Are you sure you want to delete this bookmark?", ephemeral=True, view=DeleteBookmarkView(inter.message)
         )
