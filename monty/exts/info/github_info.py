@@ -49,6 +49,7 @@ GUILD_WHITELIST = {
     constants.Guilds.nextcord: "nextcord",
     constants.Guilds.testing: "onerandomusername",
     constants.Guilds.gurkult: "gurkult",
+    constants.Guilds.branding: "gustavwilliam",
 }
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6

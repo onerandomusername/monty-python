@@ -134,6 +134,7 @@ class Guilds:
     dexp = 798235585130266654
     gurkult = 789192517375623228
     testing = 789603028382122014
+    branding = 928111022085144636
 
 
 class Icons:
