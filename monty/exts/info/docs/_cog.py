@@ -716,8 +716,20 @@ class DocCog(commands.Cog):
         count: int = 24,
         threshold: int = 45,
         scorer: Any = None,
+        include_query: bool = False,
     ) -> list[str]:
-        """Autocomplete for the search param for documentation."""
+        """
+        Autocomplete for the search param for documentation.
+
+        Parameters
+        ----------
+        inter: the autocomplete interaction
+        query: the partial query by the user
+        count: the number of results to return
+        threshold: the minimum score to return
+        scorer: the scorer to use
+        include_query: whether to include the query in the results
+        """
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
         if not query:
             return self._get_default_completion(inter, inter.guild)
@@ -760,6 +772,8 @@ class DocCog(commands.Cog):
         tweak = list(sorted(tweak, key=lambda v: v[1], reverse=True))
 
         res = []
+        if include_query:
+            res.append(query)
         for name, score in tweak:
             if score < threshold:
                 break
@@ -810,7 +824,7 @@ class DocCog(commands.Cog):
         await inter.response.send_message(embed=embed, view=view)
         await wait_for_deletion(inter, view=view)
 
-    slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete))
+    slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, include_query=True))
 
     @slash_docs.sub_command(name="find_url")
     async def slash_docs_find_url(
