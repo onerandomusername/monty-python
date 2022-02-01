@@ -63,6 +63,9 @@ if top_module_name in sys.stdlib_module_names:
         sys.exit(1)
     # handle the object being part of the stdlib
     import platform
+    python_version = f"python{{platform.python_version().rsplit('.', 1)[0]}}/"
+    if filename.startswith(python_version):
+        filename = filename.split("/", 1)[-1]
     url = f"https://github.com/python/cpython/blob/v{{platform.python_version()}}/Lib/{{filename}}{{lines_extension}}"
 else:
     # assume that the source is github
