@@ -74,7 +74,7 @@ class SourceConverter(commands.Converter):
                 return cmd
 
         cmd = ctx.bot.get_command(argument)
-        if cmd:
+        if cmd and (not cmd.hidden or await ctx.bot.is_owner(ctx.author)):
             return cmd
 
         raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, slash command, or Cog.")
