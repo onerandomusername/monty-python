@@ -62,7 +62,8 @@ if top_module_name in sys.stdlib_module_names:
         print(f"`{{module_name}}` is a builtin module.")
         sys.exit(1)
     # handle the object being part of the stdlib
-    url = f"https://github.com/python/cpython/blob/3.10/Lib/{{filename}}{{lines_extension}}"
+    import platform
+    url = f"https://github.com/python/cpython/blob/v{{platform.python_version()}}/Lib/{{filename}}{{lines_extension}}"
 else:
     # assume that the source is github
     try:
