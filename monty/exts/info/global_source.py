@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING
 import disnake
 from disnake.ext import commands
 
+from monty.utils.delete import DeleteView
+from monty.utils.messages import wait_for_deletion
+
 
 if TYPE_CHECKING:
     from monty.bot import Bot
@@ -101,7 +104,15 @@ class GlobalSource(commands.Cog):
         """Get the source of a python object."""
         async with ctx.typing():
             result = await self.snekbox.post_eval(SNEKBOX_CODE.format(object=object))
-        await ctx.send(result["stdout"] or "No output.", allowed_mentions=disnake.AllowedMentions.none())
+            view = DeleteView(ctx.author)
+        self.bot.loop.create_task(
+            wait_for_deletion(
+                await ctx.send(
+                    result["stdout"] or "No output.", allowed_mentions=disnake.AllowedMentions.none(), view=view
+                ),
+                view=view,
+            )
+        )
 
 
 def setup(bot: Bot) -> None:
