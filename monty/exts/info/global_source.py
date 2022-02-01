@@ -56,13 +56,17 @@ filename = str(
 # get the version and link to the source of the module
 if top_module_name in sys.stdlib_module_names:
     if top_module_name in sys.builtin_module_names:
-        print(f"{{module_name}} is a builtin module.")
+        print(f"`{{module_name}}` is a builtin module.")
         sys.exit(1)
     # handle the object being part of the stdlib
     url = f"https://github.com/python/cpython/blob/3.10/Lib/{{filename}}{{lines_extension}}"
 else:
     # assume that the source is github
-    metadata = importlib.metadata.metadata(top_module_name)
+    try:
+        metadata = importlib.metadata.metadata(top_module_name)
+    except importlib.metadata.PackageNotFoundError:
+        print(f"Sorry, I can't find the metadata for `{{module_name}}`.")
+        sys.exit(1)
     # print(metadata.keys())
     version = metadata["Version"]
     for url in [metadata.get("Home-page"), *metadata.json["project_url"]]:
