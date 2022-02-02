@@ -29,6 +29,9 @@ except ModuleNotFoundError:
 except AttributeError:
     print("That object doesn't exist.")
     sys.exit(1)
+except ValueError:
+    print("That isn't a valid object path.")
+    sys.exit(1)
 except Exception:
     raise
 
