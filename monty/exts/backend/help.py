@@ -19,6 +19,7 @@ from monty.metadata import ExtMetadata
 from monty.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LinePaginator
 
 
+TIMEOUT = 90
 EXT_METADATA = ExtMetadata(core=True)
 
 DELETE_EMOJI = Emojis.trashcan
@@ -166,7 +167,7 @@ class HelpSession:
 
         raise HelpQueryNotFound(f'Query "{query}" not found.', {choice: score for choice, score, pos in result})
 
-    async def timeout(self, seconds: int = 30) -> None:
+    async def timeout(self, seconds: int = TIMEOUT) -> None:
         """Waits for a set number of seconds, then stops the help session."""
         await asyncio.sleep(seconds)
         await self.stop()
