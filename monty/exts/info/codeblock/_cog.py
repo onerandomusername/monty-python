@@ -124,8 +124,11 @@ class CodeBlockCog(Cog, name="Code Block"):
         bot_message = await message.channel.send(f"Hey {message.author.mention}!", embed=embed)
         self.codeblock_message_ids[message.id] = bot_message.id
 
-        await asyncio.sleep(DELETE_PAUSE)
-        scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
+        async def add_task() -> None:
+            await asyncio.sleep(DELETE_PAUSE)
+            scheduling.create_task(wait_for_deletion(bot_message, (message.author.id,)), event_loop=self.bot.loop)
+
+        scheduling.create_task(add_task(), event_loop=self.bot.loop)
 
     def should_parse(self, message: disnake.Message) -> bool:
         """
