@@ -8,8 +8,18 @@ from signal import Signals
 from typing import Any, Optional, Tuple, overload
 
 import aiohttp
-from disnake import HTTPException, Message, NotFound, Reaction, User
-from disnake.ext.commands import Cog, Context, command, guild_only
+from disnake import (
+    CommandInteraction,
+    HTTPException,
+    Message,
+    ModalInteraction,
+    NotFound,
+    Reaction,
+    TextInputStyle,
+    User,
+)
+from disnake.ext.commands import Cog, Context, command, guild_only, slash_command
+from disnake.ui import Modal
 
 from monty.bot import Bot
 from monty.constants import Guilds, Paste, URLs
@@ -53,6 +63,28 @@ REEVAL_TIMEOUT = 30
 HEADERS = {}
 if URLs.snekbox_auth:
     HEADERS["Authorization"] = URLs.snekbox_auth
+PLACEHOLDER_CODE = """
+from random import choice
+
+print(choice(("single quotes", 'double quotes')))
+
+""".lstrip()
+
+
+class EvalModal(Modal):
+    """Modal for evaluation."""
+
+    def __init__(self, snekbox: "Snekbox"):
+        super().__init__()
+        self.snekbox = snekbox
+        self.title = "Eval Code"
+        self.custom_id = "snekbox_eval"
+        self.add_text_input(label="Code", custom_id="code", style=TextInputStyle.long, placeholder=PLACEHOLDER_CODE)
+
+    async def callback(self, inter: ModalInteraction) -> None:
+        """Evaluate the provided code."""
+        await inter.response.defer()
+        await self.snekbox.send_eval(inter, inter.values["code"])
 
 
 class Snekbox(Cog):
@@ -250,8 +282,12 @@ class Snekbox(Cog):
 
         if paste_link:
             msg = f"{msg}\nFull output: {paste_link}"
+        if hasattr(ctx, "reply"):
+            response = await ctx.reply(msg)
+        else:
+            await ctx.send(msg)
+            response = await ctx.original_message()
 
-        response = await ctx.reply(msg)
         scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
 
         return response
@@ -303,6 +339,11 @@ class Snekbox(Cog):
             code = message.content
 
         return code
+
+    @slash_command(name="eval")
+    async def slash_eval(self, inter: CommandInteraction) -> None:
+        """Open a modal to send python code to be evaluated."""
+        await inter.response.send_modal(EvalModal(self))
 
     @command(name="eval", aliases=("e",))
     @guild_only()

@@ -247,7 +247,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.3.0"
+version = "2.3.1"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -265,9 +265,9 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 
 [package.source]
 type = "git"
-url = "https://github.com/disnakedev/disnake"
-reference = 'master'
-resolved_reference = "4ef4959e657409848952bf21b23de8cf38aa3217"
+url = "https://github.com/onerandomusername/disnake"
+reference = 'ae9369358d390ec72e6cebd67a6f1d3fd2ff3933'
+resolved_reference = "ae9369358d390ec72e6cebd67a6f1d3fd2ff3933"
 
 [[package]]
 name = "distlib"
@@ -1051,7 +1051,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "5c4eb8971afc208b569854199a79742482da92c12b0592532872768647fb76c2"
+content-hash = "b42427ac12b2cde6d392928c093a8344c21ed257a289d046b34ea120a45b7956"
 
 [metadata.files]
 aiodns = [
