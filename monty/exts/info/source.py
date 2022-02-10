@@ -33,7 +33,6 @@ class BotSource(commands.Cog):
             else:
                 view = DeleteView(ctx.author)
                 msg = await ctx.send(embed=embed, view=view)
-                print(isinstance(msg, disnake.Message))
                 await wait_for_deletion(msg, view=view)
             return
 

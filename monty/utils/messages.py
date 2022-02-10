@@ -87,8 +87,7 @@ async def wait_for_deletion(
                 log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
                 return
 
-    timed_out = await view.wait()
-    print(timed_out, view.deleted, view.delete_button.disabled, message_or_inter)
+    await view.wait()
     if view.deleted:
         return
 

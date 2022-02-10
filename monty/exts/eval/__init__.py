@@ -83,7 +83,7 @@ class EvalModal(Modal):
     async def callback(self, inter: ModalInteraction) -> None:
         """Evaluate the provided code."""
         await inter.response.defer()
-        await self.snekbox.send_eval(inter, inter.values["code"], original_source=True)
+        await self.snekbox.send_eval(inter, inter.text_values["code"], original_source=True)
 
 
 class Snekbox(Cog):
