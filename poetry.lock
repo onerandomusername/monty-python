@@ -266,8 +266,8 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 [package.source]
 type = "git"
 url = "https://github.com/onerandomusername/disnake"
-reference = 'ae9369358d390ec72e6cebd67a6f1d3fd2ff3933'
-resolved_reference = "ae9369358d390ec72e6cebd67a6f1d3fd2ff3933"
+reference = '7381aeb95e97cc0a8dca06b79677fa7e9a77e73d'
+resolved_reference = "7381aeb95e97cc0a8dca06b79677fa7e9a77e73d"
 
 [[package]]
 name = "distlib"
@@ -1051,7 +1051,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "b42427ac12b2cde6d392928c093a8344c21ed257a289d046b34ea120a45b7956"
+content-hash = "3a1c3c6a1af4e02b5897aeef0a7803002b02a3980eec4515f656aa6b32e1e367"
 
 [metadata.files]
 aiodns = [

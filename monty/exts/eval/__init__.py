@@ -74,17 +74,16 @@ print(choice(("single quotes", 'double quotes')))
 class EvalModal(Modal):
     """Modal for evaluation."""
 
-    def __init__(self, snekbox: "Snekbox"):
-        super().__init__()
+    def __init__(self, snekbox: "Snekbox", *, title: str = "Eval Code"):
+        super().__init__(title=title, components=[])
         self.snekbox = snekbox
-        self.title = "Eval Code"
         self.custom_id = "snekbox_eval"
         self.add_text_input(label="Code", custom_id="code", style=TextInputStyle.long, placeholder=PLACEHOLDER_CODE)
 
     async def callback(self, inter: ModalInteraction) -> None:
         """Evaluate the provided code."""
         await inter.response.defer()
-        await self.snekbox.send_eval(inter, inter.values["code"])
+        await self.snekbox.send_eval(inter, inter.values["code"], original_source=True)
 
 
 class Snekbox(Cog):
@@ -245,16 +244,22 @@ class Snekbox(Cog):
         return output, paste_link
 
     @overload
-    async def send_eval(self, ctx: Context, code: str, return_result: bool = True) -> tuple[str, Optional[str]]:
+    async def send_eval(
+        self, ctx: Context, code: str, return_result: bool = True, original_source: bool = False
+    ) -> tuple[str, Optional[str]]:
         """Send eval and receive a tuple of the msg and paste link."""
         pass
 
     @overload
-    async def send_eval(self, ctx: Context, code: str, return_result: bool = False) -> Message:
+    async def send_eval(
+        self, ctx: Context, code: str, return_result: bool = False, original_source: bool = False
+    ) -> Message:
         """Return the bot response from an eval invocation."""
         pass
 
-    async def send_eval(self, ctx: Context, code: str, return_result: bool = False) -> Any:
+    async def send_eval(
+        self, ctx: Context, code: str, return_result: bool = False, original_source: bool = False
+    ) -> Any:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
@@ -282,6 +287,11 @@ class Snekbox(Cog):
 
         if paste_link:
             msg = f"{msg}\nFull output: {paste_link}"
+
+        if original_source:
+            original_source = await self.upload_output(code)
+            msg += f"\nOriginal code link: {original_source}"
+
         if hasattr(ctx, "reply"):
             response = await ctx.reply(msg)
         else:
