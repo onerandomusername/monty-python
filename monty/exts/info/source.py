@@ -62,7 +62,16 @@ class BotSource(commands.Cog):
 
         Raise BadArgument if `source_item` is a dynamically-created object (e.g. via internal eval).
         """
-        if isinstance(source_item, (commands.InvokableSlashCommand, commands.SubCommandGroup, commands.SubCommand)):
+        if isinstance(
+            source_item,
+            (
+                commands.InvokableSlashCommand,
+                commands.SubCommandGroup,
+                commands.SubCommand,
+                commands.InvokableUserCommand,
+                commands.InvokableMessageCommand,
+            ),
+        ):
             meth = inspect.unwrap(source_item.callback)
             src = meth.__code__
             filename = src.co_filename
@@ -104,9 +113,18 @@ class BotSource(commands.Cog):
         elif isinstance(source_object, commands.InvokableSlashCommand):
             title = f"Slash Command: {source_object.qualified_name}"
             description = source_object.description
-        elif isinstance(source_object, (commands.SubCommand, commands.SubCommandGroup)):
+        elif isinstance(source_object, commands.SubCommandGroup):
+            title = f"Slash Sub Command Group: {source_object.qualified_name}"
+            description = inspect.cleandoc(source_object.__doc__).split("\n", 1)[0]
+        elif isinstance(source_object, commands.SubCommand):
             title = f"Slash Sub-Command: {source_object.qualified_name}"
             description = source_object.option.description
+        elif isinstance(source_object, commands.InvokableUserCommand):
+            title = f"User Command: {source_object.qualified_name}"
+            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
+        elif isinstance(source_object, commands.InvokableMessageCommand):
+            title = f"Message Command: {source_object.qualified_name}"
+            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
         else:
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]

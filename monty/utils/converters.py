@@ -77,7 +77,23 @@ class SourceConverter(commands.Converter):
         if cmd and (not cmd.hidden or await ctx.bot.is_owner(ctx.author)):
             return cmd
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, slash command, or Cog.")
+        # attempt to get the context menu command
+
+        cmd = ctx.bot.get_message_command(argument)
+        if cmd:
+            if not cmd.guild_ids:
+                return cmd
+            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
+                return cmd
+
+        cmd = ctx.bot.get_user_command(argument)
+        if cmd:
+            if not cmd.guild_ids:
+                return cmd
+            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
+                return cmd
+
+        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, application command, or Cog.")
 
 
 class DateConverter(commands.Converter):
