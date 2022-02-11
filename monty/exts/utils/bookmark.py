@@ -253,7 +253,11 @@ class Bookmark(commands.Cog):
     async def message_bookmark(self, inter: disnake.MessageCommandInteraction) -> None:
         """Bookmark a message with a message command."""
         components = disnake.ui.TextInput(
-            style=disnake.TextInputStyle.short, max_length=256, label="Title", custom_id="title"
+            style=disnake.TextInputStyle.short,
+            max_length=256,
+            label="Title",
+            custom_id="title",
+            required=False,
         )
         await inter.response.send_modal(title="Bookmark", custom_id=f"bookmark-{inter.id}", components=components)
         try:
