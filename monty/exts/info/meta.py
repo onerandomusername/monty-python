@@ -35,7 +35,7 @@ CREDITS = """
 Monty python would not have been possible without the following open source projects:
 
 **Primary library**
-**disnake**: ([Website](https://disnake.dev))
+**disnake**: [Website](https://disnake.dev) | [Server](https://discord.gg/disnake)
 
 **Initial framework and features**
 python-discord's **sir-lancebot**: ([Repo](https://github.com/pythondiscord/sir-lancebot))
