@@ -282,15 +282,15 @@ class Snekbox(Cog):
 
         log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
+        if original_source:
+            original_source = await self.upload_output(code)
+            msg += f"\nOriginal code link: {original_source}"
+
         if return_result:
             return msg, paste_link
 
         if paste_link:
             msg = f"{msg}\nFull output: {paste_link}"
-
-        if original_source:
-            original_source = await self.upload_output(code)
-            msg += f"\nOriginal code link: {original_source}"
 
         if hasattr(ctx, "reply"):
             response = await ctx.reply(msg)

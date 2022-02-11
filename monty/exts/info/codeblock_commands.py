@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import urllib.parse
@@ -329,12 +330,40 @@ class CodeButtons(commands.Cog):
             await inter.send("This message does not have any code to extract.", ephemeral=True)
             return
 
+        target = inter.target
+        original_source = False
+
+        # only provide a modal if the code is short enough
+        if len(code) <= 4000:
+            components = disnake.ui.TextInput(
+                label="Code", custom_id="code", style=disnake.TextInputStyle.long, value=code, required=True
+            )
+            await inter.response.send_modal(
+                title="Run in Snekbox", custom_id=f"snekbox-eval-{inter.id}", components=components
+            )
+
+            try:
+                inter: disnake.ModalInteraction = await self.bot.wait_for(
+                    "modal_submit",
+                    timeout=300,
+                    check=lambda m: m.custom_id == f"snekbox-eval-{inter.id}" and m.user == inter.user,
+                )
+            except asyncio.TimeoutError:
+                return
+            new_code = inter.text_values["code"]
+            if code != new_code:
+                logger.warning("idk")
+                code = new_code
+                original_source = True
+
         await inter.response.defer()
-        msg, link = await self.get_snekbox().send_eval(inter.target, code, return_result=True)
+        msg, link = await self.get_snekbox().send_eval(
+            target, code, return_result=True, original_source=original_source
+        )
 
         view = DeleteView(inter.author, inter)
         if link and link.startswith("http"):
-            if link and Paste.alias_url and inter.target.guild and inter.target.guild.id == Guilds.nextcord:
+            if link and Paste.alias_url and target.guild and target.guild.id == Guilds.nextcord:
                 link = link.replace(".disnake.", ".nextcord.")
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
