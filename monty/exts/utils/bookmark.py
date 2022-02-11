@@ -116,7 +116,7 @@ class Bookmark(commands.Cog):
 
     @staticmethod
     async def send_embed(
-        ctx: typing.Union[commands.Context, disnake.ApplicationCommandInteraction], target_message: disnake.Message
+        ctx: typing.Union[commands.Context, disnake.Interaction], target_message: disnake.Message
     ) -> typing.Tuple[disnake.Message, disnake.ui.View]:
         """Sends an embed, with a reaction, so users can react to bookmark the message too."""
         view = BookMarkView(timeout=TIMEOUT)
@@ -252,7 +252,20 @@ class Bookmark(commands.Cog):
     @commands.message_command(name="Bookmark")
     async def message_bookmark(self, inter: disnake.MessageCommandInteraction) -> None:
         """Bookmark a message with a message command."""
-        await self.bookmark(inter, inter.target)
+        components = disnake.ui.TextInput(
+            style=disnake.TextInputStyle.short, max_length=256, label="Title", custom_id="title"
+        )
+        await inter.response.send_modal(title="Bookmark", custom_id=f"bookmark-{inter.id}", components=components)
+        try:
+            modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
+                "modal_submit",
+                check=lambda x: x.custom_id == f"bookmark-{inter.id}",
+                timeout=180,
+            )
+        except asyncio.TimeoutError:
+            return
+
+        await self.bookmark(modal_inter, inter.target, title=modal_inter.text_values["title"])
 
     @commands.Cog.listener()
     async def on_message_interaction(self, inter: disnake.MessageInteraction) -> None:
