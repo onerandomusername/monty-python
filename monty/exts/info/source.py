@@ -115,7 +115,7 @@ class BotSource(commands.Cog):
             description = source_object.description
         elif isinstance(source_object, commands.SubCommandGroup):
             title = f"Slash Sub Command Group: {source_object.qualified_name}"
-            description = inspect.cleandoc(source_object.__doc__).split("\n", 1)[0]
+            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
         elif isinstance(source_object, commands.SubCommand):
             title = f"Slash Sub-Command: {source_object.qualified_name}"
             description = source_object.option.description
