@@ -167,7 +167,7 @@ loop.run_until_complete(redis_session.connect())
 
 bot = Monty(
     redis_session=redis_session,
-    command_prefix=constants.Client.prefix,
+    command_prefix=commands.when_mentioned_or(constants.Client.prefix),
     activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
     allowed_mentions=disnake.AllowedMentions(everyone=False),
     intents=_intents,
