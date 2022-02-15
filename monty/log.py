@@ -54,8 +54,8 @@ def setup() -> None:
 
     root_logger.setLevel(logging.DEBUG if Client.debug else logging.INFO)
     # Silence irrelevant loggers
-    logging.getLogger("disnake").setLevel(logging.ERROR)
-    logging.getLogger("websockets").setLevel(logging.ERROR)
+    logging.getLogger("disnake").setLevel(logging.WARNING)
+    logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("async_rediscache").setLevel(logging.INFO)
 
     _set_trace_loggers()
