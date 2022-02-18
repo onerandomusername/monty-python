@@ -37,6 +37,7 @@ class InternalLogger(commands.Cog):
             )
         )
 
+    @commands.Cog.listener()
     async def on_error(self, event_method: Any, *args, **kwargs) -> None:
         """Log all errors without other listeners."""
         print(f"Ignoring exception in {event_method}", file=sys.stderr)
@@ -65,22 +66,6 @@ class InternalLogger(commands.Cog):
     async def on_slash_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log slash command completion."""
         logger.info(f"slash command by {inter.author} has completed!")
-
-    @commands.Cog.listener()
-    async def on_slash_command_error(
-        self,
-        inter: disnake.ApplicationCommandInteraction,
-        error: commands.CommandError,
-    ) -> None:
-        """Log slash command errors."""
-        logger.exception(
-            "{author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
-                author=inter.author,
-                channel=inter.channel,
-                content=str({opt.name: opt.value for opt in inter.data.options}).replace("\n", " "),
-            ),
-            exc_info=error,
-        )
 
 
 def setup(bot: Bot) -> None:

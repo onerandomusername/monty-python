@@ -1,164 +1,212 @@
-import difflib
-import logging
-import math
-import random
-from typing import Iterable, Union
+from __future__ import annotations
 
-from disnake import Embed, Message
+import functools
+import logging
+import re
+import typing
+
+import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
-from monty.constants import ERROR_REPLIES, NEGATIVE_REPLIES, Colours, RedirectOutput
-from monty.metadata import ExtMetadata
-from monty.utils.decorators import InChannelCheckFailure, InMonthCheckFailure
-from monty.utils.exceptions import APIError
+from monty.bot import Monty
+from monty.utils import responses
 
 
-EXT_METADATA = ExtMetadata(core=True)
+if typing.TYPE_CHECKING:
+    AnyContext = typing.Union[commands.Context, disnake.Interaction]
 
-log = logging.getLogger(__name__)
-
-
-QUESTION_MARK_ICON = "https://cdn.discordapp.com/emojis/512367613339369475.png"
+logger = logging.getLogger(__name__)
 
 
-class CommandErrorHandler(commands.Cog):
-    """A error handler for the PythonDiscord server."""
+ERROR_COLOUR = responses.DEFAULT_FAILURE_COLOUR
 
-    def __init__(self, bot: Bot) -> None:
+ERROR_TITLE_REGEX = re.compile(r"((?<=[a-z])[A-Z]|(?<=[a-zA-Z])[A-Z](?=[a-z]))")
+
+
+class ErrorHandler(commands.Cog, name="Error Handler"):
+    """Handles all errors across the bot."""
+
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @staticmethod
-    def revert_cooldown_counter(command: commands.Command, message: Message) -> None:
-        """Undoes the last cooldown counter for user-error cases."""
-        if command._buckets.valid:
-            bucket = command._buckets.get_bucket(message)
-            bucket._tokens = min(bucket.rate, bucket._tokens + 1)
-            logging.debug("Cooldown counter reverted as the command was not used correctly.")
+    def error_embed(title: str, message: str) -> disnake.Embed:
+        """Create an error embed with an error colour and reason and return it."""
+        return disnake.Embed(title=title, description=message, colour=ERROR_COLOUR)
 
     @staticmethod
-    def error_embed(message: str, title: Union[Iterable, str] = ERROR_REPLIES) -> Embed:
-        """Build a basic embed with red colour and either a random error title or a title provided."""
-        embed = Embed(colour=Colours.soft_red)
-        if isinstance(title, str):
-            embed.title = title
+    def get_title_from_name(error: typing.Union[Exception, str]) -> str:
+        """
+        Return a message dervived from the exception class name.
+
+        Eg NSFWChannelRequired returns NSFW Channel Required
+        """
+        if not isinstance(error, str):
+            error = error.__class__.__name__
+        return re.sub(ERROR_TITLE_REGEX, r" \1", error)
+
+    @staticmethod
+    def _reset_command_cooldown(ctx: AnyContext) -> bool:
+        if return_value := ctx.command.is_on_cooldown(ctx):
+            ctx.command.reset_cooldown(ctx)
+        return return_value
+
+    async def handle_user_input_error(
+        self,
+        ctx: AnyContext,
+        error: commands.UserInputError,
+        reset_cooldown: bool = True,
+    ) -> disnake.Embed:
+        """Handling deferred from main error handler to handle UserInputErrors."""
+        if reset_cooldown:
+            self._reset_command_cooldown(ctx)
+        msg = None
+        if isinstance(error, commands.BadUnionArgument):
+            msg = self.get_title_from_name(str(error))
+        title = self.get_title_from_name(error)
+        return self.error_embed(title, msg or str(error))
+
+    async def handle_bot_missing_perms(self, ctx: AnyContext, error: commands.BotMissingPermissions) -> None:
+        """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""  # noqa: E501
+        embed = self.error_embed("Permissions Failure", str(error))
+        bot_perms = ctx.channel.permissions_for(ctx.me)
+        not_responded = True  # noqa: F841
+        if bot_perms >= disnake.Permissions(send_messages=True, embed_links=True):
+            await ctx.send(embeds=[embed])
+            not_responded = False  # noqa: F841
+        elif bot_perms >= disnake.Permissions(send_messages=True):
+            # make a message as similar to the embed, using as few permissions as possible
+            # this is the only place we send a standard message instead of an embed
+            # so no helper methods are necessary
+            await ctx.send(
+                "**Permissions Failure**\n\n" "I am missing the permissions required to properly execute your command."
+            )
+            # intentionally not setting responded to True, since we want to attempt to dm the user
+            logger.warning(
+                f"Missing partial required permissions for {ctx.channel}. "
+                "I am able to send messages, but not embeds."
+            )
         else:
-            embed.title = random.choice(title)
-        embed.description = message
+            logger.error(f"Unable to send an error message to channel {ctx.channel}")
+
+    async def handle_check_failure(
+        self, ctx: AnyContext, error: commands.CheckFailure
+    ) -> typing.Optional[disnake.Embed]:
+        """Handle CheckFailures seperately given that there are many of them."""
+        title = "Check Failure"
+        if isinstance(error, commands.CheckAnyFailure):
+            title = self.get_title_from_name(error.checks[-1])
+        elif isinstance(error, commands.PrivateMessageOnly):
+            title = "DMs Only"
+        elif isinstance(error, commands.NoPrivateMessage):
+            title = "Server Only"
+        elif isinstance(error, commands.BotMissingPermissions):
+            # defer handling BotMissingPermissions to a method
+            # the error could be that the bot is unable to send messages, which would cause
+            # the error handling to fail
+            await self.handle_bot_missing_perms(ctx, error)
+            return None
+        else:
+            title = self.get_title_from_name(error)
+        embed = self.error_embed(title, str(error))
         return embed
 
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+    async def on_command_error(self, ctx: AnyContext, error: commands.CommandError) -> None:
         """Activates when a command raises an error."""
         if getattr(error, "handled", False):
-            logging.debug(f"Command {ctx.command} had its error already handled locally; ignoring.")
+            logging.debug(f"Command {ctx.command} had its error already handled locally, ignoring.")
             return
-
-        parent_command = ""
-        if subctx := getattr(ctx, "subcontext", None):
-            parent_command = f"{ctx.command} "
-            ctx = subctx
-
-        error = getattr(error, "original", error)
-        logging.debug(
-            f"Error Encountered: {type(error).__name__} - {str(error)}, "
-            f"Command: {ctx.command}, "
-            f"Author: {ctx.author}, "
-            f"Channel: {ctx.channel}"
-        )
 
         if isinstance(error, commands.CommandNotFound):
-            await self.send_command_suggestion(ctx, ctx.invoked_with)
+            # ignore every time the user inputs a message that starts with our prefix but isn't a command
+            # this will be modified in the future to support prefilled commands
             return
 
-        if isinstance(error, (InChannelCheckFailure, InMonthCheckFailure)):
-            await ctx.send(embed=self.error_embed(str(error), NEGATIVE_REPLIES), delete_after=7.5)
-            return
+        embed: typing.Optional[disnake.Embed] = None
+        should_respond = True
 
         if isinstance(error, commands.UserInputError):
-            self.revert_cooldown_counter(ctx.command, ctx.message)
-            usage = f"```{ctx.prefix}{parent_command}{ctx.command} {ctx.command.signature}```"
-            embed = self.error_embed(f"Your input was invalid: {error}\n\nUsage:{usage}")
-            await ctx.send(embed=embed)
-            return
+            embed = await self.handle_user_input_error(ctx, error)
+        elif isinstance(error, commands.CheckFailure):
+            embed = await self.handle_check_failure(ctx, error)
+            # handle_check_failure may send its own error if its a BotMissingPermissions error.
+            if embed is None:
+                should_respond = False
+        elif isinstance(error, commands.ConversionError):
+            pass
+        elif isinstance(error, commands.DisabledCommand):
+            logger.debug("")
+            if ctx.command.hidden:
+                should_respond = False
+            else:
+                msg = f"Command `{ctx.invoked_with}` is disabled."
+                if reason := ctx.command.extras.get("disabled_reason", None):
+                    msg += f"\nReason: {reason}"
+                embed = self.error_embed("Command Disabled", msg)
 
-        if isinstance(error, commands.CommandOnCooldown):
-            mins, secs = divmod(math.ceil(error.retry_after), 60)
-            embed = self.error_embed(
-                f"This command is on cooldown:\nPlease retry in {mins} minutes {secs} seconds.",
-                NEGATIVE_REPLIES,
-            )
-            await ctx.send(embed=embed, delete_after=7.5)
-            return
-
-        if isinstance(error, commands.DisabledCommand):
-            await ctx.send(embed=self.error_embed("This command has been disabled.", NEGATIVE_REPLIES))
-            return
-
-        if isinstance(error, commands.NoPrivateMessage):
-            await ctx.send(
-                embed=self.error_embed(
-                    "This command can only be used in a server.",
-                    NEGATIVE_REPLIES,
+        elif isinstance(error, commands.CommandInvokeError):
+            if isinstance(error.original, disnake.Forbidden):
+                logger.warn(f"Permissions error occurred in {ctx.command}.")
+                await self.handle_bot_missing_perms(ctx, error.original)
+                should_respond = False
+            else:
+                # todo: this should properly handle plugin errors and note that they are not bot bugs
+                # todo: this should log somewhere else since this is a bot bug.
+                # generic error
+                logger.error("Error occurred in command or message component", exc_info=error.original)
+                # built in command msg
+                title = "Internal Error"
+                msg = (
+                    "Something went wrong internally in the action you were trying to execute. "
+                    "Please report this error and what you were trying to do to the bot owner."
                 )
+
+                embed = self.error_embed(title, msg)
+
+        # TODO: this has a fundamental problem with any BotMissingPermissions error
+        # if the issue is the bot does not have permissions to send embeds or send messages...
+        # yeah, problematic.
+
+        if not should_respond:
+            logger.debug(
+                "Not responding to error since should_respond is falsey because either "
+                "the embed has already been sent or belongs to a hidden command and thus should be hidden."
             )
             return
 
-        if isinstance(error, commands.BadArgument):
-            self.revert_cooldown_counter(ctx.command, ctx.message)
-            embed = self.error_embed(
-                "The argument you provided was invalid: "
-                f"{error}\n\nUsage:\n```{ctx.prefix}{parent_command}{ctx.command} {ctx.command.signature}```"
-            )
-            await ctx.send(embed=embed)
-            return
+        if embed is None:
+            embed = self.error_embed(self.get_title_from_name(error), str(error))
 
-        if isinstance(error, commands.CheckFailure):
-            await ctx.send(embed=self.error_embed("You are not authorized to use this command.", NEGATIVE_REPLIES))
-            return
+        await ctx.send(embeds=[embed])
 
-        if isinstance(error, APIError):
-            await ctx.send(
-                embed=self.error_embed(
-                    f"There was an error when communicating with the {error.api}."
-                    + (f"\n{error.error_msg}" if error.error_msg is not None else ""),
-                    NEGATIVE_REPLIES,
-                )
-            )
-            return
-
-        log.exception(f"Unhandled command error: {str(error)}", exc_info=error)
-
-    async def send_command_suggestion(self, ctx: commands.Context, command_name: str) -> None:
-        """Sends user similar commands if any can be found."""
-        raw_commands = []
-        for cmd in self.bot.walk_commands():
-            if not cmd.hidden:
-                raw_commands += (cmd.name, *cmd.aliases)
-        if similar_command_data := difflib.get_close_matches(command_name, raw_commands, 1):
-            similar_command_name = similar_command_data[0]
-            similar_command = self.bot.get_command(similar_command_name)
-
-            if not similar_command:
-                return
-
-            log_msg = "Cancelling attempt to suggest a command due to failed checks."
-            try:
-                if not await similar_command.can_run(ctx):
-                    log.debug(log_msg)
-                    return
-            except commands.errors.CommandError as cmd_error:
-                log.debug(log_msg)
-                await self.on_command_error(ctx, cmd_error)
-                return
-
-            misspelled_content = ctx.message.content
-            e = Embed()
-            e.set_author(name="Did you mean:", icon_url=QUESTION_MARK_ICON)
-            e.description = misspelled_content.replace(command_name, similar_command_name, 1)
-            await ctx.send(embed=e, delete_after=RedirectOutput.delete_delay)
+    @commands.Cog.listener(name="on_command_error")
+    @commands.Cog.listener(name="on_slash_command_error")
+    @commands.Cog.listener(name="on_message_command_error")
+    async def on_error(self, ctx: AnyContext, error: Exception) -> None:
+        """Handle all errors with one mega error handler."""
+        if isinstance(ctx, disnake.Interaction):
+            ctx.send = functools.partial(ctx.send, ephemeral=True)
+            if isinstance(
+                ctx,
+                (
+                    disnake.ApplicationCommandInteraction,
+                    disnake.MessageCommandInteraction,
+                    disnake.UserCommandInteraction,
+                ),
+            ):
+                ctx.command = ctx.application_command
+            elif isinstance(ctx, (disnake.MessageInteraction, disnake.ModalInteraction)):
+                # todo: this is a hack, but it works for now
+                ctx.command = ctx.message
+            else:
+                # i don't even care, this code should be unreachable but its also the error handler
+                ctx.command = ctx
+        try:
+            await self.on_command_error(ctx, error)
+        except Exception as e:
+            logger.exception("Error occurred in error handler", exc_info=e)
 
 
-def setup(bot: Bot) -> None:
-    """Load the ErrorHandler cog."""
-    bot.add_cog(CommandErrorHandler(bot))
+def setup(bot: Monty) -> None:
+    """Add the error handler to the bot."""
+    bot.add_cog(ErrorHandler(bot))
