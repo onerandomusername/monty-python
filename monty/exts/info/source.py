@@ -29,11 +29,11 @@ class BotSource(commands.Cog):
             if isinstance(ctx, disnake.Interaction):
                 view = DeleteView(ctx.author, ctx)
                 await ctx.send(embed=embed, view=view)
-                await wait_for_deletion(ctx, view=view)
+                self.bot.loop.create_task(wait_for_deletion(ctx, view=view))
             else:
                 view = DeleteView(ctx.author)
                 msg = await ctx.send(embed=embed, view=view)
-                await wait_for_deletion(msg, view=view)
+                self.bot.loop.create_task(wait_for_deletion(msg, view=view))
             return
 
         if not source_item:

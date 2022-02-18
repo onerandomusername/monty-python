@@ -122,7 +122,7 @@ class PyPi(commands.Cog):
             if embed.url:
                 view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
             await inter.send(embed=embed, view=view)
-            await wait_for_deletion(inter, view=view)
+            self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
@@ -216,7 +216,7 @@ class PyPi(commands.Cog):
             embed.description = "Sorry, no results found."
         view = DeleteView(inter.author, inter)
         await inter.send(embed=embed, view=view)
-        await wait_for_deletion(inter, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     async def cog_slash_command_error(self, inter: disnake.ApplicationCommandInteraction, error: Exception) -> None:
         """TODO: Handle a few local errors until a full error handlers is written."""

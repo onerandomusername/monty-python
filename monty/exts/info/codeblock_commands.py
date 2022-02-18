@@ -373,7 +373,7 @@ class CodeButtons(commands.Cog):
             view.add_item(button)
 
         await inter.edit_original_message(content=msg, view=view)
-        await wait_for_deletion(inter, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

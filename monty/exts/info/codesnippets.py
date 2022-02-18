@@ -252,7 +252,7 @@ class CodeSnippets(Cog):
                 pass
 
             view = DeleteView(message.author)
-            await wait_for_deletion(await destination.send(message_to_send, view=view), view=view)
+            self.bot.loop.create_task(wait_for_deletion(await destination.send(message_to_send, view=view), view=view))
 
 
 def setup(bot: Bot) -> None:

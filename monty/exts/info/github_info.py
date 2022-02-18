@@ -563,7 +563,7 @@ class GithubInfo(commands.Cog):
         resp = self.format_embed(links, default_org)
         log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
         view = DeleteView(message.author)
-        await wait_for_deletion(await message.channel.send(embed=resp, view=view), view=view)
+        self.bot.loop.create_task(wait_for_deletion(await message.channel.send(embed=resp, view=view), view=view))
 
     @commands.slash_command(guild_ids=GITHUB_GUILDS)
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:

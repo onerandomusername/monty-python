@@ -822,7 +822,7 @@ class DocCog(commands.Cog):
 
         view = DeleteView(inter.author, inter)
         await inter.response.send_message(embed=embed, view=view)
-        await wait_for_deletion(inter, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, include_query=True))
 

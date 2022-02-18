@@ -110,7 +110,7 @@ class Utils(Cog):
         embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
         view = DeleteView(inter.author, inter)
         await inter.send(embed=embed, view=view)
-        await wait_for_deletion(inter, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:
