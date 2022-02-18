@@ -806,7 +806,7 @@ class DocCog(commands.Cog):
             if blacklist and item.package in blacklist:
                 continue
 
-            results[key] = item.url
+            results[key] = item.url + "#" + item.symbol_id
             if len(results) >= 10:
                 break
         # if no results
