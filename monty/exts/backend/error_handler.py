@@ -185,7 +185,11 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
     async def on_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         if isinstance(ctx, disnake.Interaction):
-            ctx.send = functools.partial(ctx.send, ephemeral=True)
+            if ctx.response.is_done():
+                ctx.send = functools.partial(ctx.followup.send, ephemeral=True)
+            else:
+                ctx.send = functools.partial(ctx.send, ephemeral=True)
+
             if isinstance(
                 ctx,
                 (
