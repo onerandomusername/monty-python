@@ -133,7 +133,7 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
             if embed is None:
                 should_respond = False
         elif isinstance(error, commands.ConversionError):
-            pass
+            error = error.original
         elif isinstance(error, commands.DisabledCommand):
             logger.debug("")
             if ctx.command.hidden:

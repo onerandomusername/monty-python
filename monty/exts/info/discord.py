@@ -53,7 +53,11 @@ class Discord(commands.Cog):
         """[DEV] Get information on an bot from its ID. May not work with all bots."""
         # attempt to do a precursory check on the client_id
         user = self.bot.get_user(client_id)
-
+        if not user:
+            try:
+                user = await self.bot.fetch_user(client_id)
+            except disnake.NotFound:
+                raise commands.UserNotFound(client_id) from None
         if not user.bot:
             await inter.send("You can only run this command on bots or applications.", ephemeral=True)
             return
@@ -90,14 +94,6 @@ class Discord(commands.Cog):
         embed.add_field(name="Flags", value=flags, inline=False)
 
         await inter.send(embed=embed, ephemeral=ephemeral)
-
-    @info_bot.error
-    async def bot_info_error(self, inter: disnake.CommandInteraction, error: Exception) -> None:
-        """Handle errors in the bot_info command."""
-        if isinstance(error, commands.ConversionError):
-            if isinstance(error.original, ValueError):
-                await inter.send("Client ID must be an integer.", ephemeral=True)
-                error.handled = True
 
     @api.sub_command(name="app-invite")
     async def app_invite(
@@ -187,14 +183,6 @@ class Discord(commands.Cog):
             ephemeral=ephemeral,
         )
 
-    @app_invite.error
-    async def invite_error(self, inter: disnake.CommandInteraction, error: Exception) -> None:
-        """Handle errors in the invite command."""
-        if isinstance(error, commands.ConversionError):
-            if isinstance(error.original, ValueError):
-                await inter.send("Client ID must be an integer.", ephemeral=True)
-                error.handled = True
-
     @api.sub_command(name="guild-invite")
     async def guild_invite(
         self,
@@ -231,15 +219,6 @@ class Discord(commands.Cog):
             embed.set_thumbnail(url=invite.guild.icon.url)
 
         await inter.send(embed=embed, ephemeral=ephemeral)
-
-    @guild_invite.error
-    async def guild_invite_error(self, inter: disnake.CommandInteraction, error: Exception) -> None:
-        """Handle errors for guild_invite."""
-        if isinstance(error, commands.ConversionError):
-            error = error.original
-        if isinstance(error, commands.BadInviteArgument):
-            await inter.send(str(error), ephemeral=True)
-            return
 
 
 def setup(bot: Monty) -> None:
