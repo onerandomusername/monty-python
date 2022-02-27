@@ -92,10 +92,13 @@ async def wait_for_deletion(
         return
 
     view.delete_button.disabled = True
-    if isinstance(message_or_inter, disnake.Interaction):
-        await message_or_inter.edit_original_message(view=view)
-    else:
-        await message.edit(view=view)
+    try:
+        if isinstance(message_or_inter, disnake.Interaction):
+            await message_or_inter.edit_original_message(view=view)
+        else:
+            await message.edit(view=view)
+    except disnake.NotFound:
+        log.debug("Tried to delete/edit message that is already deleted.")
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
