@@ -41,7 +41,6 @@ BITBUCKET_RE = re.compile(
 
 BLACKLIST = [
     constants.Guilds.disnake,
-    constants.Guilds.nextcord,
 ]
 
 
