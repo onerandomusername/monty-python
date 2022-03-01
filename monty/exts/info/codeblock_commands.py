@@ -65,7 +65,8 @@ class CodeButtons(commands.Cog):
         async with self.bot.http_session.get(url, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
                 return None
-            return await resp.text()
+            json = await resp.json()
+        return json["content"]
 
     async def parse_code(
         self,

@@ -27,10 +27,14 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
 
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
     paste_url = URLs.paste_service.format(key="api/new")
+    json: dict[str, str] = {
+        "content": contents,
+    }
+    if extension:
+        json["language"] = extension
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
-            print(paste_url)
-            async with bot.http_session.post(paste_url, data=contents) as response:
+            async with bot.http_session.post(paste_url, json=json, raise_for_status=True) as response:
                 response_json = await response.json()
         except ClientConnectorError:
             log.warning(
@@ -54,7 +58,9 @@ async def send_to_paste_service(contents: str, *, extension: str = "") -> Option
         elif "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
-            paste_link = URLs.paste_service.format(key=f'?id={response_json["key"]}') + f"&language={extension}"
+            paste_link = URLs.paste_service.format(key=f'?id={response_json["key"]}')
+            if extension:
+                paste_link += f"&language={extension}"
 
             return paste_link
 
