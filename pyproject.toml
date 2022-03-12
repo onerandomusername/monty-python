@@ -24,7 +24,7 @@ sphobjinv = "^2.1"
 beautifulsoup4 = "^4.10.0"
 markdownify = "==0.10.1"
 lxml = "^4.6.4"
-Pillow = "^9.0.0"
+Pillow = "^9.0.1"
 psutil = "^5.9.0"
 
 
