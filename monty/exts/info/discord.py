@@ -88,6 +88,16 @@ class Discord(commands.Cog):
         if appinfo.description:
             embed.add_field("About me:", appinfo.description, inline=False)
 
+        if data.get("tags"):
+            embed.add_field(name="Tags", value=", ".join(sorted(data["tags"])), inline=False)
+
+        if appinfo.terms_of_service_url or appinfo.privacy_policy_url:
+            embed.add_field(
+                "Legal:",
+                f"ToS: {appinfo.terms_of_service_url}\nPrivacy policy:{appinfo.privacy_policy_url}",
+                inline=False,
+            )
+
         flags = ""
         for flag, value in sorted(appinfo.flags, key=lambda x: x[0]):
             flags += f"{flag}:`{value}`\n"
@@ -118,13 +128,7 @@ class Discord(commands.Cog):
         raw_link: Instead of a fancy button, I'll give you the raw link.
         ephemeral: Whether or not to send an ephemeral response.
         """
-        if client_id:
-            try:
-                client_id = int(client_id)
-            except (TypeError, ValueError):
-                await inter.response.send_message("client id must be an integer.", ephemeral=True)
-                return
-        else:
+        if not client_id:
             client_id = inter.bot.user.id
 
         if permissions is not None:
