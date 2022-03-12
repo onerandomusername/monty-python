@@ -38,8 +38,8 @@ Monty python would not have been possible without the following open source proj
 **disnake**: [Website](https://disnake.dev) | [Server](https://discord.gg/disnake)
 
 **Initial framework and features**
-python-discord's **sir-lancebot**: ([Repo](https://github.com/pythondiscord/sir-lancebot))
-python-discord's **bot**: ([Repo](https://github.com/pythondiscord/bot))
+python-discord's **sir-lancebot**: ([Repo](https://github.com/python-discord/sir-lancebot))
+python-discord's **bot**: ([Repo](https://github.com/python-discord/bot))
 
 A majority of features were initially implemented on python-discord's **bot**, and modified to work with Monty.
 """
