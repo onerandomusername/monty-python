@@ -146,7 +146,7 @@ class Meta(commands.Cog):
             disnake_version=disnake.__version__,
             disnake_version_level=disnake.version_info.releaselevel,
             guilds=len(self.bot.guilds),
-            users=len(self.bot.users),
+            users=sum([guild.member_count for guild in self.bot.guilds]),
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
             memory_usage=psutil.virtual_memory().percent,
             cpu_usage=psutil.cpu_percent(),

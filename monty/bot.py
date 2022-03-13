@@ -146,12 +146,16 @@ class Monty(commands.Bot):
 # temp: for backwards compatibilty
 Bot = Monty
 
-_intents = disnake.Intents.all()  # Default is all intents except for privileged ones (Members, Presences, ...)
+_intents = disnake.Intents.all()
+_intents.members = False
+_intents.presences = False
 _intents.bans = False
 _intents.integrations = False
 _intents.invites = False
 _intents.typing = False
 _intents.webhooks = False
+_intents.voice_states = False
+_intents.dm_messages = False
 
 redis_session = async_rediscache.RedisSession(
     address=(constants.RedisConfig.host, constants.RedisConfig.port),
