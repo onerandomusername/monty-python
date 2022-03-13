@@ -84,7 +84,7 @@ Executor = Union[exec, eval]
 MESSAGE_LIMIT = 2000
 
 
-class Admin(commands.Cog):
+class Admin(commands.Cog, command_attrs={"hidden": True}):
     """Admin-only eval command and repr."""
 
     def __init__(self, bot: Bot):
