@@ -113,7 +113,9 @@ class Admin(commands.Cog):
 
     async def cog_check(self, ctx: Context) -> bool:
         """Cog-wide check if the user can run these commands."""
-        return await self.bot.is_owner(ctx.author)
+        if await self.bot.is_owner(ctx.author):
+            return True
+        raise commands.NotOwner("You must be the bot owner to use this command.")
 
     def get_syntax_error(self, e: SyntaxError) -> str:
         """If there's a syntax error in the exception, get some text from it."""

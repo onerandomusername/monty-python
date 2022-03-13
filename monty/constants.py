@@ -34,6 +34,7 @@ class Client(NamedTuple):
     extensions = environ.get("BOT_EXTENSIONS", None) and {
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")
     }
+    support_server = "mPscM4FjWB"
 
 
 DEBUG_MODE = Client.debug

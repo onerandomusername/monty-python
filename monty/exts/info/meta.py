@@ -27,12 +27,13 @@ Based off of multiple open source projects, Monty is a development tool for Disc
 - Codeblock detection
 
 **GitHub**: {Client.github_bot_repo}
+**Support**: https://discord.gg/{Client.support_server}
 **Credits**: Run `/monty credits` for a list of original sources.
 **Invite**: Use `/monty invite` to get an invite link to add me to your server.
 """
 
 CREDITS = """
-Monty python would not have been possible without the following open source projects:
+Monty Python would not have been possible without the following open source projects:
 
 **Primary library**
 **disnake**: [Website](https://disnake.dev) | [Server](https://discord.gg/disnake)
@@ -154,6 +155,15 @@ class Meta(commands.Cog):
         view = DeleteView(inter.author, inter)
         await inter.send(embed=e, view=view)
         self.bot.loop.create_task(wait_for_deletion(inter, view=view))
+
+    @monty.sub_command()
+    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = True) -> None:
+        """Get a link to the support server."""
+        await inter.send(
+            "If you find yourself in need of support, please join the support server: "
+            "https://discord.gg/{invite}".format(invite=Client.support_server),
+            ephemeral=ephemeral,
+        )
 
     @monty.sub_command()
     async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:

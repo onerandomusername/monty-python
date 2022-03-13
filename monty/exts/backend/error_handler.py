@@ -9,6 +9,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
+from monty.constants import Client
 from monty.utils import responses
 
 
@@ -100,6 +101,9 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
             title = "DMs Only"
         elif isinstance(error, commands.NoPrivateMessage):
             title = "Server Only"
+        elif isinstance(error, commands.NotOwner):
+            # hide errors for owner check failures
+            return None
         elif isinstance(error, commands.BotMissingPermissions):
             # defer handling BotMissingPermissions to a method
             # the error could be that the bot is unable to send messages, which would cause
@@ -156,9 +160,12 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
                 logger.error("Error occurred in command or message component", exc_info=error.original)
                 # built in command msg
                 title = "Internal Error"
+                error_str = str(error.original).replace("``", "`\u200b`")
                 msg = (
                     "Something went wrong internally in the action you were trying to execute. "
-                    "Please report this error and what you were trying to do to the bot owner."
+                    "Please report this error and the code below and what you were trying to do in "
+                    f"the [support server](https://discord.gg/{Client.support_server})."
+                    f"\n\n``{error_str}``"
                 )
 
                 embed = self.error_embed(title, msg)
