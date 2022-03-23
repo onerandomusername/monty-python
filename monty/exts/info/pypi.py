@@ -96,8 +96,10 @@ class PyPi(commands.Cog):
                 try:
                     release_info = response_json["releases"][info["version"]]
                     embed.set_footer(text="Last updated")
-                    embed.timestamp = disnake.utils.parse_time(release_info[0]["upload_time"])
-                except Exception:
+                    embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
+                        tzinfo=datetime.timezone.utc
+                    )
+                except KeyError:
                     pass
 
                 embed.colour = next(PYPI_COLOURS)
