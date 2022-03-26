@@ -1,33 +1,41 @@
-import functools
 import logging
 from datetime import datetime, timedelta
-from email.parser import HeaderParser
-from io import StringIO
 from typing import Dict, Optional, Tuple
 
-import bs4
+import aiohttp
 import disnake
 import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
+from bs4 import BeautifulSoup
 from disnake import Colour, Embed
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import Tokens
 from monty.utils.delete import DeleteView
+from monty.utils.inventory_parser import fetch_inventory
 from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
-BASE_PEP_URL = "http://www.python.org/dev/peps/pep-"
-PEPS_LISTING_API_URL = "https://api.github.com/repos/python/peps/contents"
-PEP_0 = "https://www.python.org/dev/peps/"
-GITHUB_API_HEADERS = {}
-if Tokens.github:
-    GITHUB_API_HEADERS["Authorization"] = f"token {Tokens.github}"
+BASE_URL = "https://peps.python.org"
+BASE_PEP_URL = f"{BASE_URL}/pep-"
+INVENTORY_URL = f"{BASE_URL}/objects.inv"
+
+
+class HeaderParser:
+    """Parser for parsing the headers from the HTML of a pep page."""
+
+    def parse(self, soup: BeautifulSoup) -> dict[str, str]:
+        """Parse the provided BeautifulSoup object and return a dict of pep headers."""
+        dl = soup.find("dl")
+        results = {}
+        for dt in dl.find_all("dt"):
+            results[dt.text] = dt.find_next_sibling("dd").text
+
+        return results
 
 
 class PythonEnhancementProposals(commands.Cog):
@@ -48,74 +56,18 @@ class PythonEnhancementProposals(commands.Cog):
         log.trace("Started refreshing PEP URLs.")
         self.last_refreshed_peps = datetime.now()
 
-        async with self.bot.http_session.get(PEPS_LISTING_API_URL, headers=GITHUB_API_HEADERS) as resp:
-            if resp.status != 200:
-                log.warning(f"Fetching PEP URLs from GitHub API failed with code {resp.status}")
-                return
+        package = await fetch_inventory(INVENTORY_URL)
+        if package is None:
+            log.error("Failed to fetch pep inventory.")
+            return
 
-            listing = await resp.json()
+        for item in package.values():
+            for name, location, display_name in item:
+                if name.startswith("pep-") and len(name) == 8:
+                    self.peps[int(name[4:])] = BASE_URL + "/" + location
+                    self.autocomplete[display_name] = int(name[4:])
 
-        log.trace("Got PEP URLs listing from GitHub API")
-
-        for file in listing:
-            name = file["name"]
-            if name.startswith("pep-") and name.endswith((".rst", ".txt")):
-                pep_number = name.replace("pep-", "").split(".")[0]
-                self.peps[int(pep_number)] = file["download_url"]
-
-        # add pep 0 for autocomplete.
-        log.info("Successfully refreshed PEP URLs listing.")
-        log.info("Scraping pep 0 for autocomplete.")
-        async with self.bot.http_session.get(PEP_0) as resp:
-            if resp.status != 200:
-                log.warning(f"Fetching PEP URLs from GitHub API failed with code {resp.status}")
-                return
-            bs4_partial = functools.partial(bs4.BeautifulSoup, parse_only=bs4.SoupStrainer("tr"))
-            soup = await self.bot.loop.run_in_executor(
-                None,
-                bs4_partial,
-                await resp.text(encoding="utf8"),
-                "lxml",
-            )
-
-        all_ = None
-        for x in soup.find_all("tr"):
-            td = x.find_all("td", limit=4)
-            if len(td) > 3:
-                td = td[1:-1]
-            if all_ is None:
-                all_ = td
-            else:
-                all_.extend(td)
-
-        self.autocomplete["0: Index of Python Enhancement Proposals"] = 0
-        for a in all_:
-            if num := a.find("a"):
-                try:
-                    pep_num = int(num.text)
-                except ValueError:
-                    continue
-                title = num.parent.find_next_sibling("td")
-                if title:
-                    self.autocomplete[f"{num.text}: {title.text}"] = pep_num
-
-        self.autocomplete = {k[0]: k[1] for k in sorted(self.autocomplete.items(), key=lambda x: x[1])}
-
-        log.info("Finished scraping pep0.")
-
-    @staticmethod
-    def get_pep_zero_embed() -> Embed:
-        """Get information embed about PEP 0."""
-        pep_embed = Embed(
-            title="**PEP 0 - Index of Python Enhancement Proposals (PEPs)**",
-            url=PEP_0,
-        )
-        pep_embed.set_thumbnail(url=ICON_URL)
-        pep_embed.add_field(name="Status", value="Active")
-        pep_embed.add_field(name="Created", value="13-Jul-2000")
-        pep_embed.add_field(name="Type", value="Informational")
-
-        return pep_embed
+        log.trace("Got PEP URLs listing from Pep sphinx inventory")
 
     async def validate_pep_number(self, pep_nr: int) -> Optional[Embed]:
         """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
@@ -140,9 +92,8 @@ class PythonEnhancementProposals(commands.Cog):
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed
         pep_embed = Embed(
-            title=pep_header["Title"],
+            title=f"PEP {pep_nr} - {pep_header['Title']}",
             url=f"{BASE_PEP_URL}{pep_nr:04}",
-            description=f"PEP {pep_nr}",
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
@@ -152,26 +103,28 @@ class PythonEnhancementProposals(commands.Cog):
         for field in fields_to_check:
             # Check for a PEP metadata field that is present but has an empty value
             # embed field values can't contain an empty string
-            if pep_header.get(field, ""):
+            if pep_header.get(field):
                 pep_embed.add_field(name=field, value=pep_header[field])
 
         return pep_embed
 
+    async def fetch_pep_info(self, url: str) -> Tuple[dict[str, str], BeautifulSoup]:
+        """Fetch the pep information. This is extracted into a seperate function for future use."""
+        async with self.bot.http_session.get(url) as response:
+            response.raise_for_status()
+            pep_content = await response.text()
+        soup = await self.bot.loop.run_in_executor(None, BeautifulSoup, pep_content, "lxml")
+        pep_header = HeaderParser().parse(soup)
+        return pep_header, soup
+
     async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
         """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
-        response = await self.bot.http_session.get(self.peps[pep_nr])
+        url = self.peps[pep_nr]
 
-        if response.status == 200:
-            log.trace(f"PEP {pep_nr} found")
-            pep_content = await response.text()
-
-            # Taken from https://github.com/python/peps/blob/master/pep0/pep.py#L179
-            pep_header = HeaderParser().parse(StringIO(pep_content))
-            return self.generate_pep_embed(pep_header, pep_nr), True
-        else:
-            log.trace(
-                f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {response.status}."
-            )
+        try:
+            pep_header, *_ = await self.fetch_pep_info(url)
+        except aiohttp.ClientResponseError as e:
+            log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {e.status}.")
             return (
                 Embed(
                     title="Unexpected error",
@@ -180,6 +133,8 @@ class PythonEnhancementProposals(commands.Cog):
                 ),
                 False,
             )
+        else:
+            return self.generate_pep_embed(pep_header, pep_nr), True
 
     @commands.slash_command(name="pep")
     async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: int) -> None:
@@ -190,14 +145,9 @@ class PythonEnhancementProposals(commands.Cog):
         ----------
         number: number or search query
         """
-        # Handle PEP 0 directly because it's not in .rst or .txt so it can't be accessed like other PEPs.
-        if number == 0:
-            pep_embed = self.get_pep_zero_embed()
-            success = True
-        else:
-            success = False
-            if not (pep_embed := await self.validate_pep_number(number)):
-                pep_embed, success = await self.get_pep_embed(number)
+        success = False
+        if not (pep_embed := await self.validate_pep_number(number)):
+            pep_embed, success = await self.get_pep_embed(number)
 
         if success:
             view = DeleteView(inter.author, inter)

@@ -1,7 +1,7 @@
 import re
 import zlib
 from collections import defaultdict
-from typing import AsyncIterator, DefaultDict, List, Optional, Tuple
+from typing import AsyncIterator, DefaultDict, List, Optional, Tuple, Union
 
 import aiohttp
 
@@ -14,7 +14,7 @@ log = get_logger(__name__)
 FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r"(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)")
 
-InventoryDict = DefaultDict[str, List[Tuple[str, str]]]
+InventoryDict = DefaultDict[str, List[Union[Tuple[str, str], Tuple[str, str, str]]]]
 
 
 class InvalidHeaderError(Exception):
@@ -61,7 +61,7 @@ async def _load_v1(stream: aiohttp.StreamReader) -> InventoryDict:
         else:
             type_ = "py:" + type_
             location += "#" + name
-        invdata[type_].append((name, location))
+        invdata[type_].append((name, location, name))
     return invdata
 
 
@@ -70,11 +70,13 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 
     async for line in ZlibStreamReader(stream):
         m = _V2_LINE_RE.match(line.rstrip())
-        name, type_, _prio, location, _dispname = m.groups()  # ignore the parsed items we don't need
+        if m is None:
+            continue
+        name, type_, _priority, location, dispname = m.groups()  # ignore the parsed items we don't need
         if location.endswith("$"):
             location = location[:-1] + name
 
-        invdata[type_].append((name, location))
+        invdata[type_].append((name, location, dispname))
     return invdata
 
 
@@ -129,6 +131,7 @@ async def fetch_inventory(url: str) -> Optional[InventoryDict]:
                 f"An unexpected error has occurred during fetching of {url}; "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
+            raise
         else:
             return inventory
 

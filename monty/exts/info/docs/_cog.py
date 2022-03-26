@@ -27,13 +27,13 @@ from monty.converters import Inventory, PackageName, ValidURL
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.delete import DeleteView
+from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
 from monty.utils.messages import wait_for_deletion
 from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
-from ._inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 
 
 log = get_logger(__name__)
@@ -299,7 +299,7 @@ class DocCog(commands.Cog):
         self.base_urls[package_name] = base_url
 
         for group, items in inventory.items():
-            for symbol_name, relative_doc_url in items:
+            for symbol_name, relative_doc_url, *_ in items:
 
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]

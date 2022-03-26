@@ -14,8 +14,8 @@ from disnake.ext.commands import BadArgument, Context, Converter, IDConverter, M
 from disnake.utils import snowflake_time
 
 from monty import exts
-from monty.exts.info.docs import _inventory_parser
 from monty.log import get_logger
+from monty.utils import inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
 
 
@@ -141,17 +141,17 @@ class Inventory(Converter):
     """
 
     @staticmethod
-    async def convert(ctx: Context, url: str) -> t.Tuple[str, _inventory_parser.InventoryDict]:
+    async def convert(ctx: Context, url: str) -> t.Tuple[str, inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         try:
-            inventory = await _inventory_parser.fetch_inventory(url)
-        except _inventory_parser.InvalidHeaderError:
+            inventory = await inventory_parser.fetch_inventory(url)
+        except inventory_parser.InvalidHeaderError:
             raise BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
         else:
             if inventory is None:
                 raise BadArgument(
-                    f"Failed to fetch inventory file after {_inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                    f"Failed to fetch inventory file after {inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
                 )
             return url, inventory
 
@@ -416,7 +416,7 @@ if t.TYPE_CHECKING:
     Extension = str  # noqa: F811
     PackageName = str  # noqa: F811
     ValidURL = str  # noqa: F811
-    Inventory = t.Tuple[str, _inventory_parser.InventoryDict]  # noqa: F811
+    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # noqa: F811
     Snowflake = int  # noqa: F811
     DurationDelta = relativedelta  # noqa: F811
     Duration = datetime  # noqa: F811
