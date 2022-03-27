@@ -234,30 +234,32 @@ class Bookmark(commands.Cog):
             return
         custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
 
-        def remove_button() -> View:
-            view = View.from_message(inter.message)
+        def remove_button(message: disnake.Message) -> View:
+            view = View.from_message(message)
             for child in view.children:
-                if CUSTOM_ID == getattr(child, "custom_id", ""):
+                if (getattr(child, "custom_id", "") or "").startswith(CUSTOM_ID):
                     view.remove_item(child)
                     break
+            else:
+                log.warning("Button was not found to be removed.")
             return view
 
         # legacy message
         if not custom_id:
-            view = remove_button()
+            view = remove_button(inter.message)
             await inter.response.edit_message(view=view)
             await inter.send("This is an old bookmark button and no longer works.", ephemeral=True)
             return
 
         try:
             message = await WrappedMessageConverter().convert(inter, custom_id)
-        except commands.ConversionError as e:
-            if isinstance(e.original, (disnake.Forbidden, disnake.NotFound)):
-                view = remove_button()
-                await inter.response.edit_message(view=view)
-                await inter.send("This message either no longer exists or I cannot reference it.", ephemeral=True)
-            else:
-                await inter.send("Something went wrong.", ephemeral=True)
+        except (commands.MessageNotFound, commands.ChannelNotFound, commands.ChannelNotReadable):
+            view = remove_button(inter.message)
+            await inter.response.edit_message(view=view)
+            await inter.send("This message either no longer exists or I cannot reference it.", ephemeral=True)
+            return
+        except commands.ConversionError:
+            await inter.send("Something went wrong.", ephemeral=True)
             return
 
         maybe_error = await self.action_bookmark(inter.channel, inter.author, message, title="Bookmark")
