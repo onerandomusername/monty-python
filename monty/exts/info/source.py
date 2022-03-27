@@ -54,6 +54,7 @@ class BotSource(commands.Cog):
                 item = await SourceConverter().convert(inter, item)
             except commands.BadArgument as e:
                 await inter.response.send_message(str(e), ephemeral=True)
+                return
         await self.source_command(inter, source_item=item)
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
