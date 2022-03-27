@@ -60,6 +60,7 @@ class PythonEnhancementProposals(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: Dict[int, str] = {}
+        self.soups: Dict[int, BeautifulSoup] = {}
         self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
@@ -71,6 +72,8 @@ class PythonEnhancementProposals(commands.Cog):
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
         self.last_refreshed_peps = datetime.now()
+        self.peps.clear()
+        self.soups.clear()
 
         package = await fetch_inventory(INVENTORY_URL)
         if package is None:
@@ -124,13 +127,22 @@ class PythonEnhancementProposals(commands.Cog):
 
         return pep_embed
 
-    async def fetch_pep_info(self, url: str) -> Tuple[dict[str, str], BeautifulSoup]:
+    async def fetch_pep_info(
+        self, url: str, number: int, use_cache: bool = True
+    ) -> Tuple[dict[str, str], BeautifulSoup]:
         """Fetch the pep information. This is extracted into a seperate function for future use."""
+        if use_cache and (soup := self.soups.get(number)):
+            pep_header = HeaderParser().parse(soup)
+            return pep_header, soup
+
         async with self.bot.http_session.get(url) as response:
             response.raise_for_status()
             pep_content = await response.text()
         soup = await self.bot.loop.run_in_executor(None, BeautifulSoup, pep_content, "lxml")
+
         pep_header = HeaderParser().parse(soup)
+        self.soups[number] = soup
+
         return pep_header, soup
 
     async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
@@ -138,7 +150,7 @@ class PythonEnhancementProposals(commands.Cog):
         url = self.peps[pep_nr]
 
         try:
-            pep_header, *_ = await self.fetch_pep_info(url)
+            pep_header, *_ = await self.fetch_pep_info(url, pep_nr)
         except aiohttp.ClientResponseError as e:
             log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {e.status}.")
             return (
@@ -159,7 +171,7 @@ class PythonEnhancementProposals(commands.Cog):
             await inter.send(embed=error_embed, ephemeral=True)
             return
         url = self.peps[number]
-        tags, soup = await self.fetch_pep_info(url)
+        tags, soup = await self.fetch_pep_info(url, number)
 
         tag = soup.find(PEPHeaders.header_tags, text=header)
 
@@ -271,7 +283,7 @@ class PythonEnhancementProposals(commands.Cog):
         if number not in self.peps:
             return [f"Cannot find PEP {number}.", "You must provide a valid pep number before providing a header."]
 
-        _, soup = await self.fetch_pep_info(self.peps[number])
+        _, soup = await self.fetch_pep_info(self.peps[number], number)
 
         headers = PEPHeaders().parse(soup)
 
