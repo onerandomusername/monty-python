@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 import os
 from typing import TYPE_CHECKING, Final
+from urllib.parse import urldefrag
 
 import disnake
 from disnake.ext import commands
 
 from monty.utils.delete import DeleteView
+from monty.utils.helpers import encode_github_link
 from monty.utils.messages import wait_for_deletion
 
 
@@ -77,6 +79,14 @@ class GlobalSource(commands.Cog):
         view = DeleteView(ctx.author)
         if link:
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, url=link, label="Go to Github"))
+            custom_id = encode_github_link(link)
+            if frag := (urldefrag(link)[1]):
+                frag = frag.replace("#", "").replace("L", "")
+                num1, num2 = frag.split("-")
+                if int(num2) - int(num1) < 20:
+                    view.add_item(
+                        disnake.ui.Button(style=disnake.ButtonStyle.blurple, label="Expand", custom_id=custom_id)
+                    )
 
         message = await ctx.reply(
             text,

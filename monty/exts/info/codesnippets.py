@@ -8,12 +8,15 @@ import disnake
 from aiohttp import ClientResponseError
 from disnake.ext.commands import Cog
 
+from monty import constants
 from monty.bot import Bot
 from monty.utils.delete import DeleteView
+from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
+
 
 GITHUB_RE = re.compile(
     r"https://github\.com/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/(?:blob|tree)/"
@@ -27,6 +30,8 @@ GITHUB_GIST_RE = re.compile(
 )
 
 GITHUB_HEADERS = {"Accept": "application/vnd.github.v3.raw"}
+if GITHUB_TOKEN := constants.Tokens.github:
+    GITHUB_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 GITLAB_RE = re.compile(
     r"https://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
@@ -237,8 +242,10 @@ class CodeSnippets(Cog):
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
+
             try:
-                await message.edit(suppress=True)
+                if message.channel.permissions_for(message.guild.me).manage_messages:
+                    await message.edit(suppress=True)
             except disnake.NotFound:
                 # Don't send snippets if the original message was deleted.
                 return
@@ -249,6 +256,36 @@ class CodeSnippets(Cog):
 
             view = DeleteView(message.author)
             self.bot.loop.create_task(wait_for_deletion(await destination.send(message_to_send, view=view), view=view))
+
+    @Cog.listener("on_button_click")
+    async def send_expanded_links(self, inter: disnake.MessageInteraction) -> None:
+        """
+        Send expanded links.
+
+        Listener to send expanded links for a given issue/pull request.
+        """
+        if not inter.component.custom_id.startswith(EXPAND_BUTTON_PREFIX):
+            return
+
+        custom_id = inter.component.custom_id[len(EXPAND_BUTTON_PREFIX) :]
+        link = decode_github_link(custom_id)
+        snippet = await self._parse_snippets(link)
+
+        if len(snippet) > 2000:
+            view = disnake.ui.View.from_message(inter.message)
+            for comp in view.children:
+                if custom_id in (getattr(comp, "custom_id", None) or ""):
+                    view.remove_item(comp)
+                    break
+            await inter.response.edit_message(view=view)
+            await inter.followup.send(
+                content="Sorry, this button shows a section of code that is too long.", ephemeral=True
+            )
+            return
+
+        view = DeleteView(inter.user)
+        await inter.response.send_message(snippet, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

@@ -109,6 +109,17 @@ tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)"
 tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "cloudpickle"]
 
 [[package]]
+name = "base65536"
+version = "0.1.1"
+description = "Base-65536 Python implementation"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "beautifulsoup4"
 version = "4.10.0"
 description = "Screen-scraping library"
@@ -986,7 +997,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "68d344cbe880179a4954b31abfca845dded2b0d33bcdfbcbd0217ea0e25a5498"
+content-hash = "da0e24ebe7e989f57daafc4837c37abcc5d6a8d260b46a19853d203d2b78f16a"
 
 [metadata.files]
 aiodns = [
@@ -1094,6 +1105,9 @@ atomicwrites = [
 attrs = [
     {file = "attrs-21.4.0-py2.py3-none-any.whl", hash = "sha256:2d27e3784d7a565d36ab851fe94887c5eccd6a463168875832a1be79c82828b4"},
     {file = "attrs-21.4.0.tar.gz", hash = "sha256:626ba8234211db98e869df76230a137c4c40a12d72445c45d5f5b716f076e2fd"},
+]
+base65536 = [
+    {file = "base65536-0.1.1.tar.gz", hash = "sha256:f06c559abe1f49855e7f14fa44750fd3b2dbfa2d2ec5f71a6149fcf911a823ea"},
 ]
 beautifulsoup4 = [
     {file = "beautifulsoup4-4.10.0-py3-none-any.whl", hash = "sha256:9a315ce70049920ea4572a4055bc4bd700c940521d36fc858205ad4fcde149bf"},
