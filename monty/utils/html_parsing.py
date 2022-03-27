@@ -9,16 +9,15 @@ from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, Tag
 
+from monty.exts.info.docs import MAX_SIGNATURE_AMOUNT
+from monty.exts.info.docs._html import get_dd_description, get_general_description, get_signatures
 from monty.log import get_logger
 from monty.utils.helpers import find_nth_occurrence
-
-from . import MAX_SIGNATURE_AMOUNT
-from ._html import get_dd_description, get_general_description, get_signatures
-from ._markdown import DocMarkdownConverter
+from monty.utils.markdown import DocMarkdownConverter
 
 
 if TYPE_CHECKING:
-    from ._cog import DocItem
+    from monty.exts.info.docs._cog import DocItem
 
 log = get_logger(__name__)
 

@@ -14,9 +14,9 @@ import monty.bot
 # from bot.constants import Channels
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.html_parsing import get_symbol_markdown
 
 from . import _cog, doc_cache
-from ._parsing import get_symbol_markdown
 from ._redis_cache import StaleItemCounter
 
 

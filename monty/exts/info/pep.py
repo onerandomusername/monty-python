@@ -13,7 +13,9 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.utils.delete import DeleteView
+from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
+from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import wait_for_deletion
 
 
@@ -26,7 +28,7 @@ INVENTORY_URL = f"{BASE_URL}/objects.inv"
 
 
 class HeaderParser:
-    """Parser for parsing the headers from the HTML of a pep page."""
+    """Parser for parsing the descriptor headers from the HTML of a pep page."""
 
     def parse(self, soup: BeautifulSoup) -> dict[str, str]:
         """Parse the provided BeautifulSoup object and return a dict of pep headers."""
@@ -36,6 +38,20 @@ class HeaderParser:
             results[dt.text] = dt.find_next_sibling("dd").text
 
         return results
+
+
+class PEPHeaders:
+    """Parser for getting the headers from the HTML of a pep page."""
+
+    header_tags = ["h2", "h3", "h4", "h5", "h6"]
+
+    def parse(self, soup: BeautifulSoup) -> str:
+        """Parse the provided BeautifulSoup object and return a string of headers in the pep's body."""
+        headers: dict[tuple[str, str], str] = {}
+        for header in soup.find_all(self.header_tags):
+            headers[header.text] = header.name
+
+        return headers
 
 
 class PythonEnhancementProposals(commands.Cog):
@@ -136,8 +152,39 @@ class PythonEnhancementProposals(commands.Cog):
         else:
             return self.generate_pep_embed(pep_header, pep_nr), True
 
+    async def get_pep_section_header(self, inter: disnake.CommandInteraction, number: int, header: str) -> None:
+        """Get the contents of the provided header in the pep body."""
+        error_embed = await self.validate_pep_number(number)
+        if error_embed:
+            await inter.send(embed=error_embed, ephemeral=True)
+            return
+        url = self.peps[number]
+        tags, soup = await self.fetch_pep_info(url)
+
+        tag = soup.find(PEPHeaders.header_tags, text=header)
+
+        text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=13)
+        if not text:
+            text = "No description found."
+
+        embed = Embed(
+            title=f"PEP {number} - {tags['Title']}",
+            description=text,
+        )
+
+        if a := tag.find("a"):
+
+            href = a.attrs.get("href")
+            if href:
+                embed.url = f"{BASE_PEP_URL}{number:04}/{href}"
+
+        embed.set_thumbnail(url=ICON_URL)
+        await inter.send(embed=embed)
+
     @commands.slash_command(name="pep")
-    async def pep_command(self, inter: disnake.ApplicationCommandInteraction, number: int) -> None:
+    async def pep_command(
+        self, inter: disnake.ApplicationCommandInteraction, number: int, header: Optional[str] = None
+    ) -> None:
         """
         Fetch information about a PEP.
 
@@ -145,6 +192,10 @@ class PythonEnhancementProposals(commands.Cog):
         ----------
         number: number or search query
         """
+        if header:
+            await self.get_pep_section_header(inter, number, header)
+            return
+
         success = False
         if not (pep_embed := await self.validate_pep_number(number)):
             pep_embed, success = await self.get_pep_embed(number)
@@ -199,9 +250,6 @@ class PythonEnhancementProposals(commands.Cog):
                 break
 
             peps[title] = pep
-
-        if not len(peps):
-            print("nomatch")
 
         return peps
 

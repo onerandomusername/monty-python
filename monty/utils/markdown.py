@@ -20,7 +20,7 @@ class DocMarkdownConverter(MarkdownConverter):
     # overwritten to use our regex from version 0.6.1
     def process_text(self, text: Optional[str]) -> Any:
         """Process the text, using our custom regex."""
-        return escape(WHITESPACE_RE.sub(" ", text or ""))
+        return escape(WHITESPACE_RE.sub(" ", text or ""), self.options["escape_underscores"])
 
     def convert_li(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
