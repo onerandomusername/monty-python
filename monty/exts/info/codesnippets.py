@@ -7,6 +7,7 @@ from urllib.parse import quote_plus
 import disnake
 from aiohttp import ClientResponseError
 from disnake.ext.commands import Cog
+from disnake.ui import View
 
 from monty import constants
 from monty.bot import Bot
@@ -271,20 +272,25 @@ class CodeSnippets(Cog):
         link = decode_github_link(custom_id)
         snippet = await self._parse_snippets(link)
 
-        if len(snippet) > 2000:
-            view = disnake.ui.View.from_message(inter.message)
+        def disable_button() -> View:
+            view = View.from_message(inter.message)
             for comp in view.children:
                 if custom_id in (getattr(comp, "custom_id", None) or ""):
-                    view.remove_item(comp)
+                    comp.disabled = True
                     break
-            await inter.response.edit_message(view=view)
+            return view
+
+        view = disable_button()
+        await inter.response.edit_message(view=view)
+
+        if len(snippet) > 2000:
             await inter.followup.send(
                 content="Sorry, this button shows a section of code that is too long.", ephemeral=True
             )
             return
 
         view = DeleteView(inter.user)
-        await inter.response.send_message(snippet, view=view)
+        await inter.followup.send(snippet, view=view)
         self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
