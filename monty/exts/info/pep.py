@@ -73,6 +73,7 @@ class PythonEnhancementProposals(commands.Cog):
         log.trace("Started refreshing PEP URLs.")
         self.last_refreshed_peps = datetime.now()
         self.peps.clear()
+        self.autocomplete.clear()
         self.soups.clear()
 
         package = await fetch_inventory(INVENTORY_URL)
