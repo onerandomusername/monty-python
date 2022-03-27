@@ -180,7 +180,7 @@ class PythonEnhancementProposals(commands.Cog):
 
             href = a.attrs.get("href")
             if href:
-                embed.url = f"{BASE_PEP_URL}{number:04}/{href}"
+                embed.url = href
 
         embed.set_thumbnail(url=ICON_URL)
         await inter.send(embed=embed)
