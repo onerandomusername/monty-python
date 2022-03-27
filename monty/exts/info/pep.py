@@ -180,7 +180,7 @@ class PythonEnhancementProposals(commands.Cog):
             return
 
         text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=14)
-        text = text.split("\n", 1)[-1].strip()
+        text = (text.lstrip() + "\n").split("\n", 1)[-1].strip()
         if not text:
             await inter.send("No text found for that header.", ephemeral=True)
             return

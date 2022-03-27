@@ -156,20 +156,19 @@ def _get_truncated_description(
         is_tag = isinstance(element, Tag)
         element_length = len(element.text) if is_tag else len(element)
 
-        if rendered_length + element_length < max_length:
-            if is_tag:
-                element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
-            else:
-                element_markdown = markdown_converter.process_text(element)
-
-            rendered_length += element_length
-            tag_end_index += len(element_markdown)
-
-            if not element_markdown.isspace():
-                markdown_element_ends.append(tag_end_index)
-            result += element_markdown
-        else:
+        if rendered_length + element_length >= max_length:
             break
+        if is_tag:
+            element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
+        else:
+            element_markdown = markdown_converter.process_text(element)
+
+        rendered_length += element_length
+        tag_end_index += len(element_markdown)
+
+        if not element_markdown.isspace():
+            markdown_element_ends.append(tag_end_index)
+        result += element_markdown
 
     if not markdown_element_ends:
         return ""
@@ -179,13 +178,30 @@ def _get_truncated_description(
     if newline_truncate_index is not None and newline_truncate_index < _MAX_DESCRIPTION_LENGTH - 3:
         # Truncate based on maximum lines if there are more than the maximum number of lines.
         truncate_index = newline_truncate_index
+        truncate_by_newlines = True
     else:
         # There are less than the maximum number of lines; truncate based on the max char length.
         truncate_index = _MAX_DESCRIPTION_LENGTH - 3
+        truncate_by_newlines = False
 
     # Nothing needs to be truncated if the last element ends before the truncation index.
     if truncate_index >= markdown_element_ends[-1]:
         return result
+
+    # try to cut a list in the middle if there is a list, and change the end to cont
+
+    # keep lists if they exist, removing the last items until its short.
+    # this is a tad hacky but it should work
+    if truncate_by_newlines:
+        result = result.rstrip()
+        if split := result.rsplit("\n"):
+            while split and split[-1].startswith("|") and split[-1].endswith("|") and len(split) > max_lines:
+                split.pop()
+
+        result = "\n".join(split)
+        result += "\ncont."
+        if result.count("\n") <= max_lines:
+            return result
 
     # Determine the actual truncation index.
     possible_truncation_indices = [cut for cut in markdown_element_ends if cut < truncate_index]
