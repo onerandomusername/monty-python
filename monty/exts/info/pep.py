@@ -275,7 +275,18 @@ class PythonEnhancementProposals(commands.Cog):
 
         headers = PEPHeaders().parse(soup)
 
-        return list(headers)[:25]
+        if not query:
+            return list(headers)[:25]
+
+        completion = []
+        query = query.lower().strip()
+        for header in headers:
+            if query in header.lower():
+                completion.append(header)
+            if len(completion) >= 25:
+                break
+
+        return completion
 
 
 def setup(bot: Bot) -> None:
