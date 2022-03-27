@@ -242,8 +242,8 @@ class PythonEnhancementProposals(commands.Cog):
     async def pep_number_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, int]:
         """Completion for pep numbers."""
         if not query:
-            # return some fun peps
-            interesting_peps = [0, 8, 257, 517, 619, 660]
+            # return some interesting peps
+            interesting_peps = [0, 8, 257, 517, 619, 660, 664]
             resp = {}
             for title, pep in self.autocomplete.items():
                 if pep in interesting_peps:
