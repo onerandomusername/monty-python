@@ -24,7 +24,7 @@ if __name__ == "__main__":
     import sys
 
     # establish the object itself
-    object_name = "REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"
+    object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
     try:
         src = pkgutil.resolve_name(object_name)
     except ModuleNotFoundError:
@@ -49,6 +49,8 @@ if __name__ == "__main__":
         lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
     else:
         lines_extension = ""
+    if not filename:
+        sys.exit(6)
 
     module_name = src.__name__ if inspect.ismodule(src) else src.__module__
     top_module_name = module_name.split(".", 1)[0]

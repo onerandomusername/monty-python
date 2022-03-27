@@ -59,6 +59,7 @@ class GlobalSource(commands.Cog):
             text = f"Source of `{object}`:\n<{link}>"
         elif returncode == 1:
             # generic exception occured
+            logger.exception(result["stdout"])
             raise Exception("Snekbox returned an error.")
         elif returncode == 2:
             # module not resolvable
@@ -70,7 +71,10 @@ class GlobalSource(commands.Cog):
         elif returncode == 5:
             text = "That object exists, but is dynamically created."
         elif returncode == 6:
-            text = "`{text}` is a builtin object. It is not possible to get the source of a builtin object."
+            text = (
+                "`{text}` is a builtin object or implemented in C. "
+                "It is not currently possible to get source of those objects."
+            )
         elif returncode == 7:
             text = "The metadata for the provided module is invalid."
         elif returncode == 8:
