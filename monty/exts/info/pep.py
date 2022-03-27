@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 
 import aiohttp
@@ -179,22 +179,28 @@ class PythonEnhancementProposals(commands.Cog):
             await inter.send("Could not find the requested header in the PEP.", ephemeral=True)
             return
 
-        text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=13)
+        text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=14)
+        text = text.split("\n", 1)[-1].strip()
         if not text:
-            text = "No description found."
+            await inter.send("No text found for that header.", ephemeral=True)
+            return
 
         embed = Embed(
-            title=f"PEP {number} - {tags['Title']}",
+            title=header,
             description=text,
         )
+        embed.set_author(name=f"PEP {number} - {tags['Title']}", url=url)
 
         if a := tag.find("a"):
-
             href = a.attrs.get("href")
             if href:
                 embed.url = href
 
         embed.set_thumbnail(url=ICON_URL)
+        if tags.get("Created"):
+            embed.set_footer(text="PEP Created")
+            embed.timestamp = datetime.strptime(tags["Created"], "%d-%b-%Y").replace(tzinfo=timezone.utc)
+
         view = DeleteView(inter.author, inter)
         if embed.url:
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url))
