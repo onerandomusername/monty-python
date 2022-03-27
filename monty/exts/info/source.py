@@ -1,6 +1,7 @@
 import inspect
 from pathlib import Path
 from typing import Optional, Tuple, Union
+from urllib.parse import urldefrag
 
 import disnake
 from disnake import Embed
@@ -10,6 +11,7 @@ from monty.bot import Bot
 from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
 from monty.utils.delete import DeleteView
+from monty.utils.helpers import encode_github_link
 from monty.utils.messages import wait_for_deletion
 
 
@@ -25,13 +27,17 @@ class BotSource(commands.Cog):
     ) -> None:
         """Display information and a GitHub link to the source code of a command or cog."""
 
-        async def send_message(embed: disnake.Embed) -> None:
+        async def send_message(embed: disnake.Embed, components: list = None) -> None:
             if isinstance(ctx, disnake.Interaction):
                 view = DeleteView(ctx.author, ctx)
+                if components:
+                    view.children.extend(components)
                 await ctx.send(embed=embed, view=view)
                 ctx.bot.loop.create_task(wait_for_deletion(ctx, view=view))
             else:
                 view = DeleteView(ctx.author)
+                if components:
+                    view.children.extend(components)
                 msg = await ctx.send(embed=embed, view=view)
                 ctx.bot.loop.create_task(wait_for_deletion(msg, view=view))
             return
@@ -43,8 +49,19 @@ class BotSource(commands.Cog):
             await send_message(embed)
             return
 
-        embed = self.build_embed(source_item)
-        await send_message(embed)
+        embed, url = self.build_embed(source_item)
+        components = [disnake.ui.Button(url=url, label="Open Github")]
+
+        custom_id = encode_github_link(url)
+        if frag := (urldefrag(url)[1]):
+            frag = frag.replace("#", "").replace("L", "")
+            num1, num2 = frag.split("-")
+            if int(num2) - int(num1) < 30:
+                components.append(
+                    disnake.ui.Button(style=disnake.ButtonStyle.blurple, label="Expand", custom_id=custom_id)
+                )
+
+        await send_message(embed, components=components)
 
     @commands.slash_command(name="source")
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
@@ -104,7 +121,7 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    def build_embed(self, source_object: SourceType) -> Optional[Embed]:
+    def build_embed(self, source_object: SourceType) -> Optional[Tuple[Embed, str]]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
@@ -136,7 +153,7 @@ class BotSource(commands.Cog):
         line_text = f":{first_line}" if first_line else ""
         embed.set_footer(text=f"{location}{line_text}")
 
-        return embed
+        return embed, url
 
 
 def setup(bot: Bot) -> None:
