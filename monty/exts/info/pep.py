@@ -183,7 +183,11 @@ class PythonEnhancementProposals(commands.Cog):
                 embed.url = href
 
         embed.set_thumbnail(url=ICON_URL)
-        await inter.send(embed=embed)
+        view = DeleteView(inter.author, inter)
+        if embed.url:
+            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url))
+        await inter.send(embed=embed, view=view)
+        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @commands.slash_command(name="pep")
     async def pep_command(
