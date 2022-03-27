@@ -163,6 +163,10 @@ class PythonEnhancementProposals(commands.Cog):
 
         tag = soup.find(PEPHeaders.header_tags, text=header)
 
+        if tag is None:
+            await inter.send("Could not find the requested header in the PEP.", ephemeral=True)
+            return
+
         text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=13)
         if not text:
             text = "No description found."
@@ -191,6 +195,7 @@ class PythonEnhancementProposals(commands.Cog):
         Parameters
         ----------
         number: number or search query
+        header: If provided, shows a snippet of the PEP at this header.
         """
         if header:
             await self.get_pep_section_header(inter, number, header)
@@ -252,6 +257,21 @@ class PythonEnhancementProposals(commands.Cog):
             peps[title] = pep
 
         return peps
+
+    @pep_command.autocomplete("header")
+    async def pep_header_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, str]:
+        """Completion for pep headers."""
+        number = inter.filled_options.get("number")
+        if number is None:
+            return ["No PEP number provided.", "You must provide a valid pep number before providing a header."]
+        if number not in self.peps:
+            return [f"Cannot find PEP {number}.", "You must provide a valid pep number before providing a header."]
+
+        _, soup = await self.fetch_pep_info(self.peps[number])
+
+        headers = PEPHeaders().parse(soup)
+
+        return list(headers)[:25]
 
 
 def setup(bot: Bot) -> None:
