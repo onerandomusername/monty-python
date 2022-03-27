@@ -15,7 +15,8 @@ ABOUT = f"""
 Based off of multiple open source projects, Monty is a development tool for Discord servers.
 
 **Primary features**
-`/docs` Python documentation command
+`/docs` View Python documentation from discord
+`/pep` View PEPs directly within discord
 `-eval` Evaluate Python code
 `-black` Blacken Python code
 
