@@ -8,7 +8,6 @@ import disnake
 from aiohttp import ClientResponseError
 from disnake.ext.commands import Cog
 
-from monty import constants
 from monty.bot import Bot
 from monty.utils.delete import DeleteView
 from monty.utils.messages import wait_for_deletion
@@ -39,9 +38,7 @@ BITBUCKET_RE = re.compile(
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
-BLACKLIST = [
-    constants.Guilds.disnake,
-]
+BLACKLIST = []
 
 
 class CodeSnippets(Cog):
