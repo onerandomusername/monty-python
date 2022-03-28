@@ -16,7 +16,6 @@ from monty.utils.delete import DeleteView
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
 from monty.utils.markdown import DocMarkdownConverter
-from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -202,11 +201,10 @@ class PythonEnhancementProposals(commands.Cog):
             embed.set_footer(text="PEP Created")
             embed.timestamp = datetime.strptime(tags["Created"], "%d-%b-%Y").replace(tzinfo=timezone.utc)
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         if embed.url:
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url))
         await inter.send(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @commands.slash_command(name="pep")
     async def pep_command(
@@ -229,11 +227,10 @@ class PythonEnhancementProposals(commands.Cog):
             pep_embed, success = await self.get_pep_embed(number)
 
         if success:
-            view = DeleteView(inter.author, inter)
+            view = DeleteView(inter.author)
             if pep_embed.url:
                 view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=pep_embed.url))
             await inter.send(embed=pep_embed, view=view)
-            self.bot.loop.create_task(wait_for_deletion(inter, view=view))
             log.trace(f"PEP {number} getting and sending finished successfully")
         else:
             await inter.send(embed=pep_embed, ephemeral=True)

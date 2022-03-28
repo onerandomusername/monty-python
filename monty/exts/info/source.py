@@ -12,7 +12,6 @@ from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
 from monty.utils.delete import DeleteView
 from monty.utils.helpers import encode_github_link
-from monty.utils.messages import wait_for_deletion
 
 
 class BotSource(commands.Cog):
@@ -28,18 +27,10 @@ class BotSource(commands.Cog):
         """Display information and a GitHub link to the source code of a command or cog."""
 
         async def send_message(embed: disnake.Embed, components: list = None) -> None:
-            if isinstance(ctx, disnake.Interaction):
-                view = DeleteView(ctx.author, ctx)
-                if components:
-                    view.children.extend(components)
-                await ctx.send(embed=embed, view=view)
-                ctx.bot.loop.create_task(wait_for_deletion(ctx, view=view))
-            else:
-                view = DeleteView(ctx.author)
-                if components:
-                    view.children.extend(components)
-                msg = await ctx.send(embed=embed, view=view)
-                ctx.bot.loop.create_task(wait_for_deletion(msg, view=view))
+            view = DeleteView(ctx.author)
+            if components:
+                view.children.extend(components)
+            await ctx.send(embed=embed, view=view)
             return
 
         if not source_item:

@@ -29,7 +29,6 @@ from monty.utils import scheduling
 from monty.utils.delete import DeleteView
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
-from monty.utils.messages import wait_for_deletion
 from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
 
@@ -102,9 +101,7 @@ class DocView(DeleteView):
     def __init__(
         self, inter: Union[disnake.Interaction, commands.Context], bot: Monty, docitem: DocItem, og_embed: disnake.Embed
     ):
-        super().__init__(
-            users=inter.author, initial_inter=inter if isinstance(inter, disnake.Interaction) else None, timeout=300
-        )
+        super().__init__(user=inter.author, timeout=300)
         self.bot = bot
         self.attributes = docitem.attributes
         self.docitem = docitem
@@ -180,7 +177,7 @@ class DocView(DeleteView):
     def disable(self) -> None:
         """Disable all attributes in this view."""
         for c in self.children:
-            if hasattr(c, "disabled") and c.is_dispatchable():
+            if hasattr(c, "disabled") and c.is_dispatchable() and c is not self.delete_button:
                 c.disabled = True
 
 
@@ -820,9 +817,8 @@ class DocCog(commands.Cog):
         for res, url in results.items():
             embed.description += f"[`{res}`]({url})\n"
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.response.send_message(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     slash_docs_search.autocomplete("query")(functools.partial(_docs_autocomplete, include_query=True))
 
@@ -996,8 +992,7 @@ class DocCog(commands.Cog):
         for guild, packages in self.whitelist.items():
             embed.add_field(self.bot.get_guild(guild).name + f" ({guild})", ", ".join(sorted(packages)))
         view = DeleteView(ctx.author)
-        msg = await ctx.send(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(msg, view=view))
+        await ctx.send(embed=embed, view=view)
 
     @commands.is_owner()
     @whitelist_command_group.command(name="add", aliases=("a",))
@@ -1111,7 +1106,7 @@ class DocCog(commands.Cog):
             return
 
         view = DeleteView(message.author)
-        self.bot.loop.create_task(wait_for_deletion(await message.channel.send(embeds=embeds, view=view), view=view))
+        await message.channel.send(embeds=embeds, view=view)
 
     def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""

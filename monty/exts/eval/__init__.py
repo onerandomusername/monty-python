@@ -24,10 +24,9 @@ from disnake.ui import Modal
 from monty.bot import Bot
 from monty.constants import Guilds, Paste, URLs
 from monty.log import get_logger
-from monty.utils import scheduling
+from monty.utils.delete import DeleteView
 from monty.utils.exceptions import APIError
 from monty.utils.extensions import invoke_help_command
-from monty.utils.messages import wait_for_deletion
 from monty.utils.services import send_to_paste_service
 
 
@@ -292,13 +291,12 @@ class Snekbox(Cog):
         if paste_link:
             msg = f"{msg}\nFull output: {paste_link}"
 
+        view = DeleteView(ctx.author)
         if hasattr(ctx, "reply"):
-            response = await ctx.reply(msg)
+            response = await ctx.reply(msg, view=view)
         else:
-            await ctx.send(msg)
+            await ctx.send(msg, view=view)
             response = await ctx.original_message()
-
-        scheduling.create_task(wait_for_deletion(response, (ctx.author.id,)), event_loop=self.bot.loop)
 
         return response
 

@@ -13,7 +13,6 @@ from monty import constants
 from monty.bot import Bot
 from monty.utils.delete import DeleteView
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
-from monty.utils.messages import wait_for_deletion
 
 
 log = logging.getLogger(__name__)
@@ -256,7 +255,7 @@ class CodeSnippets(Cog):
                 pass
 
             view = DeleteView(message.author)
-            self.bot.loop.create_task(wait_for_deletion(await destination.send(message_to_send, view=view), view=view))
+            await destination.send(message_to_send, view=view)
 
     @Cog.listener("on_button_click")
     async def send_expanded_links(self, inter: disnake.MessageInteraction) -> None:
@@ -291,7 +290,6 @@ class CodeSnippets(Cog):
 
         view = DeleteView(inter.user)
         await inter.followup.send(snippet, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

@@ -8,7 +8,6 @@ from disnake.ext.commands import Range
 from monty.bot import Bot
 from monty.constants import Client, Colours
 from monty.utils.delete import DeleteView
-from monty.utils.messages import wait_for_deletion
 
 
 ABOUT = f"""
@@ -86,9 +85,8 @@ class Meta(commands.Cog):
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.send(embed=e, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @monty.sub_command(name="credits")
     async def credits(self, inter: disnake.CommandInteraction) -> None:
@@ -131,9 +129,8 @@ class Meta(commands.Cog):
             colour=Colours.bright_green,
             description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
         )
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @monty.sub_command(name="stats")
     async def status(self, inter: disnake.CommandInteraction) -> None:
@@ -155,9 +152,8 @@ class Meta(commands.Cog):
             cpu_usage=self.process.cpu_percent(),
         )
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.send(embed=e, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
     @monty.sub_command()
     async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = True) -> None:
@@ -174,9 +170,8 @@ class Meta(commands.Cog):
         timestamp = round(float(self.bot.start_time.format("X")))
         embed = disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)")
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

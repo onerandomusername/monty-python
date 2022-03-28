@@ -10,7 +10,6 @@ from disnake.ext import commands
 
 from monty.utils.delete import DeleteView
 from monty.utils.helpers import encode_github_link
-from monty.utils.messages import wait_for_deletion
 
 
 if TYPE_CHECKING:
@@ -92,12 +91,11 @@ class GlobalSource(commands.Cog):
                         disnake.ui.Button(style=disnake.ButtonStyle.blurple, label="Expand", custom_id=custom_id)
                     )
 
-        message = await ctx.reply(
+        await ctx.reply(
             text,
             allowed_mentions=disnake.AllowedMentions(everyone=False, users=False, roles=False, replied_user=True),
             view=view,
         )
-        self.bot.loop.create_task(wait_for_deletion(message, view=view))
 
 
 def setup(bot: Bot) -> None:

@@ -11,7 +11,6 @@ from disnake.ext import commands
 from monty.bot import Bot
 from monty.constants import Guilds, Paste, URLs
 from monty.utils.delete import DeleteView
-from monty.utils.messages import wait_for_deletion
 from monty.utils.services import send_to_paste_service
 
 
@@ -362,7 +361,7 @@ class CodeButtons(commands.Cog):
             target, code, return_result=True, original_source=original_source
         )
 
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         if link and link.startswith("http"):
             if link and Paste.alias_url and target.guild and target.guild.id == Guilds.nextcord:
                 link = link.replace(".disnake.", ".nextcord.")
@@ -374,7 +373,6 @@ class CodeButtons(commands.Cog):
             view.add_item(button)
 
         await inter.edit_original_message(content=msg, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

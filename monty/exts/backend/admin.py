@@ -34,7 +34,6 @@ from disnake.ext.commands import Context
 
 from monty.metadata import ExtMetadata
 from monty.utils.delete import DeleteView
-from monty.utils.messages import wait_for_deletion
 
 
 EXT_METADATA = ExtMetadata(core=True)
@@ -144,18 +143,18 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         error: Exception = None,
     ) -> None:
         """Send a nicely formatted eval response."""
+        if ctx.channel.permissions_for(ctx.me).read_message_history:
+            reference = ctx.message.to_reference(fail_if_not_exists=False)
+        else:
+            reference = None
+
         if resp is None and error is None:
             view = DeleteView(ctx.author)
-            self.bot.loop.create_task(
-                wait_for_deletion(
-                    await ctx.send(
-                        "No output.",
-                        allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                        reference=ctx.message.to_reference(fail_if_not_exists=False),
-                        view=view,
-                    ),
-                    view=view,
-                )
+            await ctx.send(
+                "No output.",
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                reference=reference,
+                view=view,
             )
             return
         resp_file: disnake.File = None
@@ -195,17 +194,13 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
             if f is not None:
                 files.append(f)
         view = DeleteView(ctx.author)
-        self.bot.loop.create_task(
-            wait_for_deletion(
-                await ctx.send(
-                    out,
-                    files=files,
-                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                    reference=ctx.message.to_reference(fail_if_not_exists=False),
-                    view=view,
-                ),
-                view=view,
-            )
+
+        await ctx.send(
+            out,
+            files=files,
+            allowed_mentions=disnake.AllowedMentions(replied_user=False),
+            reference=reference,
+            view=view,
         )
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])
@@ -406,7 +401,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
         view = DeleteView(ctx.author)
-        self.bot.loop.create_task(wait_for_deletion(await ctx.send(embed=embed, view=view), view=view))
+        await ctx.send(embed=embed, view=view)
 
 
 def setup(bot: Bot) -> None:

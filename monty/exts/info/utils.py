@@ -13,7 +13,6 @@ from disnake.utils import DISCORD_EPOCH
 
 from monty.bot import Bot
 from monty.utils.delete import DeleteView
-from monty.utils.messages import wait_for_deletion
 from monty.utils.pagination import LinePaginator
 
 
@@ -108,9 +107,8 @@ class Utils(Cog):
         )
         created_at = int(((snowflake >> 22) + DISCORD_EPOCH) / 1000)
         embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
-        view = DeleteView(inter.author, inter)
+        view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)
-        self.bot.loop.create_task(wait_for_deletion(inter, view=view))
 
 
 def setup(bot: Bot) -> None:

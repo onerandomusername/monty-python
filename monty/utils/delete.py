@@ -1,4 +1,6 @@
-from typing import Sequence, Union
+import asyncio
+import logging
+from typing import Union
 
 import disnake
 import disnake.ext.commands
@@ -6,7 +8,9 @@ import disnake.ext.commands
 from monty import constants
 
 
-VIEW_DELETE_ID = "wait_for_deletion_interaction_trash"
+DELETE_ID_V2 = "message_delete_button_v2:"
+
+logger = logging.getLogger(__name__)
 
 
 class DeleteView(disnake.ui.View):
@@ -14,38 +18,26 @@ class DeleteView(disnake.ui.View):
 
     def __init__(
         self,
-        users: Union[disnake.User, int, Sequence[Union[disnake.User, int]]],
-        initial_inter: disnake.Interaction = None,
+        user: Union[int, disnake.User],
         *,
-        timeout: float = 500,
+        timeout: float = 1,
         allow_manage_messages: bool = True,
     ):
-        if isinstance(users, Sequence):
-            self.user_ids = {getattr(user, "id", user) for user in users}
-        else:
-            self.user_ids = {getattr(users, "id", users)}
-        self.inter = initial_inter
+        if isinstance(user, (disnake.User, disnake.Member)):
+            user = str(user.id)
+
         super().__init__(timeout=timeout)
-        self.deleted = False
-        self.allow_manage_messages = allow_manage_messages
+        self.delete_button.custom_id = DELETE_ID_V2
+        permissions = disnake.Permissions()
+        if allow_manage_messages:
+            permissions.manage_messages = True
+        self.delete_button.custom_id += str(permissions.value) + ":"
+        self.delete_button.custom_id += str(user)
 
     @disnake.ui.button(
-        custom_id=VIEW_DELETE_ID,
         style=disnake.ButtonStyle.grey,
         emoji=constants.Emojis.trashcan,
     )
     async def delete_button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
         """Delete a message when a button is pressed if the user is okay to delete it."""
-        if inter.author.id in self.user_ids or self.allow_manage_messages and inter.permissions.manage_messages:
-            if self.inter:
-                await self.inter.followup.delete_message(inter.message.id)
-            else:
-                await inter.message.delete()
-            self.deleted = True
-            self.stop()
-        else:
-            await inter.response.send_message("This isn't for you!", ephemeral=True)
-
-    async def on_timeout(self) -> None:
-        """Disable the button on timeout."""
-        self.delete_button.disabled = True
+        await asyncio.sleep(3)

@@ -1,15 +1,14 @@
 import re
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
 
 import disnake
 
 from monty.bot import bot
 from monty.log import get_logger
-from monty.utils.delete import DeleteView
+from monty.utils.delete import DELETE_ID_V2, DeleteView  # noqa: F401
 
 
 log = get_logger(__name__)
-DELETE_ID = "wait_for_deletion_trash"
 
 
 def _check(user: disnake.abc.User, *, message_id: int, allowed_users: Sequence[int], allow_mods: bool = True) -> bool:
@@ -61,44 +60,6 @@ def interaction_check(
         return False
     res = _check(inter.user, message_id=message_id, allowed_users=allowed_users)
     return res
-
-
-async def wait_for_deletion(
-    message_or_inter: Union[disnake.Message, disnake.Interaction],
-    user_ids: Sequence[int] = None,
-    *,
-    view: DeleteView = None,
-) -> None:
-    """
-    Wait for any of `user_ids` to react with one of the `deletion_emojis` within `timeout` seconds to delete `message`.
-
-    If `timeout` expires then the button is edited to indicate the option to delete has expired.
-    """
-    if isinstance(message_or_inter, disnake.Message):
-        message = message_or_inter
-
-        if user_ids:
-            if message.guild is None:
-                raise ValueError("Message must be sent on a guild")
-            view = DeleteView(user_ids)
-            try:
-                await message.edit(view=view)
-            except disnake.NotFound:
-                log.trace(f"Aborting wait_for_deletion: message {message.id} deleted prematurely.")
-                return
-
-    await view.wait()
-    if view.deleted:
-        return
-
-    view.delete_button.disabled = True
-    try:
-        if isinstance(message_or_inter, disnake.Interaction):
-            await message_or_inter.edit_original_message(view=view)
-        else:
-            await message.edit(view=view)
-    except disnake.NotFound:
-        log.debug("Tried to delete/edit message that is already deleted.")
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:
