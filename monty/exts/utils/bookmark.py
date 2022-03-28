@@ -11,6 +11,7 @@ from disnake.ui import View
 from monty.bot import Bot
 from monty.constants import ERROR_REPLIES, Colours, Icons
 from monty.utils.converters import WrappedMessageConverter
+from monty.utils.messages import DeleteView
 
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 # Number of seconds to wait for other users to bookmark the same message
 TIMEOUT = 120
 BOOKMARK_EMOJI = "📌"
-CUSTOM_ID = "bookmark_add_bookmark"
+CUSTOM_ID = "bookmark_add_bookmark_v1:"
 
 DELETE_CUSTOM_ID = "bookmark_delete_bookmark"
 
@@ -101,7 +102,7 @@ class Bookmark(commands.Cog):
 
     async def action_bookmark(
         self, channel: disnake.TextChannel, user: disnake.Member, target_message: disnake.Message, title: str
-    ) -> Optional[Union[bool, disnake.Embed]]:
+    ) -> Union[disnake.Embed, disnake.Message]:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
         if not self.check_perms(user, target_message):
             return disnake.Embed(
@@ -114,12 +115,13 @@ class Bookmark(commands.Cog):
             components = disnake.ui.Button(
                 custom_id=DELETE_CUSTOM_ID, label="Delete this bookmark", style=disnake.ButtonStyle.red
             )
-            await user.send(embed=embed, components=components)
+            message = await user.send(embed=embed, components=components)
         except disnake.Forbidden:
             error_embed = self.build_error_embed(user)
             return error_embed
         else:
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
+        return message
 
     @staticmethod
     async def send_embed(
@@ -139,11 +141,12 @@ class Bookmark(commands.Cog):
             emoji=BOOKMARK_EMOJI,
         )
         if isinstance(ctx, commands.Context) and ctx.channel == target_message.channel:
+            if ctx.channel.permissions_for(ctx.me).read_message_history:
+                reference = target_message.to_reference(fail_if_not_exists=False)
+            else:
+                reference = None
             message = await ctx.send(
-                embed=embed,
-                reference=target_message.to_reference(fail_if_not_exists=False),
-                allowed_mentions=disnake.AllowedMentions.none(),
-                components=components,
+                embed=embed, allowed_mentions=disnake.AllowedMentions.none(), components=components, reference=reference
             )
         else:
             message = await ctx.send(embed=embed, components=components)
@@ -174,8 +177,12 @@ class Bookmark(commands.Cog):
         if isinstance(result, disnake.Embed):
             if isinstance(ctx, disnake.Interaction):
                 await ctx.send(embed=result, ephemeral=True)
+            elif ctx.channel.permissions_for(ctx.me).read_message_history:
+                view = DeleteView(ctx.author)
+                await ctx.reply(embed=result, fail_if_not_exists=False, view=view)
             else:
-                await ctx.reply(embed=result)
+                view = DeleteView(ctx.author)
+                await ctx.send(embed=result, view=view)
             return
         await self.send_embed(
             ctx,
@@ -244,29 +251,30 @@ class Bookmark(commands.Cog):
                 log.warning("Button was not found to be removed.")
             return view
 
-        # legacy message
-        if not custom_id:
-            view = remove_button(inter.message)
-            await inter.response.edit_message(view=view)
-            await inter.send("This is an old bookmark button and no longer works.", ephemeral=True)
+        channel_id, message_id = custom_id.split("-")
+        channel_id, message_id = int(channel_id), int(message_id)
+
+        channel = self.bot.get_channel(channel_id)
+        if channel is None:
+            await inter.response.send("I can no longer view this channel.", ephemeral=True)
             return
 
+        if not channel.permissions_for(channel.guild.me).read_message_history:
+            # while we could remove the button there is no reason to as we aren't making an invalid api request
+            await inter.response.send_message("I am currently unable to view the channel this message is from.")
+            return
         try:
-            message = await WrappedMessageConverter().convert(inter, custom_id)
-        except (commands.MessageNotFound, commands.ChannelNotFound, commands.ChannelNotReadable):
+            message = await channel.fetch_message(message_id)
+        except (disnake.NotFound, disnake.Forbidden):
             view = remove_button(inter.message)
             await inter.response.edit_message(view=view)
             await inter.send("This message either no longer exists or I cannot reference it.", ephemeral=True)
             return
-        except commands.ConversionError:
-            await inter.send("Something went wrong.", ephemeral=True)
-            return
-
         maybe_error = await self.action_bookmark(inter.channel, inter.author, message, title="Bookmark")
         if isinstance(maybe_error, disnake.Embed):
             await inter.send(embed=maybe_error, ephemeral=True)
         else:
-            await inter.send("Sent you a direct message.", ephemeral=True)
+            await inter.send(f"Sent you a [direct message](<{maybe_error.jump_url}>).", ephemeral=True)
 
     @commands.Cog.listener("on_button_click")
     async def maybe_delete_bookmark_button(self, inter: disnake.MessageInteraction) -> None:
