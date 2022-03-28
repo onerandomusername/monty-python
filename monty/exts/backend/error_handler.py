@@ -194,7 +194,10 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         """Handle all errors with one mega error handler."""
         view = DeleteView(ctx.author)
         if isinstance(ctx, commands.Context):
-            ctx.send = functools.partial(ctx.send, view=view)
+            if ctx.channel.permissions_for(ctx.me).read_message_history:
+                ctx.send = functools.partial(ctx.reply, view=view, fail_if_not_exists=False)
+            else:
+                ctx.send = functools.partial(ctx.send, view=view)
         if isinstance(ctx, disnake.Interaction):
             if ctx.response.is_done():
                 ctx.send = functools.partial(ctx.followup.send, ephemeral=True, view=view)
