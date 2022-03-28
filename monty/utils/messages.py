@@ -1,14 +1,18 @@
+import asyncio
 import re
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import disnake
+import disnake.ext.commands
 
+from monty import constants
 from monty.bot import bot
 from monty.log import get_logger
-from monty.utils.delete import DELETE_ID_V2, DeleteView  # noqa: F401
 
 
-log = get_logger(__name__)
+DELETE_ID_V2 = "message_delete_button_v2:"
+
+logger = get_logger(__name__)
 
 
 def _check(user: disnake.abc.User, *, message_id: int, allowed_users: Sequence[int], allow_mods: bool = True) -> bool:
@@ -35,9 +39,9 @@ def reaction_check(
     res = _check(user, message_id=message_id, allowed_users=allowed_users)
 
     if res:
-        log.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
+        logger.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
     else:
-        log.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
+        logger.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
         bot.loop.create_task(
             reaction.message.remove_reaction(reaction.emoji, user),
             suppressed_exceptions=(disnake.HTTPException,),
@@ -83,3 +87,33 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
 def format_user(user: disnake.abc.User) -> str:
     """Return a string for `user` which has their mention and ID."""
     return f"{user.mention} (`{user.id}`)"
+
+
+class DeleteView(disnake.ui.View):
+    """This should only be used on responses from interactions."""
+
+    def __init__(
+        self,
+        user: Union[int, disnake.User],
+        *,
+        timeout: float = 1,
+        allow_manage_messages: bool = True,
+    ):
+        if isinstance(user, (disnake.User, disnake.Member)):
+            user = str(user.id)
+
+        super().__init__(timeout=timeout)
+        self.delete_button.custom_id = DELETE_ID_V2
+        permissions = disnake.Permissions()
+        if allow_manage_messages:
+            permissions.manage_messages = True
+        self.delete_button.custom_id += str(permissions.value) + ":"
+        self.delete_button.custom_id += str(user)
+
+    @disnake.ui.button(
+        style=disnake.ButtonStyle.grey,
+        emoji=constants.Emojis.trashcan,
+    )
+    async def delete_button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
+        """Delete a message when a button is pressed if the user is okay to delete it."""
+        await asyncio.sleep(3)

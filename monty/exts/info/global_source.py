@@ -8,8 +8,8 @@ from urllib.parse import urldefrag
 import disnake
 from disnake.ext import commands
 
-from monty.utils.delete import DeleteView
 from monty.utils.helpers import encode_github_link
+from monty.utils.messages import DeleteView
 
 
 if TYPE_CHECKING:

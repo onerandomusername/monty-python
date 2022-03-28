@@ -14,8 +14,8 @@ from disnake.ext.commands import Cog, Context, command, guild_only
 from monty.bot import Bot
 from monty.constants import URLs
 from monty.utils import send_to_paste_service
-from monty.utils.delete import get_view
 from monty.utils.extensions import invoke_help_command
+from monty.utils.messages import get_view
 
 
 log = logging.getLogger(__name__)

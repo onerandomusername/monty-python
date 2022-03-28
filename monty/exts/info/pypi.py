@@ -15,7 +15,7 @@ from disnake.utils import escape_markdown
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
-from monty.utils.delete import DeleteView
+from monty.utils.messages import DeleteView
 
 
 BASE_PYPI_URL = "https://pypi.org"

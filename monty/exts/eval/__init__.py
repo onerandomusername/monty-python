@@ -24,9 +24,9 @@ from disnake.ui import Modal
 from monty.bot import Bot
 from monty.constants import Guilds, Paste, URLs
 from monty.log import get_logger
-from monty.utils.delete import DeleteView
 from monty.utils.exceptions import APIError
 from monty.utils.extensions import invoke_help_command
+from monty.utils.messages import DeleteView
 from monty.utils.services import send_to_paste_service
 
 

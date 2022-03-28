@@ -13,8 +13,8 @@ from disnake.ext import commands, tasks
 
 from monty import constants
 from monty.bot import TEST_GUILDS, Bot
-from monty.utils.delete import DeleteView
 from monty.utils.extensions import invoke_help_command
+from monty.utils.messages import DeleteView
 from monty.utils.pagination import LinePaginator
 
 

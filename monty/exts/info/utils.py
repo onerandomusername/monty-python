@@ -12,7 +12,7 @@ from disnake.ext.commands import BadArgument, Cog, Context
 from disnake.utils import DISCORD_EPOCH
 
 from monty.bot import Bot
-from monty.utils.delete import DeleteView
+from monty.utils.messages import DeleteView
 from monty.utils.pagination import LinePaginator
 
 

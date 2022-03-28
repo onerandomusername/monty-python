@@ -10,8 +10,8 @@ from disnake.ext import commands
 from monty.bot import Bot
 from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
-from monty.utils.delete import DeleteView
 from monty.utils.helpers import encode_github_link
+from monty.utils.messages import DeleteView
 
 
 class BotSource(commands.Cog):

@@ -12,10 +12,10 @@ from disnake import Colour, Embed
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.utils.delete import DeleteView
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
 from monty.utils.markdown import DocMarkdownConverter
+from monty.utils.messages import DeleteView
 
 
 log = logging.getLogger(__name__)

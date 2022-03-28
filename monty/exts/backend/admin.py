@@ -33,7 +33,7 @@ from disnake.ext import commands
 from disnake.ext.commands import Context
 
 from monty.metadata import ExtMetadata
-from monty.utils.delete import DeleteView
+from monty.utils.messages import DeleteView
 
 
 EXT_METADATA = ExtMetadata(core=True)

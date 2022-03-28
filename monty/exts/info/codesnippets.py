@@ -11,8 +11,8 @@ from disnake.ui import View
 
 from monty import constants
 from monty.bot import Bot
-from monty.utils.delete import DeleteView
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
+from monty.utils.messages import DeleteView
 
 
 log = logging.getLogger(__name__)

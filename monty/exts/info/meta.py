@@ -7,7 +7,7 @@ from disnake.ext.commands import Range
 
 from monty.bot import Bot
 from monty.constants import Client, Colours
-from monty.utils.delete import DeleteView
+from monty.utils.messages import DeleteView
 
 
 ABOUT = f"""

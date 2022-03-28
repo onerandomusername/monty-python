@@ -10,7 +10,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Guilds, Paste, URLs
-from monty.utils.delete import DeleteView
+from monty.utils.messages import DeleteView
 from monty.utils.services import send_to_paste_service
 
 

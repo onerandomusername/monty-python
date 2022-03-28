@@ -14,8 +14,8 @@ from monty.exts.info.codeblock._instructions import get_instructions
 from monty.exts.info.codeblock._parsing import is_python_code
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.delete import DeleteView
 from monty.utils.helpers import has_lines
+from monty.utils.messages import DeleteView
 
 
 log = get_logger(__name__)
