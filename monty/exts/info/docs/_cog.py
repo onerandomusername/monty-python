@@ -853,14 +853,15 @@ class DocCog(commands.Cog):
             if res[0]:
                 link = res[1]
 
+        view = DeleteView(inter.author)
         if link:
-            await inter.send(f"Found documentation for {package} at <{link}>.")
+            await inter.send(f"Found documentation for {package} at <{link}>.", view=view)
             return
         else:
             msg = f"No docs found for {package}."
             if res[1]:
                 msg += f"\nHowever, I did find this homepage while looking: <{res[1]}>."
-            await inter.send(msg)
+            await inter.send(msg, view=view)
 
     @staticmethod
     def base_url_from_inventory_url(inventory_url: str) -> str:

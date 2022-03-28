@@ -11,6 +11,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 from monty.constants import Client
 from monty.utils import responses
+from monty.utils.messages import DeleteView
 
 
 if typing.TYPE_CHECKING:
@@ -191,11 +192,14 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
     @commands.Cog.listener(name="on_message_command_error")
     async def on_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
+        view = DeleteView(ctx.author)
+        if isinstance(ctx, commands.Context):
+            ctx.send = functools.partial(ctx.send, view=view)
         if isinstance(ctx, disnake.Interaction):
             if ctx.response.is_done():
-                ctx.send = functools.partial(ctx.followup.send, ephemeral=True)
+                ctx.send = functools.partial(ctx.followup.send, ephemeral=True, view=view)
             else:
-                ctx.send = functools.partial(ctx.send, ephemeral=True)
+                ctx.send = functools.partial(ctx.send, ephemeral=True, view=view)
 
             if isinstance(
                 ctx,
