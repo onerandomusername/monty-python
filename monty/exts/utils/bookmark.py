@@ -43,15 +43,13 @@ class DeleteBookmarkView(disnake.ui.View):
             content = "You already deleted this message, nice try!"
         else:
             content = "Successfully deleted."
-        self.disable()
 
-        await inter.response.edit_message(content=content, view=self)
+        await inter.response.edit_message(content=content, view=None)
 
     @disnake.ui.button(label="Cancel", custom_id="bookmark_delete_bookmark_cancel", style=disnake.ButtonStyle.green)
     async def cancel(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
         """Cancel the deletion and provide a response."""
-        self.disable()
-        await inter.response.edit_message(content="Cancelled", view=self)
+        await inter.response.edit_message(content="Cancelled", view=None)
 
     def disable(self) -> None:
         """Disable all attributes in this view."""
