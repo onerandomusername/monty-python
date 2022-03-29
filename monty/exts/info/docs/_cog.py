@@ -689,10 +689,13 @@ class DocCog(commands.Cog):
             view.disable()
             if getattr(view, "deleted", False):
                 return
-            if msg is not None:
-                await msg.edit(view=view)
-            else:
-                await inter.edit_original_message(view=view)
+            try:
+                if msg is not None:
+                    await msg.edit(view=view)
+                else:
+                    await inter.edit_original_message(view=view)
+            except disnake.NotFound:
+                return
 
     @slash_docs.sub_command("view")
     async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: Optional[str]) -> None:
