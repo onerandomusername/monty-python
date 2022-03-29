@@ -149,7 +149,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
             reference = None
 
         if resp is None and error is None:
-            view = DeleteView(ctx.author)
+            view = DeleteView(ctx.author, allow_manage_messages=False)
             await ctx.send(
                 "No output.",
                 allowed_mentions=disnake.AllowedMentions(replied_user=False),
@@ -193,7 +193,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         for f in resp_file, error_file:
             if f is not None:
                 files.append(f)
-        view = DeleteView(ctx.author)
+        view = DeleteView(ctx.author, allow_manage_messages=False)
 
         await ctx.send(
             out,
@@ -400,7 +400,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         for event_type, count in self.bot.socket_events.most_common(25):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
-        view = DeleteView(ctx.author)
+        view = DeleteView(ctx.author, allow_manage_messages=False)
         await ctx.send(embed=embed, view=view)
 
 
