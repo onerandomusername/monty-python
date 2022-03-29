@@ -308,24 +308,31 @@ class Snekbox(Cog):
         """
         _predicate_eval_message_edit = partial(predicate_eval_message_edit, ctx)
         _predicate_emoji_reaction = partial(predicate_eval_emoji_reaction, ctx)
+        added_reaction = False
+        try:
+            _, new_message = await self.bot.wait_for(
+                "message_edit", check=_predicate_eval_message_edit, timeout=REEVAL_TIMEOUT
+            )
+            await ctx.message.add_reaction(REEVAL_EMOJI)
+            added_reaction = True
+            await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=30)
 
-        with contextlib.suppress(NotFound):
-            try:
-                _, new_message = await self.bot.wait_for(
-                    "message_edit", check=_predicate_eval_message_edit, timeout=REEVAL_TIMEOUT
-                )
-                await ctx.message.add_reaction(REEVAL_EMOJI)
-                await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=30)
+            code = await self.get_code(new_message)
+            added_reaction = False
+            await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
+            with contextlib.suppress(HTTPException):
+                await response.delete()
 
-                code = await self.get_code(new_message)
-                await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
-                with contextlib.suppress(HTTPException):
-                    await response.delete()
-
-            except asyncio.TimeoutError:
-                await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
-                return None
-
+        except asyncio.TimeoutError:
+            if added_reaction:
+                try:
+                    await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
+                except NotFound:
+                    pass
+            return None
+        except NotFound:
+            return None
+        else:
             return code
 
     async def get_code(self, message: Message) -> Optional[str]:
@@ -349,9 +356,21 @@ class Snekbox(Cog):
         return code
 
     @slash_command(name="eval")
-    async def slash_eval(self, inter: CommandInteraction) -> None:
-        """Open a modal to send python code to be evaluated."""
-        await inter.response.send_modal(EvalModal(self))
+    async def slash_eval(self, inter: CommandInteraction, code: Optional[str] = None) -> None:
+        """
+        Evaluate python code.
+
+        Parameters
+        ----------
+        code: Code to evaluate, leave blank to open a modal.
+        """
+        if code:
+            await inter.response.defer()
+            await self.eval_command(inter, code=code)
+            return
+        else:
+
+            await inter.response.send_modal(EvalModal(self))
 
     @command(name="eval", aliases=("e",))
     @guild_only()
@@ -367,7 +386,7 @@ class Snekbox(Cog):
         issue with it!
         """
         if ctx.author.id in self.jobs:
-            await ctx.reply(f"{ctx.author.mention} You've already got a job running - " "please wait for it to finish!")
+            await ctx.send(f"{ctx.author.mention} You've already got a job running - " "please wait for it to finish!")
             return
 
         if not code:  # None or empty string
@@ -383,6 +402,9 @@ class Snekbox(Cog):
                 response = await self.send_eval(ctx, code)
             finally:
                 del self.jobs[ctx.author.id]
+
+            if not isinstance(ctx, Context):
+                return
 
             code = await self.continue_eval(ctx, response)
             if not code:
