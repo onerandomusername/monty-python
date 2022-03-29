@@ -170,6 +170,8 @@ class Bookmark(commands.Cog):
                     "\n3. Lookup by message URL"
                 )
             target_message = ctx.message.reference.resolved
+        if not target_message.guild:
+            raise commands.NoPrivateMessage("You may only bookmark messages that aren't in DMs.")
 
         result = await self.action_bookmark(ctx.channel, ctx.author, target_message, title)
         if isinstance(result, disnake.Embed):
