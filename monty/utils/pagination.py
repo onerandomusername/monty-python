@@ -147,7 +147,6 @@ class LinePaginator(Paginator):
             )
             # check the custom_id is valid
             name = cls.strip_custom_id(inter.data.custom_id)
-            print(user_valid)
             check = all(
                 # Conditions for a successful pagination:
                 (
