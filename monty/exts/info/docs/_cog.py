@@ -102,6 +102,7 @@ class DocView(DeleteView):
         self, inter: Union[disnake.Interaction, commands.Context], bot: Monty, docitem: DocItem, og_embed: disnake.Embed
     ):
         super().__init__(user=inter.author, timeout=300)
+        self.user_ids = [inter.author.id]
         self.bot = bot
         self.attributes = docitem.attributes
         self.docitem = docitem
