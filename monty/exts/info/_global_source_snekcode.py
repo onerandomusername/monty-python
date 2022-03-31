@@ -87,14 +87,14 @@ if __name__ == "__main__":
             else:
                 continue
             if parents:
-                if getattr(target, "attr", None) == name:
-                    pass
-                else:
+                if getattr(target, "attr", None) != name:
                     continue
-            elif getattr(target, "id", None) == name:
-                pass
-            else:
+            elif getattr(target, "id", None) != name:
                 continue
+
+            if node.lineno <= first_lineno:
+                continue
+
             lines_extension = f"#L{node.lineno}"
             if node.end_lineno > node.lineno:
                 lines_extension += f"-L{node.end_lineno}"
@@ -103,8 +103,8 @@ if __name__ == "__main__":
         module_name = object_name.rsplit(".", 1)[0]
     else:
         if not inspect.ismodule(src):
-            lines, first_line_no = inspect.getsourcelines(src)
-            lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
+            lines, first_lineno = inspect.getsourcelines(src)
+            lines_extension = f"#L{first_lineno}-L{first_lineno+len(lines)-1}"
         else:
             lines_extension = ""
         module_name = ""
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         sys.exit(6)
 
     if not module_name:
-        module_name = src.__name__ if inspect.ismodule(src) else src.__module__
+        module_name = inspect.getmodule(src).__name__
     top_module_name = module_name.split(".", 1)[0]
 
     # determine the actual file name
