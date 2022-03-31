@@ -92,7 +92,7 @@ if __name__ == "__main__":
             elif getattr(target, "id", None) != name:
                 continue
 
-            if node.lineno <= first_lineno:
+            if node.lineno < first_lineno:
                 continue
 
             lines_extension = f"#L{node.lineno}"
