@@ -22,7 +22,7 @@ from disnake.ext.commands import Cog, Context, command, guild_only, slash_comman
 from disnake.ui import Modal
 
 from monty.bot import Bot
-from monty.constants import Guilds, Paste, URLs
+from monty.constants import URLs
 from monty.log import get_logger
 from monty.utils.exceptions import APIError
 from monty.utils.extensions import invoke_help_command
@@ -273,8 +273,6 @@ class Snekbox(Cog):
             output, paste_link = error, None
         else:
             output, paste_link = await self.format_output(results["stdout"])
-            if paste_link and Paste.alias_url and ctx.guild and ctx.guild.id == Guilds.nextcord:
-                paste_link = paste_link.replace(".disnake.", ".nextcord.")
 
         icon = self.get_status_emoji(results)
         msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"

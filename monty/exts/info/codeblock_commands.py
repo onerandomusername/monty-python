@@ -9,7 +9,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import Guilds, Paste, URLs
+from monty.constants import Paste, URLs
 from monty.utils.messages import DeleteView
 from monty.utils.services import send_to_paste_service
 
@@ -24,7 +24,9 @@ TIMEOUT = 180
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=2.4)
 
-PASTE_REGEX = re.compile(r"(https?:\/\/)?paste\.(disnake|nextcord)\.dev\/\S+")
+PASTE_REGEX = re.compile(
+    r"(https?:\/\/)(?:workbin\.dev|(?:paste\.(?:(?:disnake|nextcord|vcokltfre)\.dev|vcokltf\.re)))\/\S+"
+)
 
 MAX_LEN = 30_000
 
@@ -133,8 +135,6 @@ class CodeButtons(commands.Cog):
             return False, "This is already a paste link.", None
 
         url = await send_to_paste_service(code, extension="python")
-        if url and Paste.alias_url and message.guild and message.guild.id == Guilds.nextcord:
-            url = url.replace(".disnake.", ".nextcord.")
 
         if provide_link:
             msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here: <{url}>"
@@ -260,9 +260,6 @@ class CodeButtons(commands.Cog):
         if not paste:
             return False, "Sorry, something went wrong!", None
 
-        if Paste.alias_url and message.guild and message.guild.id == Guilds.nextcord:
-            paste = paste.replace(".disnake.", ".nextcord.")
-
         msg = f"Formatted {maybe_ref_link}with black. Click the button below to view on the pastebin."
         if formatted.startswith(("Cannot parse:", "unindent does not match any outer indentation level")):
             msg = f"Attempted to format {maybe_ref_link}with black, but an error occured. Click to view."
@@ -363,8 +360,6 @@ class CodeButtons(commands.Cog):
 
         view = DeleteView(inter.author)
         if link and link.startswith("http"):
-            if link and Paste.alias_url and target.guild and target.guild.id == Guilds.nextcord:
-                link = link.replace(".disnake.", ".nextcord.")
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
