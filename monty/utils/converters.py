@@ -74,7 +74,7 @@ class SourceConverter(commands.Converter):
                 return cmd
 
         cmd = ctx.bot.get_command(argument)
-        if cmd and (not cmd.hidden or await ctx.bot.is_owner(ctx.author)):
+        if cmd:
             return cmd
 
         # attempt to get the context menu command
