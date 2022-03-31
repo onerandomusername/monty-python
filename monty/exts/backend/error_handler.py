@@ -195,7 +195,12 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         if isinstance(ctx, commands.Context):
             view = DeleteView(ctx.author, initial_message=ctx.message)
             if ctx.channel.permissions_for(ctx.me).read_message_history:
-                ctx.send = functools.partial(ctx.reply, view=view, fail_if_not_exists=False)
+                ctx.send = functools.partial(
+                    ctx.reply,
+                    view=view,
+                    fail_if_not_exists=False,
+                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                )
             else:
                 ctx.send = functools.partial(ctx.send, view=view)
         elif isinstance(ctx, disnake.Interaction):
