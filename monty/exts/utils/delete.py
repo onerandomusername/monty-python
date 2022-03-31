@@ -1,3 +1,5 @@
+import logging
+
 import disnake
 from disnake.ext import commands
 from disnake.ui import View
@@ -8,6 +10,8 @@ from monty.utils.messages import DELETE_ID_V2
 
 VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 
+logger = logging.getLogger(__name__)
+
 
 class DeleteManager(commands.Cog):
     """Handle delete buttons being pressed."""
@@ -17,6 +21,7 @@ class DeleteManager(commands.Cog):
 
     # button schema
     # prefix:PERMS:USERID
+    # optional :MSGID
     @commands.Cog.listener("on_button_click")
     async def handle_v2_button(self, inter: disnake.MessageInteraction) -> None:
         """Delete a message if the user is authorized to delete the message."""
@@ -25,7 +30,12 @@ class DeleteManager(commands.Cog):
 
         custom_id = inter.component.custom_id.removeprefix(DELETE_ID_V2)
 
-        perms, user_id, *_ = custom_id.split(":")
+        perms, user_id, *extra = custom_id.split(":")
+        delete_msg = None
+        if extra:
+            if extra[0]:
+                delete_msg = int(extra[0])
+
         perms, user_id = int(perms), int(user_id)
 
         # check if the user id is the allowed user OR check if the user has any of the permissions allowed
@@ -36,11 +46,27 @@ class DeleteManager(commands.Cog):
                 await inter.response.send_message("Sorry, this delete button is not for you!", ephemeral=True)
                 return
 
-        if inter.channel.permissions_for(inter.guild.me).read_message_history:
-            await inter.message.delete()
-        else:
+        me = inter.guild.me if inter.guild else inter.bot.user
+        myperms = inter.channel.permissions_for(me)
+        if not myperms.read_messages:
             await inter.response.defer()
             await inter.delete_original_message()
+            return
+
+        await inter.message.delete()
+        if not delete_msg or not myperms.manage_messages:
+            return
+        if msg := inter.bot.get_message(delete_msg):
+            if msg.edited_at:
+                return
+        else:
+            msg = inter.channel.get_partial_message(delete_msg)
+        try:
+            await msg.delete()
+        except disnake.NotFound:
+            pass
+        except disnake.Forbidden:
+            logger.warning("Cache is unreliable, or something weird occured.")
 
     @commands.Cog.listener("on_button_click")
     async def handle_v1_buttons(self, inter: disnake.MessageInteraction) -> None:

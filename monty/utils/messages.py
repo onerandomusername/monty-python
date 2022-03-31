@@ -94,13 +94,14 @@ class DeleteView(disnake.ui.View):
 
     def __init__(
         self,
-        user: Union[int, disnake.User],
+        user: Union[int, disnake.User, disnake.Member],
         *,
         timeout: float = 1,
         allow_manage_messages: bool = True,
+        initial_message: Optional[Union[int, disnake.Message]] = None,
     ):
         if isinstance(user, (disnake.User, disnake.Member)):
-            user = str(user.id)
+            user = user.id
 
         super().__init__(timeout=timeout)
         self.delete_button.custom_id = DELETE_ID_V2
@@ -110,10 +111,16 @@ class DeleteView(disnake.ui.View):
         self.delete_button.custom_id += str(permissions.value) + ":"
         self.delete_button.custom_id += str(user)
 
+        self.delete_button.custom_id += ":"
+        if initial_message:
+            if isinstance(initial_message, disnake.Message):
+                initial_message = initial_message.id
+            self.delete_button.custom_id += str(initial_message)
+
     @disnake.ui.button(
         style=disnake.ButtonStyle.grey,
         emoji=constants.Emojis.trashcan,
     )
-    async def delete_button(self, button: disnake.Button, inter: disnake.MessageInteraction) -> None:
+    async def delete_button(self, button: disnake.ui.Button, inter: disnake.MessageInteraction) -> None:
         """Delete a message when a button is pressed if the user is okay to delete it."""
         await asyncio.sleep(3)
