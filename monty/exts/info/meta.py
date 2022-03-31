@@ -104,7 +104,7 @@ class Meta(commands.Cog):
     async def invite(
         self,
         inter: disnake.CommandInteraction,
-        permissions: Range[-1, disnake.Permissions.all().value] = None,
+        permissions: Range[0, disnake.Permissions.all().value] = None,
         guild: str = None,
         raw_link: bool = False,
         ephemeral: bool = True,

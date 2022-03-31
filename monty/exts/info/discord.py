@@ -110,7 +110,7 @@ class Discord(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         client_id: LargeInt,
-        permissions: Range[-1, disnake.Permissions.all().value] = None,
+        permissions: Range[0, disnake.Permissions.all().value] = None,
         guild: str = None,
         include_applications_commands: bool = True,
         raw_link: bool = False,
@@ -136,7 +136,7 @@ class Discord(commands.Cog):
         elif client_id == inter.bot.user.id:
             permissions = self.bot.invite_permissions
         else:
-            permissions = disnake.Permissions(-1)
+            permissions = disnake.Permissions().all()
 
         if guild is not None:
             try:
