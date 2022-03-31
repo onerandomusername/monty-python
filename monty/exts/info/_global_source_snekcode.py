@@ -59,7 +59,15 @@ if __name__ == "__main__":
         filename = frame.filename
         first_lineno = frame.lineno
         lines_extension = f"#L{frame.lineno}"
-        name = object_name.rsplit(".", 1)[-1]
+        parents = []
+        try:
+            name = src.__qualname__
+        except AttributeError:
+            name = object_name.rsplit(".", 1)[-1]
+        else:
+            if "." in name:
+                parents, name = name.rsplit(".", 1)
+            parents = parents.split(".")
         try:
             with open(filename) as f:
                 sourcecode = f.read()
@@ -78,11 +86,19 @@ if __name__ == "__main__":
                 target = node.target
             else:
                 continue
-            if getattr(target, "id", None) == name or getattr(target, "attr", None) == name:
-                lines_extension = f"#L{node.lineno}"
-                if node.end_lineno > node.lineno:
-                    lines_extension += f"-L{node.end_lineno}"
-                break
+            if parents:
+                if getattr(target, "attr", None) == name:
+                    pass
+                else:
+                    continue
+            elif getattr(target, "id", None) == name:
+                pass
+            else:
+                continue
+            lines_extension = f"#L{node.lineno}"
+            if node.end_lineno > node.lineno:
+                lines_extension += f"-L{node.end_lineno}"
+            break
         # minor hack
         module_name = object_name.rsplit(".", 1)[0]
     else:
