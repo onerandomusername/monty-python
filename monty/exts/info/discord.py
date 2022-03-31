@@ -134,8 +134,7 @@ class Discord(commands.Cog):
         if permissions is not None:
             permissions = disnake.Permissions(permissions)
         elif client_id == inter.bot.user.id:
-            # todo: make this a constant
-            permissions = disnake.Permissions(412317248704)
+            permissions = self.bot.invite_permissions
         else:
             permissions = disnake.Permissions(-1)
 

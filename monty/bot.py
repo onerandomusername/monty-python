@@ -54,6 +54,7 @@ class Monty(commands.Bot):
         self.db = Database()
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
+        self.invite_permissions = disnake.Permissions(412317248704)
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
@@ -155,7 +156,6 @@ _intents.invites = False
 _intents.typing = False
 _intents.webhooks = False
 _intents.voice_states = False
-_intents.dm_messages = False
 
 redis_session = async_rediscache.RedisSession(
     address=(constants.RedisConfig.host, constants.RedisConfig.port),
