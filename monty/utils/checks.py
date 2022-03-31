@@ -21,3 +21,14 @@ class InWhitelistCheckFailure(CheckFailure):
         error_message = f"You are not allowed to use that command{redirect_message}."
 
         super().__init__(error_message)
+
+
+class BotAccountRequired(CheckFailure):
+    """Raised when the bot needs to be in the guild."""
+
+    def __init__(self, msg: str):
+        self._error_title = "Bot Account Required"
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg

@@ -53,6 +53,9 @@ class InternalLogger(commands.Cog):
         """Log the start of a slash command."""
         spl = str({opt.name: opt.value for opt in inter.data.options}).replace("\n", " ")
         spl = spl.split("\n")
+        # todo: fix this in disnake
+        if inter.application_command is disnake.utils.MISSING:
+            return
         logger.info(
             "Slash command `{command!s}` by {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
                 author=inter.author,
