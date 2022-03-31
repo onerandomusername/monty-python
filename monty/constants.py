@@ -2,6 +2,7 @@ import logging
 from os import environ
 from typing import NamedTuple
 
+import disnake
 import yarl
 
 
@@ -35,6 +36,19 @@ class Client(NamedTuple):
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")
     }
     support_server = "mPscM4FjWB"
+    invite_permissions = disnake.Permissions(
+        view_audit_log=True,
+        read_messages=True,
+        send_messages=True,
+        send_messages_in_threads=True,
+        manage_messages=True,
+        embed_links=True,
+        attach_files=True,
+        read_message_history=True,
+        add_reactions=True,
+        use_external_emojis=True,
+        use_external_stickers=True,
+    )
 
 
 DEBUG_MODE = Client.debug

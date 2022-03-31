@@ -54,7 +54,7 @@ class Monty(commands.Bot):
         self.db = Database()
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
-        self.invite_permissions = disnake.Permissions(412317248704)
+        self.invite_permissions = constants.Client.invite_permissions
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
