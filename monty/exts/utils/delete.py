@@ -39,7 +39,7 @@ class DeleteManager(commands.Cog):
         perms, user_id = int(perms), int(user_id)
 
         # check if the user id is the allowed user OR check if the user has any of the permissions allowed
-        if inter.author.id != user_id:
+        if not (is_orig_author := inter.author.id == user_id):
             permissions = disnake.Permissions(perms)
             user_permissions = inter.channel.permissions_for(inter.author)
             if not permissions.value & user_permissions.value:
@@ -54,7 +54,7 @@ class DeleteManager(commands.Cog):
             return
 
         await inter.message.delete()
-        if not delete_msg or not myperms.manage_messages:
+        if not delete_msg or not myperms.manage_messages or not is_orig_author:
             return
         if msg := inter.bot.get_message(delete_msg):
             if msg.edited_at:
