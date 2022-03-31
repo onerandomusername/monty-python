@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Final
 from urllib.parse import urldefrag
 
 import disnake
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 
 from monty.utils.helpers import encode_github_link
 from monty.utils.messages import DeleteView
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from monty.exts.eval import Snekbox
 
 logger = logging.getLogger(__name__)
+CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
 
 
 class GlobalSource(commands.Cog):
@@ -24,8 +25,12 @@ class GlobalSource(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        with open(os.path.dirname(__file__) + "/_global_source_snekcode.py", "r") as f:
+        with open(CODE_FILE, "r") as f:
             self.code: Final[str] = f.read()
+
+    def cog_unload(self) -> None:
+        """Stop the running task on unload if it is running."""
+        self.refresh_code.stop()
 
     @property
     def snekbox(self) -> Snekbox:
@@ -51,6 +56,8 @@ class GlobalSource(commands.Cog):
         # 7: invalid metadata
         # 8: unsupported package (does not use github)
         text = result["stdout"]
+        if self.refresh_code.is_running():
+            logger.debug(text)
         returncode = result["returncode"]
         link = ""
         if returncode == 0:
@@ -89,8 +96,14 @@ class GlobalSource(commands.Cog):
             custom_id = encode_github_link(link)
             if frag := (urldefrag(link)[1]):
                 frag = frag.replace("#", "").replace("L", "")
-                num1, num2 = frag.split("-")
-                if int(num2) - int(num1) < 20:
+
+                if "-" in frag:
+                    num1, num2 = frag.split("-")
+                    show_source = int(num2) - int(num1) <= 21
+                else:
+                    show_source = True
+
+                if show_source:
                     view.add_item(
                         disnake.ui.Button(style=disnake.ButtonStyle.blurple, label="Expand", custom_id=custom_id)
                     )
@@ -100,6 +113,48 @@ class GlobalSource(commands.Cog):
             allowed_mentions=disnake.AllowedMentions(everyone=False, users=False, roles=False, replied_user=True),
             view=view,
         )
+
+    @tasks.loop(seconds=1)
+    async def refresh_code(self, ctx: commands.Context, query: str) -> None:
+        """Refresh the internal code every second."""
+        modified = os.stat(CODE_FILE).st_mtime
+        if modified <= self.last_modified:
+            return
+        self.last_modified = modified
+        with open(CODE_FILE, "r") as f:
+            self.code = f.read()
+            logger.debug("Updated global_source code")
+
+        try:
+            await self.globalsource(ctx, query)
+        except Exception as e:
+            self.bot.dispatch("command_error", ctx, e)
+
+    @refresh_code.before_loop
+    async def before_refresh_code(self) -> None:
+        """Set the current last_modified stat to zero starting the task."""
+        self.last_modified = 0
+
+    @commands.command("globalsourcedebug", hidden=True)
+    @commands.is_owner()
+    async def globalsourcedebug(self, ctx: commands.Context, query: str = None) -> None:
+        """Refresh the existing code and reinvoke it continually until the command is run again."""
+        if self.refresh_code.is_running():
+            if query:
+                self.refresh_code.restart(ctx, query)
+                await ctx.send("Restarted the global source debug task.")
+            else:
+                self.refresh_code.stop()
+                await ctx.send("Cancelled the internal global source debug task.")
+            return
+        if not query:
+
+            class FakeParam:
+                name = "query"
+
+            raise commands.MissingRequiredArgument(FakeParam)
+        await ctx.send("Starting the global source debug task.")
+        self.refresh_code.start(ctx, query)
 
 
 def setup(bot: Bot) -> None:
