@@ -400,7 +400,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         for event_type, count in self.bot.socket_events.most_common(25):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
-        view = DeleteView(ctx.author, allow_manage_messages=False)
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(embed=embed, view=view)
 
 

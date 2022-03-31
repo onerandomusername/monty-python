@@ -193,7 +193,7 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
     async def on_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         if isinstance(ctx, commands.Context):
-            view = DeleteView(ctx.author)
+            view = DeleteView(ctx.author, initial_message=ctx.message)
             if ctx.channel.permissions_for(ctx.me).read_message_history:
                 ctx.send = functools.partial(ctx.reply, view=view, fail_if_not_exists=False)
             else:

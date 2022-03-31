@@ -178,10 +178,10 @@ class Bookmark(commands.Cog):
             if isinstance(ctx, disnake.Interaction):
                 await ctx.send(embed=result, ephemeral=True)
             elif ctx.channel.permissions_for(ctx.me).read_message_history:
-                view = DeleteView(ctx.author)
+                view = DeleteView(ctx.author, initial_message=ctx.message)
                 await ctx.reply(embed=result, fail_if_not_exists=False, view=view)
             else:
-                view = DeleteView(ctx.author)
+                view = DeleteView(ctx.author, initial_message=ctx.message)
                 await ctx.send(embed=result, view=view)
             return
         await self.send_embed(

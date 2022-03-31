@@ -79,7 +79,11 @@ class GlobalSource(commands.Cog):
         elif returncode == 8:
             text = "The provided module is not supported."
 
-        view = DeleteView(ctx.author)
+        if isinstance(ctx, commands.Context):
+            view = DeleteView(ctx.author, initial_message=ctx.message)
+        else:
+            view = DeleteView(ctx.author)
+
         if link:
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, url=link, label="Go to Github"))
             custom_id = encode_github_link(link)

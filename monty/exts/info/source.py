@@ -27,7 +27,10 @@ class BotSource(commands.Cog):
         """Display information and a GitHub link to the source code of a command or cog."""
 
         async def send_message(embed: disnake.Embed, components: list = None) -> None:
-            view = DeleteView(ctx.author)
+            if isinstance(ctx, commands.Context):
+                view = DeleteView(ctx.author, initial_message=ctx.message)
+            else:
+                view = DeleteView(ctx.author)
             if components:
                 view.children.extend(components)
             await ctx.send(embed=embed, view=view)

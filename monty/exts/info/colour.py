@@ -79,7 +79,10 @@ class Colour(commands.Cog):
 
         colour_embed.set_thumbnail(url="attachment://colour.png")
 
-        view = DeleteView(ctx.author)
+        if isinstance(ctx, commands.Context):
+            view = DeleteView(ctx.author, initial_message=ctx.message)
+        else:
+            view = DeleteView(ctx.author)
         await ctx.send(file=thumbnail_file, embed=colour_embed, view=view)
 
     @commands.group(aliases=("color",), invoke_without_command=True)
