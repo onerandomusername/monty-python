@@ -15,16 +15,22 @@ NOTE: THIS RUNS ON PYTHON 3.10
 # 7: invalid metadata
 # 8: unsupported package (does not use github)
 
+
 if __name__ == "__main__":
     import importlib
     import importlib.metadata
+    import importlib.util
     import inspect
     import pathlib
     import pkgutil
     import sys
+    import tracemalloc
+
+    tracemalloc.start()
 
     # establish the object itself
     object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
+
     try:
         src = pkgutil.resolve_name(object_name)
     except ModuleNotFoundError:
@@ -36,36 +42,77 @@ if __name__ == "__main__":
     except Exception:
         raise
 
-    # used to be able to slice code to ignore import side-effects
-    print("#" * 80)
+    trace = tracemalloc.get_object_traceback(src)
+    tracemalloc.stop()
 
     # get the source of the object
+
     try:
         filename = inspect.getsourcefile(src)
     except TypeError:
-        sys.exit(5)
-    if not inspect.ismodule(src):
-        lines, first_line_no = inspect.getsourcelines(src)
-        lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
+        # if we have to use tracemalloc we have a bit of a problem
+        # the code is dynamically created
+        # this means that we need to establish the file, where the def starts, and where it ends
+        if not trace:
+            sys.exit(5)
+        frame = trace[-1]
+        filename = frame.filename
+        first_lineno = frame.lineno
+        lines_extension = f"#L{frame.lineno}"
+        name = object_name.rsplit(".", 1)[-1]
+        try:
+            with open(filename) as f:
+                sourcecode = f.read()
+        except FileNotFoundError:
+            sys.exit(5)
+
+        # Once we know where the definition starts, we can hopefully use ast for parsing the file
+        import ast
+
+        parsed = ast.parse(sourcecode)
+        node = None
+        for node in ast.walk(parsed):
+            if isinstance(node, ast.Assign):
+                target = node.targets[0]
+            elif isinstance(node, ast.AnnAssign):
+                target = node.target
+            else:
+                continue
+            if getattr(target, "id", None) == name or getattr(target, "attr", None) == name:
+                lines_extension = f"#L{node.lineno}"
+                if node.end_lineno > node.lineno:
+                    lines_extension += f"-L{node.end_lineno}"
+                break
+        # minor hack
+        module_name = object_name.rsplit(".", 1)[0]
     else:
-        lines_extension = ""
+        if not inspect.ismodule(src):
+            lines, first_line_no = inspect.getsourcelines(src)
+            lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
+        else:
+            lines_extension = ""
+        module_name = ""
     if not filename:
         sys.exit(6)
 
-    module_name = src.__name__ if inspect.ismodule(src) else src.__module__
+    if not module_name:
+        module_name = src.__name__ if inspect.ismodule(src) else src.__module__
     top_module_name = module_name.split(".", 1)[0]
 
     # determine the actual file name
-    filename = str(
-        pathlib.Path(filename).relative_to(
-            pathlib.Path(inspect.getsourcefile(importlib.import_module(top_module_name))).parent.parent
+    try:
+        filename = str(
+            pathlib.Path(filename).relative_to(
+                pathlib.Path(inspect.getsourcefile(importlib.import_module(top_module_name))).parent.parent
+            )
         )
-    )
+    except ValueError:
+        sys.exit(5)
 
     # get the version and link to the source of the module
     if top_module_name in sys.stdlib_module_names:
         if top_module_name in sys.builtin_module_names:
-            print(module_name)
+            print(object_name)
             sys.exit(6)
         # handle the object being part of the stdlib
         import platform
@@ -79,7 +126,7 @@ if __name__ == "__main__":
         try:
             metadata = importlib.metadata.metadata(top_module_name)
         except importlib.metadata.PackageNotFoundError:
-            print(f"Sorry, I can't find the metadata for `{module_name}`.")
+            print(f"Sorry, I can't find the metadata for `{object_name}`.")
             sys.exit(7)
         # print(metadata.keys())
         version = metadata["Version"]
@@ -93,4 +140,6 @@ if __name__ == "__main__":
         if top_module_name != "arrow":
             version = f"v{version}"
         url += f"/blob/{version}/{filename}{lines_extension}"
+    # used to be able to slice code to ignore import side-effects
+    print("#" * 80)
     print(url)
