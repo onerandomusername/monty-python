@@ -112,7 +112,7 @@ class PythonEnhancementProposals(commands.Cog):
         # Assemble the embed
         pep_embed = Embed(
             title=f"PEP {pep_nr} - {pep_header['Title']}",
-            url=f"{BASE_PEP_URL}{pep_nr:04}",
+            url=self.peps[pep_nr],
         )
 
         pep_embed.set_thumbnail(url=ICON_URL)
@@ -188,13 +188,9 @@ class PythonEnhancementProposals(commands.Cog):
         embed = Embed(
             title=header,
             description=text,
+            url=url,
         )
         embed.set_author(name=f"PEP {number} - {tags['Title']}", url=url)
-
-        if a := tag.find("a"):
-            href = a.attrs.get("href")
-            if href:
-                embed.url = href
 
         embed.set_thumbnail(url=ICON_URL)
         if tags.get("Created"):
@@ -202,8 +198,7 @@ class PythonEnhancementProposals(commands.Cog):
             embed.timestamp = datetime.strptime(tags["Created"], "%d-%b-%Y").replace(tzinfo=timezone.utc)
 
         view = DeleteView(inter.author)
-        if embed.url:
-            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url))
+        view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url))
         await inter.send(embed=embed, view=view)
 
     @commands.slash_command(name="pep")
