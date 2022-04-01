@@ -42,6 +42,7 @@ class GlobalSource(commands.Cog):
     @commands.command(name="globalsource", aliases=("gs",), hidden=True)
     async def globalsource(self, ctx: commands.Context, object: str) -> None:
         """Get the source of a python object."""
+        object = object.strip("`")
         async with ctx.typing():
             result = await self.snekbox.post_eval(self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object))
 
