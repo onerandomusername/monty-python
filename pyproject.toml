@@ -14,7 +14,7 @@ arrow = "~=1.0.3"
 async-rediscache = {extras = ["fakeredis"], version = "~=0.1.4"}
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
-disnake = "~=2.4.0"
+disnake = {git = "https://github.com/DisnakeDev/disnake.git"}
 emoji = "~=0.6"
 feedparser = "~=6.0.2"
 rapidfuzz = "~=1.4"
