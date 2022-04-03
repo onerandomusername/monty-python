@@ -29,6 +29,7 @@ if __name__ == "__main__":
     # establish the object itself
     object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
 
+    tracemalloc.start()
     try:
         src = pkgutil.resolve_name(object_name)
     except ModuleNotFoundError:
@@ -75,9 +76,11 @@ if __name__ == "__main__":
         # Once we know where the definition starts, we can hopefully use ast for parsing the file
         import ast
 
-        parsed = ast.parse(sourcecode)
+        parsed = ast.parse(sourcecode, filename=filename)
         node = None
         for node in ast.walk(parsed):
+            if not hasattr(node, "lineno"):
+                continue
             if node.lineno < first_lineno:
                 continue
             if isinstance(node, ast.Assign):
