@@ -56,6 +56,8 @@ class GlobalSource(commands.Cog):
         # 6: is a builtin object, prints module name
         # 7: invalid metadata
         # 8: unsupported package (does not use github)
+        # 9: module found but cannot find class definition
+
         text = result["stdout"]
         if self.refresh_code.is_running():
             logger.debug(text)
@@ -86,6 +88,10 @@ class GlobalSource(commands.Cog):
             text = "The metadata for the provided module is invalid."
         elif returncode == 8:
             text = "The provided module is not supported."
+        elif returncode == 9:
+            text = "The definition could not be found."
+        else:
+            text = "Something went wrong."
 
         if isinstance(ctx, commands.Context):
             view = DeleteView(ctx.author, initial_message=ctx.message)

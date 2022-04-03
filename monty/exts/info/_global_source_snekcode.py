@@ -14,7 +14,7 @@ NOTE: THIS RUNS ON PYTHON 3.10
 # 6: is a builtin object, prints module name
 # 7: invalid metadata
 # 8: unsupported package (does not use github)
-
+# 9: module found but cannot find class definition
 
 if __name__ == "__main__":
     import importlib
@@ -25,8 +25,6 @@ if __name__ == "__main__":
     import pkgutil
     import sys
     import tracemalloc
-
-    tracemalloc.start()
 
     # establish the object itself
     object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
@@ -80,6 +78,8 @@ if __name__ == "__main__":
         parsed = ast.parse(sourcecode)
         node = None
         for node in ast.walk(parsed):
+            if node.lineno < first_lineno:
+                continue
             if isinstance(node, ast.Assign):
                 target = node.targets[0]
             elif isinstance(node, ast.AnnAssign):
@@ -92,9 +92,6 @@ if __name__ == "__main__":
             elif getattr(target, "id", None) != name:
                 continue
 
-            if node.lineno < first_lineno:
-                continue
-
             lines_extension = f"#L{node.lineno}"
             if node.end_lineno > node.lineno:
                 lines_extension += f"-L{node.end_lineno}"
@@ -103,7 +100,11 @@ if __name__ == "__main__":
         module_name = object_name.rsplit(".", 1)[0]
     else:
         if not inspect.ismodule(src):
-            lines, first_lineno = inspect.getsourcelines(src)
+            try:
+                lines, first_lineno = inspect.getsourcelines(src)
+            except OSError:
+                print(filename)
+                sys.exit(9)
             lines_extension = f"#L{first_lineno}-L{first_lineno+len(lines)-1}"
         else:
             lines_extension = ""
