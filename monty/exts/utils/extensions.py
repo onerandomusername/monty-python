@@ -12,6 +12,7 @@ from monty.bot import Bot
 from monty.constants import Client
 from monty.metadata import ExtMetadata
 from monty.utils.extensions import EXTENSIONS, invoke_help_command, unqualify
+from monty.utils.messages import DeleteView
 from monty.utils.pagination import LinePaginator
 
 
@@ -101,7 +102,9 @@ class Extensions(commands.Cog):
             extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
 
         msg = self.batch_manage(Action.LOAD, *extensions)
-        await ctx.send(msg)
+
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, view=view)
 
     @extensions_group.command(name="unload", aliases=("ul",))
     async def unload_command(self, ctx: Context, *extensions: Extension) -> None:
@@ -124,7 +127,8 @@ class Extensions(commands.Cog):
 
             msg = self.batch_manage(Action.UNLOAD, *extensions)
 
-        await ctx.send(msg)
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, view=view)
 
     @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
     async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
@@ -148,7 +152,8 @@ class Extensions(commands.Cog):
 
         msg = self.batch_manage(Action.RELOAD, *extensions)
 
-        await ctx.send(msg)
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, view=view)
 
     @extensions_group.command(name="list", aliases=("all",))
     async def list_command(self, ctx: Context) -> None:
