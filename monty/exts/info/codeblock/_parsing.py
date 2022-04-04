@@ -32,7 +32,7 @@ _RE_PYTHON_REPL = re.compile(r"^(>>>|\.\.\.)( |$)")
 _RE_IPYTHON_REPL = re.compile(r"^((In|Out) \[\d+\]: |\s*\.{3,}: ?)")
 
 _RE_CODE_BLOCK = re.compile(
-    fr"""
+    rf"""
     (?P<ticks>
         (?P<tick>[{''.join(_TICKS)}]) # Put all ticks into a character class within a group.
         \2{{2}}                       # Match previous group 2 more times to ensure the same char.
@@ -45,7 +45,7 @@ _RE_CODE_BLOCK = re.compile(
 )
 
 _RE_LANGUAGE = re.compile(
-    fr"""
+    rf"""
     ^(?P<spaces>\s+)?                    # Optionally match leading spaces from the beginning.
     (?P<lang>{'|'.join(PY_LANG_CODES)})  # Match a Python language.
     (?P<newline>\n)?                     # Optionally match a newline following the language.

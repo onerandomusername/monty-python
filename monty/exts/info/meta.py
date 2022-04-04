@@ -141,7 +141,7 @@ class Meta(commands.Cog):
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
         memory_usage = self.process.memory_info()
-        memory_usage = memory_usage.rss / 1024 ** 2
+        memory_usage = memory_usage.rss / 1024**2
         e.description = STATS.format(
             disnake_version=disnake.__version__,
             disnake_version_level=disnake.version_info.releaselevel,
