@@ -86,7 +86,7 @@ class Utils(Cog):
     async def slash_snowflake(
         self,
         inter: disnake.AppCommandInteraction,
-        snowflake: str,
+        snowflake: commands.LargeInt,
     ) -> None:
         """
         [BETA] Get creation date of a snowflake.
@@ -95,11 +95,6 @@ class Utils(Cog):
         ----------
         snowflake: The snowflake.
         """
-        try:
-            snowflake = int(snowflake)
-        except ValueError:
-            await inter.send("`snowflake` must be an integer!", ephemeral=True)
-            return
         embed = Embed(colour=Colour.blue())
         embed.set_author(
             name="Snowflake",
