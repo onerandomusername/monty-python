@@ -78,6 +78,7 @@ if __name__ == "__main__":
 
         parsed = ast.parse(sourcecode, filename=filename)
         node = None
+        _endlines: set[tuple[int, int]] = set()
         for node in ast.walk(parsed):
             if not hasattr(node, "lineno"):
                 continue
@@ -95,12 +96,15 @@ if __name__ == "__main__":
             elif getattr(target, "id", None) != name:
                 continue
 
-            lines_extension = f"#L{node.lineno}"
-            if node.end_lineno > node.lineno:
-                lines_extension += f"-L{node.end_lineno}"
-            break
-        # minor hack
-        module_name = object_name.rsplit(".", 1)[0]
+            _endlines.add((node.lineno, node.end_lineno))
+
+        if _endlines:
+            lineno, end_lineno = sorted(_endlines, key=lambda i: i[0])[0]
+            lines_extension = f"#L{lineno}"
+            if end_lineno > lineno:
+                lines_extension += f"-L{end_lineno}"
+
+        module_name = object_name.split(":", 1)[0] if ":" in object_name else object_name.rsplit(".", 1)[0]
     else:
         if not inspect.ismodule(src):
             try:
