@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  read-all
+  packages: write
+
 
 jobs:
   build:
