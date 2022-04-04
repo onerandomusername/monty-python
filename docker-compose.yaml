@@ -12,12 +12,10 @@ services:
 
   monty-python:
     << : *restart_policy
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/onerandomusername/monty-python:latest
     container_name: monty-python
-    # init: true
-    # tty: true
+    init: true
+    tty: true
 
     depends_on:
       - redis
