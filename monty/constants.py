@@ -27,6 +27,7 @@ log = logging.getLogger(__name__)
 class Client(NamedTuple):
 
     name = "Monty Python"
+    version = environ.get("GIT_SHA", "development")
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"

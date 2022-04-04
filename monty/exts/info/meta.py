@@ -46,7 +46,7 @@ A majority of features were initially implemented on python-discord's **bot**, a
 """
 
 STATS = """
-Version: `stable`
+Version: `{version}`
 Disnake version: `{disnake_version} {disnake_version_level}`
 
 Guilds: `{guilds}`
@@ -150,6 +150,7 @@ class Meta(commands.Cog):
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
             memory_usage=memory_usage,
             cpu_usage=self.process.cpu_percent(),
+            version=Client.version,
         )
 
         view = DeleteView(inter.author)
