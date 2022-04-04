@@ -1,0 +1,8 @@
+# Exclude everything
+*
+
+# Make exceptions for what's needed
+!monty
+!pyproject.toml
+!poetry.lock
+!LICENSE

@@ -9,10 +9,10 @@ WORKDIR /bot
 # Install project dependencies
 
 # as we have a git dep, install git
-# RUN apt update && apt install git -y
+RUN apt update && apt install git -y
 
 RUN pip install -U pip wheel setuptools
-RUN pip install poetry==1.1.12
+RUN pip install poetry==1.1.13
 
 # export requirements after copying req files
 COPY pyproject.toml poetry.lock ./
@@ -26,4 +26,5 @@ COPY . .
 # install the package using pep 517
 RUN pip install . --no-deps
 
-CMD ["python", "-m", "monty"]
+ENTRYPOINT ["python3"]
+CMD ["-m", "monty"]

@@ -1,0 +1,32 @@
+version: "3.7"
+
+x-restart-policy: &restart_policy
+  restart: unless-stopped
+
+services:
+  redis:
+    << : *restart_policy
+    image: redis:latest
+    ports:
+      - "127.0.0.1:6381:6379"
+
+  monty-python:
+    << : *restart_policy
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: monty-python
+    # init: true
+    # tty: true
+
+    depends_on:
+      - redis
+
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    env_file:
+      - .env
+
+    volumes:
+      - .:/bot
