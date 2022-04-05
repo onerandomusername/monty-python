@@ -28,6 +28,8 @@ class InternalLogger(commands.Cog):
         spl = spl.split("\n")
         if command is None:
             command = ctx.command
+        qualname = command.qualified_name.replace(" ", ".")
+        self.bot.stats.incr("prefix_command.start." + qualname)
         logger.info(
             "command {command!s} {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
                 author=ctx.author,
@@ -48,6 +50,9 @@ class InternalLogger(commands.Cog):
         """Log a successful command completion."""
         logger.info(f"command by {ctx.author} has completed!")
 
+        qualname = ctx.command.qualified_name.replace(" ", ".")
+        self.bot.stats.incr("prefix_command.completion." + qualname)
+
     @commands.Cog.listener()
     async def on_slash_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log the start of a slash command."""
@@ -56,11 +61,14 @@ class InternalLogger(commands.Cog):
         # todo: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
             return
+        qualname = inter.application_command.qualified_name.replace(" ", ".")
+        self.bot.stats.incr("slash_command.start." + qualname)
+
         logger.info(
             "Slash command `{command!s}` by {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
                 author=inter.author,
                 channel=inter.channel,
-                command=inter.application_command.name,
+                command=inter.application_command.qualified_name,
                 content=spl[0] + (" ..." if len(spl) > 1 else ""),
             )
         )
@@ -68,6 +76,8 @@ class InternalLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log slash command completion."""
+        qualname = inter.application_command.qualified_name.replace(" ", ".")
+        self.bot.stats.incr("slash_command.completion." + qualname)
         logger.info(f"slash command by {inter.author} has completed!")
 
 

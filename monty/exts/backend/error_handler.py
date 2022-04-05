@@ -130,6 +130,8 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         embed: typing.Optional[disnake.Embed] = None
         should_respond = True
 
+        self.bot.stats.incr("errors")
+
         if isinstance(error, commands.UserInputError):
             embed = await self.handle_user_input_error(ctx, error)
         elif isinstance(error, commands.CheckFailure):
