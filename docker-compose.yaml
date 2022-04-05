@@ -10,6 +10,12 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
 
+    command:
+      --save 60 1
+
+    volumes:
+      - /docker/host/monty-redis:/data
+
   monty-python:
     << : *restart_policy
     image: ghcr.io/onerandomusername/monty-python:latest
