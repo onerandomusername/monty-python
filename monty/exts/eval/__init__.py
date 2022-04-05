@@ -115,7 +115,7 @@ class Snekbox(Cog):
         if len(output) > MAX_PASTE_LEN:
             log.info("Full output is too long to upload")
             return None
-        return await send_to_paste_service(output, extension=extension)
+        return await send_to_paste_service(self.bot, output, extension=extension)
 
     @overload
     @staticmethod

@@ -1,69 +1,17 @@
 import asyncio
 import re
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
 import disnake
 import disnake.ext.commands
 
 from monty import constants
-from monty.bot import bot
 from monty.log import get_logger
 
 
 DELETE_ID_V2 = "message_delete_button_v2:"
 
 logger = get_logger(__name__)
-
-
-def _check(user: disnake.abc.User, *, message_id: int, allowed_users: Sequence[int], allow_mods: bool = True) -> bool:
-    return user.id in allowed_users
-
-
-def reaction_check(
-    reaction: disnake.Reaction,
-    user: disnake.abc.User,
-    *,
-    message_id: int,
-    allowed_emoji: Sequence[str],
-    allowed_users: Sequence[int],
-) -> bool:
-    """
-    Check if a reaction's emoji and author are allowed and the message is `message_id`.
-
-    If the user is not allowed, remove the reaction. Ignore reactions made by the bot.
-    If `allow_mods` is True, allow users with moderator roles even if they're not in `allowed_users`.
-    """
-    right_reaction = user != bot.user and reaction.message.id == message_id and str(reaction.emoji) in allowed_emoji
-    if not right_reaction:
-        return False
-    res = _check(user, message_id=message_id, allowed_users=allowed_users)
-
-    if res:
-        logger.trace(f"Allowed reaction {reaction} by {user} on {reaction.message.id}.")
-    else:
-        logger.trace(f"Removing reaction {reaction} by {user} on {reaction.message.id}: disallowed user.")
-        bot.loop.create_task(
-            reaction.message.remove_reaction(reaction.emoji, user),
-            suppressed_exceptions=(disnake.HTTPException,),
-            name=f"remove_reaction-{reaction}-{reaction.message.id}-{user}",
-        )
-    return res
-
-
-def interaction_check(
-    inter: disnake.MessageInteraction,
-    *,
-    message_id: int,
-    allowed_component_ids: Sequence[str],
-    allowed_users: Sequence[int],
-) -> bool:
-    """Check an interaction, see reaction_check for more info."""
-    if inter.type != disnake.InteractionType.component:
-        return False
-    if inter.data.custom_id not in allowed_component_ids and inter.message.id != message_id:
-        return False
-    res = _check(inter.user, message_id=message_id, allowed_users=allowed_users)
-    return res
 
 
 def sub_clyde(username: Optional[str]) -> Optional[str]:

@@ -134,7 +134,7 @@ class CodeButtons(commands.Cog):
         if is_paste:
             return False, "This is already a paste link.", None
 
-        url = await send_to_paste_service(code, extension="python")
+        url = await send_to_paste_service(self.bot, code, extension="python")
 
         if provide_link:
             msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here: <{url}>"

@@ -2,7 +2,7 @@ from typing import Optional
 
 from aiohttp import ClientConnectorError
 
-from monty.bot import bot
+from monty.bot import Monty
 from monty.constants import URLs
 from monty.log import get_logger
 
@@ -14,7 +14,7 @@ FAILED_REQUEST_ATTEMPTS = 3
 PASTE_DISABLED = URLs.paste_service is None
 
 
-async def send_to_paste_service(contents: str, *, extension: str = "") -> Optional[str]:
+async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
     """
     Upload `contents` to the paste service.
 
