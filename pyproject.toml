@@ -26,6 +26,7 @@ lxml = "^4.6.4"
 Pillow = "^9.0.0"
 psutil = "^5.9.0"
 base65536 = "^0.1.1"
+statsd = "^3.3.0"
 
 
 [tool.poetry.dev-dependencies]

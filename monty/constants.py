@@ -12,6 +12,7 @@ __all__ = (
     "Colours",
     "Emojis",
     "Icons",
+    "Stats",
     "Tokens",
     "RedisConfig",
     "Wolfram",
@@ -27,6 +28,7 @@ log = logging.getLogger(__name__)
 class Client(NamedTuple):
 
     name = "Monty Python"
+    config_prefix = "monty-python"
     version = environ.get("GIT_SHA", "development")
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
@@ -173,6 +175,12 @@ class Paste:
     raw_paste_endpoint: str = environ.get("PASTE_SERVICE_RAW", "")
 
 
+class Stats(NamedTuple):
+    host = environ.get("STATS_HOST", "localhost")
+    port = int(environ.get("STATS_PORT", 8125))
+    prefix = Client.config_prefix
+
+
 class Tokens(NamedTuple):
     github = environ.get("GITHUB_TOKEN")
 
@@ -182,6 +190,7 @@ class RedisConfig(NamedTuple):
     port = environ.get("REDIS_PORT", 6379)
     password = environ.get("REDIS_PASSWORD")
     use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
+    prefix = Client.config_prefix
 
 
 class Wolfram(NamedTuple):

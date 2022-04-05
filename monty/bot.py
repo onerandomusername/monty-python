@@ -13,6 +13,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.config import Database
+from monty.statsd import AsyncStatsClient
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -54,11 +55,17 @@ class Monty(commands.Bot):
         self.db = Database()
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
+        self.stats: AsyncStatsClient = None
         self.invite_permissions = constants.Client.invite_permissions
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
         self.start_time = arrow.utcnow()
+        self.stats = AsyncStatsClient(
+            host=constants.Stats.host,
+            port=constants.Stats.port,
+            prefix=constants.Stats.prefix,
+        )
         return await super().login(token)
 
     async def close(self) -> None:
