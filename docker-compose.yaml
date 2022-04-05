@@ -31,6 +31,3 @@ services:
       - REDIS_PORT=6379
     env_file:
       - .env
-
-    volumes:
-      - .:/bot
