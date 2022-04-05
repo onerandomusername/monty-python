@@ -8,7 +8,7 @@ services:
     << : *restart_policy
     image: redis:latest
     ports:
-      - "127.0.0.1:6381:6379"
+      - "127.0.0.1:6379:6379"
 
   monty-python:
     << : *restart_policy
