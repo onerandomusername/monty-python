@@ -557,6 +557,10 @@ class DocCog(commands.Cog):
         log.trace(f"Building embed for symbol `{symbol_name}`")
         if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
+            if inter:
+                await inter.response.defer()
+                # cheeky way to not defer again
+                inter = None
             await self.refresh_event.wait()
         # Ensure a refresh can't run in case of a context switch until the with block is exited
         with self.symbol_get_event:
