@@ -92,10 +92,13 @@ class Snekbox(Cog):
         self.bot = bot
         self.jobs = {}
 
-    async def post_eval(self, code: str) -> dict:
+    async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = URLs.snekbox_eval_api
         data = {"input": code}
+
+        if args is not None:
+            data["args"] = args
         try:
             async with self.bot.http_session.post(
                 url,
@@ -105,7 +108,7 @@ class Snekbox(Cog):
                 timeout=10,
             ) as resp:
                 return await resp.json()
-        except aiohttp.ClientError:
+        except (aiohttp.ClientError, asyncio.TimeoutError):
             raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
 
     async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
