@@ -105,7 +105,7 @@ class Snekbox(Cog):
                 timeout=10,
             ) as resp:
                 return await resp.json()
-        except aiohttp.ClientConnectorError:
+        except aiohttp.ClientError:
             raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
 
     async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
