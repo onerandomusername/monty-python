@@ -165,7 +165,7 @@ class Icons:
 
 class URLs:
     paste_service = environ.get("PASTE_SERVICE")
-    snekbox_eval_api = environ.get("SNEKBOX_EVAL_URL")
+    snekbox_api = environ.get("SNEKBOX_URL")
     snekbox_auth = environ.get("SNEKBOX_AUTH")
     black_formatter = environ.get("BLACK_API")
     black_playground = environ.get("BLACK_PLAYGROUND", "https://black.vercel.app/")

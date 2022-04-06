@@ -8,6 +8,7 @@ from signal import Signals
 from typing import Any, Optional, Tuple, overload
 
 import aiohttp
+import yarl
 from disnake import (
     CommandInteraction,
     HTTPException,
@@ -85,6 +86,16 @@ class EvalModal(Modal):
         await self.snekbox.send_eval(inter, inter.text_values["code"], original_source=True)
 
 
+def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+    """Return True if the edited message is the context message and the content was indeed modified."""
+    return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
+
+
+def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
+    """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
+    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
+
+
 class Snekbox(Cog):
     """Safe evaluation of Python code using Snekbox."""
 
@@ -94,7 +105,7 @@ class Snekbox(Cog):
 
     async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
-        url = URLs.snekbox_eval_api
+        url = yarl.URL(URLs.snekbox_api) / "eval"
         data = {"input": code}
 
         if args is not None:
@@ -426,16 +437,6 @@ class Snekbox(Cog):
         if not code:
             return
         await self.send_eval(message, code, return_result=False)
-
-
-def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
-    """Return True if the edited message is the context message and the content was indeed modified."""
-    return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
-
-
-def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
-    """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
-    return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
 
 def setup(bot: Bot) -> None:
