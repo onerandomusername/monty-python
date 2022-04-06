@@ -27,9 +27,9 @@ class InternalLogger(commands.Cog):
             spl = ctx.message.content
         spl = spl.split("\n")
         if command is None:
-            command = ctx.command
-        qualname = command.qualified_name.replace(" ", ".")
-        self.bot.stats.incr("prefix_command.start." + qualname)
+            command: commands.Command = ctx.command
+        qualname = command.qualified_name.replace(".", "_")
+        self.bot.stats.incr("prefix_commands." + qualname + ".uses")
         logger.info(
             "command {command!s} {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
                 author=ctx.author,
@@ -50,8 +50,8 @@ class InternalLogger(commands.Cog):
         """Log a successful command completion."""
         logger.info(f"command by {ctx.author} has completed!")
 
-        qualname = ctx.command.qualified_name.replace(" ", ".")
-        self.bot.stats.incr("prefix_command.completion." + qualname)
+        qualname = ctx.command.qualified_name.replace(".", "_")
+        self.bot.stats.incr("prefix_commands." + qualname + ".completion")
 
     @commands.Cog.listener()
     async def on_slash_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
@@ -61,8 +61,8 @@ class InternalLogger(commands.Cog):
         # todo: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
             return
-        qualname = inter.application_command.qualified_name.replace(" ", ".")
-        self.bot.stats.incr("slash_command.start." + qualname)
+        qualname = inter.application_command.qualified_name.replace(".", "_")
+        self.bot.stats.incr("slash_commands." + qualname + ".uses")
 
         logger.info(
             "Slash command `{command!s}` by {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
@@ -76,8 +76,8 @@ class InternalLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log slash command completion."""
-        qualname = inter.application_command.qualified_name.replace(" ", ".")
-        self.bot.stats.incr("slash_command.completion." + qualname)
+        qualname = inter.application_command.qualified_name.replace(".", "_")
+        self.bot.stats.incr("slash_commands." + qualname + ".completion")
         logger.info(f"slash command by {inter.author} has completed!")
 
 
