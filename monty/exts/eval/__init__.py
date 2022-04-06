@@ -19,7 +19,7 @@ from disnake import (
     TextInputStyle,
     User,
 )
-from disnake.ext.commands import Cog, Context, command, guild_only, slash_command
+from disnake.ext import commands
 from disnake.ui import Modal
 
 from monty.bot import Bot
@@ -86,17 +86,17 @@ class EvalModal(Modal):
         await self.snekbox.send_eval(inter, inter.text_values["code"], original_source=True)
 
 
-def predicate_eval_message_edit(ctx: Context, old_msg: Message, new_msg: Message) -> bool:
+def predicate_eval_message_edit(ctx: commands.Context, old_msg: Message, new_msg: Message) -> bool:
     """Return True if the edited message is the context message and the content was indeed modified."""
     return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
 
 
-def predicate_eval_emoji_reaction(ctx: Context, reaction: Reaction, user: User) -> bool:
+def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: Reaction, user: User) -> bool:
     """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
 
-class Snekbox(Cog):
+class Snekbox(commands.Cog):
     """Safe evaluation of Python code using Snekbox."""
 
     def __init__(self, bot: Bot):
@@ -258,27 +258,27 @@ class Snekbox(Cog):
 
     @overload
     async def send_eval(
-        self, ctx: Context, code: str, return_result: bool = True, original_source: bool = False
+        self, ctx: commands.Context, code: str, return_result: bool = True, original_source: bool = False
     ) -> tuple[str, Optional[str]]:
         """Send eval and receive a tuple of the msg and paste link."""
         pass
 
     @overload
     async def send_eval(
-        self, ctx: Context, code: str, return_result: bool = False, original_source: bool = False
+        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
     ) -> Message:
         """Return the bot response from an eval invocation."""
         pass
 
     async def send_eval(
-        self, ctx: Context, code: str, return_result: bool = False, original_source: bool = False
+        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
     ) -> Any:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
         Return the bot response.
         """
-        if isinstance(ctx, Context):
+        if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
         results = await self.post_eval(code)
         msg, error = self.get_results_message(results)
@@ -312,7 +312,7 @@ class Snekbox(Cog):
 
         return response
 
-    async def continue_eval(self, ctx: Context, response: Message) -> Optional[str]:
+    async def continue_eval(self, ctx: commands.Context, response: Message) -> Optional[str]:
         """
         Check if the eval session should continue.
 
@@ -367,7 +367,7 @@ class Snekbox(Cog):
 
         return code
 
-    @slash_command(name="eval")
+    @commands.slash_command(name="eval")
     async def slash_eval(self, inter: CommandInteraction, code: Optional[str] = None) -> None:
         """
         Evaluate python code.
@@ -384,9 +384,9 @@ class Snekbox(Cog):
 
             await inter.response.send_modal(EvalModal(self))
 
-    @command(name="eval", aliases=("e",))
-    @guild_only()
-    async def eval_command(self, ctx: Context, *, code: str = None) -> None:
+    @commands.command(name="eval", aliases=("e",))
+    @commands.guild_only()
+    async def eval_command(self, ctx: commands.Context, *, code: str = None) -> None:
         """
         Run Python code and get the results.
 
@@ -415,7 +415,7 @@ class Snekbox(Cog):
             finally:
                 del self.jobs[ctx.author.id]
 
-            if not isinstance(ctx, Context):
+            if not isinstance(ctx, commands.Context):
                 return
 
             code = await self.continue_eval(ctx, response)
@@ -423,7 +423,7 @@ class Snekbox(Cog):
                 break
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
-    @Cog.listener()
+    @commands.Cog.listener()
     async def on_message(self, message: Message) -> None:
         """Evaluate code in the message automatically."""
         if not message.guild:
