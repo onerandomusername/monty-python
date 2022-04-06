@@ -817,6 +817,7 @@ class DocCog(commands.Cog):
         # if no results
         if not results:
             await inter.response.send_message(f"No documentation results found for `{query}`.", ephemeral=True)
+            return
         # construct embed
         results = {key: val for key, val in sorted(results.items(), key=lambda x: x[0])}
 
