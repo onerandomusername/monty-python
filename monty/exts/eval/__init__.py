@@ -8,6 +8,7 @@ from signal import Signals
 from typing import Any, Optional, Tuple, overload
 
 import aiohttp
+import disnake
 import yarl
 from disnake import (
     CommandInteraction,
@@ -32,6 +33,8 @@ from monty.utils.services import send_to_paste_service
 
 
 log = get_logger(__name__)
+
+# copied from pypi cog for snek management
 
 INLINE_EVAL_REGEX = re.compile(r"\$(?P<fence>`+)(.+)(?P=fence)")
 
@@ -101,11 +104,12 @@ class Snekbox(commands.Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.url = yarl.URL(URLs.snekbox_api)
         self.jobs = {}
 
     async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
-        url = yarl.URL(URLs.snekbox_api) / "eval"
+        url = self.url / "eval"
         data = {"input": code}
 
         if args is not None:
@@ -437,6 +441,94 @@ class Snekbox(commands.Cog):
         if not code:
             return
         await self.send_eval(message, code, return_result=False)
+
+    @commands.group("snekbox", aliases=("snek",))
+    @commands.is_owner()
+    async def manage_snekbox(self, ctx: commands.Context) -> None:
+        """Commands for managing the snekbox instance."""
+        pass
+
+    @manage_snekbox.group("packages", aliases=("pack", "packs", "p"), invoke_without_command=True)
+    async def manage_snekbox_packages(self, ctx: commands.Context) -> None:
+        """Manage the packages installed on snekbox."""
+        await self.list_snekbox_packages(ctx)
+
+    @manage_snekbox_packages.command(name="list", aliases=("l",))
+    async def list_snekbox_packages(self, ctx: commands.Context) -> None:
+        """List all packages on snekbox."""
+        try:
+            async with self.bot.http_session.get(self.url / "packages", headers=HEADERS, raise_for_status=True) as resp:
+                json = await resp.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+
+        embed = disnake.Embed(title="Installed packages")
+        embed.description = ""
+        for item in sorted(json["packages"], key=lambda x: x["name"]):
+            # iterable of dicts
+            embed.description += f"**{item['name']}**: {item['version']}\n"
+        embed.timestamp = disnake.utils.utcnow()
+        await ctx.reply(
+            embed=embed,
+            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            fail_if_not_exists=False,
+        )
+
+    @manage_snekbox_packages.command(name="add", aliases=("install", "a"))
+    async def install_snekbox_packages(self, ctx: commands.Context, *packages: str) -> None:
+        """Install the specified packages to snekbox."""
+        json = {"packages": packages}
+        async with ctx.typing():
+            try:
+                async with self.bot.http_session.post(
+                    self.url / "packages", headers=HEADERS, json=json, raise_for_status=True
+                ) as resp:
+                    pass
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+        await ctx.reply(
+            f"[{resp.status}] Installed the packages.",
+            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            fail_if_not_exists=False,
+        )
+
+    @manage_snekbox_packages.command(name="remove", aliases=("delete", "uninstall", "r", "d", "del"))
+    async def uninstall_snekbox_package(self, ctx: commands.Context, *packages: str) -> None:
+        """Uninstall the provided package from snekbox."""
+        async with ctx.typing():
+            for package in packages:
+                try:
+                    async with self.bot.http_session.delete(
+                        self.url / "packages" / package, headers=HEADERS, raise_for_status=True
+                    ) as resp:
+                        pass
+                except (aiohttp.ClientError, asyncio.TimeoutError):
+                    raise APIError("snekbox", 0, "Request errored.")
+        await ctx.reply(
+            f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
+            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            fail_if_not_exists=False,
+        )
+
+    @manage_snekbox_packages.command(name="view", aliases=("info", "show"))
+    async def view_snekbox_package(self, ctx: commands.Context, package: str) -> None:
+        """View more specific details about a single package installed on snekbox."""
+        try:
+            async with self.bot.http_session.get(
+                self.url / "packages" / package, headers=HEADERS, raise_for_status=True
+            ) as resp:
+                data = await resp.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+        embed = disnake.Embed(title=f"{data['version']} -- {data['name']}")
+        if url := data.get("home-page"):
+            embed.url = url
+        embed.description = data.get("summary", "")[:600]
+        await ctx.reply(
+            embed=embed,
+            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            fail_if_not_exists=False,
+        )
 
 
 def setup(bot: Bot) -> None:
