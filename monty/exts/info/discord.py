@@ -132,11 +132,12 @@ class Discord(commands.Cog):
             client_id = inter.bot.user.id
 
         if permissions is not None:
-            permissions = disnake.Permissions(permissions)
+            perms = disnake.Permissions(permissions)
         elif client_id == inter.bot.user.id:
-            permissions = self.bot.invite_permissions
+            perms = self.bot.invite_permissions
         else:
-            permissions = disnake.Permissions().all()
+            perms = disnake.Permissions(1644971949567)
+            perms.stream = False
 
         if guild is not None:
             try:
@@ -160,7 +161,7 @@ class Discord(commands.Cog):
         scopes = ("bot", "applications.commands") if include_applications_commands else ("bot",)
         url = disnake.utils.oauth_url(
             client_id,
-            permissions=permissions,
+            permissions=perms,
             guild=guild,
             scopes=scopes,
         )
