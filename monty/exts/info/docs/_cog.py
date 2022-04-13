@@ -511,9 +511,7 @@ class DocCog(commands.Cog):
 
         return symbol_name, doc_item
 
-    async def get_symbol_markdown(
-        self, doc_item: DocItem, inter: Optional[disnake.ApplicationCommandInteraction] = None
-    ) -> str:
+    async def get_symbol_markdown(self, doc_item: DocItem) -> str:
         """
         Get the Markdown from the symbol `doc_item` refers to.
 
@@ -523,9 +521,6 @@ class DocCog(commands.Cog):
         markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
-            if inter:
-                log.debug("Deferring interaction since contents are not cached.")
-                await inter.response.defer()
             log.debug(f"Redis cache miss with {doc_item}.")
             try:
                 markdown = await self.item_fetcher.get_markdown(doc_item)
@@ -545,7 +540,6 @@ class DocCog(commands.Cog):
     async def create_symbol_embed(
         self,
         symbol_name: str,
-        inter: Optional[disnake.ApplicationCommandInteraction] = None,
     ) -> Optional[tuple[disnake.Embed, DocItem]]:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
@@ -557,10 +551,6 @@ class DocCog(commands.Cog):
         log.trace(f"Building embed for symbol `{symbol_name}`")
         if not self.refresh_event.is_set():
             log.debug("Waiting for inventories to be refreshed before processing item.")
-            if inter:
-                await inter.response.defer()
-                # cheeky way to not defer again
-                inter = None
             await self.refresh_event.wait()
         # Ensure a refresh can't run in case of a context switch until the with block is exited
         with self.symbol_get_event:
@@ -580,7 +570,7 @@ class DocCog(commands.Cog):
             embed = disnake.Embed(
                 title=disnake.utils.escape_markdown(symbol_name),
                 url=f"{doc_item.url}#{doc_item.symbol_id}",
-                description=await self.get_symbol_markdown(doc_item, inter=inter),
+                description=await self.get_symbol_markdown(doc_item),
             )
             embed.set_footer(text=footer_text)
             return embed, doc_item
@@ -634,6 +624,9 @@ class DocCog(commands.Cog):
         threshold: commands.Range[0, 100] = 60,
         scorer: Any = None,
     ) -> None:
+        def maybe_defer(inter: disnake.Interaction) -> None:
+            if not inter.response.is_done():
+                self.bot.loop.create_task(inter.response.defer())
 
         if not search:
             inventory_embed = disnake.Embed(
@@ -666,9 +659,10 @@ class DocCog(commands.Cog):
             res = None
             if not no_match:
                 if isinstance(inter, disnake.Interaction):
-                    res = await self.create_symbol_embed(sym, inter)
+                    self.bot.loop.call_later(2.5, maybe_defer, inter)
                 else:
-                    res = await self.create_symbol_embed(sym)
+                    await inter.trigger_typing()
+                res = await self.create_symbol_embed(sym)
             if return_embed:
                 return res[0] if res else None
 
