@@ -659,7 +659,7 @@ class DocCog(commands.Cog):
             res = None
             if not no_match:
                 if isinstance(inter, disnake.Interaction):
-                    self.bot.loop.call_later(2.5, maybe_defer, inter)
+                    self.bot.loop.call_later(2, maybe_defer, inter)
                 else:
                     await inter.trigger_typing()
                 res = await self.create_symbol_embed(sym)
