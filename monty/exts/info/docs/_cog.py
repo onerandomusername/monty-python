@@ -660,8 +660,10 @@ class DocCog(commands.Cog):
             if not no_match:
                 if isinstance(inter, disnake.Interaction):
                     self.bot.loop.call_later(2, maybe_defer, inter)
-                else:
+                elif hasattr(inter, "trigger_typing"):
                     await inter.trigger_typing()
+                elif isinstance(inter, disnake.Message):
+                    await inter.channel.trigger_typing()
                 res = await self.create_symbol_embed(sym)
             if return_embed:
                 return res[0] if res else None
