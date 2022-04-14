@@ -17,7 +17,7 @@ from monty.utils.messages import DeleteView
 class BotSource(commands.Cog):
     """Displays information about the bot's source code."""
 
-    @commands.command(name="source", aliases=("src",))
+    @commands.command(name="source", aliases=["src"])
     async def source_command(
         self,
         ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],
@@ -25,7 +25,6 @@ class BotSource(commands.Cog):
         source_item: SourceConverter = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command or cog."""
-
         async def send_message(embed: disnake.Embed, components: list = None) -> None:
             if isinstance(ctx, commands.Context):
                 view = DeleteView(ctx.author, initial_message=ctx.message)
@@ -59,7 +58,12 @@ class BotSource(commands.Cog):
 
     @commands.slash_command(name="source")
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
-        """Get the source of my commands and cogs."""
+        """Get the source of my commands and cogs.
+        
+        Parameters
+        ----------
+        item: The command or cog to display the source code of.
+        """
         if item is not None:
             try:
                 item = await SourceConverter().convert(inter, item)
