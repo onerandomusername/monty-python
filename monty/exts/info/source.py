@@ -17,7 +17,7 @@ from monty.utils.messages import DeleteView
 class BotSource(commands.Cog):
     """Displays information about the bot's source code."""
 
-    @commands.command(name="source", aliases=["src"])
+    @commands.command(name="source", aliases=("src", ))
     async def source_command(
         self,
         ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],

@@ -74,7 +74,7 @@ class Meta(commands.Cog):
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
-        """About monty."""
+        """About Monty."""
         e = disnake.Embed(
             title="About",
             description=ABOUT,
@@ -109,7 +109,7 @@ class Meta(commands.Cog):
         raw_link: bool = False,
         ephemeral: bool = True,
     ) -> None:
-        """Generate an invite link to invite monty.
+        """Generate an invite link to invite Monty.
         
         Parameters
         ----------
