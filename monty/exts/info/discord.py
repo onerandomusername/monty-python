@@ -143,8 +143,13 @@ class Discord(commands.Cog):
         elif client_id == inter.bot.user.id:
             perms = self.bot.invite_permissions
         else:
-            perms = disnake.Permissions(1644971949567)
+            perms = disnake.Permissions.all()
+            # discord doesn't allow bots to request these permissions
             perms.stream = False
+            perms.view_guild_insights = False
+            perms.use_slash_commands = False
+            perms.request_to_speak = False
+            perms.start_embedded_activities = False
 
         if guild is not None:
             guild = disnake.Object(guild)

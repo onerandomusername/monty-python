@@ -56,7 +56,18 @@ class Monty(commands.Bot):
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
         self.stats: AsyncStatsClient = None
-        self.invite_permissions = constants.Client.invite_permissions
+        self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
+        self.loop.create_task(self.get_self_invite_perms())
+
+    async def get_self_invite_perms(self) -> disnake.Permissions:
+        """Sets the internal invite_permissions and fetches them."""
+        await self.wait_until_first_connect()
+        app_info = await self.application_info()
+        if app_info.install_params:
+            self.invite_permissions = app_info.install_params.permissions
+        else:
+            self.invite_permissions = constants.Client.invite_permissions
+        return self.invite_permissions
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""

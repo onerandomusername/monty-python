@@ -40,17 +40,21 @@ class Client(NamedTuple):
     }
     support_server = "mPscM4FjWB"
     invite_permissions = disnake.Permissions(
-        view_audit_log=True,
-        read_messages=True,
+        view_channel=True,
         send_messages=True,
         send_messages_in_threads=True,
         manage_messages=True,
+        manage_threads=True,
         embed_links=True,
         attach_files=True,
         read_message_history=True,
         add_reactions=True,
         use_external_emojis=True,
-        use_external_stickers=True,
+        # these are enabled for future features, but not currently used
+        change_nickname=True,
+        create_public_threads=True,
+        create_private_threads=True,
+        view_audit_log=True,
     )
 
 
