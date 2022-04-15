@@ -119,7 +119,7 @@ class Meta(commands.Cog):
         raw_link: Whether to return the raw invite link.
         ephemeral: Whether to send the invite link as an ephemeral message.
         """
-        invite_command = self.bot.get_slash_command("discord").children["api"].children["app-invite"]
+        invite_command = self.bot.get_slash_command("discord").children["app-invite"]
         await invite_command(
             inter,
             client_id=self.bot.user.id,

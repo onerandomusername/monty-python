@@ -112,7 +112,7 @@ class Discord(commands.Cog):
 
         await inter.send(embed=embed, ephemeral=ephemeral)
 
-    @api.sub_command(name="app-invite")
+    @discord.sub_command(name="app-invite")
     async def app_invite(
         self,
         inter: disnake.AppCmdInter,
