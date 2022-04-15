@@ -118,7 +118,7 @@ class Discord(commands.Cog):
         inter: disnake.AppCmdInter,
         client_id: LargeInt,
         permissions: Range[0, disnake.Permissions.all().value] = None,
-        guild: str = None,
+        guild: LargeInt = None,
         include_applications_commands: bool = True,
         raw_link: bool = False,
         ephemeral: bool = True,
@@ -147,11 +147,7 @@ class Discord(commands.Cog):
             perms.stream = False
 
         if guild is not None:
-            try:
-                guild = disnake.Object(guild)
-            except TypeError:
-                await inter.response.send_message("Guild ID must be an integer.", ephemeral=True)
-                return
+            guild = disnake.Object(guild)
         else:
             guild = disnake.utils.MISSING
 
