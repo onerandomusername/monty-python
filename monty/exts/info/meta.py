@@ -109,8 +109,9 @@ class Meta(commands.Cog):
         raw_link: bool = False,
         ephemeral: bool = True,
     ) -> None:
-        """Generate an invite link to invite Monty.
-        
+        """
+        Generate an invite link to invite Monty.
+
         Parameters
         ----------
         permissions: The permissions to grant the invite link.
@@ -166,8 +167,9 @@ class Meta(commands.Cog):
 
     @monty.sub_command()
     async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = True) -> None:
-        """Get a link to the support server.
-        
+        """
+        Get a link to the support server.
+
         Parameters
         ----------
         ephemeral: Whether to send the invite link as an ephemeral message.

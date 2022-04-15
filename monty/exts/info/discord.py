@@ -50,8 +50,9 @@ class Discord(commands.Cog):
 
     @api.sub_command(name="app-info")
     async def info_bot(self, inter: disnake.CommandInteraction, client_id: LargeInt, ephemeral: bool = True) -> None:
-        """[DEV] Get information on an bot from its ID. May not work with all bots.
-        
+        """
+        [DEV] Get information on an bot from its ID. May not work with all bots.
+
         Parameters
         ----------
         client_id: The ID of the bot.
@@ -201,8 +202,9 @@ class Discord(commands.Cog):
         ephemeral: bool = True,
         with_features: bool = False,
     ) -> None:
-        """Get information on a guild from an invite.
-        
+        """
+        Get information on a guild from an invite.
+
         Parameters
         ----------
         invite: The invite to get information on.

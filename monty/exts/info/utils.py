@@ -27,8 +27,9 @@ class Utils(Cog):
 
     @commands.slash_command(name="char-info")
     async def charinfo(self, ctx: disnake.ApplicationCommandInteraction, characters: str) -> None:
-        """Shows you information on up to 50 unicode characters.
-        
+        """
+        Shows you information on up to 50 unicode characters.
+
         Parameters
         ----------
         characters: The characters to display information on.
