@@ -190,7 +190,7 @@ class PyPi(commands.Cog):
         Parameters
         ----------
         query: What to search.
-        max_results
+        max_results: Max number of results to show.
         """
         await inter.response.defer()
 

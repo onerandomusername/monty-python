@@ -74,7 +74,7 @@ class Meta(commands.Cog):
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
-        """About monty."""
+        """About Monty."""
         e = disnake.Embed(
             title="About",
             description=ABOUT,
@@ -109,7 +109,16 @@ class Meta(commands.Cog):
         raw_link: bool = False,
         ephemeral: bool = True,
     ) -> None:
-        """Generate an invite link to invite monty."""
+        """
+        Generate an invite link to invite Monty.
+
+        Parameters
+        ----------
+        permissions: The permissions to grant the invite link.
+        guild: The guild to invite the bot to.
+        raw_link: Whether to return the raw invite link.
+        ephemeral: Whether to send the invite link as an ephemeral message.
+        """
         invite_command = self.bot.get_slash_command("discord").children["api"].children["app-invite"]
         await invite_command(
             inter,
@@ -158,7 +167,13 @@ class Meta(commands.Cog):
 
     @monty.sub_command()
     async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = True) -> None:
-        """Get a link to the support server."""
+        """
+        Get a link to the support server.
+
+        Parameters
+        ----------
+        ephemeral: Whether to send the invite link as an ephemeral message.
+        """
         await inter.send(
             "If you find yourself in need of support, please join the support server: "
             "https://discord.gg/{invite}".format(invite=Client.support_server),

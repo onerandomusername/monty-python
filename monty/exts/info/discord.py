@@ -50,7 +50,14 @@ class Discord(commands.Cog):
 
     @api.sub_command(name="app-info")
     async def info_bot(self, inter: disnake.CommandInteraction, client_id: LargeInt, ephemeral: bool = True) -> None:
-        """[DEV] Get information on an bot from its ID. May not work with all bots."""
+        """
+        [DEV] Get information on an bot from its ID. May not work with all bots.
+
+        Parameters
+        ----------
+        client_id: The ID of the bot.
+        ephemeral: Whether to send the bot info as an ephemeral message.
+        """
         # attempt to do a precursory check on the client_id
         user = self.bot.get_user(client_id)
         if not user:
@@ -195,7 +202,15 @@ class Discord(commands.Cog):
         ephemeral: bool = True,
         with_features: bool = False,
     ) -> None:
-        """Get information on a guild from an invite."""
+        """
+        Get information on a guild from an invite.
+
+        Parameters
+        ----------
+        invite: The invite to get information on.
+        ephemeral: Whether or not to send an ephemeral response.
+        with_features: Whether or not to include the features of the guild.
+        """
         if not invite.guild:
             await inter.send("Group dm invites are not supported.", ephemeral=True)
             return
