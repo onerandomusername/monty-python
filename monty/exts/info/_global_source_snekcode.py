@@ -154,7 +154,7 @@ if __name__ == "__main__":
             sys.exit(7)
         # print(metadata.keys())
         version = metadata["Version"]
-        for url in [metadata.get("Home-page"), *metadata.json["project_url"]]:
+        for url in [metadata.get("Home-page"), *metadata.json.get("project_url", [])]:
             url = url.split(",", 1)[-1].strip()
             if url.startswith(("https://github.com/", "http://github.com/")):
                 break
