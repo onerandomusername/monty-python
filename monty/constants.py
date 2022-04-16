@@ -29,7 +29,7 @@ class Client(NamedTuple):
 
     name = "Monty Python"
     config_prefix = "monty-python"
-    version = environ.get("GIT_SHA", "develop")[:7]
+    version = environ.get("GIT_SHA", "main")[:7]
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"

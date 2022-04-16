@@ -21,7 +21,7 @@ RUN pip uninstall poetry -y
 RUN pip install -r requirements.txt
 
 # Set SHA build argument
-ARG git_sha="develop"
+ARG git_sha="main"
 ENV GIT_SHA=$git_sha
 
 # Copy the source code in next to last to optimize rebuilding the image
