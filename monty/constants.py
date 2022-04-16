@@ -29,7 +29,7 @@ class Client(NamedTuple):
 
     name = "Monty Python"
     config_prefix = "monty-python"
-    version = environ.get("GIT_SHA", "development")
+    version = environ.get("GIT_SHA", "develop")[:7]
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
@@ -211,8 +211,6 @@ class Source:
 class RedirectOutput:
     delete_delay: int = 10
 
-
-GIT_SHA = environ.get("GIT_SHA", "foobar")
 
 # Bot replies
 ERROR_REPLIES = [
