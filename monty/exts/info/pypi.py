@@ -60,19 +60,54 @@ class PyPi(commands.Cog):
                 return await response.json()
             return None
 
+    def make_pypi_embed(self, package: str, json: dict, *, with_description: bool = False) -> disnake.Embed:
+        """Create an embed for a package."""
+        embed = disnake.Embed()
+        embed.set_thumbnail(url=PYPI_ICON)
+
+        info = json["info"]
+
+        embed.title = f"{info['name']} v{info['version']}"
+
+        embed.url = info["package_url"]
+
+        try:
+            release_info = json["releases"][info["version"]]
+            embed.set_footer(text="Last updated")
+            embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
+                tzinfo=datetime.timezone.utc
+            )
+        except KeyError:
+            pass
+
+        embed.colour = next(PYPI_COLOURS)
+
+        summary = escape_markdown(info["summary"])
+
+        # Summary could be completely empty, or just whitespace.
+        if summary and not summary.isspace():
+            embed.description = summary
+        else:
+            embed.description = "*No summary provided.*"
+
+        return embed
+
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Useful commands for info about packages on pypi."""
         pass
 
     @pypi.sub_command(name="package")
-    async def pypi_package(self, inter: disnake.ApplicationCommandInteraction, package: str) -> None:
+    async def pypi_package(
+        self, inter: disnake.ApplicationCommandInteraction, package: str, with_description: bool = False
+    ) -> None:
         """
         Provide information about a specific package from PyPI.
 
         Parameters
         ----------
         package: The package on pypi to get information about.
+        with_description: Whether or not to show the full description.
         """
         embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
         embed.set_thumbnail(url=PYPI_ICON)
@@ -85,44 +120,19 @@ class PyPi(commands.Cog):
         else:
             response_json = await self.fetch_package(package)
             if response_json:
-
-                info = response_json["info"]
-
-                embed.title = f"{info['name']} v{info['version']}"
-
-                embed.url = info["package_url"]
-
-                try:
-                    release_info = response_json["releases"][info["version"]]
-                    embed.set_footer(text="Last updated")
-                    embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
-                        tzinfo=datetime.timezone.utc
-                    )
-                except KeyError:
-                    pass
-
-                embed.colour = next(PYPI_COLOURS)
-
-                summary = escape_markdown(info["summary"])
-
-                # Summary could be completely empty, or just whitespace.
-                if summary and not summary.isspace():
-                    embed.description = summary
-                else:
-                    embed.description = "No summary provided."
-
+                embed = self.make_pypi_embed(package, response_json, with_description=with_description)
                 error = False
             else:
                 embed.description = "Package could not be found."
 
         if error:
             await inter.send(embed=embed, ephemeral=True)
+            return
 
-        else:
-            view = DeleteView(inter.author)
-            if embed.url:
-                view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
-            await inter.send(embed=embed, view=view)
+        view = DeleteView(inter.author)
+        if embed.url:
+            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
+        await inter.send(embed=embed, view=view)
 
     def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
