@@ -20,7 +20,9 @@ from monty.utils.messages import DeleteView
 
 
 BASE_PYPI_URL = "https://pypi.org"
-URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
+JSON_URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
+SEARCH_URL = f"{BASE_PYPI_URL}/search"
+
 PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
 
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
@@ -56,7 +58,7 @@ class PyPi(commands.Cog):
 
     async def fetch_package(self, package: str) -> Optional[str]:
         """Fetch a package from pypi."""
-        async with self.bot.http_session.get(URL.format(package=package)) as response:
+        async with self.bot.http_session.get(JSON_URL.format(package=package)) as response:
             if response.status == 200 and response.content_type == "application/json":
                 return await response.json()
             return None
@@ -173,7 +175,7 @@ class PyPi(commands.Cog):
 
             params = {"q": query}
 
-            async with self.bot.http_session.get(f"{BASE_PYPI_URL}/search", params=params) as resp:
+            async with self.bot.http_session.get(SEARCH_URL, params=params) as resp:
                 txt = await resp.text()
 
             packages = await self.parse_pypi_search(txt)
