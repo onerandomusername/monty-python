@@ -16,10 +16,13 @@ from disnake.utils import escape_markdown
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
+from monty.utils.html_parsing import _get_truncated_description
+from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteView
 
 
 BASE_PYPI_URL = "https://pypi.org"
+HTML_URL = f"{BASE_PYPI_URL}/project/{{package}}"
 JSON_URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
 SEARCH_URL = f"{BASE_PYPI_URL}/search"
 
@@ -63,7 +66,29 @@ class PyPi(commands.Cog):
                 return await response.json()
             return None
 
-    def make_pypi_embed(self, package: str, json: dict, *, with_description: bool = False) -> disnake.Embed:
+    async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
+        """Fetch a description parsed into markdown from pypi."""
+        url = HTML_URL.format(package=package)
+        async with self.bot.http_session.get(url) as response:
+            if response.status != 200:
+                return None
+            html = await response.text()
+        # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
+        # parse_only=bs4.SoupStrainer("a", class_="package-snippet")
+        bs_partial = functools.partial(
+            bs4.BeautifulSoup, parse_only=bs4.SoupStrainer(name="div", attrs={"class": "project-description"})
+        )
+        parsed = await self.bot.loop.run_in_executor(None, bs_partial, html, "lxml")
+        text = _get_truncated_description(
+            parsed.find("div", attrs={"class": "project-description"}),
+            DocMarkdownConverter(page_url=url),
+            max_length=max_length,
+            max_lines=14,
+        )
+        text = "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
+        return text
+
+    async def make_pypi_embed(self, package: str, json: dict, *, with_description: bool = False) -> disnake.Embed:
         """Create an embed for a package."""
         embed = disnake.Embed()
         embed.set_thumbnail(url=PYPI_ICON)
@@ -92,6 +117,16 @@ class PyPi(commands.Cog):
             embed.description = summary
         else:
             embed.description = "*No summary provided.*"
+
+        if with_description and (description := info["description"]):
+            if description != "UNKNOWN":
+                # there's likely a description here, so we're going to fetch the html project page,
+                # and parse the html to get the rendered description
+                # this means that we don't have to parse the rst or markdown or whatever is the
+                # project's description content type
+                description = await self.fetch_description(package)
+                if description:
+                    embed.description += "\n\n" + description
 
         return embed
 
@@ -123,7 +158,7 @@ class PyPi(commands.Cog):
         else:
             response_json = await self.fetch_package(package)
             if response_json:
-                embed = self.make_pypi_embed(package, response_json, with_description=with_description)
+                embed = await self.make_pypi_embed(package, response_json, with_description=with_description)
                 error = False
             else:
                 embed.description = "Package could not be found."
