@@ -204,7 +204,7 @@ class PyPi(commands.Cog):
         """
         await inter.response.defer()
 
-        current_time = datetime.datetime.utcnow()
+        current_time = datetime.datetime.now()
         packages, query_url = await self.fetch_pypi_search(query)
 
         embed = disnake.Embed(description="", title=f"PYPI Package Search: {query}")
