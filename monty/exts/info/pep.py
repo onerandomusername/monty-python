@@ -36,6 +36,11 @@ class HeaderParser:
         for dt in dl.find_all("dt"):
             results[dt.text] = dt.find_next_sibling("dd").text
 
+        # readd title to headers
+        # this was removed from the headers in python/peps#2532
+        h1 = soup.find("h1", attrs={"class": "page-title"})
+        results["Title"] = h1.text.split("-", 1)[-1]
+
         return results
 
 
