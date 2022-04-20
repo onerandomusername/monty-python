@@ -83,7 +83,7 @@ class PyPi(commands.Cog):
             parsed.find("div", attrs={"class": "project-description"}),
             DocMarkdownConverter(page_url=url),
             max_length=max_length,
-            max_lines=14,
+            max_lines=21,
         )
         text = "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
         return text
