@@ -22,6 +22,10 @@ class DocMarkdownConverter(MarkdownConverter):
         """Process the text, using our custom regex."""
         return escape(WHITESPACE_RE.sub(" ", text or ""), self.options["escape_underscores"])
 
+    def convert_img(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+        """Remove images from the parsed contents, we don't want them."""
+        return ""
+
     def convert_li(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
         parent = el.parent
