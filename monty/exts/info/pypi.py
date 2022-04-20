@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import functools
 import itertools
 import logging
 import random
@@ -134,11 +135,13 @@ class PyPi(commands.Cog):
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
         await inter.send(embed=embed, view=view)
 
-    def parse_pypi_search(self, content: str) -> list[Package]:
+    async def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
         results = []
         log.debug("Beginning to parse with bs4")
-        parsed = bs4.BeautifulSoup(content, "lxml", parse_only=bs4.SoupStrainer("a", class_="package-snippet"))
+        # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
+        bs_partial = functools.partial(bs4.BeautifulSoup, parse_only=bs4.SoupStrainer("a", class_="package-snippet"))
+        parsed = await self.bot.loop.run_in_executor(None, bs_partial, content, "lxml")
         log.debug("Finished parsing.")
         log.info(f"len of parse {len(parsed)}")
         # with open
@@ -173,7 +176,7 @@ class PyPi(commands.Cog):
             async with self.bot.http_session.get(f"{BASE_PYPI_URL}/search", params=params) as resp:
                 txt = await resp.text()
 
-            packages = self.parse_pypi_search(txt)
+            packages = await self.parse_pypi_search(txt)
 
             if len(self.searches) > MAX_CACHE:
                 self.searches.popitem()
