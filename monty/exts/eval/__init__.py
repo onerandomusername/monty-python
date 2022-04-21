@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import datetime
 import re
 import textwrap
@@ -10,16 +9,7 @@ from typing import Any, Optional, Tuple, overload
 import aiohttp
 import disnake
 import yarl
-from disnake import (
-    CommandInteraction,
-    HTTPException,
-    Message,
-    ModalInteraction,
-    NotFound,
-    Reaction,
-    TextInputStyle,
-    User,
-)
+from disnake import CommandInteraction, Message, ModalInteraction, NotFound, Reaction, TextInputStyle, User
 from disnake.ext import commands
 from disnake.ui import Modal
 
@@ -334,10 +324,20 @@ class Snekbox(commands.Cog):
             await self.bot.wait_for("reaction_add", check=_predicate_emoji_reaction, timeout=30)
 
             code = await self.get_code(new_message)
-            added_reaction = False
-            await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
-            with contextlib.suppress(HTTPException):
+            try:
                 await response.delete()
+            except disnake.NotFound:
+                pass
+            # if we have permissions, delete the user's reaction
+            if ctx.channel.permissions_for(ctx.me).manage_messages:
+                try:
+                    await ctx.message.clear_reaction(REEVAL_EMOJI)
+                except disnake.Forbidden:
+                    # delete our own reaction
+                    await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
+            else:
+                await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
+            added_reaction = False
 
         except asyncio.TimeoutError:
             if added_reaction:
