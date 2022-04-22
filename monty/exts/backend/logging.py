@@ -56,7 +56,7 @@ class InternalLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_slash_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log the start of a slash command."""
-        spl = str({opt.name: opt.value for opt in inter.data.options}).replace("\n", " ")
+        spl = str(inter.filled_options).replace("\n", " ")
         spl = spl.split("\n")
         # todo: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
