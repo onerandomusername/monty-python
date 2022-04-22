@@ -25,6 +25,7 @@ if __name__ == "__main__":
     import pkgutil
     import sys
     import tracemalloc
+    import types
 
     # establish the object itself
     object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
@@ -49,6 +50,8 @@ if __name__ == "__main__":
     try:
         filename = inspect.getsourcefile(src)
     except TypeError:
+        if isinstance(src, types.BuiltinFunctionType):
+            sys.exit(6)
         # if we have to use tracemalloc we have a bit of a problem
         # the code is dynamically created
         # this means that we need to establish the file, where the def starts, and where it ends
@@ -136,7 +139,6 @@ if __name__ == "__main__":
     # get the version and link to the source of the module
     if top_module_name in sys.stdlib_module_names:
         if top_module_name in sys.builtin_module_names:
-            print(object_name)
             sys.exit(6)
         # handle the object being part of the stdlib
         import platform

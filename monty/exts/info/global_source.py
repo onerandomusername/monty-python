@@ -58,7 +58,7 @@ class GlobalSource(commands.Cog):
         # 8: unsupported package (does not use github)
         # 9: module found but cannot find class definition
 
-        text = result["stdout"]
+        text = result["stdout"].strip()
         if self.refresh_code.is_running():
             logger.debug(text)
         returncode = result["returncode"]
@@ -71,7 +71,6 @@ class GlobalSource(commands.Cog):
             logger.exception(result["stdout"])
             raise Exception("Snekbox returned an error.")
         elif returncode == 2:
-            # module not resolvable
             text = "The module you provided was not resolvable to an installed module."
         elif returncode == 3:
             text = "The attribute you are looking for does not exist. Check for misspellings and try again."
@@ -81,7 +80,7 @@ class GlobalSource(commands.Cog):
             text = "That object exists, but is dynamically created."
         elif returncode == 6:
             text = (
-                "`{text}` is a builtin object or implemented in C. "
+                f"`{object}` is a builtin object/implemented in C. "
                 "It is not currently possible to get source of those objects."
             )
         elif returncode == 7:
