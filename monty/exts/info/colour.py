@@ -29,7 +29,7 @@ class Colour(commands.Cog):
             del self.colour_mapping["_"]  # Delete source credit entry
 
     async def send_colour_response(
-        self, ctx: Union[commands.Context, disnake.AppCmdInter], rgb: tuple[int, int, int], input_colour: str
+        self, ctx: Union[commands.Context, disnake.CommandInteraction], rgb: tuple[int, int, int], input_colour: str
     ) -> None:
         """Create and send embed from user given colour information."""
         name = self._rgb_to_name(rgb)
@@ -38,29 +38,30 @@ class Colour(commands.Cog):
         except (IndexError, AttributeError):
             colour_or_color = "colour"
 
-        if isinstance(ctx, disnake.AppCmdInter):
+        if isinstance(ctx, disnake.CommandInteraction):
             colour_mode = ctx.application_command.name
+            kwargs = ctx.filled_options
         else:
             colour_mode = ctx.invoked_with
+            kwargs = ctx.kwargs
 
         if colour_mode == "random":
             colour_mode = colour_or_color
             input_colour = name
-        # elif colour_mode in ("colour", "color"):
-        #     input_colour = ctx.kwargs["colour_input"]
-        # elif colour_mode == "name":
-        #     input_colour = ctx.kwargs["user_colour_name"]
+        elif colour_mode in ("colour", "color"):
+            input_colour = kwargs["colour_input"]
+        elif colour_mode == "name":
+            input_colour = kwargs["name"]
         elif colour_mode == "hex":
-            input_colour = input_colour[2:][0]
             if len(input_colour) > 7:
-                input_colour = input_colour[0:-2]
-        # else:
-        #     input_colour = tuple(ctx.args[2:])
-
-        if colour_mode not in ("name", "hex", "random", "color", "colour"):
-            colour_mode = colour_mode.upper()
+                input_colour = input_colour[:-2]
         else:
+            input_colour = str(rgb)
+
+        if colour_mode in ("name", "hex", "random", "color", "colour"):
             colour_mode = colour_mode.title()
+        else:
+            colour_mode = colour_mode.upper()
 
         colour_embed = disnake.Embed(
             title=f"{name or input_colour}",
@@ -103,7 +104,7 @@ class Colour(commands.Cog):
             await invoke_help_command(ctx)
 
     @commands.slash_command(name="colour")
-    async def slash_colour(self, inter: disnake.AppCmdInter) -> None:
+    async def slash_colour(self, inter: disnake.CommandInteraction) -> None:
         """Show information about a colour."""
         pass
 
@@ -120,7 +121,7 @@ class Colour(commands.Cog):
     @slash_colour.sub_command(name="rgb")
     async def slash_rgb(
         self,
-        inter: disnake.AppCmdInter,
+        inter: disnake.CommandInteraction,
         red: commands.Range[0, 255],
         green: commands.Range[0, 255],
         blue: commands.Range[0, 255],
@@ -152,7 +153,7 @@ class Colour(commands.Cog):
     @slash_colour.sub_command(name="hsv")
     async def slash_hsv(
         self,
-        inter: disnake.AppCmdInter,
+        inter: disnake.CommandInteraction,
         hue: commands.Range[0, 360],
         sat: commands.Range[0, 360],
         value: commands.Range[0, 100],
@@ -185,7 +186,7 @@ class Colour(commands.Cog):
     @slash_colour.sub_command(name="hsl")
     async def slash_hsl(
         self,
-        inter: disnake.AppCmdInter,
+        inter: disnake.CommandInteraction,
         hue: commands.Range[0, 360],
         sat: commands.Range[0, 360],
         lightness: commands.Range[0, 100],
@@ -218,7 +219,7 @@ class Colour(commands.Cog):
     @slash_colour.sub_command(name="cymk")
     async def slash_cymk(
         self,
-        inter: disnake.AppCmdInter,
+        inter: disnake.CommandInteraction,
         cyan: commands.Range[0, 100],
         magenta: commands.Range[0, 100],
         yellow: commands.Range[0, 100],
@@ -254,7 +255,7 @@ class Colour(commands.Cog):
         await self.send_colour_response(ctx, hex_tuple, input_colour=hex_code)
 
     @slash_colour.sub_command(name="hex")
-    async def slash_hex(self, inter: disnake.AppCmdInter, hex: str) -> None:
+    async def slash_hex(self, inter: disnake.CommandInteraction, hex: str) -> None:
         """
         HEX Format.
 
@@ -268,22 +269,22 @@ class Colour(commands.Cog):
             await inter.send(str(e), ephemeral=True)
 
     @colour.command()
-    async def name(self, ctx: commands.Context, *, user_colour_name: str) -> None:
+    async def name(self, ctx: commands.Context, *, name: str) -> None:
         """Create an embed from a name input."""
-        hex_colour = self.match_colour_name(ctx, user_colour_name)
+        hex_colour = self.match_colour_name(ctx, name)
         if hex_colour is None:
             name_error_embed = disnake.Embed(
                 title="No colour match found.",
-                description=f"No colour found for: `{user_colour_name}`",
+                description=f"No colour found for: `{name}`",
                 colour=disnake.Color.dark_red(),
             )
             await ctx.send(embed=name_error_embed)
             return
         hex_tuple = ImageColor.getrgb(hex_colour)
-        await self.send_colour_response(ctx, hex_tuple, input_colour=user_colour_name)
+        await self.send_colour_response(ctx, hex_tuple, input_colour=name)
 
     @slash_colour.sub_command(name="name")
-    async def slash_name(self, inter: disnake.AppCmdInter, name: str) -> None:
+    async def slash_name(self, inter: disnake.CommandInteraction, name: str) -> None:
         """
         Get a colour by name.
 
@@ -301,7 +302,7 @@ class Colour(commands.Cog):
         await self.send_colour_response(ctx, hex_tuple, input_colour=None)
 
     @slash_colour.sub_command(name="random")
-    async def slash_random(self, inter: disnake.AppCmdInter) -> None:
+    async def slash_random(self, inter: disnake.CommandInteraction) -> None:
         """Random colour."""
         await self.random(inter)
 
