@@ -705,7 +705,7 @@ class DocCog(commands.Cog):
 
         Parameters
         ----------
-        search: the object to view the docs
+        query: the object to view the docs
         """
         await self._docs_get_command(inter, query, maybe_start=False)
 
