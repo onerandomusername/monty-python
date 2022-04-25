@@ -6,7 +6,6 @@ from typing import Optional, Union
 
 import disnake
 from disnake.ext import commands
-from disnake.ui import View
 
 from monty.bot import Bot
 from monty.constants import ERROR_REPLIES, Colours, Icons
@@ -241,8 +240,8 @@ class Bookmark(commands.Cog):
             return
         custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
 
-        def remove_button(message: disnake.Message) -> View:
-            view = View.from_message(message)
+        def remove_button(message: disnake.Message) -> disnake.ui.View:
+            view = disnake.ui.View.from_message(message)
             for child in view.children:
                 if (getattr(child, "custom_id", "") or "").startswith(CUSTOM_ID):
                     view.remove_item(child)

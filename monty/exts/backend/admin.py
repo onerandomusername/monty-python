@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Optional, Tuple, Union
 import arrow
 import disnake
 from disnake.ext import commands
-from disnake.ext.commands import Context
 
 from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteView
@@ -71,8 +70,6 @@ def create_file_obj(
 
 
 if TYPE_CHECKING:
-    from disnake import Message
-
     from monty.bot import Bot
 
 
@@ -110,7 +107,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
 
         return content
 
-    async def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: commands.Context) -> bool:
         """Cog-wide check if the user can run these commands."""
         if await self.bot.is_owner(ctx.author):
             return True
@@ -292,7 +289,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
             await msg.edit(content=":ok_hand:", view=None)
 
     @commands.command(pass_context=True, hidden=True)
-    async def repl(self, ctx: Context) -> None:
+    async def repl(self, ctx: commands.Context) -> None:
         """Launches an interactive REPL session."""
         variables = {
             "ctx": ctx,
@@ -311,7 +308,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         self.sessions.add(ctx.channel.id)
         await ctx.send("Enter code to execute or evaluate. `exit()` or `quit` to exit.")
 
-        def check(m: Message) -> bool:
+        def check(m: disnake.Message) -> bool:
             return m.author.id == ctx.author.id and m.channel.id == ctx.channel.id and m.content.startswith("`")
 
         return await self._repl(ctx, variables, check)
@@ -336,7 +333,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
                 stop = True
         return executor, code, stop
 
-    async def _repl(self, ctx: Context, variables: dict, check: t.Any) -> None:
+    async def _repl(self, ctx: commands.Context, variables: dict, check: t.Any) -> None:
         while True:
             try:
                 response = await self.bot.wait_for("message", check=check, timeout=10.0 * 60.0)
@@ -387,7 +384,7 @@ class Admin(commands.Cog, command_attrs={"hidden": True}):
         self.bot.socket_events[event_type] += 1
 
     @commands.command(aliases=("gw",))
-    async def gateway(self, ctx: Context) -> None:
+    async def gateway(self, ctx: commands.Context) -> None:
         """Sends current stats from the gateway."""
         embed = disnake.Embed(title="Gateway Events")
 

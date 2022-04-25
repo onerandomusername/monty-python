@@ -2,7 +2,6 @@ import logging
 
 import disnake
 from disnake.ext import commands
-from disnake.ui import View
 
 from monty.bot import Monty
 from monty.utils.messages import DELETE_ID_V2
@@ -75,7 +74,7 @@ class DeleteManager(commands.Cog):
         if inter.component.custom_id != VIEW_DELETE_ID_V1:
             return
 
-        view = View.from_message(inter.message)
+        view = disnake.ui.View.from_message(inter.message)
         # get the button from the view
         for comp in view.children:
             if VIEW_DELETE_ID_V1 == getattr(comp, "custom_id", None):

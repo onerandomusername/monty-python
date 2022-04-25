@@ -6,8 +6,7 @@ from urllib.parse import quote_plus
 
 import disnake
 from aiohttp import ClientResponseError
-from disnake.ext.commands import Cog
-from disnake.ui import View
+from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Bot
@@ -46,9 +45,9 @@ BITBUCKET_RE = re.compile(
 BLACKLIST = []
 
 
-class CodeSnippets(Cog):
+class CodeSnippets(commands.Cog):
     """
-    Cog that parses and sends code snippets to disnake.
+    commands.Cog that parses and sends code snippets to disnake.
 
     Matches each message against a regex and prints the contents of all matched snippets.
     """
@@ -229,7 +228,7 @@ class CodeSnippets(Cog):
         # Sorts the list of snippets by their match index and joins them into a single message
         return "\n".join(map(lambda x: x[1], sorted(all_snippets)))
 
-    @Cog.listener()
+    @commands.Cog.listener()
     async def on_message(self, message: disnake.Message) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if message.author.bot:
@@ -257,7 +256,7 @@ class CodeSnippets(Cog):
             view = DeleteView(message.author)
             await destination.send(message_to_send, view=view)
 
-    @Cog.listener("on_button_click")
+    @commands.Cog.listener("on_button_click")
     async def send_expanded_links(self, inter: disnake.MessageInteraction) -> None:
         """
         Send expanded links.
@@ -271,8 +270,8 @@ class CodeSnippets(Cog):
         link = decode_github_link(custom_id)
         snippet = await self._parse_snippets(link)
 
-        def disable_button() -> View:
-            view = View.from_message(inter.message)
+        def disable_button() -> disnake.ui.View:
+            view = disnake.ui.View.from_message(inter.message)
             for comp in view.children:
                 if custom_id in (getattr(comp, "custom_id", None) or ""):
                     comp.disabled = True

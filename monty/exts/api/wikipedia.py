@@ -4,7 +4,7 @@ from datetime import datetime
 from html import unescape
 from typing import List
 
-from disnake import Color, Embed, TextChannel
+import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -37,7 +37,7 @@ class WikipediaSearch(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def wiki_request(self, channel: TextChannel, search: str) -> List[str]:
+    async def wiki_request(self, channel: disnake.TextChannel, search: str) -> List[str]:
         """Search wikipedia search string and return formatted first 10 pages found."""
         params = WIKI_PARAMS | {"srlimit": 10, "srsearch": search}
         async with self.bot.http_session.get(url=SEARCH_API, params=params) as resp:
@@ -71,7 +71,7 @@ class WikipediaSearch(commands.Cog):
         contents = await self.wiki_request(ctx.channel, search)
 
         if contents:
-            embed = Embed(title="Wikipedia Search Results", colour=Color.blurple())
+            embed = disnake.Embed(title="Wikipedia Search Results", colour=disnake.Color.blurple())
             embed.set_thumbnail(url=WIKI_THUMBNAIL)
             embed.timestamp = datetime.utcnow()
             await LinePaginator.paginate(contents, ctx, embed)

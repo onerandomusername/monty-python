@@ -4,7 +4,7 @@ import string
 from typing import List, Optional
 
 import disnake
-from disnake.ext.commands import BadArgument, Context
+from disnake.ext import commands
 
 from monty.utils.pagination import LinePaginator
 
@@ -19,7 +19,7 @@ __all__ = [
 
 
 async def disambiguate(
-    ctx: Context,
+    ctx: commands.Context,
     entries: List[str],
     *,
     timeout: float = 30,
@@ -32,11 +32,11 @@ async def disambiguate(
 
     Disambiguation will be canceled after `timeout` seconds.
 
-    This will raise a BadArgument if entries is empty, if the disambiguation event times out,
+    This will raise a commands.BadArgument if entries is empty, if the disambiguation event times out,
     or if the user makes an invalid choice.
     """
     if len(entries) == 0:
-        raise BadArgument("No matches found.")
+        raise commands.BadArgument("No matches found.")
 
     if len(entries) == 1:
         return entries[0]
@@ -72,7 +72,7 @@ async def disambiguate(
         if result is None:
             for coro in pending:
                 coro.cancel()
-            raise BadArgument("Canceled.")
+            raise commands.BadArgument("Canceled.")
 
         # Pagination was not initiated, only one page
         if result.author == ctx.bot.user:
@@ -83,7 +83,7 @@ async def disambiguate(
         for coro in pending:
             coro.cancel()
     except asyncio.TimeoutError:
-        raise BadArgument("Timed out.")
+        raise commands.BadArgument("Timed out.")
 
     # Guaranteed to not error because of isdecimal() in check
     index = int(result.content)
@@ -91,7 +91,7 @@ async def disambiguate(
     try:
         return entries[index - 1]
     except IndexError:
-        raise BadArgument("Invalid choice.")
+        raise commands.BadArgument("Invalid choice.")
 
 
 def replace_many(

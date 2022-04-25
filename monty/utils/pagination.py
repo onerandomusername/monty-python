@@ -3,10 +3,7 @@ import logging
 from typing import Iterable, List, Optional, Tuple
 
 import disnake
-from disnake import Embed, Member, Reaction
-from disnake.abc import User
-from disnake.embeds import EmptyEmbed
-from disnake.ext.commands import Context, Paginator
+from disnake.ext import commands
 
 from monty.constants import Emojis
 
@@ -32,7 +29,7 @@ class EmptyPaginatorEmbedError(Exception):
     """Base Exception class for an empty paginator embed."""
 
 
-class LinePaginator(Paginator):
+class LinePaginator(commands.Paginator):
     """A class that aids in paginating code blocks for Discord messages."""
 
     def __init__(
@@ -101,15 +98,15 @@ class LinePaginator(Paginator):
     async def paginate(
         cls,
         lines: Iterable[str],
-        ctx: Context,
-        embed: Embed,
+        ctx: commands.Context,
+        embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
         max_lines: Optional[int] = None,
         max_size: int = 500,
         empty: bool = True,
         linesep: str = "\n",
-        restrict_to_user: User = None,
+        restrict_to_user: disnake.abc.User = None,
         timeout: int = 300,
         footer_text: str = None,
         url: str = None,
@@ -128,7 +125,7 @@ class LinePaginator(Paginator):
 
         If `empty` is True, an empty line will be placed between each given line.
 
-        >>> embed = Embed()
+        >>> embed = disnake.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
         >>> await LinePaginator.paginate(
         ...     (line for line in lines),
@@ -152,7 +149,7 @@ class LinePaginator(Paginator):
                 (
                     # name is not None
                     name is not None,
-                    # Reaction is one of the pagination emotes
+                    # disnake.Reaction is one of the pagination emotes
                     name in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
                     # User is allowed
                     user_valid,
@@ -309,7 +306,7 @@ class LinePaginator(Paginator):
         await message.edit(view=None)
 
 
-class ImagePaginator(Paginator):
+class ImagePaginator(commands.Paginator):
     """
     Helper class that paginates images for embeds in messages.
 
@@ -345,8 +342,8 @@ class ImagePaginator(Paginator):
     async def paginate(
         cls,
         pages: List[Tuple[str, str]],
-        ctx: Context,
-        embed: Embed,
+        ctx: commands.Context,
+        embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
         timeout: int = 300,
@@ -364,16 +361,16 @@ class ImagePaginator(Paginator):
         Note: Pagination will be removed automatically if no reaction is added for `timeout` seconds,
               defaulting to five minutes (300 seconds).
 
-        >>> embed = Embed()
+        >>> embed = disnake.Embed()
         >>> embed.set_author(name="Some Operation", url=url, icon_url=icon)
         >>> await ImagePaginator.paginate(pages, ctx, embed)
         """
 
-        def check_event(reaction_: Reaction, member: Member) -> bool:
+        def check_event(reaction_: disnake.Reaction, member: disnake.Member) -> bool:
             """Checks each reaction added, if it matches our conditions pass the wait_for."""
             return all(
                 (
-                    # Reaction is on the same message sent
+                    # disnake.Reaction is on the same message sent
                     reaction_.message.id == message.id,
                     # The reaction is part of the navigation menu
                     str(reaction_.emoji) in PAGINATION_EMOJI,  # Note: DELETE_EMOJI is a string and not unicode
@@ -468,7 +465,7 @@ class ImagePaginator(Paginator):
             # Magic happens here, after page and reaction_type is set
             embed.description = paginator.pages[current_page]
 
-            image = paginator.images[current_page] or EmptyEmbed
+            image = paginator.images[current_page] or disnake.Embed.Empty
             embed.set_image(url=image)
 
             embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")

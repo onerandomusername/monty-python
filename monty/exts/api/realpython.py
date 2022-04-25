@@ -2,7 +2,7 @@ import logging
 from html import unescape
 from urllib.parse import quote_plus
 
-from disnake import Embed
+import disnake
 from disnake.ext import commands
 
 from monty import bot
@@ -17,7 +17,7 @@ ARTICLE_URL = "https://realpython.com{article_url}"
 SEARCH_URL = "https://realpython.com/search?q={user_search}"
 
 
-ERROR_EMBED = Embed(
+ERROR_EMBED = disnake.Embed(
     title="Error while searching Real Python",
     description="There was an error while trying to reach Real Python. Please try again shortly.",
     color=Colours.soft_red,
@@ -46,11 +46,11 @@ class RealPython(commands.Cog):
         articles = data["results"]
 
         if len(articles) == 0:
-            no_articles = Embed(title=f"No articles found for '{user_search}'", color=Colours.soft_red)
+            no_articles = disnake.Embed(title=f"No articles found for '{user_search}'", color=Colours.soft_red)
             await ctx.send(embed=no_articles)
             return
 
-        article_embed = Embed(
+        article_embed = disnake.Embed(
             title="Search results - Real Python",
             url=SEARCH_URL.format(user_search=quote_plus(user_search)),
             description="Here are the top 5 results:",

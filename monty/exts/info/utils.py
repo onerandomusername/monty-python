@@ -6,10 +6,7 @@ import unicodedata
 from typing import Tuple
 
 import disnake
-from disnake import Colour, Embed, Object, utils
 from disnake.ext import commands
-from disnake.ext.commands import BadArgument, Cog, Context
-from disnake.utils import DISCORD_EPOCH
 
 from monty.bot import Bot
 from monty.utils.messages import DeleteView
@@ -19,7 +16,7 @@ from monty.utils.pagination import LinePaginator
 log = logging.getLogger(__name__)
 
 
-class Utils(Cog):
+class Utils(commands.Cog):
     """A selection of utilities which don't have a clear category."""
 
     def __init__(self, bot: Bot):
@@ -54,11 +51,11 @@ class Utils(Cog):
                 u_code = f"\\U{digit:>08}"
             url = f"https://www.compart.com/en/unicode/U+{digit:>04}"
             name = f"[{unicodedata.name(char, '')}]({url})"
-            info = f"`{u_code.ljust(10)}`: {name} - {utils.escape_markdown(char)}"
+            info = f"`{u_code.ljust(10)}`: {name} - {disnake.utils.escape_markdown(char)}"
             return (info, u_code)
 
         (char_list, raw_list) = zip(*(get_info(c) for c in characters))
-        embed = Embed().set_author(name="Character Info")
+        embed = disnake.Embed().set_author(name="Character Info")
 
         if len(characters) > 1:
             # Maximum length possible is 502 out of 1024, so there's no need to truncate.
@@ -67,15 +64,15 @@ class Utils(Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=("snf", "snfl", "sf"))
-    async def snowflake(self, ctx: Context, *snowflakes: Object) -> None:
+    async def snowflake(self, ctx: commands.Context, *snowflakes: disnake.Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
-            raise BadArgument("At least one snowflake must be provided.")
+            raise commands.BadArgument("At least one snowflake must be provided.")
 
         # clear any dup keys
         snowflakes = list(set(snowflakes))
 
-        embed = Embed(colour=Colour.blue())
+        embed = disnake.Embed(colour=disnake.Colour.blue())
         embed.set_author(
             name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
@@ -83,7 +80,7 @@ class Utils(Cog):
 
         lines = []
         for snowflake in snowflakes:
-            created_at = int(((snowflake.id >> 22) + DISCORD_EPOCH) / 1000)
+            created_at = int(((snowflake.id >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
             lines.append(f"**{snowflake.id}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
@@ -101,12 +98,12 @@ class Utils(Cog):
         ----------
         snowflake: The snowflake.
         """
-        embed = Embed(colour=Colour.blue())
+        embed = disnake.Embed(colour=disnake.Colour.blue())
         embed.set_author(
             name="Snowflake",
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
-        created_at = int(((snowflake >> 22) + DISCORD_EPOCH) / 1000)
+        created_at = int(((snowflake >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
         embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
         view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)

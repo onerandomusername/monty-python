@@ -3,7 +3,7 @@ import inspect
 import pkgutil
 from typing import TYPE_CHECKING, Generator, NewType, NoReturn, Tuple
 
-from disnake.ext.commands import Context
+from disnake.ext import commands
 
 from monty import exts
 from monty.log import get_logger
@@ -65,7 +65,7 @@ def walk_extensions() -> Generator[Tuple[ModuleName, "ExtMetadata"], None, None]
         yield module.name, ExtMetadata()
 
 
-async def invoke_help_command(ctx: Context) -> None:
+async def invoke_help_command(ctx: commands.Context) -> None:
     """Invoke the help command or default help command if help extensions is not loaded."""
     if "monty.exts.backend.help" in ctx.bot.extensions:
         help_command = ctx.bot.get_command("help")

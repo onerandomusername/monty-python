@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime, timedelta
 
-from disnake import Forbidden, http
+import disnake
+import disnake.http
 from disnake.ext import commands
 
 
@@ -50,7 +51,7 @@ def patch_typing() -> None:
     """
     log.debug("Patching send_typing, which should fix things breaking when discord disables typing events. Stay safe!")
 
-    original = http.HTTPClient.send_typing
+    original = disnake.http.HTTPClient.send_typing
     last_403 = None
 
     async def honeybadger_type(self, channel_id: int) -> None:  # noqa: ANN001
@@ -60,9 +61,9 @@ def patch_typing() -> None:
             return
         try:
             await original(self, channel_id)
-        except Forbidden:
+        except disnake.Forbidden:
             last_403 = datetime.utcnow()
             log.warning("Got a 403 from typing event!")
             pass
 
-    http.HTTPClient.send_typing = honeybadger_type
+    disnake.http.HTTPClient.send_typing = honeybadger_type

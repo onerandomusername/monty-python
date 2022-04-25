@@ -8,7 +8,6 @@ import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
 from bs4 import BeautifulSoup
-from disnake import Colour, Embed
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -93,7 +92,7 @@ class PythonEnhancementProposals(commands.Cog):
 
         log.trace("Got PEP URLs listing from Pep sphinx inventory")
 
-    async def validate_pep_number(self, pep_nr: int) -> Optional[Embed]:
+    async def validate_pep_number(self, pep_nr: int) -> Optional[disnake.Embed]:
         """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
         if (
             pep_nr not in self.peps
@@ -104,18 +103,18 @@ class PythonEnhancementProposals(commands.Cog):
 
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
-            return Embed(
+            return disnake.Embed(
                 title="PEP not found",
                 description=f"PEP {pep_nr} does not exist.",
-                colour=Colour.red(),
+                colour=disnake.Colour.red(),
             )
 
         return None
 
-    def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> Embed:
+    def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> disnake.Embed:
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed
-        pep_embed = Embed(
+        pep_embed = disnake.Embed(
             title=f"PEP {pep_nr} - {pep_header['Title']}",
             url=self.peps[pep_nr],
         )
@@ -150,7 +149,7 @@ class PythonEnhancementProposals(commands.Cog):
 
         return pep_header, soup
 
-    async def get_pep_embed(self, pep_nr: int) -> Tuple[Embed, bool]:
+    async def get_pep_embed(self, pep_nr: int) -> Tuple[disnake.Embed, bool]:
         """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
         url = self.peps[pep_nr]
 
@@ -159,10 +158,10 @@ class PythonEnhancementProposals(commands.Cog):
         except aiohttp.ClientResponseError as e:
             log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {e.status}.")
             return (
-                Embed(
+                disnake.Embed(
                     title="Unexpected error",
                     description="Unexpected HTTP error during PEP search. Please let us know.",
-                    colour=Colour.red(),
+                    colour=disnake.Colour.red(),
                 ),
                 False,
             )
@@ -190,7 +189,7 @@ class PythonEnhancementProposals(commands.Cog):
             await inter.send("No text found for that header.", ephemeral=True)
             return
 
-        embed = Embed(
+        embed = disnake.Embed(
             title=header,
             description=text,
             url=url,

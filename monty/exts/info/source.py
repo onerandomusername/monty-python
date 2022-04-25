@@ -4,7 +4,6 @@ from typing import Optional, Tuple, Union
 from urllib.parse import urldefrag
 
 import disnake
-from disnake import Embed
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -37,7 +36,7 @@ class BotSource(commands.Cog):
             return
 
         if not source_item:
-            embed = Embed(title=f"{Client.name}'s GitHub Repository")
+            embed = disnake.Embed(title=f"{Client.name}'s GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
             embed.set_thumbnail(url=Source.github_avatar_url)
             await send_message(embed)
@@ -121,7 +120,7 @@ class BotSource(commands.Cog):
 
         return url, file_location, first_line_no or None
 
-    def build_embed(self, source_object: SourceType) -> Optional[Tuple[Embed, str]]:
+    def build_embed(self, source_object: SourceType) -> Optional[Tuple[disnake.Embed, str]]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
@@ -147,7 +146,7 @@ class BotSource(commands.Cog):
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
 
-        embed = Embed(title=title, description=description)
+        embed = disnake.Embed(title=title, description=description)
         embed.set_thumbnail(url=Source.github_avatar_url)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({url})")
         line_text = f":{first_line}" if first_line else ""

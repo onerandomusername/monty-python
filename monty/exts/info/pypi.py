@@ -12,7 +12,6 @@ import bs4
 import disnake
 import yarl
 from disnake.ext import commands
-from disnake.utils import escape_markdown
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
@@ -110,7 +109,7 @@ class PyPi(commands.Cog):
 
         embed.colour = next(PYPI_COLOURS)
 
-        summary = escape_markdown(info["summary"])
+        summary = disnake.utils.escape_markdown(info["summary"])
 
         # Summary could be completely empty, or just whitespace.
         if summary and not summary.isspace():
@@ -153,7 +152,9 @@ class PyPi(commands.Cog):
         error = True
 
         if characters := self.check_characters(package):
-            embed.description = f"Illegal character(s) passed into command: '{escape_markdown(characters.group(0))}'"
+            embed.description = (
+                f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
+            )
 
         else:
             response_json = await self.fetch_package(package)

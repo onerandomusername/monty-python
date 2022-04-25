@@ -2,7 +2,7 @@ import logging
 from html import unescape
 from urllib.parse import quote_plus
 
-from disnake import Embed, HTTPException
+import disnake
 from disnake.ext import commands
 
 from monty import bot
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://api.stackexchange.com/2.2/search/advanced"
 SO_PARAMS = {"order": "desc", "sort": "activity", "site": "stackoverflow"}
 SEARCH_URL = "https://stackoverflow.com/search?q={query}"
-ERR_EMBED = Embed(
+ERR_EMBED = disnake.Embed(
     title="Error in fetching results from Stackoverflow",
     description=(
         "Sorry, there was en error while trying to fetch data from the Stackoverflow website. Please try again in some "
@@ -44,7 +44,7 @@ class Stackoverflow(commands.Cog):
                     await ctx.send(embed=ERR_EMBED)
                     return
             if not data["items"]:
-                no_search_result = Embed(
+                no_search_result = disnake.Embed(
                     title=f"No search results found for {search_query}",
                     color=Colours.soft_red,
                 )
@@ -53,7 +53,7 @@ class Stackoverflow(commands.Cog):
 
             top5 = data["items"][:5]
             encoded_search_query = quote_plus(search_query)
-            embed = Embed(
+            embed = disnake.Embed(
                 title="Search results - Stackoverflow",
                 url=SEARCH_URL.format(query=encoded_search_query),
                 description=f"Here are the top {len(top5)} results:",
@@ -75,8 +75,8 @@ class Stackoverflow(commands.Cog):
 
         try:
             await ctx.send(embed=embed)
-        except HTTPException:
-            search_query_too_long = Embed(
+        except disnake.HTTPException:
+            search_query_too_long = disnake.Embed(
                 title="Your search query is too long, please try shortening your search query",
                 color=Colours.soft_red,
             )

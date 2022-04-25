@@ -5,7 +5,6 @@ from urllib.parse import urlencode
 
 import arrow
 import disnake
-from disnake import Embed
 from disnake.ext import commands
 from disnake.ext.commands import BucketType, Cog, Context, check, group
 
@@ -39,7 +38,7 @@ async def send_embed(
     f: disnake.File = None,
 ) -> None:
     """Generate & send a response embed with Wolfram as the author."""
-    embed = Embed(colour=colour)
+    embed = disnake.Embed(colour=colour)
     embed.description = message_txt
     embed.set_author(name="Wolfram Alpha", icon_url=WOLF_IMAGE, url="https://www.wolframalpha.com/")
     if footer:
@@ -217,7 +216,7 @@ class Wolfram(Cog):
         if not pages:
             return
 
-        embed = Embed()
+        embed = disnake.Embed()
         embed.set_author(
             name="Wolfram Alpha",
             icon_url=WOLF_IMAGE,

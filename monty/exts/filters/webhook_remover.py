@@ -1,7 +1,7 @@
 import re
 
-from disnake import Message
-from disnake.ext.commands import Cog
+import disnake
+from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Guilds
@@ -25,13 +25,13 @@ WHITELIST = [Guilds.disnake, Guilds.nextcord, Guilds.testing]
 log = get_logger(__name__)
 
 
-class WebhookRemover(Cog):
+class WebhookRemover(commands.Cog):
     """Scan messages to detect Discord webhooks links."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def maybe_delete(self, msg: Message) -> bool:
+    async def maybe_delete(self, msg: disnake.Message) -> bool:
         """
         Maybe delete a message, if we have perms.
 
@@ -44,7 +44,7 @@ class WebhookRemover(Cog):
         await msg.delete()
         return True
 
-    async def delete_and_respond(self, msg: Message, redacted_url: str, *, webhook_deleted: bool) -> None:
+    async def delete_and_respond(self, msg: disnake.Message, redacted_url: str, *, webhook_deleted: bool) -> None:
         """Delete `msg` and send a warning that it contained the Discord webhook `redacted_url`."""
         # Don't log this, due internal delete, not by user. Will make different entry.
 
@@ -75,8 +75,8 @@ class WebhookRemover(Cog):
         #     channel_id=Channels.mod_alerts
         # )
 
-    @Cog.listener()
-    async def on_message(self, msg: Message) -> None:
+    @commands.Cog.listener()
+    async def on_message(self, msg: disnake.Message) -> None:
         """Check if a Discord webhook URL is in `message`."""
         # Ignore DMs; can't delete messages in there anyway.
         if not msg.guild or msg.author.bot:
@@ -91,8 +91,8 @@ class WebhookRemover(Cog):
                 deleted_successfully = resp.status == 204
             await self.delete_and_respond(msg, matches[1] + "xxx", webhook_deleted=deleted_successfully)
 
-    @Cog.listener()
-    async def on_message_edit(self, before: Message, after: Message) -> None:
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: disnake.Message, after: disnake.Message) -> None:
         """Check if a Discord webhook URL is in the edited message `after`."""
         if before.content == after.content:
             return

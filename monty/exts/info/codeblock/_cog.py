@@ -3,8 +3,7 @@ import time
 from typing import Optional
 
 import disnake
-from disnake import Message, RawMessageUpdateEvent
-from disnake.ext.commands import Cog
+from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Bot
@@ -26,7 +25,7 @@ WHITELISTED_GUILDS = [constants.Guilds.disnake, constants.Guilds.nextcord, const
 DELETE_PAUSE = 7
 
 
-class CodeBlockCog(Cog, name="Code Block"):
+class CodeBlockCog(commands.Cog, name="Code Block"):
     """
     Detect improperly formatted Markdown code blocks and suggest proper formatting.
 
@@ -79,7 +78,7 @@ class CodeBlockCog(Cog, name="Code Block"):
         """Return an embed which displays code block formatting `instructions`."""
         return disnake.Embed(description=instructions)
 
-    async def get_sent_instructions(self, payload: RawMessageUpdateEvent) -> Optional[Message]:
+    async def get_sent_instructions(self, payload: disnake.RawMessageUpdateEvent) -> Optional[disnake.Message]:
         """
         Return the bot's sent instructions message associated with a user's message `payload`.
 
@@ -150,8 +149,8 @@ class CodeBlockCog(Cog, name="Code Block"):
             and not WEBHOOK_URL_RE.search(message.content)
         )
 
-    @Cog.listener()
-    async def on_message(self, msg: Message) -> None:
+    @commands.Cog.listener()
+    async def on_message(self, msg: disnake.Message) -> None:
         """Detect incorrect Markdown code blocks in `msg` and send instructions to fix them."""
         # check for perms first
         if not msg.guild:
@@ -180,8 +179,8 @@ class CodeBlockCog(Cog, name="Code Block"):
                 log.debug(f"Adding #{msg.channel} to the channel cooldowns.")
                 self.channel_cooldowns[msg.channel.id] = time.time()
 
-    @Cog.listener()
-    async def on_raw_message_edit(self, payload: RawMessageUpdateEvent) -> None:
+    @commands.Cog.listener()
+    async def on_raw_message_edit(self, payload: disnake.RawMessageUpdateEvent) -> None:
         """Delete the instructional message if an edited message had its code blocks fixed."""
         if payload.message_id not in self.codeblock_message_ids:
             log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")

@@ -9,9 +9,7 @@ from typing import Any, Optional, Tuple, overload
 import aiohttp
 import disnake
 import yarl
-from disnake import CommandInteraction, Message, ModalInteraction, NotFound, Reaction, TextInputStyle, User
 from disnake.ext import commands
-from disnake.ui import Modal
 
 from monty.bot import Bot
 from monty.constants import URLs
@@ -64,27 +62,29 @@ print(choice(("single quotes", 'double quotes')))
 """.lstrip()
 
 
-class EvalModal(Modal):
+class EvalModal(disnake.ui.Modal):
     """Modal for evaluation."""
 
     def __init__(self, snekbox: "Snekbox", *, title: str = "Eval Code"):
         super().__init__(title=title, components=[])
         self.snekbox = snekbox
         self.custom_id = "snekbox_eval"
-        self.add_text_input(label="Code", custom_id="code", style=TextInputStyle.long, placeholder=PLACEHOLDER_CODE)
+        self.add_text_input(
+            label="Code", custom_id="code", style=disnake.TextInputStyle.long, placeholder=PLACEHOLDER_CODE
+        )
 
-    async def callback(self, inter: ModalInteraction) -> None:
+    async def callback(self, inter: disnake.ModalInteraction) -> None:
         """Evaluate the provided code."""
         await inter.response.defer()
         await self.snekbox.send_eval(inter, inter.text_values["code"], original_source=True)
 
 
-def predicate_eval_message_edit(ctx: commands.Context, old_msg: Message, new_msg: Message) -> bool:
+def predicate_eval_message_edit(ctx: commands.Context, old_msg: disnake.Message, new_msg: disnake.Message) -> bool:
     """Return True if the edited message is the context message and the content was indeed modified."""
     return new_msg.id == ctx.message.id and old_msg.content != new_msg.content
 
 
-def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: Reaction, user: User) -> bool:
+def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: disnake.Reaction, user: disnake.User) -> bool:
     """Return True if the reaction REEVAL_EMOJI was added by the context message author on this message."""
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
@@ -260,7 +260,7 @@ class Snekbox(commands.Cog):
     @overload
     async def send_eval(
         self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
-    ) -> Message:
+    ) -> disnake.Message:
         """Return the bot response from an eval invocation."""
         pass
 
@@ -306,7 +306,7 @@ class Snekbox(commands.Cog):
 
         return response
 
-    async def continue_eval(self, ctx: commands.Context, response: Message) -> Optional[str]:
+    async def continue_eval(self, ctx: commands.Context, response: disnake.Message) -> Optional[str]:
         """
         Check if the eval session should continue.
 
@@ -343,15 +343,15 @@ class Snekbox(commands.Cog):
             if added_reaction:
                 try:
                     await ctx.message.remove_reaction(REEVAL_EMOJI, ctx.me)
-                except NotFound:
+                except disnake.NotFound:
                     pass
             return None
-        except NotFound:
+        except disnake.NotFound:
             return None
         else:
             return code
 
-    async def get_code(self, message: Message) -> Optional[str]:
+    async def get_code(self, message: disnake.Message) -> Optional[str]:
         """
         Return the code from `message` to be evaluated.
 
@@ -362,17 +362,17 @@ class Snekbox(commands.Cog):
         new_ctx = await self.bot.get_context(message)
 
         if new_ctx.command is self.eval_command:
-            log.trace(f"Message {message.id} invokes eval command.")
+            log.trace(f"disnake.Message {message.id} invokes eval command.")
             split = message.content.split(maxsplit=1)
             code = split[1] if len(split) > 1 else None
         else:
-            log.trace(f"Message {message.id} does not invoke eval command.")
+            log.trace(f"disnake.Message {message.id} does not invoke eval command.")
             code = message.content
 
         return code
 
     @commands.slash_command(name="eval")
-    async def slash_eval(self, inter: CommandInteraction, code: Optional[str] = None) -> None:
+    async def slash_eval(self, inter: disnake.CommandInteraction, code: Optional[str] = None) -> None:
         """
         Evaluate python code.
 
@@ -428,7 +428,7 @@ class Snekbox(commands.Cog):
             log.info(f"Re-evaluating code from message {ctx.message.id}:\n{code}")
 
     @commands.Cog.listener()
-    async def on_message(self, message: Message) -> None:
+    async def on_message(self, message: disnake.Message) -> None:
         """Evaluate code in the message automatically."""
         if not message.guild:
             return

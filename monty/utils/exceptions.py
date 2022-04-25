@@ -1,9 +1,9 @@
 from typing import Optional
 
-from disnake.ext.commands import CommandError
+from disnake.ext import commands
 
 
-class APIError(CommandError):
+class APIError(commands.CommandError):
     """Raised when an external API (eg. Wikipedia) returns an error response."""
 
     def __init__(self, api: str, status_code: int, error_msg: Optional[str] = None):

@@ -1,7 +1,7 @@
 from copy import copy
 from time import perf_counter
 
-from disnake import Message
+import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -13,7 +13,7 @@ class TimedCommands(commands.Cog):
     @staticmethod
     async def create_execution_context(ctx: commands.Context, command: str) -> commands.Context:
         """Get a new execution context for a command."""
-        msg: Message = copy(ctx.message)
+        msg: disnake.Message = copy(ctx.message)
         msg.content = f"{ctx.prefix}{command}"
 
         return await ctx.bot.get_context(msg)

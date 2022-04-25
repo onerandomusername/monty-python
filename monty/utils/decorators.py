@@ -5,9 +5,8 @@ from asyncio import Lock
 from functools import wraps
 from weakref import WeakValueDictionary
 
-from disnake import Colour, Embed
+import disnake
 from disnake.ext import commands
-from disnake.ext.commands import CheckFailure, Context
 
 from monty.constants import ERROR_REPLIES
 
@@ -17,13 +16,13 @@ ONE_DAY = 24 * 60 * 60
 log = logging.getLogger(__name__)
 
 
-class InChannelCheckFailure(CheckFailure):
+class InChannelCheckFailure(commands.CheckFailure):
     """Check failure when the user runs a command in a non-whitelisted channel."""
 
     pass
 
 
-class InMonthCheckFailure(CheckFailure):
+class InMonthCheckFailure(commands.CheckFailure):
     """Check failure for when a command is invoked outside of its allowed month."""
 
     pass
@@ -32,7 +31,7 @@ class InMonthCheckFailure(CheckFailure):
 def with_role(*role_ids: int) -> t.Callable:
     """Check to see whether the invoking user has any of the roles specified in role_ids."""
 
-    async def predicate(ctx: Context) -> bool:
+    async def predicate(ctx: commands.Context) -> bool:
         if not ctx.guild:  # Return False in a DM
             log.debug(
                 f"{ctx.author} tried to use the '{ctx.command.name}'command from a DM. "
@@ -57,7 +56,7 @@ def with_role(*role_ids: int) -> t.Callable:
 def without_role(*role_ids: int) -> t.Callable:
     """Check whether the invoking user does not have all of the roles specified in role_ids."""
 
-    async def predicate(ctx: Context) -> bool:
+    async def predicate(ctx: commands.Context) -> bool:
         if not ctx.guild:  # Return False in a DM
             log.debug(
                 f"{ctx.author} tried to use the '{ctx.command.name}' command from a DM. "
@@ -89,11 +88,11 @@ def locked() -> t.Union[t.Callable, None]:
         func.__locks = WeakValueDictionary()
 
         @wraps(func)
-        async def inner(self: t.Callable, ctx: Context, *args, **kwargs) -> t.Union[t.Callable, None]:
+        async def inner(self: t.Callable, ctx: commands.Context, *args, **kwargs) -> t.Union[t.Callable, None]:
             lock = func.__locks.setdefault(ctx.author.id, Lock())
             if lock.locked():
-                embed = Embed()
-                embed.colour = Colour.red()
+                embed = disnake.Embed()
+                embed.colour = disnake.Colour.red()
 
                 log.debug("User tried to invoke a locked command.")
                 embed.description = (

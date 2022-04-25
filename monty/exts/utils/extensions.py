@@ -3,9 +3,8 @@ import logging
 import typing as t
 from enum import Enum
 
-from disnake import Colour, Embed
+import disnake
 from disnake.ext import commands
-from disnake.ext.commands import Context, group
 
 from monty import exts
 from monty.bot import Bot
@@ -41,17 +40,17 @@ class Extensions(commands.Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    @group(
+    @commands.group(
         name="extensions",
         aliases=("ext", "exts", "c", "cogs"),
         invoke_without_command=True,
     )
-    async def extensions_group(self, ctx: Context) -> None:
+    async def extensions_group(self, ctx: commands.Context) -> None:
         """Load, unload, reload, and list loaded extensions."""
         await invoke_help_command(ctx)
 
     @extensions_group.command(name="load", aliases=("l",))
-    async def load_command(self, ctx: Context, *extensions: Extension) -> None:
+    async def load_command(self, ctx: commands.Context, *extensions: Extension) -> None:
         r"""
         Load extensions given their fully qualified or unqualified names.
 
@@ -70,7 +69,7 @@ class Extensions(commands.Cog):
         await ctx.send(msg, view=view)
 
     @extensions_group.command(name="unload", aliases=("ul",))
-    async def unload_command(self, ctx: Context, *extensions: Extension) -> None:
+    async def unload_command(self, ctx: commands.Context, *extensions: Extension) -> None:
         r"""
         Unload currently loaded extensions given their fully qualified or unqualified names.
 
@@ -94,7 +93,7 @@ class Extensions(commands.Cog):
         await ctx.send(msg, view=view)
 
     @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
-    async def reload_command(self, ctx: Context, *extensions: Extension) -> None:
+    async def reload_command(self, ctx: commands.Context, *extensions: Extension) -> None:
         r"""
         Reload extensions given their fully qualified or unqualified names.
 
@@ -119,14 +118,14 @@ class Extensions(commands.Cog):
         await ctx.send(msg, view=view)
 
     @extensions_group.command(name="list", aliases=("all",))
-    async def list_command(self, ctx: Context) -> None:
+    async def list_command(self, ctx: commands.Context) -> None:
         """
         Get a list of all extensions, including their loaded status.
 
         Grey indicates that the extension is unloaded.
         Green indicates that the extension is currently loaded.
         """
-        embed = Embed(colour=Colour.blurple())
+        embed = disnake.Embed(colour=disnake.Colour.blurple())
         embed.set_author(
             name="Extensions List",
             url=Client.github_bot_repo,
@@ -223,12 +222,12 @@ class Extensions(commands.Cog):
         return msg, error_msg
 
     # This cannot be static (must have a __func__ attribute).
-    async def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: commands.Context) -> bool:
         """Only allow moderators and core developers to invoke the commands in this cog."""
         return await self.bot.is_owner(ctx.author)
 
     # This cannot be static (must have a __func__ attribute).
-    async def cog_command_error(self, ctx: Context, error: Exception) -> None:
+    async def cog_command_error(self, ctx: commands.Context, error: Exception) -> None:
         """Handle BadArgument errors locally to prevent the help command from showing."""
         if isinstance(error, commands.BadArgument):
             await ctx.send(str(error))

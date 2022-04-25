@@ -7,9 +7,6 @@ from typing import List, NamedTuple, Optional, Union
 
 import disnake
 from disnake.ext import commands
-from disnake.ext.commands import CheckFailure
-from disnake.ext.commands import Cog as DiscordCog
-from disnake.ext.commands import Command, Context
 from rapidfuzz import fuzz, process
 
 from monty import constants
@@ -38,7 +35,7 @@ class Cog(NamedTuple):
 
     name: str
     description: str
-    commands: List[Command]
+    commands: List[commands.Command]
 
 
 log = logging.getLogger(__name__)
@@ -83,7 +80,7 @@ class HelpSession:
 
     def __init__(
         self,
-        ctx: Context,
+        ctx: commands.Context,
         *command,
         cleanup: bool = False,
         only_can_run: bool = True,
@@ -119,7 +116,7 @@ class HelpSession:
         self._timeout_task = None
         self.reset_timeout()
 
-    def _get_query(self, query: str) -> Union[Command, Cog]:
+    def _get_query(self, query: str) -> Union[commands.Command, Cog]:
         """Attempts to match the provided query with a valid command or cog."""
         command = self._bot.get_command(query)
         if command:
@@ -229,7 +226,7 @@ class HelpSession:
 
         await self.update_page()
 
-    def _category_key(self, cmd: Command) -> str:
+    def _category_key(self, cmd: commands.Command) -> str:
         """
         Returns a cog name of a given command for use as a key for `sorted` and `groupby`.
 
@@ -246,7 +243,7 @@ class HelpSession:
         else:
             return "**\u200bNo Category:**"
 
-    def _get_command_params(self, cmd: Command) -> str:
+    def _get_command_params(self, cmd: commands.Command) -> str:
         """
         Returns the command usage signature.
 
@@ -341,7 +338,9 @@ class HelpSession:
         for category, cmds in grouped:
             await self._format_command_category(paginator, category, list(cmds))
 
-    async def _format_command_category(self, paginator: LinePaginator, category: str, cmds: List[Command]) -> None:
+    async def _format_command_category(
+        self, paginator: LinePaginator, category: str, cmds: List[commands.Command]
+    ) -> None:
         cmds = sorted(cmds, key=lambda c: c.name)
         cat_cmds = []
         for command in cmds:
@@ -371,7 +370,7 @@ class HelpSession:
 
             paginator.add_line(details)
 
-    async def _format_command(self, command: Command) -> List[str]:
+    async def _format_command(self, command: commands.Command) -> List[str]:
         # skip if hidden and hide if session is set to
         if command.hidden and not self._show_hidden:
             return []
@@ -381,7 +380,7 @@ class HelpSession:
         # the mean time.
         try:
             can_run = await command.can_run(self._ctx)
-        except CheckFailure:
+        except commands.CheckFailure:
             can_run = False
 
         # see if the user can run the command
@@ -440,7 +439,7 @@ class HelpSession:
             del self.inter
 
     @classmethod
-    async def start(cls, ctx: Context, *command, **options) -> "HelpSession":
+    async def start(cls, ctx: commands.Context, *command, **options) -> "HelpSession":
         """
         Create and begin a help session based on the given command context.
 
@@ -510,11 +509,11 @@ class HelpSession:
         await self.message.delete()
 
 
-class Help(DiscordCog):
+class Help(commands.Cog):
     """Custom disnake.Embed Pagination Help feature."""
 
     @commands.command("help")
-    async def new_help(self, ctx: Context, *commands) -> None:
+    async def new_help(self, ctx: commands.Context, *commands) -> None:
         """Shows Command Help."""
         try:
             await HelpSession.start(ctx, *commands)

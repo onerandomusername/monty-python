@@ -8,7 +8,6 @@ import arrow
 import async_rediscache
 import disnake
 from aiohttp import AsyncResolver, ClientSession, TCPConnector
-from disnake import DiscordException
 from disnake.ext import commands
 
 from monty import constants
@@ -133,7 +132,7 @@ class Monty(commands.Bot):
         self._remove_root_aliases(command)
         return command
 
-    async def on_command_error(self, context: commands.Context, exception: DiscordException) -> None:
+    async def on_command_error(self, context: commands.Context, exception: disnake.DiscordException) -> None:
         """Check command errors for UserInputError and reset the cooldown if thrown."""
         if isinstance(exception, commands.UserInputError):
             context.command.reset_cooldown(context)

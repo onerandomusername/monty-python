@@ -4,8 +4,8 @@ import contextlib
 import re
 import typing as t
 
-from disnake import Message, NotFound
-from disnake.ext.commands import Cog
+import disnake
+from disnake.ext import commands
 
 from monty import utils
 from monty.bot import Bot
@@ -58,13 +58,13 @@ class Token(t.NamedTuple):
     hmac: str
 
 
-class TokenRemover(Cog):
+class TokenRemover(commands.Cog):
     """Scans messages for potential discord client tokens and removes them."""
 
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def maybe_delete(self, msg: Message) -> bool:
+    async def maybe_delete(self, msg: disnake.Message) -> bool:
         """
         Maybe delete a message, if we have perms.
 
@@ -77,8 +77,8 @@ class TokenRemover(Cog):
         await msg.delete()
         return True
 
-    @Cog.listener()
-    async def on_message(self, msg: Message) -> None:
+    @commands.Cog.listener()
+    async def on_message(self, msg: disnake.Message) -> None:
         """
         Check each message for a string that matches Discord's token pattern.
 
@@ -98,8 +98,8 @@ class TokenRemover(Cog):
         # check for mfa tokens
         await self.handle_mfa_token(msg)
 
-    @Cog.listener()
-    async def on_message_edit(self, before: Message, after: Message) -> None:
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: disnake.Message, after: disnake.Message) -> None:
         """
         Check each edit for a string that matches Discord's token pattern.
 
@@ -114,11 +114,11 @@ class TokenRemover(Cog):
 
         await self.on_message(after)
 
-    async def take_action(self, msg: Message, found_token: Token) -> None:
+    async def take_action(self, msg: disnake.Message, found_token: Token) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         try:
             await self.maybe_delete(msg)
-        except NotFound:
+        except disnake.NotFound:
             log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
             return
 
@@ -139,7 +139,7 @@ class TokenRemover(Cog):
         #     ping_everyone=mention_everyone,
         # )
 
-    async def handle_mfa_token(self, msg: Message) -> None:
+    async def handle_mfa_token(self, msg: disnake.Message) -> None:
         """
         Check all messages for a string that matches the mfa token pattern.
 
@@ -161,7 +161,7 @@ class TokenRemover(Cog):
         token = match.group()
         # since the token was probably valid, we can now delete the message and ping the moderators.
         # the user is not informed, given the reasoning for deleting the message.
-        with contextlib.suppress(NotFound):
+        with contextlib.suppress(disnake.NotFound):
             await self.maybe_delete(msg)
 
         log_message = (
@@ -182,7 +182,7 @@ class TokenRemover(Cog):
         # )
 
     @classmethod
-    async def format_userid_log_message(cls, msg: Message, token: Token) -> t.Tuple[str, bool]:
+    async def format_userid_log_message(cls, msg: disnake.Message, token: Token) -> t.Tuple[str, bool]:
         """
         Format the portion of the log message that includes details about the detected user ID.
 
@@ -209,7 +209,7 @@ class TokenRemover(Cog):
             return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
 
     @staticmethod
-    def format_log_message(msg: Message, token: Token) -> str:
+    def format_log_message(msg: disnake.Message, token: Token) -> str:
         """Return the generic portion of the log message to send for `token` being censored in `msg`."""
         return LOG_MESSAGE.format(
             author=format_user(msg.author),
@@ -220,7 +220,7 @@ class TokenRemover(Cog):
         )
 
     @classmethod
-    def find_token_in_message(cls, msg: Message) -> t.Optional[Token]:
+    def find_token_in_message(cls, msg: disnake.Message) -> t.Optional[Token]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
         # Use finditer rather than search to guard against method calls prematurely returning the
         # token check (e.g. `message.channel.send` also matches our token pattern)

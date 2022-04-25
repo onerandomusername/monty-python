@@ -1,13 +1,13 @@
 import logging
 from typing import Optional
 
-from disnake.ext.commands import CheckFailure
+from disnake.ext import commands
 
 
 log = logging.getLogger(__name__)
 
 
-class InWhitelistCheckFailure(CheckFailure):
+class InWhitelistCheckFailure(commands.CheckFailure):
     """Raised when the `in_whitelist` check fails."""
 
     def __init__(self, redirect_channel: Optional[int]) -> None:
@@ -23,7 +23,7 @@ class InWhitelistCheckFailure(CheckFailure):
         super().__init__(error_message)
 
 
-class BotAccountRequired(CheckFailure):
+class BotAccountRequired(commands.CheckFailure):
     """Raised when the bot needs to be in the guild."""
 
     def __init__(self, msg: str):
