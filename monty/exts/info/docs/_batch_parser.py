@@ -5,11 +5,9 @@ import collections
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import Deque, Dict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Deque, Dict, List, NamedTuple, Optional, Union
 
 from bs4 import BeautifulSoup
-
-import monty.bot
 
 # from bot.constants import Channels
 from monty.log import get_logger
@@ -19,6 +17,9 @@ from monty.utils.html_parsing import get_symbol_markdown
 from . import _cog, doc_cache
 from ._redis_cache import StaleItemCounter
 
+
+if TYPE_CHECKING:
+    from monty.bot import Monty
 
 log = get_logger(__name__)
 
@@ -38,7 +39,7 @@ class StaleInventoryNotifier:
     async def _init_channel(self) -> None:
         """Wait for guild and get channel."""
         # await bot.wait_until_guild_available()
-        # self._dev_log = bot.bot.bot.get_channel(Channels.dev_log)
+        # self._dev_log = self._bot.get_channel(Channels.dev_log)
 
     async def send_warning(self, doc_item: _cog.DocItem) -> None:
         """Send a warning to dev log if one wasn't already sent for `item`'s url."""
@@ -90,7 +91,8 @@ class BatchParser:
     all of the symbols are queued to be parsed to avoid multiple web requests to the same page.
     """
 
-    def __init__(self):
+    def __init__(self, bot: Monty):
+        self._bot: Monty = bot
         self._queue: Deque[QueueItem] = collections.deque()
         self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
         self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
@@ -110,8 +112,8 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            async with monty.bot.bot.http_session.get(doc_item.url, raise_for_status=True) as response:
-                soup = await monty.bot.bot.loop.run_in_executor(
+            async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
+                soup = await self._bot.loop.run_in_executor(
                     None,
                     BeautifulSoup,
                     await response.text(encoding="utf8"),
@@ -148,7 +150,7 @@ class BatchParser:
                     continue
 
                 try:
-                    markdown = await monty.bot.bot.loop.run_in_executor(None, get_symbol_markdown, soup, item)
+                    markdown = await self._bot.loop.run_in_executor(None, get_symbol_markdown, soup, item)
                     if markdown is not None:
                         await doc_cache.set(item, markdown)
                     else:

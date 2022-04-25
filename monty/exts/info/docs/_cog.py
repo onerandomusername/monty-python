@@ -192,7 +192,7 @@ class DocCog(commands.Cog):
         self.bot = bot
         # the new doc_symbols that collects each package in their own dict and uses a chainmap
         self.doc_symbols_new: Dict[str, Dict[str, DocItem]] = {}
-        self.item_fetcher = _batch_parser.BatchParser()
+        self.item_fetcher = _batch_parser.BatchParser(self.bot)
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
         self.whitelist: Dict[int, Set[str]] = {}
