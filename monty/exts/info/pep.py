@@ -79,7 +79,7 @@ class PythonEnhancementProposals(commands.Cog):
         self.autocomplete.clear()
         self.soups.clear()
 
-        package = await fetch_inventory(INVENTORY_URL)
+        package = await fetch_inventory(self.bot, INVENTORY_URL)
         if package is None:
             log.error("Failed to fetch pep inventory.")
             return

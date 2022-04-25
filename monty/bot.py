@@ -1,4 +1,3 @@
-import asyncio
 import collections
 import logging
 import socket
@@ -29,7 +28,7 @@ else:
         log.info("TEST_GUILDS FOUND")
 
 
-__all__ = ("Bot", "bot")
+__all__ = ("Bot",)
 
 
 class Monty(commands.Bot):
@@ -163,35 +162,3 @@ class Monty(commands.Bot):
 
 # temp: for backwards compatibilty
 Bot = Monty
-
-_intents = disnake.Intents.all()
-_intents.members = False
-_intents.presences = False
-_intents.bans = False
-_intents.integrations = False
-_intents.invites = False
-_intents.typing = False
-_intents.webhooks = False
-_intents.voice_states = False
-
-redis_session = async_rediscache.RedisSession(
-    address=(constants.RedisConfig.host, constants.RedisConfig.port),
-    password=constants.RedisConfig.password,
-    minsize=1,
-    maxsize=20,
-    use_fakeredis=constants.RedisConfig.use_fakeredis,
-    global_namespace="monty-python",
-)
-
-loop = asyncio.get_event_loop()
-loop.run_until_complete(redis_session.connect())
-
-bot = Monty(
-    redis_session=redis_session,
-    command_prefix=commands.when_mentioned_or(constants.Client.prefix),
-    activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
-    allowed_mentions=disnake.AllowedMentions(everyone=False),
-    intents=_intents,
-)
-
-loop.run_until_complete(bot.db.async_init())

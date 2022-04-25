@@ -345,7 +345,7 @@ class DocCog(commands.Cog):
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
         """
         try:
-            package = await fetch_inventory(inventory_url)
+            package = await fetch_inventory(self.bot, inventory_url)
         except InvalidHeaderError as e:
             # Do not reschedule if the header is invalid, as the request went through but the contents are invalid.
             log.warning(f"Invalid inventory header at {inventory_url}. Reason: {e}")

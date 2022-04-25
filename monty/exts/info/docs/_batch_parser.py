@@ -32,7 +32,6 @@ class StaleInventoryNotifier:
         self._init_task = scheduling.create_task(
             self._init_channel(),
             name="StaleInventoryNotifier channel init",
-            event_loop=monty.bot.bot.loop,
         )
         self._warned_urls = set()
 

@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import re
 import zlib
 from collections import defaultdict
-from typing import AsyncIterator, DefaultDict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple, Union
 
 import aiohttp
 
-import monty.bot
 from monty.log import get_logger
+
+
+if TYPE_CHECKING:
+    from monty.bot import Monty
 
 
 log = get_logger(__name__)
@@ -80,10 +85,10 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
     return invdata
 
 
-async def _fetch_inventory(url: str) -> InventoryDict:
+async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
-    async with monty.bot.bot.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
+    async with bot.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()
@@ -108,7 +113,7 @@ async def _fetch_inventory(url: str) -> InventoryDict:
         raise InvalidHeaderError("Incompatible inventory version.")
 
 
-async def fetch_inventory(url: str) -> Optional[InventoryDict]:
+async def fetch_inventory(bot: Monty, url: str) -> Optional[InventoryDict]:
     """
     Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
 
@@ -117,7 +122,7 @@ async def fetch_inventory(url: str) -> Optional[InventoryDict]:
     """
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
-            inventory = await _fetch_inventory(url)
+            inventory = await _fetch_inventory(bot, url)
         except aiohttp.ClientConnectorError:
             log.warning(
                 f"Failed to connect to inventory url at {url}; " f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
