@@ -1,12 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Hashable, Union
-
-from disnake.ext.commands import ConversionError, Converter
-
-
-if TYPE_CHECKING:
-    from monty.converters import MemberOrUser
+from typing import Hashable
 
 
 class LockedResourceError(RuntimeError):
@@ -26,47 +20,3 @@ class LockedResourceError(RuntimeError):
             f"Cannot operate on {self.type.lower()} `{self.id}`; "
             "it is currently locked and in use by another operation."
         )
-
-
-class InvalidInfractedUserError(Exception):
-    """
-    Exception raised upon attempt of infracting an invalid user.
-
-    Attributes:
-        `user` -- User or Member which is invalid
-    """
-
-    def __init__(self, user: MemberOrUser, reason: str = "User infracted is a bot."):
-
-        self.user = user
-        self.reason = reason
-
-        super().__init__(reason)
-
-
-class InvalidInfraction(ConversionError):
-    """
-    Raised by the Infraction converter when trying to fetch an invalid infraction id.
-
-    Attributes:
-        `infraction_arg` -- the value that we attempted to convert into an Infraction
-    """
-
-    def __init__(self, converter: Converter, original: Exception, infraction_arg: Union[int, str]):
-
-        self.infraction_arg = infraction_arg
-        super().__init__(converter, original)
-
-
-class NonExistentRoleError(ValueError):
-    """
-    Raised by the Information Cog when encountering a Role that does not exist.
-
-    Attributes:
-        `role_id` -- the ID of the role that does not exist
-    """
-
-    def __init__(self, role_id: int):
-        super().__init__(f"Could not fetch data for role {role_id}")
-
-        self.role_id = role_id

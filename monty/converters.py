@@ -5,11 +5,8 @@ import typing as t
 from datetime import datetime, timezone
 from ssl import CertificateError
 
-import dateutil.parser
-import dateutil.tz
 import disnake
 from aiohttp import ClientConnectorError
-from dateutil.relativedelta import relativedelta
 from disnake.ext.commands import BadArgument, Context, Converter, IDConverter, MemberConverter, UserConverter
 from disnake.utils import snowflake_time
 
@@ -18,8 +15,6 @@ from monty.log import get_logger
 from monty.utils import inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
 
-
-# from bot.utils.time import parse_duration_string
 
 log = get_logger(__name__)
 
@@ -194,174 +189,6 @@ class Snowflake(IDConverter):
         return snowflake
 
 
-# class DurationDelta(Converter):
-#     """Convert duration strings into dateutil.relativedelta.relativedelta objects."""
-
-#     async def convert(self, ctx: Context, duration: str) -> relativedelta:
-#         """
-#         Converts a `duration` string to a relativedelta object.
-
-#         The converter supports the following symbols for each unit of time:
-#         - years: `Y`, `y`, `year`, `years`
-#         - months: `m`, `month`, `months`
-#         - weeks: `w`, `W`, `week`, `weeks`
-#         - days: `d`, `D`, `day`, `days`
-#         - hours: `H`, `h`, `hour`, `hours`
-#         - minutes: `M`, `minute`, `minutes`
-#         - seconds: `S`, `s`, `second`, `seconds`
-
-#         The units need to be provided in descending order of magnitude.
-#         """
-#         if not (delta := parse_duration_string(duration)):
-#             raise BadArgument(f"`{duration}` is not a valid duration string.")
-
-#         return delta
-
-
-# class Duration(DurationDelta):
-#     """Convert duration strings into UTC datetime.datetime objects."""
-
-#     async def convert(self, ctx: Context, duration: str) -> datetime:
-#         """
-#         Converts a `duration` string to a datetime object that's `duration` in the future.
-
-#         The converter supports the same symbols for each unit of time as its parent class.
-#         """
-#         delta = await super().convert(ctx, duration)
-#         now = datetime.now(timezone.utc)
-
-#         try:
-#             return now + delta
-#         except (ValueError, OverflowError):
-#             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
-
-
-# class Age(DurationDelta):
-#     """Convert duration strings into UTC datetime.datetime objects."""
-
-#     async def convert(self, ctx: Context, duration: str) -> datetime:
-#         """
-#         Converts a `duration` string to a datetime object that's `duration` in the past.
-
-#         The converter supports the same symbols for each unit of time as its parent class.
-#         """
-#         delta = await super().convert(ctx, duration)
-#         now = datetime.now(timezone.utc)
-
-#         try:
-#             return now - delta
-#         except (ValueError, OverflowError):
-#             raise BadArgument(f"`{duration}` results in a datetime outside the supported range.")
-
-
-class OffTopicName(Converter):
-    """A converter that ensures an added off-topic name is valid."""
-
-    ALLOWED_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?'`-<>"
-    TRANSLATED_CHARACTERS = "𝖠𝖡𝖢𝖣𝖤𝖥𝖦𝖧𝖨𝖩𝖪𝖫𝖬𝖭𝖮𝖯𝖰𝖱𝖲𝖳𝖴𝖵𝖶𝖷𝖸𝖹ǃ？’’-＜＞"
-
-    @classmethod
-    def translate_name(cls, name: str, *, from_unicode: bool = True) -> str:
-        """
-        Translates `name` into a format that is allowed in discord channel names.
-
-        If `from_unicode` is True, the name is translated from a discord-safe format, back to normalized text.
-        """
-        if from_unicode:
-            table = str.maketrans(cls.ALLOWED_CHARACTERS, cls.TRANSLATED_CHARACTERS)
-        else:
-            table = str.maketrans(cls.TRANSLATED_CHARACTERS, cls.ALLOWED_CHARACTERS)
-
-        return name.translate(table)
-
-    async def convert(self, ctx: Context, argument: str) -> str:
-        """Attempt to replace any invalid characters with their approximate Unicode equivalent."""
-        # Chain multiple words to a single one
-        argument = "-".join(argument.split())
-
-        if not (2 <= len(argument) <= 96):
-            raise BadArgument("Channel name must be between 2 and 96 chars long")
-
-        elif not all(c.isalnum() or c in self.ALLOWED_CHARACTERS for c in argument):
-            raise BadArgument(
-                "Channel name must only consist of " "alphanumeric characters, minus signs or apostrophes."
-            )
-
-        # Replace invalid characters with unicode alternatives.
-        return self.translate_name(argument)
-
-
-class ISODateTime(Converter):
-    """Converts an ISO-8601 datetime string into a datetime.datetime."""
-
-    async def convert(self, ctx: Context, datetime_string: str) -> datetime:
-        """
-        Converts a ISO-8601 `datetime_string` into a `datetime.datetime` object.
-
-        The converter is flexible in the formats it accepts, as it uses the `isoparse` method of
-        `dateutil.parser`. In general, it accepts datetime strings that start with a date,
-        optionally followed by a time. Specifying a timezone offset in the datetime string is
-        supported, but the `datetime` object will be converted to UTC. If no timezone is specified, the datetime will
-        be assumed to be in UTC already. In all cases, the returned object will have the UTC timezone.
-
-        See: https://dateutil.readthedocs.io/en/stable/parser.html#dateutil.parser.isoparse
-
-        Formats that are guaranteed to be valid by our tests are:
-
-        - `YYYY-mm-ddTHH:MM:SSZ` | `YYYY-mm-dd HH:MM:SSZ`
-        - `YYYY-mm-ddTHH:MM:SS±HH:MM` | `YYYY-mm-dd HH:MM:SS±HH:MM`
-        - `YYYY-mm-ddTHH:MM:SS±HHMM` | `YYYY-mm-dd HH:MM:SS±HHMM`
-        - `YYYY-mm-ddTHH:MM:SS±HH` | `YYYY-mm-dd HH:MM:SS±HH`
-        - `YYYY-mm-ddTHH:MM:SS` | `YYYY-mm-dd HH:MM:SS`
-        - `YYYY-mm-ddTHH:MM` | `YYYY-mm-dd HH:MM`
-        - `YYYY-mm-dd`
-        - `YYYY-mm`
-        - `YYYY`
-
-        Note: ISO-8601 specifies a `T` as the separator between the date and the time part of the
-        datetime string. The converter accepts both a `T` and a single space character.
-        """
-        try:
-            dt = dateutil.parser.isoparse(datetime_string)
-        except ValueError:
-            raise BadArgument(f"`{datetime_string}` is not a valid ISO-8601 datetime string")
-
-        if dt.tzinfo:
-            dt = dt.astimezone(dateutil.tz.UTC)
-        else:  # Without a timezone, assume it represents UTC.
-            dt = dt.replace(tzinfo=dateutil.tz.UTC)
-
-        return dt
-
-
-class HushDurationConverter(Converter):
-    """Convert passed duration to `int` minutes or `None`."""
-
-    MINUTES_RE = re.compile(r"(\d+)(?:M|m|$)")
-
-    async def convert(self, ctx: Context, argument: str) -> int:
-        """
-        Convert `argument` to a duration that's max 15 minutes or None.
-
-        If `"forever"` is passed, -1 is returned; otherwise an int of the extracted time.
-        Accepted formats are:
-        * <duration>,
-        * <duration>m,
-        * <duration>M,
-        * forever.
-        """
-        if argument == "forever":
-            return -1
-        match = self.MINUTES_RE.match(argument)
-        if not match:
-            raise BadArgument(f"{argument} is not a valid minutes duration.")
-
-        duration = int(match.group(1))
-        if duration > 15:
-            raise BadArgument("Duration must be at most 15 minutes.")
-        return duration
-
-
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
     has_id_or_mention = bool(IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
@@ -411,23 +238,10 @@ class UnambiguousMember(MemberConverter):
 
 
 if t.TYPE_CHECKING:
-    ValidDiscordServerInvite = dict  # noqa: F811
-    ValidFilterListType = str  # noqa: F811
     Extension = str  # noqa: F811
     PackageName = str  # noqa: F811
     ValidURL = str  # noqa: F811
     Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # noqa: F811
     Snowflake = int  # noqa: F811
-    DurationDelta = relativedelta  # noqa: F811
-    Duration = datetime  # noqa: F811
-    Age = datetime  # noqa: F811
-    OffTopicName = str  # noqa: F811
-    ISODateTime = datetime  # noqa: F811
-    HushDurationConverter = int  # noqa: F811
     UnambiguousUser = disnake.User  # noqa: F811
     UnambiguousMember = disnake.Member  # noqa: F811
-    Infraction = t.Optional[dict]  # noqa: F811
-
-# Expiry = t.Union[Duration, ISODateTime]
-MemberOrUser = t.Union[disnake.Member, disnake.User]
-UnambiguousMemberOrUser = t.Union[UnambiguousMember, UnambiguousUser]
