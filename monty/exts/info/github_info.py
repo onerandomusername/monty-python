@@ -137,7 +137,6 @@ class GithubInfo(commands.Cog):
         """Fetch and populate the repos on load."""
         await self.bot.wait_until_ready()
         for guild, user in GUILD_WHITELIST.items():
-            print(guild, user)
             if not self.bot.get_guild(guild):
                 continue
             url = ORG_REPOS_ENDPOINT.format(org=user)
@@ -467,7 +466,6 @@ class GithubInfo(commands.Cog):
             open_emoji = constants.Emojis.pull_request_open
             closed_emoji = constants.Emojis.pull_request_closed
         endpoint = endpoint.format(user=user, repository=repo)
-        print(endpoint)
         json = await self.fetch_data(endpoint)
         prs = []
         for pull_data in json:
@@ -520,8 +518,6 @@ class GithubInfo(commands.Cog):
         else:
             req_perm = "send_messages"
         if not getattr(perms, req_perm):
-            print(perms)
-            log.warn("I don't have send perms.")
             return
 
         default_org = self.get_default_user(message.guild)
