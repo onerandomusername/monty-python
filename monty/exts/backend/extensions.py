@@ -21,8 +21,8 @@ EXT_METADATA = ExtMetadata(core=True)
 log = logging.getLogger(__name__)
 
 
-UNLOAD_BLACKLIST = {f"{exts.__name__}.utils.extensions"}
-BASE_PATH_LEN = len(exts.__name__.split("."))
+UNLOAD_BLACKLIST = {__name__}
+BASE_PATH_LEN = exts.__name__.count(".")
 
 
 class Action(Enum):
