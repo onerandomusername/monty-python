@@ -607,11 +607,11 @@ class DocCog(commands.Cog):
         if not json:
             return False, None
         info = json["info"]
-        docs = info.get("docs_url") or info["project_urls"].get("Documentation")
+        project_urls = info["project_urls"] or {}
+        docs = info.get("docs_url") or project_urls.get("Documentation")
         if docs:
             return True, docs
 
-        project_urls = info["project_urls"]
         return False, info.get("home_page") or project_urls.get("Homepage") or project_urls.get("Home")
 
     async def _docs_get_command(
