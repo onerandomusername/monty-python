@@ -23,9 +23,9 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.constants import RedirectOutput
-from monty.converters import Inventory, PackageName, ValidURL
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.converters import Inventory, PackageName, ValidURL
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
 from monty.utils.messages import DeleteView
