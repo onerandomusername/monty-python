@@ -53,6 +53,7 @@ async def main() -> None:
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token), loop=loop)
     loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
+    loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
     try:
         await future
     except asyncio.CancelledError:
