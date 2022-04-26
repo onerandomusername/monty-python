@@ -74,13 +74,13 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         bot_perms = ctx.channel.permissions_for(ctx.me)
         not_responded = True  # noqa: F841
         if bot_perms >= disnake.Permissions(send_messages=True, embed_links=True):
-            await ctx.send(embeds=[embed])
+            await ctx.send_error(embeds=[embed])
             not_responded = False  # noqa: F841
         elif bot_perms >= disnake.Permissions(send_messages=True):
             # make a message as similar to the embed, using as few permissions as possible
             # this is the only place we send a standard message instead of an embed
             # so no helper methods are necessary
-            await ctx.send(
+            await ctx.send_error(
                 "**Permissions Failure**\n\n" "I am missing the permissions required to properly execute your command."
             )
             # intentionally not setting responded to True, since we want to attempt to dm the user
@@ -142,7 +142,6 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         elif isinstance(error, commands.ConversionError):
             error = error.original
         elif isinstance(error, commands.DisabledCommand):
-            logger.debug("")
             if ctx.command.hidden:
                 should_respond = False
             else:
@@ -150,6 +149,16 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
                 if reason := ctx.command.extras.get("disabled_reason", None):
                     msg += f"\nReason: {reason}"
                 embed = self.error_embed("Command Disabled", msg)
+        elif isinstance(error, commands.CommandOnCooldown):
+            if await ctx.bot.is_owner(ctx.author):
+                if isinstance(ctx, commands.Context):
+                    ctx.command.reset_cooldown(ctx)
+                    await ctx.reinvoke()
+                    should_respond = False
+                elif isinstance(ctx, disnake.CommandInteraction):
+                    ctx.application_command.reset_cooldown(ctx)
+                    await self.bot.process_application_commands(ctx)
+                    should_respond = False
 
         elif isinstance(error, commands.CommandInvokeError):
             if isinstance(error.original, disnake.Forbidden):
@@ -187,7 +196,7 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         if embed is None:
             embed = self.error_embed(self.get_title_from_name(error), str(error))
 
-        await ctx.send(embeds=[embed])
+        await ctx.send_error(embeds=[embed])
 
     @commands.Cog.listener(name="on_command_error")
     @commands.Cog.listener(name="on_slash_command_error")
@@ -197,19 +206,19 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
         if isinstance(ctx, commands.Context):
             view = DeleteView(ctx.author, initial_message=ctx.message)
             if ctx.channel.permissions_for(ctx.me).read_message_history:
-                ctx.send = functools.partial(
+                ctx.send_error = functools.partial(
                     ctx.reply,
                     view=view,
                     fail_if_not_exists=False,
                     allowed_mentions=disnake.AllowedMentions(replied_user=False),
                 )
             else:
-                ctx.send = functools.partial(ctx.send, view=view)
+                ctx.send_error = functools.partial(ctx.send, view=view)
         elif isinstance(ctx, disnake.Interaction):
             if ctx.response.is_done():
-                ctx.send = functools.partial(ctx.followup.send, ephemeral=True)
+                ctx.send_error = functools.partial(ctx.followup.send, ephemeral=True)
             else:
-                ctx.send = functools.partial(ctx.send, ephemeral=True)
+                ctx.send_error = functools.partial(ctx.send, ephemeral=True)
 
             if isinstance(
                 ctx,
@@ -226,6 +235,8 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
             else:
                 # i don't even care, this code should be unreachable but its also the error handler
                 ctx.command = ctx
+        else:
+            raise RuntimeError("how was this even reached")
         try:
             await self.on_command_error(ctx, error)
         except Exception as e:
