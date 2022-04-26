@@ -218,7 +218,7 @@ class PyPi(commands.Cog):
 
             if len(self.searches) > MAX_CACHE:
                 self.searches.popitem()
-            self.searches[query] = packages
+            self.searches[query] = (packages, resp.url)
             return packages, resp.url
 
     @pypi.sub_command(name="search")
@@ -267,14 +267,6 @@ class PyPi(commands.Cog):
             embed.description = "Sorry, no results found."
         view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)
-
-    async def cog_slash_command_error(self, inter: disnake.ApplicationCommandInteraction, error: Exception) -> None:
-        """TODO: Handle a few local errors until a full error handlers is written."""
-        if isinstance(error, commands.CommandOnCooldown):
-            error.handled = True
-            await inter.response.send_message(str(error), ephemeral=True)
-            return
-        raise
 
 
 def setup(bot: Bot) -> None:
