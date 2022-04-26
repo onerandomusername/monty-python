@@ -61,7 +61,7 @@ class Utils(commands.Cog):
             # Maximum length possible is 502 out of 1024, so there's no need to truncate.
             embed.add_field(name="Full Raw Text", value=f"`{''.join(raw_list)}`", inline=False)
         embed.description = "\n".join(char_list)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed, view=DeleteView(ctx.author))
 
     @commands.command(aliases=("snf", "snfl", "sf"))
     async def snowflake(self, ctx: commands.Context, *snowflakes: disnake.Object) -> None:
