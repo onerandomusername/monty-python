@@ -26,6 +26,7 @@ from monty.constants import RedirectOutput
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.converters import Inventory, PackageName, ValidURL
+from monty.utils.helpers import maybe_defer
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
 from monty.utils.messages import DeleteView
@@ -624,10 +625,6 @@ class DocCog(commands.Cog):
         threshold: commands.Range[0, 100] = 60,
         scorer: Any = None,
     ) -> None:
-        def maybe_defer(inter: disnake.Interaction) -> None:
-            if not inter.response.is_done():
-                self.bot.loop.create_task(inter.response.defer())
-
         if not search:
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
@@ -659,7 +656,7 @@ class DocCog(commands.Cog):
             res = None
             if not no_match:
                 if isinstance(inter, disnake.Interaction):
-                    self.bot.loop.call_later(2, maybe_defer, inter)
+                    maybe_defer(inter)
                 elif hasattr(inter, "trigger_typing"):
                     await inter.trigger_typing()
                 elif isinstance(inter, disnake.Message):

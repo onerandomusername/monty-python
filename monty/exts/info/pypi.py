@@ -15,6 +15,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
+from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteView
@@ -150,7 +151,7 @@ class PyPi(commands.Cog):
         embed.set_thumbnail(url=PYPI_ICON)
 
         error = True
-
+        defer_task = None
         if characters := self.check_characters(package):
             embed.description = (
                 f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
@@ -159,6 +160,8 @@ class PyPi(commands.Cog):
         else:
             response_json = await self.fetch_package(package)
             if response_json:
+                if with_description:
+                    defer_task = maybe_defer(inter)
                 embed = await self.make_pypi_embed(package, response_json, with_description=with_description)
                 error = False
             else:
@@ -172,6 +175,8 @@ class PyPi(commands.Cog):
         if embed.url:
             view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
         await inter.send(embed=embed, view=view)
+        if defer_task:
+            defer_task.cancel()
 
     async def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
@@ -243,7 +248,7 @@ class PyPi(commands.Cog):
         query: What to search.
         max_results: Max number of results to show.
         """
-        await inter.response.defer()
+        defer_task = maybe_defer(inter, delay=2)
 
         current_time = datetime.datetime.now()
         packages, query_url = await self.fetch_pypi_search(query)
@@ -267,6 +272,7 @@ class PyPi(commands.Cog):
             embed.description = "Sorry, no results found."
         view = DeleteView(inter.author)
         await inter.send(embed=embed, view=view)
+        defer_task.cancel()
 
 
 def setup(bot: Bot) -> None:

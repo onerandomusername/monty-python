@@ -1,8 +1,10 @@
 import re
-from typing import Optional
+from asyncio import TimerHandle
+from typing import Literal, Optional, Union, overload
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
+import disnake
 
 
 def suppress_links(message: str) -> str:
@@ -64,3 +66,33 @@ def decode_github_link(compressed: str) -> str:
     user, repo, blob, file_path = path.split("/", 3)
     path = f"{user}/{repo}/blob/{blob}/{file_path}"
     return urlunsplit(("https", "github.com", path, "", fragment))
+
+
+@overload
+def maybe_defer(inter: disnake.Interaction, *, delay: Literal[0], **options) -> None:
+    ...
+
+
+@overload
+def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> TimerHandle:
+    ...
+
+
+@overload
+def maybe_defer(inter: disnake.Interaction, **options) -> TimerHandle:
+    ...
+
+
+def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> Optional[TimerHandle]:
+    """Defer an interaction if it has not been responded to after ``delay`` seconds."""
+    loop = inter.bot.loop
+    if delay <= 0:
+        loop.create_task(inter.response.defer(**options))
+        return
+
+    def internal_task() -> None:
+        if inter.response.is_done():
+            return
+        loop.create_task(inter.response.defer(**options))
+
+    return loop.call_later(delay, internal_task)
