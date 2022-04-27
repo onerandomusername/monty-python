@@ -201,7 +201,7 @@ class ErrorHandler(commands.Cog, name="Error Handler"):
     @commands.Cog.listener(name="on_command_error")
     @commands.Cog.listener(name="on_slash_command_error")
     @commands.Cog.listener(name="on_message_command_error")
-    async def on_error(self, ctx: AnyContext, error: Exception) -> None:
+    async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         if isinstance(ctx, commands.Context):
             view = DeleteView(ctx.author, initial_message=ctx.message)
