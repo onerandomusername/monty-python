@@ -39,7 +39,8 @@ class BotSource(commands.Cog):
             embed = disnake.Embed(title=f"{Client.name}'s GitHub Repository")
             embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
             embed.set_thumbnail(url=Source.github_avatar_url)
-            await send_message(embed)
+            components = [disnake.ui.Button(url=Source.github, label="Open Github")]
+            await send_message(embed, components)
             return
 
         embed, url = self.build_embed(source_item)
