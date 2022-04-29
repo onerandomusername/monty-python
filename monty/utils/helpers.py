@@ -1,6 +1,6 @@
+import asyncio
 import re
-from asyncio import TimerHandle
-from typing import Literal, Optional, Union, overload
+from typing import Optional, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
@@ -68,31 +68,19 @@ def decode_github_link(compressed: str) -> str:
     return urlunsplit(("https", "github.com", path, "", fragment))
 
 
-@overload
-def maybe_defer(inter: disnake.Interaction, *, delay: Literal[0], **options) -> None:
-    ...
-
-
-@overload
-def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> TimerHandle:
-    ...
-
-
-@overload
-def maybe_defer(inter: disnake.Interaction, **options) -> TimerHandle:
-    ...
-
-
-def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> Optional[TimerHandle]:
+def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> asyncio.Task:
     """Defer an interaction if it has not been responded to after ``delay`` seconds."""
     loop = inter.bot.loop
     if delay <= 0:
-        loop.create_task(inter.response.defer(**options))
-        return
+        return loop.create_task(inter.response.defer(**options))
 
-    def internal_task() -> None:
+    async def internal_task() -> None:
+        now = loop.time()
+        await asyncio.sleep(delay - (start - now))
+
         if inter.response.is_done():
             return
-        loop.create_task(inter.response.defer(**options))
+        await inter.response.defer(**options)
 
-    return loop.call_later(delay, internal_task)
+    start = loop.time()
+    return loop.create_task(internal_task())
