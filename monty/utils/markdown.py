@@ -3,7 +3,7 @@ from typing import Any, Optional
 from urllib.parse import urljoin
 
 from bs4.element import PageElement
-from markdownify import MarkdownConverter, escape
+from markdownify import MarkdownConverter
 
 
 # taken from version 0.6.1 of markdownify
@@ -20,7 +20,7 @@ class DocMarkdownConverter(MarkdownConverter):
     # overwritten to use our regex from version 0.6.1
     def process_text(self, text: Optional[str]) -> Any:
         """Process the text, using our custom regex."""
-        return escape(WHITESPACE_RE.sub(" ", text or ""), self.options["escape_underscores"])
+        return self.escape(WHITESPACE_RE.sub(" ", text or ""))
 
     def convert_img(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Remove images from the parsed contents, we don't want them."""

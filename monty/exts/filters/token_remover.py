@@ -1,5 +1,4 @@
 import base64
-import binascii
 import contextlib
 import re
 import typing as t
@@ -250,7 +249,7 @@ class TokenRemover(commands.Cog):
                 # that means it's not a valid user id.
                 return None
             return int(string)
-        except (binascii.Error, ValueError):
+        except ValueError:
             return None
 
     @staticmethod
@@ -266,7 +265,7 @@ class TokenRemover(commands.Cog):
         try:
             decoded_bytes = base64.urlsafe_b64decode(b64_content)
             timestamp = int.from_bytes(decoded_bytes, byteorder="big")
-        except (binascii.Error, ValueError) as e:
+        except ValueError as e:
             log.debug(f"Failed to decode token timestamp '{b64_content}': {e}")
             return False
 
