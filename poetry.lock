@@ -246,7 +246,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.5.0a4183+g68546266"
+version = "2.5.0a4194+g5033fa2e"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
