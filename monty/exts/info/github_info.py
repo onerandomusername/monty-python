@@ -53,8 +53,9 @@ GUILD_WHITELIST = {
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
 
-# webhooks in these channels will relay autolinkers
-WHITELISTED_WEBHOOK_CHANNELS = {931380367884185681, 931379162965487617}
+# webhooks owned by this application that aren't the following
+# id (as that would be an interaction response) will relay autolinkers
+CROSSCHAT_BOT = 931285254319247400
 
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
@@ -500,9 +501,10 @@ class GithubInfo(commands.Cog):
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        # Ignore bots but NOT webhooks in designated channels
+        # Ignore bots but NOT webhooks owned by crosschat which also aren't the application id
+        # this allows webhooks that are owned by crosschat but aren't application responses
         if message.author.bot and not (
-            message.channel.id in WHITELISTED_WEBHOOK_CHANNELS and message.author.discriminator == "0000"
+            message.webhook_id and message.application_id == CROSSCHAT_BOT and message.webhook_id != CROSSCHAT_BOT
         ):
             return
 
