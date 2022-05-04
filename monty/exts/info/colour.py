@@ -36,7 +36,10 @@ class Colour(commands.Cog):
         try:
             colour_or_color = ctx.invoked_parents[0]
         except (IndexError, AttributeError):
-            colour_or_color = "colour"
+            if isinstance(ctx, disnake.Interaction):
+                colour_or_color = "color" if ctx.locale is disnake.Locale.en_US else "colour"
+            else:
+                colour_or_color = "colour"
 
         if isinstance(ctx, disnake.CommandInteraction):
             colour_mode = ctx.application_command.name
@@ -103,7 +106,7 @@ class Colour(commands.Cog):
         except ValueError:
             await invoke_help_command(ctx)
 
-    @commands.slash_command(name="colour")
+    @commands.slash_command(name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}))
     async def slash_colour(self, inter: disnake.CommandInteraction) -> None:
         """Show information about a colour."""
         pass
@@ -261,7 +264,7 @@ class Colour(commands.Cog):
 
         Parameters
         ----------
-        hex: Hex color code.
+        hex: Hex colour code.
         """
         try:
             await self.hex(inter, hex)
