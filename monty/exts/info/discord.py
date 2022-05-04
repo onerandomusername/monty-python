@@ -151,6 +151,9 @@ class Discord(commands.Cog):
             perms.request_to_speak = False
             perms.start_embedded_activities = False
 
+            # remove the admin perm
+            perms.administrator = False
+
         if guild is not None:
             guild = disnake.Object(guild)
         else:
