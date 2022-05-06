@@ -46,7 +46,7 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     check, call_once=True, slash_commands=True, user_commands=True, message_commands=True
                 )
             elif name.startswith("global_check_prefix_cmd"):
-                self.bot.add_check(check)
+                self.bot.add_check(check, call_once=True)
             else:
                 logger.warn(f"Invalid named check in {type(self).__name__} cog")
 
@@ -54,9 +54,11 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Removes all cog checks from the bot."""
         for name, check in self._checks.items():
             if name.startswith("global_check_app_cmd"):
-                self.bot.remove_app_command_check(check, slash_commands=True, user_commands=True, message_commands=True)
+                self.bot.remove_app_command_check(
+                    check, call_once=True, slash_commands=True, user_commands=True, message_commands=True
+                )
             elif name.startswith("global_check_prefix_cmd"):
-                self.bot.remove_check(check)
+                self.bot.remove_check(check, call_once=True)
             else:
                 # no warning here as it was warned for during load
                 pass
