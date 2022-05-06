@@ -13,7 +13,7 @@ from monty.utils.helpers import encode_github_link
 from monty.utils.messages import DeleteView
 
 
-class BotSource(commands.Cog):
+class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Displays information about the bot's source code."""
 
     @commands.command(name="source", aliases=("src",))

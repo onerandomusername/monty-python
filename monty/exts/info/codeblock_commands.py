@@ -31,7 +31,11 @@ PASTE_REGEX = re.compile(
 MAX_LEN = 30_000
 
 
-class CodeButtons(commands.Cog):
+class CodeButtons(
+    commands.Cog,
+    slash_command_attrs={"dm_permission": False},
+    message_command_attrs={"dm_permission": False},
+):
     """Adds automatic buttons to codeblocks if they match commands."""
 
     def __init__(self, bot: Bot):

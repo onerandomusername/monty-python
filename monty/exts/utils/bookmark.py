@@ -63,7 +63,11 @@ def check_user_read_perms(user: disnake.User, target_message: disnake.Message) -
     return permissions.read_messages and permissions.read_message_history
 
 
-class Bookmark(commands.Cog):
+class Bookmark(
+    commands.Cog,
+    slash_command_attrs={"dm_permission": False},
+    message_command_attrs={"dm_permission": False},
+):
     """Creates personal bookmarks by relaying a message link to the user's DMs."""
 
     def __init__(self, bot: Bot):

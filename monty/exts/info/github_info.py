@@ -125,7 +125,7 @@ def whitelisted_autolink() -> t.Callable[[commands.Command], commands.Command]:
     return commands.check(predicate)
 
 
-class GithubInfo(commands.Cog):
+class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Fetches info from GitHub."""
 
     def __init__(self, bot: Bot):

@@ -46,7 +46,7 @@ class Package:
     url: str
 
 
-class PyPi(commands.Cog):
+class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for getting information about PyPi packages."""
 
     def __init__(self, bot: Bot):

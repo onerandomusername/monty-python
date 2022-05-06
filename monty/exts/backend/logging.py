@@ -14,7 +14,7 @@ EXT_METADATA = ExtMetadata(core=True)
 logger = logging.getLogger(__name__)
 
 
-class InternalLogger(commands.Cog):
+class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Internal logging for debug and abuse handling."""
 
     def __init__(self, bot: Bot):

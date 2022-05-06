@@ -60,7 +60,7 @@ Memory Usage: `{memory_usage:.2f} MiB`
 COLOURS = (Colours.python_blue, Colours.python_yellow)
 
 
-class Meta(commands.Cog):
+class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Get meta information about the bot."""
 
     def __init__(self, bot: Bot):

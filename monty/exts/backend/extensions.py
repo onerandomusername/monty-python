@@ -34,7 +34,7 @@ class Action(Enum):
     RELOAD = functools.partial(Bot.reload_extension)
 
 
-class Extensions(commands.Cog):
+class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Extension management commands."""
 
     def __init__(self, bot: Bot):

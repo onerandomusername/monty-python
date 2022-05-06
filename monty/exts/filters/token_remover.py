@@ -57,7 +57,7 @@ class Token(t.NamedTuple):
     hmac: str
 
 
-class TokenRemover(commands.Cog):
+class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Scans messages for potential discord client tokens and removes them."""
 
     def __init__(self, bot: Bot):

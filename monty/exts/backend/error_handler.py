@@ -25,7 +25,11 @@ ERROR_COLOUR = responses.DEFAULT_FAILURE_COLOUR
 ERROR_TITLE_REGEX = re.compile(r"((?<=[a-z])[A-Z]|(?<=[a-zA-Z])[A-Z](?=[a-z]))")
 
 
-class ErrorHandler(commands.Cog, name="Error Handler"):
+class ErrorHandler(
+    commands.Cog,
+    name="Error Handler",
+    slash_command_attrs={"dm_permission": False},
+):
     """Handles all errors across the bot."""
 
     def __init__(self, bot: Monty):

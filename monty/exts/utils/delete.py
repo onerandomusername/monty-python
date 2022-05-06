@@ -12,7 +12,7 @@ VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 logger = logging.getLogger(__name__)
 
 
-class DeleteManager(commands.Cog):
+class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Handle delete buttons being pressed."""
 
     def __init__(self, bot: Monty):

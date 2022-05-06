@@ -7,7 +7,7 @@ from disnake.ext import commands
 from monty.bot import Bot
 
 
-class TimedCommands(commands.Cog):
+class TimedCommands(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Time the command execution of a command."""
 
     @staticmethod

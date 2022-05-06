@@ -183,7 +183,7 @@ class DocView(DeleteView):
                 c.disabled = True
 
 
-class DocCog(commands.Cog):
+class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Monty):
@@ -590,7 +590,7 @@ class DocCog(commands.Cog):
         """Look up documentation for Python symbols."""
         await self._docs_get_command(ctx, search=search)
 
-    @commands.slash_command(name="docs")
+    @commands.slash_command(name="docs", dm_permission=False)
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""
         pass

@@ -10,7 +10,7 @@ from monty.utils.checks import BotAccountRequired
 logger = logging.getLogger(__name__)
 
 
-class GlobalCheck(commands.Cog):
+class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Global checks for monty."""
 
     def __init__(self, bot: Monty):
@@ -65,8 +65,6 @@ class GlobalCheck(commands.Cog):
         """Require all commands be in a guild and have the bot scope."""
         if inter.guild:
             return True
-        if not inter.guild_id:
-            raise commands.NoPrivateMessage()
 
         invite = self._bot_invite_link.format(guild_id=inter.guild_id)
         if inter.permissions.manage_guild:
