@@ -67,7 +67,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.bot = bot
         self.process = psutil.Process()
 
-    @commands.slash_command(name="monty")
+    @commands.slash_command(name="monty", dm_permission=True)
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
         pass
@@ -98,7 +98,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
-        await inter.send(embed=e, ephemeral=True)
+        await inter.send(embed=e, ephemeral=bool(inter.guild_id))
 
     @monty.sub_command(name="invite")
     async def invite(
@@ -107,7 +107,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         permissions: Range[0, disnake.Permissions.all().value] = None,
         guild: str = None,
         raw_link: bool = False,
-        ephemeral: bool = True,
+        ephemeral: bool = None,
     ) -> None:
         """
         Generate an invite link to invite Monty.
@@ -119,6 +119,9 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         raw_link: Whether to return the raw invite link.
         ephemeral: Whether to send the invite link as an ephemeral message.
         """
+        if ephemeral is None:
+            ephemeral = bool(inter.guild_id)
+
         invite_command = self.bot.get_slash_command("discord").children["app-invite"]
         await invite_command(
             inter,
@@ -166,7 +169,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await inter.send(embed=e, view=view)
 
     @monty.sub_command()
-    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = True) -> None:
+    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = None) -> None:
         """
         Get a link to the support server.
 
@@ -174,6 +177,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ----------
         ephemeral: Whether to send the invite link as an ephemeral message.
         """
+        if ephemeral is None:
+            ephemeral = bool(inter.guild_id)
         await inter.send(
             "If you find yourself in need of support, please join the support server: "
             "https://discord.gg/{invite}".format(invite=Client.support_server),

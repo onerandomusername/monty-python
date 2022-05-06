@@ -63,7 +63,7 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def global_check_app_cmd(self, inter: disnake.CommandInteraction) -> bool:
         """Require all commands be in a guild and have the bot scope."""
-        if inter.guild:
+        if inter.guild or not inter.guild_id:
             return True
 
         invite = self._bot_invite_link.format(guild_id=inter.guild_id)
