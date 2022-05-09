@@ -246,7 +246,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.5.0"
+version = "2.6.0a4215+g2f93645d"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -266,7 +266,7 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 type = "git"
 url = "https://github.com/DisnakeDev/disnake.git"
 reference = 'master'
-resolved_reference = "1b27223ff695252d44db3b35e594a754d32f3ac4"
+resolved_reference = "2f93645d8becc9267acecbc45547457861611919"
 
 [[package]]
 name = "distlib"
