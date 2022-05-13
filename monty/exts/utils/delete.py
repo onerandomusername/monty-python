@@ -84,7 +84,7 @@ class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         comp.disabled = True
         await inter.response.edit_message(view=view)
-        await inter.followup.send("This button no longer works lol.")
+        await inter.followup.send("This button should not have been enabled, and no longer works.", ephemeral=True)
 
 
 def setup(bot: Monty) -> None:
