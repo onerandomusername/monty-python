@@ -18,7 +18,7 @@ RUN pip install poetry==1.1.13
 COPY pyproject.toml poetry.lock ./
 RUN poetry export --without-hashes > requirements.txt
 RUN pip uninstall poetry -y
-RUN pip install -r requirements.txt
+RUN pip install -Ur requirements.txt
 
 # Set SHA build argument
 ARG git_sha="main"
