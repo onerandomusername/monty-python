@@ -244,7 +244,7 @@ name = "deprecated"
 version = "1.2.13"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
 category = "main"
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [package.dependencies]
@@ -872,7 +872,7 @@ name = "redis"
 version = "4.3.1"
 description = "Python client for Redis database and key-value store"
 category = "main"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1006,7 +1006,7 @@ name = "wrapt"
 version = "1.14.1"
 description = "Module for decorators, wrappers and monkey patching."
 category = "main"
-optional = true
+optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
@@ -1024,7 +1024,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "5bae5da101f4f073b7786da771d46a3ba19b06237b5823279e8fd341107fd38b"
+content-hash = "71c7cc1654d880d438c4dff7ab0682f30c06ee2537247474a7a0a83ff513c2df"
 
 [metadata.files]
 aiodns = [
