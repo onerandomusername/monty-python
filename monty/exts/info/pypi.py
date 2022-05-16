@@ -12,12 +12,12 @@ from typing import Optional
 import bs4
 import disnake
 import yarl
-from cachingutils import async_cached
+from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
-from monty.utils.helpers import maybe_defer, redis_cache
+from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteView
@@ -61,7 +61,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Check if the package is valid."""
         return re.search(ILLEGAL_CHARACTERS, package)
 
-    @redis_cache("pypi", lambda package: package, timeout=datetime.timedelta(hours=2))
+    @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[str]:
         """Fetch a package from pypi."""
         async with self.bot.http_session.get(JSON_URL.format(package=package)) as response:
@@ -69,9 +69,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 return await response.json()
             return None
 
-    @redis_cache(
-        "pypi-description", lambda package, max_length: f"{package}:{max_length}", timeout=datetime.timedelta(hours=4)
-    )
+    @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
         """Fetch a description parsed into markdown from pypi."""
         url = HTML_URL.format(package=package)

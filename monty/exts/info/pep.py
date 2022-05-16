@@ -8,7 +8,7 @@ import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
 from bs4 import BeautifulSoup
-from cachingutils import async_cached
+from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -130,9 +130,7 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
 
         return pep_embed
 
-    @async_cached(
-        timeout=int(timedelta(hours=2).total_seconds()),
-    )
+    @async_cached(cache=LRUMemoryCache(20, timeout=int(timedelta(hours=2).total_seconds())))
     async def fetch_pep_info(self, url: str, number: int) -> Tuple[dict[str, str], BeautifulSoup]:
         """Fetch the pep information. This is extracted into a seperate function for future use."""
         async with self.bot.http_session.get(url) as response:
