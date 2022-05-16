@@ -67,7 +67,7 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @async_cached(
         timeout=int(timedelta(minutes=6).total_seconds()),
-        include_posargs=[0, 1],
+        include_posargs=[0, 1, 2],
         include_kwargs=[],
         allow_unset=True,
     )
