@@ -48,6 +48,7 @@ class Monty(commands.Bot):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
+        kwargs["sync_commands_on_cog_unload"] = False
         super().__init__(**kwargs)
 
         self.redis_session = redis_session
