@@ -6,11 +6,13 @@ import logging
 import random
 import re
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Optional
 
 import bs4
 import disnake
 import yarl
+from cachingutils import async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -67,7 +69,9 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 return await response.json()
             return None
 
-    # todo: cache with redis for 2 hours
+    @redis_cache(
+        "pypi-description", lambda package, max_length: f"{package}:{max_length}", timeout=datetime.timedelta(hours=4)
+    )
     async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
         """Fetch a description parsed into markdown from pypi."""
         url = HTML_URL.format(package=package)
@@ -209,11 +213,14 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         return results
 
-    async def fetch_pypi_search(self, query: str, *, use_cache: bool = True) -> tuple[list[Package], yarl.URL]:
+    @async_cached(
+        timeout=int(timedelta(minutes=10).total_seconds()),
+        include_posargs=[0],
+        include_kwargs=[],
+        allow_unset=True,
+    )
+    async def fetch_pypi_search(self, query: str) -> tuple[list[Package], yarl.URL]:
         """Cache results of searching pypi."""
-        if use_cache and query in self.searches:
-            return self.searches[query]
-
         async with self.fetch_lock:
 
             params = {"q": query}

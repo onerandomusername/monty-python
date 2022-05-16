@@ -8,6 +8,7 @@ import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
 from bs4 import BeautifulSoup
+from cachingutils import async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
@@ -38,7 +39,7 @@ class HeaderParser:
         # readd title to headers
         # this was removed from the headers in python/peps#2532
         h1 = soup.find("h1", attrs={"class": "page-title"})
-        results["Title"] = h1.text.split("-", 1)[-1]
+        results["Title"] = h1.text.split("–", 1)[-1]
 
         return results
 
@@ -63,7 +64,6 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
     def __init__(self, bot: Bot):
         self.bot = bot
         self.peps: Dict[int, str] = {}
-        self.soups: Dict[int, BeautifulSoup] = {}
         self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
@@ -77,7 +77,6 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         self.last_refreshed_peps = datetime.now()
         self.peps.clear()
         self.autocomplete.clear()
-        self.soups.clear()
 
         package = await fetch_inventory(self.bot, INVENTORY_URL)
         if package is None:
@@ -131,20 +130,17 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
 
         return pep_embed
 
+    @async_cached(
+        timeout=int(timedelta(hours=2).total_seconds()),
+    )
     async def fetch_pep_info(self, url: str, number: int) -> Tuple[dict[str, str], BeautifulSoup]:
         """Fetch the pep information. This is extracted into a seperate function for future use."""
-        if soup := self.soups.get(number):
-            pep_header = HeaderParser().parse(soup)
-            return pep_header, soup
-
         async with self.bot.http_session.get(url) as response:
             response.raise_for_status()
             pep_content = await response.text()
         soup = await self.bot.loop.run_in_executor(None, BeautifulSoup, pep_content, "lxml")
 
         pep_header = HeaderParser().parse(soup)
-        self.soups[number] = soup
-
         return pep_header, soup
 
     async def get_pep_embed(self, pep_nr: int) -> Tuple[disnake.Embed, bool]:
