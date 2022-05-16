@@ -252,7 +252,7 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
             try:
                 if message.channel.permissions_for(message.guild.me).manage_messages:
-                    await message.edit(suppress=True)
+                    await message.edit(suppress_embeds=True)
             except disnake.NotFound:
                 # Don't send snippets if the original message was deleted.
                 return
