@@ -51,7 +51,7 @@ class Monty(commands.Bot):
         super().__init__(**kwargs)
 
         self.redis_session = redis_session
-        self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix, session=self.redis_session)
         self.redis_cache_key = constants.Client.redis_prefix
 
         self.create_http_session()

@@ -7,7 +7,10 @@ from contextlib import suppress
 from operator import attrgetter
 from typing import TYPE_CHECKING, Deque, Dict, List, NamedTuple, Optional, Union
 
+import cachingutils.redis
 from bs4 import BeautifulSoup
+
+from monty import constants
 
 # from bot.constants import Channels
 from monty.log import get_logger
@@ -23,11 +26,13 @@ if TYPE_CHECKING:
 
 log = get_logger(__name__)
 
+_redis = cachingutils.redis.async_session(constants.Client.config_prefix)._redis
+
 
 class StaleInventoryNotifier:
     """Handle sending notifications about stale inventories through `DocItem`s to dev log."""
 
-    symbol_counter = StaleItemCounter()
+    symbol_counter = StaleItemCounter(session=_redis)
 
     def __init__(self):
         self._init_task = scheduling.create_task(
