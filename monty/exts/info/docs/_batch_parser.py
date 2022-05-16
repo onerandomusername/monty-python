@@ -167,7 +167,7 @@ class BatchParser:
                     log.exception(f"Unexpected error when handling {item}")
                 future.set_result(markdown)
                 del self._item_futures[item]
-                await asyncio.sleep(0)
+                await asyncio.sleep(0.1)
         finally:
             self._parse_task = None
             log.trace("Finished parsing queue.")
