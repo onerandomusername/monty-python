@@ -5,15 +5,19 @@ import re
 import typing
 import typing as t
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote, quote_plus
 
+import aiohttp
 import disnake
+from cachingutils import async_cached
 from disnake.ext import commands, tasks
 
 from monty import constants
 from monty.bot import TEST_GUILDS, Bot
+from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import redis_cache
 from monty.utils.messages import DeleteView
 from monty.utils.pagination import LinePaginator
 
@@ -151,6 +155,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Stop tasks on cog unload."""
         self.repo_refresh.stop()
 
+    @redis_cache(
+        "github",
+        lambda url, **kw: url,
+        skip_cache_func=lambda url, **kw: "/pulls/" in url or "/issues/" in url,
+        timeout=timedelta(hours=4),
+    )
     async def fetch_data(self, url: str, **kw) -> t.Union[dict, str, list, typing.Any]:
         """Retrieve data as a dictionary."""
         log.debug(f"fetching {url}")
@@ -161,6 +171,18 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             kw["headers"] = REQUEST_HEADERS
         async with self.bot.http_session.get(url, **kw) as r:
             return await r.json()
+
+    @async_cached(
+        timeout=int(timedelta(minutes=6).total_seconds()),
+        include_posargs=[0],
+        include_kwargs=[],
+        allow_unset=True,
+    )
+    async def fetch_issue(self, url: str, **kw) -> t.Tuple[aiohttp.ClientResponse, t.Dict[str, str]]:
+        """Fetch an issue from github."""
+        async with self.bot.http_session.get(url, headers=REQUEST_HEADERS) as r:
+            json_data = await r.json()
+        return (r, json_data)
 
     @staticmethod
     def get_default_user(guild: disnake.Guild) -> typing.Optional["str"]:
@@ -347,8 +369,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
         log.trace(f"Querying GH issues API: {url}")
 
-        async with self.bot.http_session.get(url, headers=REQUEST_HEADERS) as r:
-            json_data = await r.json()
+        r, json_data = await self.fetch_issue(url, headers=GITHUB_HEADERS)
 
         if r.status == 403:
             if r.headers.get("X-RateLimit-Remaining") == "0":
@@ -467,7 +488,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             open_emoji = constants.Emojis.pull_request_open
             closed_emoji = constants.Emojis.pull_request_closed
         endpoint = endpoint.format(user=user, repository=repo)
-        json = await self.fetch_data(endpoint)
+        json = await self.fetch_issue(endpoint)
         prs = []
         for pull_data in json:
             if pull_data.get("draft"):

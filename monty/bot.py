@@ -1,12 +1,14 @@
 import collections
 import logging
 import socket
+from types import SimpleNamespace
 from typing import Optional
 
+import aiohttp
 import arrow
-import async_rediscache
+import cachingutils.redis
 import disnake
-from aiohttp import AsyncResolver, ClientSession, TCPConnector
+import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
@@ -42,13 +44,17 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: async_rediscache.RedisSession, **kwargs):
+    def __init__(self, redis_session: redis.asyncio.Redis, **kwargs):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
         super().__init__(**kwargs)
+
         self.redis_session = redis_session
-        self.http_session = ClientSession(connector=TCPConnector(resolver=AsyncResolver(), family=socket.AF_INET))
+        self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        self.redis_cache_key = constants.Client.redis_prefix
+
+        self.create_http_session()
 
         self.db = Database()
         self.socket_events = collections.Counter()
@@ -56,6 +62,38 @@ class Monty(commands.Bot):
         self.stats: AsyncStatsClient = None
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
         self.loop.create_task(self.get_self_invite_perms())
+
+    def create_http_session(self) -> None:
+        """Create the aiohttp session and set the trace logger, if desired."""
+        trace_configs = []
+        if constants.Client.debug:
+            aiohttp_log = logging.getLogger(__package__ + ".http")
+
+            async def on_request_end(
+                session: aiohttp.ClientSession,
+                ctx: SimpleNamespace,
+                end: aiohttp.TraceRequestEndParams,
+            ) -> None:
+                """Log all aiohttp requests on request end."""
+                resp = end.response
+                aiohttp_log.info(
+                    "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
+                        status=resp.status,
+                        reason=resp.reason,
+                        method=end.method.upper(),
+                        url=end.url,
+                        content_type=resp.content_type,
+                    )
+                )
+
+            trace_config = aiohttp.TraceConfig()
+            trace_config.on_request_end.append(on_request_end)
+            trace_configs.append(trace_config)
+
+        self.http_session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.AsyncResolver(), family=socket.AF_INET),
+            trace_configs=trace_configs,
+        )
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""

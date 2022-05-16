@@ -56,7 +56,7 @@ def setup() -> None:
     # Silence irrelevant loggers
     logging.getLogger("disnake").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
-    logging.getLogger("async_rediscache").setLevel(logging.INFO)
+    logging.getLogger("cachingutils").setLevel(logging.INFO)
 
     _set_trace_loggers()
 

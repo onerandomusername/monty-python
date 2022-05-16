@@ -9,23 +9,24 @@ license = "MIT"
 python = "~=3.9"
 aiodns = "~=2.0"
 aiohttp = "~=3.8.1"
-aioredis = "~1.3"
+aioredis = "~=2.0.1"
 arrow = "~=1.2.2"
-async-rediscache = {extras = ["fakeredis"], version = "~=0.1.4"}
+base65536 = "^0.1.1"
+beautifulsoup4 = "^4.10.0"
+cachingutils = {git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2'}
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
 disnake = {git = "https://github.com/DisnakeDev/disnake.git", rev='master'}
 emoji = "~=1.7.0"
+fakeredis = {version = "^1.7.4", optional = true}
 feedparser = "~=6.0.2"
-rapidfuzz = "~=1.4"
-python-dateutil = "~=2.8"
-python-frontmatter = "~=1.0.0"
-beautifulsoup4 = "^4.10.0"
-markdownify = "==0.11.2"
 lxml = "^4.6.4"
+markdownify = "==0.11.2"
 Pillow = "^9.0.0"
 psutil = "^5.9.0"
-base65536 = "^0.1.1"
+python-dateutil = "~=2.8"
+python-frontmatter = "~=1.0.0"
+rapidfuzz = "~=1.4"
 statsd = "^3.3.0"
 
 

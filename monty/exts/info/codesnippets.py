@@ -1,11 +1,13 @@
 import logging
 import re
 import textwrap
+from datetime import timedelta
 from typing import Any, Coroutine, List, Tuple
 from urllib.parse import quote_plus
 
 import disnake
 from aiohttp import ClientResponseError
+from cachingutils import async_cached
 from disnake.ext import commands
 
 from monty import constants
@@ -63,6 +65,12 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
             (BITBUCKET_RE, self._fetch_bitbucket_snippet),
         ]
 
+    @async_cached(
+        timeout=int(timedelta(minutes=6).total_seconds()),
+        include_posargs=[0],
+        include_kwargs=[],
+        allow_unset=True,
+    )
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:

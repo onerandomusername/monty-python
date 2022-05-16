@@ -131,11 +131,9 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
 
         return pep_embed
 
-    async def fetch_pep_info(
-        self, url: str, number: int, use_cache: bool = True
-    ) -> Tuple[dict[str, str], BeautifulSoup]:
+    async def fetch_pep_info(self, url: str, number: int) -> Tuple[dict[str, str], BeautifulSoup]:
         """Fetch the pep information. This is extracted into a seperate function for future use."""
-        if use_cache and (soup := self.soups.get(number)):
+        if soup := self.soups.get(number):
             pep_header = HeaderParser().parse(soup)
             return pep_header, soup
 

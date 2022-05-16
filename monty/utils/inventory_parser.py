@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 import zlib
 from collections import defaultdict
+from datetime import timedelta
 from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple, Union
 
 import aiohttp
 
 from monty.log import get_logger
+from monty.utils.helpers import redis_cache
 
 
 if TYPE_CHECKING:
@@ -113,7 +115,14 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
         raise InvalidHeaderError("Incompatible inventory version.")
 
 
-async def fetch_inventory(bot: Monty, url: str) -> Optional[InventoryDict]:
+# todo: add cache avoidance
+@redis_cache(
+    "sphinx-inventory",
+    lambda url, **kw: url,
+    skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache"),
+    timeout=timedelta(minutes=30),
+)
+async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Optional[InventoryDict]:
     """
     Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
 

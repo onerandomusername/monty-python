@@ -1,3 +1,6 @@
+import cachingutils.redis
+
+from monty import constants
 from monty.bot import Bot
 
 from ._redis_cache import DocRedisCache
@@ -7,7 +10,8 @@ MAX_SIGNATURE_AMOUNT = 3
 PRIORITY_PACKAGES = ("python",)
 NAMESPACE = "doc"
 
-doc_cache = DocRedisCache(namespace=NAMESPACE)
+_cache = cachingutils.redis.async_session(constants.Client.config_prefix)
+doc_cache = DocRedisCache(prefix=_cache._prefix + "docs", session=_cache._redis)
 
 
 def setup(bot: Bot) -> None:

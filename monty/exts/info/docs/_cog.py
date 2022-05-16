@@ -83,17 +83,22 @@ class DocItem:
     """Holds inventory symbol information."""
 
     package: str  # Name of the package name the symbol is from
-    group: str  # Interpshinx "role" of the symbol, for example `label` or `method`
+    group: str  # Intersphinx "role" of the symbol, for example `label` or `method`
     base_url: str  # Absolute path to to which the relative path resolves, same for all items with the same package
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
     symbol_name: str  # The key in the dictionary where this is found
-    attributes: list["DocItem"] = dataclasses.field(default_factory=list, hash=False)
+    attributes: list[DocItem] = dataclasses.field(default_factory=list, hash=False)
 
     @property
     def url(self) -> str:
         """Return the absolute url to the symbol."""
         return self.base_url + self.relative_url_path
+
+    @property
+    def key(self) -> str:
+        """Returns a unique key for this DocItem."""
+        return f"{self.package}:{self.relative_url_path.removesuffix('.html')}:{self.symbol_id}"
 
 
 class DocView(DeleteView):
@@ -519,23 +524,20 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         First a redis lookup is attempted, if that fails the `item_fetcher`
         is used to fetch the page and parse the HTML from it into Markdown.
         """
-        markdown = await doc_cache.get(doc_item)
+        log.debug(f"Redis cache miss with {doc_item}.")
+        try:
+            markdown = await self.item_fetcher.get_markdown(doc_item)
+
+        except aiohttp.ClientError as e:
+            log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
+            return "Unable to parse the requested symbol due to a network error."
+
+        except Exception:
+            log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
+            return "Unable to parse the requested symbol due to an error."
 
         if markdown is None:
-            log.debug(f"Redis cache miss with {doc_item}.")
-            try:
-                markdown = await self.item_fetcher.get_markdown(doc_item)
-
-            except aiohttp.ClientError as e:
-                log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
-                return "Unable to parse the requested symbol due to a network error."
-
-            except Exception:
-                log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
-                return "Unable to parse the requested symbol due to an error."
-
-            if markdown is None:
-                return "Unable to parse the requested symbol."
+            return "Unable to parse the requested symbol."
         return markdown
 
     async def create_symbol_embed(

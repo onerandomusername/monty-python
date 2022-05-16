@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 class Client(NamedTuple):
 
     name = "Monty Python"
-    config_prefix = "monty-python"
+    redis_prefix = config_prefix = "monty-python"
     version = environ.get("GIT_SHA", "main")[:7]
     prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
@@ -194,7 +194,7 @@ class RedisConfig(NamedTuple):
     port = environ.get("REDIS_PORT", 6379)
     password = environ.get("REDIS_PASSWORD")
     use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
-    prefix = Client.config_prefix
+    prefix = Client.redis_prefix + ":"
 
 
 class Wolfram(NamedTuple):

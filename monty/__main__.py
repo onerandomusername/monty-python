@@ -3,8 +3,10 @@ import logging
 import signal
 import sys
 
-import async_rediscache
+import cachingutils
+import cachingutils.redis
 import disnake
+import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
@@ -27,16 +29,21 @@ async def main() -> None:
     """Create and run the bot."""
     disnake.Embed.set_default_colour(constants.Colours.python_yellow)
 
-    redis_session = async_rediscache.RedisSession(
-        address=(constants.RedisConfig.host, constants.RedisConfig.port),
-        password=constants.RedisConfig.password,
-        minsize=1,
-        maxsize=20,
-        use_fakeredis=constants.RedisConfig.use_fakeredis,
-        global_namespace="monty-python",
+    # we make our redis session here and pass it to cachingutils
+    if not constants.RedisConfig.use_fakeredis:
+        redis_session = redis.asyncio.Redis(
+            host=constants.RedisConfig.host, port=constants.RedisConfig.port, password=constants.RedisConfig.password
+        )
+    else:
+        try:
+            import fakeredis
+            import fakeredis.aioredis
+        except ImportError as e:
+            raise RuntimeError("fakeredis must be installed to use fake redis") from e
+        redis_session = fakeredis.aioredis.FakeRedis()
+    cachingutils.redis.async_session(
+        constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
     )
-
-    await redis_session.connect()
 
     bot = Monty(
         redis_session=redis_session,
