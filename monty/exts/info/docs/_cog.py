@@ -88,7 +88,7 @@ class DocItem:
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
     symbol_name: str  # The key in the dictionary where this is found
-    attributes: list[DocItem] = dataclasses.field(default_factory=list, hash=False)
+    attributes: list[DocItem] = dataclasses.field(default_factory=list, hash=False, repr=False)
 
     @property
     def url(self) -> str:
@@ -524,20 +524,23 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         First a redis lookup is attempted, if that fails the `item_fetcher`
         is used to fetch the page and parse the HTML from it into Markdown.
         """
-        log.debug(f"Redis cache miss with {doc_item}.")
-        try:
-            markdown = await self.item_fetcher.get_markdown(doc_item)
-
-        except aiohttp.ClientError as e:
-            log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
-            return "Unable to parse the requested symbol due to a network error."
-
-        except Exception:
-            log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
-            return "Unable to parse the requested symbol due to an error."
+        markdown = await doc_cache.get(doc_item)
 
         if markdown is None:
-            return "Unable to parse the requested symbol."
+            log.debug(f"Redis cache miss with {doc_item}.")
+            try:
+                markdown = await self.item_fetcher.get_markdown(doc_item)
+
+            except aiohttp.ClientError as e:
+                log.warning(f"A network error has occurred when requesting parsing of {doc_item}.", exc_info=e)
+                return "Unable to parse the requested symbol due to a network error."
+
+            except Exception:
+                log.exception(f"An unexpected error has occurred when requesting parsing of {doc_item}.")
+                return "Unable to parse the requested symbol due to an error."
+
+            if markdown is None:
+                return "Unable to parse the requested symbol."
         return markdown
 
     async def create_symbol_embed(

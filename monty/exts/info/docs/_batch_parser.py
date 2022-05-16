@@ -5,7 +5,7 @@ import collections
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import TYPE_CHECKING, Deque, Dict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, DefaultDict, Deque, List, NamedTuple, Optional, Union
 
 import cachingutils.redis
 from bs4 import BeautifulSoup
@@ -99,8 +99,8 @@ class BatchParser:
     def __init__(self, bot: Monty):
         self._bot: Monty = bot
         self._queue: Deque[QueueItem] = collections.deque()
-        self._page_doc_items: Dict[str, List[_cog.DocItem]] = defaultdict(list)
-        self._item_futures: Dict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
+        self._page_doc_items: DefaultDict[str, List[_cog.DocItem]] = defaultdict(list)
+        self._item_futures: DefaultDict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
         self._parse_task = None
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
