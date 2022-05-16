@@ -124,6 +124,9 @@ class Monty(commands.Bot):
         if self.http_session:
             await self.http_session.close()
 
+        if self.redis_session:
+            await self.redis_session.close(close_connection_pool=True)
+
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
         if constants.Client.extensions:
