@@ -31,9 +31,16 @@ async def main() -> None:
 
     # we make our redis session here and pass it to cachingutils
     if not constants.RedisConfig.use_fakeredis:
-        redis_session = redis.asyncio.Redis(
-            host=constants.RedisConfig.host, port=constants.RedisConfig.port, password=constants.RedisConfig.password
+
+        pool = redis.asyncio.BlockingConnectionPool(
+            max_connections=20,
+            timeout=300,
+            host=constants.RedisConfig.host,
+            port=constants.RedisConfig.port,
+            password=constants.RedisConfig.password,
         )
+        redis_session = redis.asyncio.Redis(connection_pool=pool)
+
     else:
         try:
             import fakeredis
