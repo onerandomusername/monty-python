@@ -163,7 +163,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     )
     async def fetch_data(self, url: str, **kw) -> t.Union[dict, str, list, typing.Any]:
         """Retrieve data as a dictionary."""
-        log.debug(f"fetching {url}")
         if kw.get("headers"):
             kw["headers"] = copy.copy(kw["headers"])
             kw["headers"].update(REQUEST_HEADERS)
@@ -367,7 +366,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         Returns IssueState on success, FetchError on failure.
         """
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
-        log.trace(f"Querying GH issues API: {url}")
 
         r, json_data = await self.fetch_issue(url, headers=GITHUB_HEADERS)
 
