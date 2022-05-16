@@ -579,7 +579,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         user = self.get_default_user(inter.guild)
         repository = repo or self.get_repository(inter.guild, user)
-        repository = repository.rsplit("/", 1)[-1]
+        repository = repository and repository.rsplit("/", 1)[-1]
         await self.github_issue.callback(self, inter, [num], repository=repository, user=user)
 
     @github_pull_slash.autocomplete("repo")
@@ -589,6 +589,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         resp = []
         for repo in self.repos[user]:
             resp.append(f"{user}/{repo}")
+            if len(resp) >= 25:
+                break
+
         return resp
 
     @github.sub_command("issue")
@@ -615,6 +618,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         resp = []
         for repo in self.repos[user]:
             resp.append(f"{user}/{repo}")
+            if len(resp) >= 25:
+                break
+
         return resp
 
 
