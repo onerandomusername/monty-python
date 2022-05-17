@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
+from urllib.parse import urljoin
 
 import aiohttp
 import disnake
@@ -184,7 +185,7 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         embed = disnake.Embed(
             title=header,
             description=text,
-            url=url,
+            url=urljoin(url, tag.a["href"]),
         )
         embed.set_author(name=f"PEP {number} - {tags['Title']}", url=url)
 
