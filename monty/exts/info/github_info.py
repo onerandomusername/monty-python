@@ -286,11 +286,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             else:
                 blog = "No website link available."
 
+            html_url = user_data["html_url"]
             embed = disnake.Embed(
                 title=f"`{user_data['login']}`'s GitHub profile info",
                 description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
                 colour=disnake.Colour.blurple(),
-                url=user_data["html_url"],
+                url=html_url,
                 timestamp=datetime.strptime(user_data["created_at"], "%Y-%m-%dT%H:%M:%SZ"),
             )
             embed.set_thumbnail(url=user_data["avatar_url"])
@@ -326,7 +327,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 )
             embed.add_field(name="Website", value=blog)
 
-        components = DeleteButton(ctx.author, initial_message=ctx.message)
+            components = [
+                DeleteButton(ctx.author, initial_message=ctx.message),
+                disnake.ui.Button(style=disnake.ButtonStyle.link, url=html_url, label="Go to Github"),
+            ]
         await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="repository", aliases=("repo",), root_aliases=("repo",))
@@ -362,11 +366,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 await ctx.send(embed=embed, components=components)
                 return
 
+        html_url = repo_data["html_url"]
         embed = disnake.Embed(
             title=repo_data["name"],
             description=repo_data["description"],
             colour=disnake.Colour.blurple(),
-            url=repo_data["html_url"],
+            url=html_url,
         )
 
         # If it's a fork, then it will have a parent key
@@ -396,7 +401,11 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             )
         )
 
-        components = DeleteButton(ctx.author, initial_message=ctx.message)
+        components = [
+            DeleteButton(ctx.author, initial_message=ctx.message),
+            disnake.ui.Button(style=disnake.ButtonStyle.link, url=html_url, label="Go to Github"),
+        ]
+
         await ctx.send(embed=embed, components=components)
 
     @staticmethod
