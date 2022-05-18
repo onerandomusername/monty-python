@@ -43,3 +43,8 @@ repos:
         language: python
         types: [python]
         require_serial: true
+
+
+ci:
+  skip:
+    - flake8
