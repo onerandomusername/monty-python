@@ -1,10 +1,13 @@
+import asyncio
+import contextlib
 import logging
 import random
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, Generic, List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Generator, Generic, List, NamedTuple, Optional, Tuple, TypeVar, Union
 from urllib.parse import quote, quote_plus
+from weakref import WeakValueDictionary
 
 import cachingutils
 import cachingutils.redis
@@ -131,8 +134,9 @@ class GithubCache(Generic[KT, VT]):
         self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
         self._rediscache = cachingutils.redis.async_session(constants.Client.redis_prefix)
         self._redis_timeout = timedelta(hours=4).total_seconds()
+        self._locks: WeakValueDictionary[KT, asyncio.Lock] = WeakValueDictionary()
 
-    async def get(self, key: Any, default: Optional[VT] = None) -> Optional[VT]:
+    async def get(self, key: KT, default: Optional[VT] = None) -> Optional[VT]:
         """Get the provided key from the internal caches."""
         # only requests for repos go to redis
         if "/repos?" in key:
@@ -144,6 +148,18 @@ class GithubCache(Generic[KT, VT]):
         if "/repos?" in key:
             return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
         return self._memcache.set(key, value=value, timeout=timeout)
+
+    @contextlib.asynccontextmanager
+    async def lock(self, key: KT) -> Generator[None, None, None]:
+        """Runs a lock with the provided key."""
+        if key not in self._locks:
+            lock = asyncio.Lock()
+            self._locks[key] = lock
+        else:
+            lock = self._locks[key]
+
+        async with lock:
+            yield
 
 
 class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
@@ -183,7 +199,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
-        cached = await self.request_cache.get(url)
         if "headers" in kw:
             og = kw["headers"]
             kw["headers"] = REQUEST_HEADERS.copy()
@@ -191,31 +206,33 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         else:
             kw["headers"] = REQUEST_HEADERS.copy()
 
-        if cached:
-            etag, body = cached
-            if not etag:
-                # shortcut the return
-                return body
-            kw["headers"]["If-None-Match"] = etag
-        else:
-            etag = None
-            body = None
-
-        async with self.bot.http_session.get(url, **kw) as r:
-            etag = r.headers.get("ETag")
-            if r.status == 304:
-                return body
-            if as_text:
-                body = await r.text()
+        async with self.request_cache.lock(url):
+            cached = await self.request_cache.get(url)
+            if cached:
+                etag, body = cached
+                if not etag:
+                    # shortcut the return
+                    return body
+                kw["headers"]["If-None-Match"] = etag
             else:
-                body = await r.json()
+                etag = None
+                body = None
 
-            # only cache if etag is provided and the request was in the 200
-            if etag and 200 <= r.status < 300:
-                await self.request_cache.set(url, (etag, body))
-            elif "/repos?" in url:
-                await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
-            return body
+            async with self.bot.http_session.get(url, **kw) as r:
+                etag = r.headers.get("ETag")
+                if r.status == 304:
+                    return body
+                if as_text:
+                    body = await r.text()
+                else:
+                    body = await r.json()
+
+                # only cache if etag is provided and the request was in the 200
+                if etag and 200 <= r.status < 300:
+                    await self.request_cache.set(url, (etag, body))
+                elif "/repos?" in url:
+                    await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
+                return body
 
     async def fetch_user_and_repo(
         self,
