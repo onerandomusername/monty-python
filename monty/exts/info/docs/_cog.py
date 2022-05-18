@@ -902,11 +902,15 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         if base_url and not base_url.endswith("/"):
             raise commands.BadArgument("The base url must end with a slash.")
+
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         inventory_url, inventory_dict = inventory
 
         res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1", package_name)
+
         if res:
-            await ctx.send(":x: That package is already added!")
+            await ctx.send(":x: That package is already added!", view=view)
             return
 
         await self.bot.db.execute(
@@ -929,7 +933,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not base_url:
             base_url = self.base_url_from_inventory_url(inventory_url)
         self.update_single(package_name, base_url, inventory_dict)
-        await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.")
+        await ctx.send(f"Added the package `{package_name}` to the database and updated the inventories.", view=view)
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
@@ -941,9 +945,11 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         Example:
             !docs deletedoc aiohttp
         """
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
         if not res:
-            await ctx.send(":x: No package found with that name.")
+            await ctx.send(":x: No package found with that name.", view=view)
             return
 
         await self.bot.db.execute("DELETE * FROM docs_inventory WHERE name = $1", package_name)
@@ -951,7 +957,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         async with ctx.typing():
             await self.refresh_inventories()
             await doc_cache.delete(package_name)
-        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.")
+        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.", view=view)
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.is_owner()
@@ -972,7 +978,9 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed = disnake.Embed(
             title="Inventories refreshed", description=f"```diff\n{added}\n{removed}```" if added or removed else ""
         )
-        await ctx.send(embed=embed)
+
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(embed=embed, view=view)
 
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.is_owner()
@@ -980,11 +988,13 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self, ctx: commands.Context, package_name: Union[PackageName, Literal["*"]]  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         if await doc_cache.delete(package_name):
             await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
-            await ctx.send(f"Successfully cleared the cache for `{package_name}`.")
+            await ctx.send(f"Successfully cleared the cache for `{package_name}`.", view=view)
         else:
-            await ctx.send("No keys matching the package found.")
+            await ctx.send("No keys matching the package found.", view=view)
 
     @commands.is_owner()
     @docs_group.group(name="whitelist", aliases=("wh",), invoke_without_command=True)
@@ -996,13 +1006,14 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @whitelist_command_group.command(name="list", aliases=("l",))
     async def list_whitelist(self, ctx: commands.Context) -> None:
         """List the whitelisted packages."""
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         if not self.whitelist:
-            await ctx.send("No packages are whitelisted.")
+            await ctx.send("No packages are whitelisted.", view=view)
             return
         embed = disnake.Embed(title="Whitelisted packages")
         for guild, packages in self.whitelist.items():
             embed.add_field(self.bot.get_guild(guild).name + f" ({guild})", ", ".join(sorted(packages)))
-        view = DeleteView(ctx.author)
         await ctx.send(embed=embed, view=view)
 
     @commands.is_owner()
@@ -1016,13 +1027,15 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         Example:
             -docs whitelist python 123456789012345678
         """
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         if not guild_ids:
-            await ctx.send(":x: You must specify at least one guild.")
+            await ctx.send(":x: You must specify at least one guild.", view=view)
             return
 
         res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
         if not res:
-            await ctx.send(":x: No package found with that name.")
+            await ctx.send(":x: No package found with that name.", view=view)
             return
         res = res[0]
 
@@ -1044,7 +1057,8 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await self.refresh_whitelist_and_blacklist()
 
         await ctx.send(
-            f"Successfully whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
+            f"Successfully whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}",  # noqa: 501
+            view=view,
         )
 
     @commands.is_owner()
@@ -1058,16 +1072,18 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         Example:
             -docs unwhitelist python 123456789012345678
         """
+        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
         if not guild_ids:
-            await ctx.send(":x: You must specify at least one guild.")
+            await ctx.send(":x: You must specify at least one guild.", view=view)
             return
         res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
         if not res:
-            await ctx.send(":x: No package found with that name.")
+            await ctx.send(":x: No package found with that name.", view=view)
             return
         res = res[0]
         if not res["guilds_whitelist"]:
-            await ctx.send("No whitelist configured for that package.")
+            await ctx.send("No whitelist configured for that package.", view=view)
             return
 
         guild_ids = [g.id for g in guild_ids]
@@ -1087,7 +1103,8 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await self.refresh_whitelist_and_blacklist()
 
         await ctx.send(
-            f"Successfully de-whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}"  # noqa: E501
+            f"Successfully de-whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}",  # noqa: 501
+            view=view,
         )
 
     @commands.Cog.listener()
