@@ -1,4 +1,3 @@
-import copy
 import logging
 import random
 import re
@@ -180,36 +179,41 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Stop tasks on cog unload."""
         self.repo_refresh.stop()
 
-    async def fetch_data(self, url: str, **kw) -> Union[dict, str, list, Any]:
+    async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
         cached = await self.request_cache.get(url)
         if "headers" in kw:
-            kw["headers"] = copy.copy(kw["headers"])
+            og = kw["headers"]
+            kw["headers"] = REQUEST_HEADERS.copy()
+            kw["headers"].update(og)
         else:
-            kw["headers"] = {}
-        kw["headers"].update(REQUEST_HEADERS)
+            kw["headers"] = REQUEST_HEADERS.copy()
 
         if cached:
-            etag, json = cached
+            etag, body = cached
             if not etag:
                 # shortcut the return
-                return json
+                return body
             kw["headers"]["If-None-Match"] = etag
         else:
             etag = None
-            json = None
+            body = None
 
         async with self.bot.http_session.get(url, **kw) as r:
             etag = r.headers.get("ETag")
             if r.status == 304:
-                return json
-            json = await r.json()
+                return body
+            if as_text:
+                body = await r.text()
+            else:
+                body = await r.json()
+
             # only cache if etag is provided and the request was in the 200
             if etag and 200 <= r.status < 300:
-                await self.request_cache.set(url, (etag, json))
+                await self.request_cache.set(url, (etag, body))
             elif "/repos?" in url:
-                await self.request_cache.set(url, (None, json), timeout=timedelta(minutes=30).total_seconds())
-            return json
+                await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
+            return body
 
     @staticmethod
     def get_default_user(guild: disnake.Guild) -> Optional["str"]:

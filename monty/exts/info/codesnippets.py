@@ -2,12 +2,12 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import Any, Coroutine, List, Tuple
+from typing import TYPE_CHECKING, Any, Coroutine, List, Tuple
 from urllib.parse import quote_plus
 
+import cachingutils
 import disnake
 from aiohttp import ClientResponseError
-from cachingutils import async_cached
 from disnake.ext import commands
 
 from monty import constants
@@ -15,6 +15,9 @@ from monty.bot import Bot
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.messages import DeleteView
 
+
+if TYPE_CHECKING:
+    from monty.exts.info.github_info import GithubInfo
 
 log = logging.getLogger(__name__)
 
@@ -65,19 +68,29 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
             (BITBUCKET_RE, self._fetch_bitbucket_snippet),
         ]
 
-    @async_cached(
-        timeout=int(timedelta(minutes=6).total_seconds()),
-        include_posargs=[0, 1, 2],
-        include_kwargs=[],
-        allow_unset=True,
-    )
+        self.request_cache: cachingutils.MemoryCache[str, Any] = cachingutils.MemoryCache(timeout=timedelta(minutes=6))
+
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
+        # make the request with the github_info cog if it is loaded
+        if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GithubInfo")):
+            cog: GithubInfo
+            return await cog.fetch_data(url, as_text=True if response_format == "text" else False, **kwargs)
+
+        key = (url, response_format)
+        if cached := self.request_cache.get(key):
+            return cached
+
         async with self.bot.http_session.get(url, raise_for_status=True, **kwargs) as response:
             if response_format == "text":
-                return await response.text()
+                body = await response.text()
             elif response_format == "json":
-                return await response.json()
+                body = await response.json()
+            else:
+                return None
+
+        self.request_cache.set(key, body)
+        return body
 
     def _find_ref(self, path: str, refs: tuple) -> tuple:
         """Loops through all branches and tags to find the required ref."""
