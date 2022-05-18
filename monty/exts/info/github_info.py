@@ -12,7 +12,7 @@ import disnake
 from disnake.ext import commands, tasks
 
 from monty import constants
-from monty.bot import TEST_GUILDS, Bot
+from monty.bot import Monty
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
 from monty.utils.messages import DeleteButton
@@ -73,8 +73,6 @@ CODE_BLOCK_RE = re.compile(
 )
 
 log = logging.getLogger(__name__)
-
-GITHUB_GUILDS = TEST_GUILDS if TEST_GUILDS else _GUILD_WHITELIST
 
 
 class RepoTarget(NamedTuple):
@@ -151,7 +149,7 @@ class GithubCache(Generic[KT, VT]):
 class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Fetches info from GitHub."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.repos: dict[str, list[str]] = {}
         self.repo_refresh.start()
@@ -472,17 +470,25 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
         self,
-        ctx: commands.Context,
+        ctx: Union[commands.Context, disnake.CommandInteraction],
         numbers: commands.Greedy[int],
-        repository: str,
+        repo: str,
         user: str = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
-        if user is None:
-            user = await self.fetch_user_and_repo(ctx.message, user)
-            if user is None:
-                raise commands.CommandError("No user provided, a user must be provided.")
-
+        if not user or not repo:
+            user, repo = await self.fetch_user_and_repo(
+                ctx.message if isinstance(ctx, commands.Context) else ctx, user, repo
+            )
+            if not user or not repo:
+                if not user:
+                    if not repo:
+                        # both are non-existant
+                        raise commands.CommandError("Both a user and repo must be provided.")
+                    # user is non-existant
+                    raise commands.CommandError("No user provided, a user must be provided.")
+                # repo is non-existant
+                raise commands.CommandError("No repo provided, a repo must be provided.")
         # Remove duplicates and sort
         numbers = dict.fromkeys(numbers)
 
@@ -491,21 +497,23 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await invoke_help_command(ctx)
             return
 
+        components = DeleteButton(
+            ctx.author, initial_message=ctx.message if isinstance(ctx, commands.Context) else None
+        )
+
         if len(numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
                 title=random.choice(constants.ERROR_REPLIES),
                 color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
-            components = DeleteButton(ctx.author, initial_message=ctx.message)
             await ctx.send(embed=embed, components=components)
             if isinstance(ctx, commands.Context):
                 await invoke_help_command(ctx)
             return
 
-        components = DeleteButton(ctx.author)
-        results = [await self.fetch_issues(number, repository, user) for number in numbers]
-        await ctx.send(embed=self.format_embed(results, user, repository), components=components)
+        results = [await self.fetch_issues(number, repo, user) for number in numbers]
+        await ctx.send(embed=self.format_embed(results, user, repo), components=components)
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
@@ -574,7 +582,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         components = DeleteButton(message.author)
         await message.channel.send(embed=resp, components=components)
 
-    @commands.slash_command(guild_ids=GITHUB_GUILDS)
+    @commands.slash_command()
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Helpful commands for viewing information about whitelisted guild's github projects."""
         pass
@@ -593,7 +601,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         user, repo = repository.user, repository.repo
         repo = repo and repo.rsplit("/", 1)[-1]
-        await self.github_issue.callback(self, inter, [num], repository=repo, user=user)
+        await self.github_issue(inter, [num], repo=repo, user=user)
 
     @github_pull_slash.autocomplete("repo")
     async def github_pull_autocomplete(self, inter: disnake.CommandInteraction, query: str) -> list[str]:
@@ -630,7 +638,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         user, repo = repo_user
         repo = repo.rsplit("/", 1)[-1]
-        await self.github_issue.callback(self, inter, [num], repository=repo, user=user)
+        await self.github_issue(inter, [num], repo=repo, user=user)
 
     @github_issue_slash.autocomplete("repo")
     async def github_issue_autocomplete(self, inter: disnake.Interaction, query: str) -> list[str]:
@@ -645,6 +653,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return resp
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the GithubInfo cog."""
     bot.add_cog(GithubInfo(bot))
