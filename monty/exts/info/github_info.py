@@ -4,22 +4,24 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Generic, List, Optional, Tuple, TypeVar, Union
 from urllib.parse import quote, quote_plus
 
-import aiohttp
+import cachingutils
+import cachingutils.redis
 import disnake
-from cachingutils import async_cached
 from disnake.ext import commands, tasks
 
 from monty import constants
 from monty.bot import TEST_GUILDS, Bot
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
-from monty.utils.helpers import redis_cache
 from monty.utils.messages import DeleteView
 from monty.utils.pagination import LinePaginator
 
+
+KT = TypeVar("KT")
+VT = TypeVar("VT")
 
 BAD_RESPONSE = {
     403: "Rate limit has been hit! Please try again later!",
@@ -128,6 +130,28 @@ def whitelisted_autolink() -> Callable[[commands.Command], commands.Command]:
     return commands.check(predicate)
 
 
+class GithubCache(Generic[KT, VT]):
+    """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
+
+    def __init__(self):
+        self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
+        self._rediscache = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        self._redis_timeout = timedelta(hours=4)
+
+    async def get(self, key: Any, default: Optional[VT] = None) -> Optional[VT]:
+        """Get the provided key from the internal caches."""
+        # only requests for repos go to redis
+        if "/repos?" in key:
+            return await self._rediscache.get(key, default=default)
+        return self._memcache.get(key, default=default)
+
+    async def set(self, key: KT, value: VT, *, timeout: Optional[float] = None) -> None:
+        """Set the provided key and value into the internal caches."""
+        if "/repos?" in key:
+            return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
+        return self._memcache.set(key, value=value, timeout=timeout)
+
+
 class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Fetches info from GitHub."""
 
@@ -135,6 +159,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.bot = bot
         self.repos: dict[str, list[str]] = {}
         self.repo_refresh.start()
+        # this is a memory cache for most requests, but a redis cache will be used for the list of repos
+        self.request_cache: GithubCache[str, Tuple[str, Any]] = GithubCache()
 
     @tasks.loop(hours=6)
     async def repo_refresh(self) -> None:
@@ -154,33 +180,36 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Stop tasks on cog unload."""
         self.repo_refresh.stop()
 
-    @redis_cache(
-        "github",
-        lambda url, **kw: url,
-        skip_cache_func=lambda url, **kw: "/pulls/" in url or "/issues/" in url,
-        timeout=timedelta(hours=4),
-    )
     async def fetch_data(self, url: str, **kw) -> Union[dict, str, list, Any]:
-        """Retrieve data as a dictionary."""
-        if kw.get("headers"):
+        """Retrieve data as a dictionary and cache it, using the provided etag."""
+        cached = await self.request_cache.get(url)
+        if "headers" in kw:
             kw["headers"] = copy.copy(kw["headers"])
-            kw["headers"].update(REQUEST_HEADERS)
         else:
-            kw["headers"] = REQUEST_HEADERS
-        async with self.bot.http_session.get(url, **kw) as r:
-            return await r.json()
+            kw["headers"] = {}
+        kw["headers"].update(REQUEST_HEADERS)
 
-    @async_cached(
-        timeout=int(timedelta(minutes=6).total_seconds()),
-        include_posargs=[0, 1],
-        include_kwargs=[],
-        allow_unset=True,
-    )
-    async def fetch_issue(self, url: str, **kw) -> Tuple[aiohttp.ClientResponse, Dict[str, str]]:
-        """Fetch an issue from github."""
-        async with self.bot.http_session.get(url, headers=REQUEST_HEADERS) as r:
-            json_data = await r.json()
-        return (r, json_data)
+        if cached:
+            etag, json = cached
+            if not etag:
+                # shortcut the return
+                return json
+            kw["headers"]["If-None-Match"] = etag
+        else:
+            etag = None
+            json = None
+
+        async with self.bot.http_session.get(url, **kw) as r:
+            etag = r.headers.get("ETag")
+            if r.status == 304:
+                return json
+            json = await r.json()
+            # only cache if etag is provided and the request was in the 200
+            if etag and 200 <= r.status < 300:
+                await self.request_cache.set(url, (etag, json))
+            elif "/repos?" in url:
+                await self.request_cache.set(url, (None, json), timeout=timedelta(minutes=30).total_seconds())
+            return json
 
     @staticmethod
     def get_default_user(guild: disnake.Guild) -> Optional["str"]:
@@ -366,17 +395,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
 
-        r, json_data = await self.fetch_issue(url, headers=GITHUB_HEADERS)
+        json_data = await self.fetch_data(url, headers=GITHUB_HEADERS)
 
-        if r.status == 403:
-            if r.headers.get("X-RateLimit-Remaining") == "0":
-                log.info(f"Ratelimit reached while fetching {url}")
-                return FetchError(403, "Ratelimit reached, please retry in a few minutes.")
-            return FetchError(403, "Cannot access issue.")
-        elif r.status in (404, 410):
-            return FetchError(r.status, "Issue not found.")
-        elif r.status != 200:
-            return FetchError(r.status, "Error while fetching issue.")
+        if "message" in json_data:
+            return FetchError("unknown", "Issue not found.")
 
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
@@ -485,7 +507,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             open_emoji = constants.Emojis.pull_request_open
             closed_emoji = constants.Emojis.pull_request_closed
         endpoint = endpoint.format(user=user, repository=repo)
-        json = await self.fetch_issue(endpoint)
+        json = await self.fetch_data(endpoint)
         prs = []
         for pull_data in json:
             if pull_data.get("draft"):

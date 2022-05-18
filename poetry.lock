@@ -176,7 +176,7 @@ redis = ["redis (>=4.2.2,<5.0.0)"]
 type = "git"
 url = "https://github.com/onerandomusername/cachingutils.git"
 reference = 'vcokltfre/feat/v2'
-resolved_reference = "8f38c7235be6296316b59b934e9caf2962d77888"
+resolved_reference = "0e43656e87b42efa2314f3dfeb1489d59931a0e2"
 
 [[package]]
 name = "cffi"
