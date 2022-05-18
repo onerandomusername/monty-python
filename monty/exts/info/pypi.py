@@ -20,7 +20,7 @@ from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
 from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 BASE_PYPI_URL = "https://pypi.org"
@@ -175,10 +175,10 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await inter.send(embed=embed, ephemeral=True)
             return
 
-        view = DeleteView(inter.author)
+        components = [DeleteButton(inter.author)]
         if embed.url:
-            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
-        await inter.send(embed=embed, view=view)
+            components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
+        await inter.send(embed=embed, components=components)
         if defer_task:
             defer_task.cancel()
 
@@ -278,8 +278,8 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         if not len(embed.description):
             embed.description = "Sorry, no results found."
-        view = DeleteView(inter.author)
-        await inter.send(embed=embed, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=embed, components=components)
         defer_task.cancel()
 
 

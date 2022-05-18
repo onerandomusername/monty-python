@@ -10,7 +10,7 @@ from disnake.ext import commands
 from monty.bot import Bot
 from monty.constants import ERROR_REPLIES, Colours, Icons
 from monty.utils.converters import WrappedMessageConverter
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 log = logging.getLogger(__name__)
@@ -181,11 +181,11 @@ class Bookmark(
             if isinstance(ctx, disnake.Interaction):
                 await ctx.send(embed=result, ephemeral=True)
             elif ctx.channel.permissions_for(ctx.me).read_message_history:
-                view = DeleteView(ctx.author, initial_message=ctx.message)
-                await ctx.reply(embed=result, fail_if_not_exists=False, view=view)
+                components = DeleteButton(ctx.author, initial_message=ctx.message)
+                await ctx.reply(embed=result, fail_if_not_exists=False, components=components)
             else:
-                view = DeleteView(ctx.author, initial_message=ctx.message)
-                await ctx.send(embed=result, view=view)
+                components = DeleteButton(ctx.author, initial_message=ctx.message)
+                await ctx.send(embed=result, components=components)
             return
         await self.send_embed(
             ctx,

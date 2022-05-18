@@ -13,7 +13,7 @@ from PIL import Image, ImageColor
 
 from monty.bot import Bot
 from monty.utils.extensions import invoke_help_command
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 THUMBNAIL_SIZE = (80, 80)
@@ -84,10 +84,10 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         colour_embed.set_thumbnail(url="attachment://colour.png")
 
         if isinstance(ctx, commands.Context):
-            view = DeleteView(ctx.author, initial_message=ctx.message)
+            components = DeleteButton(ctx.author, initial_message=ctx.message)
         else:
-            view = DeleteView(ctx.author)
-        await ctx.send(file=thumbnail_file, embed=colour_embed, view=view)
+            components = DeleteButton(ctx.author)
+        await ctx.send(file=thumbnail_file, embed=colour_embed, components=components)
 
     @commands.group(aliases=("color",), invoke_without_command=True)
     async def colour(self, ctx: commands.Context, *, colour_input: Optional[str] = None) -> None:

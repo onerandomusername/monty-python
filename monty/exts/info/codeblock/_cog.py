@@ -14,7 +14,7 @@ from monty.exts.info.codeblock._parsing import is_python_code
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import has_lines
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 log = get_logger(__name__)
@@ -129,8 +129,8 @@ class CodeBlockCog(
 
         async def add_task() -> None:
             await asyncio.sleep(DELETE_PAUSE)
-            view = DeleteView(message.author)
-            await bot_message.edit(view=view)
+            components = DeleteButton(message.author)
+            await bot_message.edit(components=components)
 
         scheduling.create_task(add_task(), event_loop=self.bot.loop)
 

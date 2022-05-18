@@ -10,7 +10,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Paste, URLs
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service
 
 
@@ -362,16 +362,16 @@ class CodeButtons(
             target, code, return_result=True, original_source=original_source
         )
 
-        view = DeleteView(inter.author)
+        components = [DeleteButton(inter.author)]
         if link and link.startswith("http"):
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
                 url=link,
             )
-            view.add_item(button)
+            components.append(button)
 
-        await inter.edit_original_message(content=msg, view=view)
+        await inter.edit_original_message(content=msg, components=components)
 
 
 def setup(bot: Bot) -> None:

@@ -13,7 +13,7 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Bot
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
@@ -274,8 +274,8 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 # its fine, since this bot is public and shouldn't require that.
                 pass
 
-            view = DeleteView(message.author)
-            await destination.send(message_to_send, view=view)
+            components = DeleteButton(message.author)
+            await destination.send(message_to_send, components=components)
 
     @commands.Cog.listener("on_button_click")
     async def send_expanded_links(self, inter: disnake.MessageInteraction) -> None:
@@ -308,8 +308,8 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
             )
             return
 
-        view = DeleteView(inter.user)
-        await inter.followup.send(snippet, view=view)
+        components = DeleteButton(inter.user)
+        await inter.followup.send(snippet, components=components)
 
 
 def setup(bot: Bot) -> None:

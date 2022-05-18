@@ -32,7 +32,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.metadata import ExtMetadata
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 EXT_METADATA = ExtMetadata(core=True)
@@ -150,12 +150,12 @@ class Admin(
             reference = None
 
         if resp is None and error is None:
-            view = DeleteView(ctx.author, allow_manage_messages=False)
+            components = DeleteButton(ctx.author, allow_manage_messages=False)
             await ctx.send(
                 "No output.",
                 allowed_mentions=disnake.AllowedMentions(replied_user=False),
                 reference=reference,
-                view=view,
+                components=components,
             )
             return
         resp_file: disnake.File = None
@@ -194,14 +194,14 @@ class Admin(
         for f in resp_file, error_file:
             if f is not None:
                 files.append(f)
-        view = DeleteView(ctx.author, allow_manage_messages=False)
+        components = DeleteButton(ctx.author, allow_manage_messages=False)
 
         await ctx.send(
             out,
             files=files,
             allowed_mentions=disnake.AllowedMentions(replied_user=False),
             reference=reference,
-            view=view,
+            components=components,
         )
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])
@@ -404,8 +404,8 @@ class Admin(
         for event, count in events_and_count.items():
             embed.description += f"`{event:<{longest_length+1}}`: `{count:>4,}`\n"
 
-        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(embed=embed, view=view)
+        components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(embed=embed, components=components)
 
     @commands.command(aliases=("gw",))
     async def gateway(self, ctx: commands.Context, *events: str) -> None:
@@ -425,8 +425,8 @@ class Admin(
         for event_type, count in self.bot.socket_events.most_common(25):
             embed.add_field(name=event_type, value=f"{count:,}", inline=True)
 
-        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(embed=embed, view=view)
+        components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(embed=embed, components=components)
 
 
 def setup(bot: Bot) -> None:

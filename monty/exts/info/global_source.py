@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, List
 from urllib.parse import urldefrag
 
 import disnake
 from disnake.ext import commands, tasks
 
 from monty.utils.helpers import encode_github_link
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
@@ -92,13 +92,14 @@ class GlobalSource(commands.Cog):
         else:
             text = "Something went wrong."
 
+        components: List[disnake.ui.action_row.Components] = []
         if isinstance(ctx, commands.Context):
-            view = DeleteView(ctx.author, initial_message=ctx.message)
+            components.append(DeleteButton(ctx.author, initial_message=ctx.message))
         else:
-            view = DeleteView(ctx.author)
+            components.append(DeleteButton(ctx.author))
 
         if link:
-            view.add_item(disnake.ui.Button(style=disnake.ButtonStyle.link, url=link, label="Go to Github"))
+            components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, url=link, label="Go to Github"))
             custom_id = encode_github_link(link)
             if frag := (urldefrag(link)[1]):
                 frag = frag.replace("#", "").replace("L", "")
@@ -110,14 +111,14 @@ class GlobalSource(commands.Cog):
                     show_source = True
 
                 if show_source:
-                    view.add_item(
+                    components.append(
                         disnake.ui.Button(style=disnake.ButtonStyle.blurple, label="Expand", custom_id=custom_id)
                     )
 
         await ctx.reply(
             text,
             allowed_mentions=disnake.AllowedMentions(everyone=False, users=False, roles=False, replied_user=True),
-            view=view,
+            components=components,
         )
 
     @tasks.loop(seconds=1)

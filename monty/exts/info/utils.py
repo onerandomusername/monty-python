@@ -9,7 +9,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
 
 
@@ -61,7 +61,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
             # Maximum length possible is 502 out of 1024, so there's no need to truncate.
             embed.add_field(name="Full Raw Text", value=f"`{''.join(raw_list)}`", inline=False)
         embed.description = "\n".join(char_list)
-        await ctx.send(embed=embed, view=DeleteView(ctx.author))
+        await ctx.send(embed=embed, components=DeleteButton(ctx.author))
 
     @commands.command(aliases=("snf", "snfl", "sf"))
     async def snowflake(self, ctx: commands.Context, *snowflakes: disnake.Object) -> None:
@@ -105,8 +105,8 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
         created_at = int(((snowflake >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
         embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
-        view = DeleteView(inter.author)
-        await inter.send(embed=embed, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=embed, components=components)
 
 
 def setup(bot: Bot) -> None:

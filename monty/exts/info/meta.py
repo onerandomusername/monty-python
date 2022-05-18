@@ -7,7 +7,7 @@ from disnake.ext.commands import Range
 
 from monty.bot import Bot
 from monty.constants import Client, Colours
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 ABOUT = f"""
@@ -85,8 +85,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
 
-        view = DeleteView(inter.author)
-        await inter.send(embed=e, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=e, components=components)
 
     @monty.sub_command(name="credits")
     async def credits(self, inter: disnake.CommandInteraction) -> None:
@@ -141,8 +141,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             colour=Colours.bright_green,
             description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
         )
-        view = DeleteView(inter.author)
-        await inter.send(embed=embed, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=embed, components=components)
 
     @monty.sub_command(name="stats")
     async def status(self, inter: disnake.CommandInteraction) -> None:
@@ -165,8 +165,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             version=Client.version,
         )
 
-        view = DeleteView(inter.author)
-        await inter.send(embed=e, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=e, components=components)
 
     @monty.sub_command()
     async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = None) -> None:
@@ -191,8 +191,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         timestamp = round(float(self.bot.start_time.format("X")))
         embed = disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)")
 
-        view = DeleteView(inter.author)
-        await inter.send(embed=embed, view=view)
+        components = DeleteButton(inter.author)
+        await inter.send(embed=embed, components=components)
 
 
 def setup(bot: Bot) -> None:

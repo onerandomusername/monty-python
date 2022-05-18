@@ -12,7 +12,7 @@ from monty.constants import Client
 from monty.metadata import ExtMetadata
 from monty.utils.converters import Extension
 from monty.utils.extensions import EXTENSIONS, invoke_help_command
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
 
 
@@ -65,8 +65,8 @@ class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         msg = self.batch_manage(Action.LOAD, *extensions)
 
-        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(msg, view=view)
+        components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, components=components)
 
     @extensions_group.command(name="unload", aliases=("ul",))
     async def unload_command(self, ctx: commands.Context, *extensions: Extension) -> None:
@@ -89,8 +89,8 @@ class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
             msg = self.batch_manage(Action.UNLOAD, *extensions)
 
-        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(msg, view=view)
+        components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, components=components)
 
     @extensions_group.command(name="reload", aliases=("r",), root_aliases=("reload",))
     async def reload_command(self, ctx: commands.Context, *extensions: Extension) -> None:
@@ -114,8 +114,8 @@ class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         msg = self.batch_manage(Action.RELOAD, *extensions)
 
-        view = DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(msg, view=view)
+        components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(msg, components=components)
 
     @extensions_group.command(name="list", aliases=("all",))
     async def list_command(self, ctx: commands.Context) -> None:

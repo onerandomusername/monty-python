@@ -16,7 +16,7 @@ from monty.constants import URLs
 from monty.log import get_logger
 from monty.utils.exceptions import APIError
 from monty.utils.extensions import invoke_help_command
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service
 
 
@@ -297,11 +297,11 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if paste_link:
             msg = f"{msg}\nFull output: {paste_link}"
 
-        view = DeleteView(ctx.author)
+        components = DeleteButton(ctx.author)
         if hasattr(ctx, "reply"):
-            response = await ctx.reply(msg, view=view)
+            response = await ctx.reply(msg, components=components)
         else:
-            await ctx.send(msg, view=view)
+            await ctx.send(msg, components=components)
             response = await ctx.original_message()
 
         return response
@@ -470,7 +470,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed.timestamp = disnake.utils.utcnow()
         await ctx.reply(
             embed=embed,
-            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
 
@@ -488,7 +488,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
         await ctx.reply(
             f"[{resp.status}] Installed the packages.",
-            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
 
@@ -506,7 +506,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     raise APIError("snekbox", 0, "Request errored.")
         await ctx.reply(
             f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
-            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
 
@@ -526,7 +526,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed.description = data.get("summary", "")[:600]
         await ctx.reply(
             embed=embed,
-            view=DeleteView(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
 

@@ -11,7 +11,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 from monty.constants import Client
 from monty.utils import responses
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 
 
 if typing.TYPE_CHECKING:
@@ -208,16 +208,16 @@ class ErrorHandler(
     async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         if isinstance(ctx, commands.Context):
-            view = DeleteView(ctx.author, initial_message=ctx.message)
+            components = DeleteButton(ctx.author, initial_message=ctx.message)
             if ctx.channel.permissions_for(ctx.me).read_message_history:
                 ctx.send_error = functools.partial(
                     ctx.reply,
-                    view=view,
+                    components=components,
                     fail_if_not_exists=False,
                     allowed_mentions=disnake.AllowedMentions(replied_user=False),
                 )
             else:
-                ctx.send_error = functools.partial(ctx.send, view=view)
+                ctx.send_error = functools.partial(ctx.send, components=components)
         elif isinstance(ctx, disnake.Interaction):
             if ctx.response.is_done():
                 ctx.send_error = functools.partial(ctx.followup.send, ephemeral=True)

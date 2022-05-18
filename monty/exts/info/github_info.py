@@ -15,7 +15,7 @@ from monty import constants
 from monty.bot import TEST_GUILDS, Bot
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
-from monty.utils.messages import DeleteView
+from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
 
 
@@ -603,8 +603,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         resp = self.format_embed(links, default_org)
         log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
-        view = DeleteView(message.author)
-        await message.channel.send(embed=resp, view=view)
+        components = DeleteButton(message.author)
+        await message.channel.send(embed=resp, components=components)
 
     @commands.slash_command(guild_ids=GITHUB_GUILDS)
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
