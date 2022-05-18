@@ -2,10 +2,9 @@ import copy
 import logging
 import random
 import re
-import typing
-import typing as t
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import quote, quote_plus
 
 import aiohttp
@@ -68,7 +67,7 @@ AUTOMATIC_REGEX = re.compile(
 )
 
 
-def get_default_user(guild_id: int) -> typing.Optional[str]:
+def get_default_user(guild_id: int) -> Optional[str]:
     """Get default user per guild_id."""
     return guild_id and GUILD_WHITELIST.get(guild_id)
 
@@ -87,7 +86,7 @@ GITHUB_GUILDS = TEST_GUILDS if TEST_GUILDS else GUILD_WHITELIST
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
 
-    organisation: t.Optional[str]
+    organisation: Optional[str]
     repository: str
     number: str
 
@@ -114,7 +113,7 @@ class IssueState:
     emoji: str
 
 
-def whitelisted_autolink() -> t.Callable[[commands.Command], commands.Command]:
+def whitelisted_autolink() -> Callable[[commands.Command], commands.Command]:
     """Decorator to whitelist a guild for automatic linking."""
 
     async def predicate(ctx: commands.Context) -> bool:
@@ -161,7 +160,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         skip_cache_func=lambda url, **kw: "/pulls/" in url or "/issues/" in url,
         timeout=timedelta(hours=4),
     )
-    async def fetch_data(self, url: str, **kw) -> t.Union[dict, str, list, typing.Any]:
+    async def fetch_data(self, url: str, **kw) -> Union[dict, str, list, Any]:
         """Retrieve data as a dictionary."""
         if kw.get("headers"):
             kw["headers"] = copy.copy(kw["headers"])
@@ -177,19 +176,19 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         include_kwargs=[],
         allow_unset=True,
     )
-    async def fetch_issue(self, url: str, **kw) -> t.Tuple[aiohttp.ClientResponse, t.Dict[str, str]]:
+    async def fetch_issue(self, url: str, **kw) -> Tuple[aiohttp.ClientResponse, Dict[str, str]]:
         """Fetch an issue from github."""
         async with self.bot.http_session.get(url, headers=REQUEST_HEADERS) as r:
             json_data = await r.json()
         return (r, json_data)
 
     @staticmethod
-    def get_default_user(guild: disnake.Guild) -> typing.Optional["str"]:
+    def get_default_user(guild: disnake.Guild) -> Optional["str"]:
         """Get the default user for the guild."""
         return get_default_user(guild.id)
 
     @staticmethod
-    def get_repository(guild: disnake.Guild = None, org: str = None) -> typing.Optional[str]:
+    def get_repository(guild: disnake.Guild = None, org: str = None) -> Optional[str]:
         """Get the repository name for the guild."""
         if guild is None:
             return "monty-python"
@@ -359,7 +358,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Remove any codeblock in a message."""
         return re.sub(CODE_BLOCK_RE, "", message)
 
-    async def fetch_issues(self, number: int, repository: str, user: str) -> t.Union[IssueState, FetchError]:
+    async def fetch_issues(self, number: int, repository: str, user: str) -> Union[IssueState, FetchError]:
         """
         Retrieve an issue from a GitHub repository.
 
@@ -408,9 +407,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @staticmethod
     def format_embed(
-        results: t.List[t.Union[IssueState, FetchError]],
+        results: List[Union[IssueState, FetchError]],
         user: str,
-        repository: t.Optional[str] = None,
+        repository: Optional[str] = None,
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
@@ -470,7 +469,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @whitelisted_autolink()
     @github_issue.command(name="list")
-    async def list_open(self, ctx: commands.Context, query: typing.Optional[str]) -> None:
+    async def list_open(self, ctx: commands.Context, query: Optional[str]) -> None:
         """List issues on the default repo matching the provided query."""
         await ctx.trigger_typing()
         user = self.get_default_user(ctx.guild)
