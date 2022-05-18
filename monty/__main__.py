@@ -3,6 +3,7 @@ import logging
 import signal
 import sys
 
+import asyncpg
 import cachingutils
 import cachingutils.redis
 import disnake
@@ -52,15 +53,16 @@ async def main() -> None:
         constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
     )
 
+    database: asyncpg.Pool = await asyncpg.create_pool(constants.Database.postgres_bind)
+
     bot = Monty(
         redis_session=redis_session,
+        database=database,
         command_prefix=commands.when_mentioned_or(constants.Client.prefix),
         activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
         allowed_mentions=disnake.AllowedMentions(everyone=False),
         intents=_intents,
     )
-
-    await bot.db.async_init()
 
     bot.load_extensions()
     loop = asyncio.get_running_loop()

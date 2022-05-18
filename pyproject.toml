@@ -12,6 +12,7 @@ aiohttp = "~=3.8.1"
 # currently kept as fakeredis depends on this
 aioredis = "~=2.0.1"
 arrow = "~=1.2.2"
+asyncpg = "^0.25.0"
 base65536 = "^0.1.1"
 beautifulsoup4 = "^4.10.0"
 cachingutils = {git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2'}

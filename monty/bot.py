@@ -6,13 +6,13 @@ from typing import Optional
 
 import aiohttp
 import arrow
+import asyncpg
 import cachingutils.redis
 import disnake
 import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
-from monty.config import Database
 from monty.statsd import AsyncStatsClient
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
@@ -44,7 +44,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, **kwargs):
+    def __init__(self, redis_session: redis.asyncio.Redis, database: asyncpg.Pool, **kwargs):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
@@ -57,7 +57,7 @@ class Monty(commands.Bot):
 
         self.create_http_session()
 
-        self.db = Database()
+        self.db: asyncpg.Pool = database
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
         self.stats: AsyncStatsClient = None
@@ -127,6 +127,9 @@ class Monty(commands.Bot):
 
         if self.redis_session:
             await self.redis_session.close(close_connection_pool=True)
+
+        if self.db:
+            await self.db.close()
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""

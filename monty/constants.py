@@ -3,7 +3,6 @@ from os import environ
 from typing import NamedTuple
 
 import disnake
-import yarl
 
 
 __all__ = (
@@ -62,8 +61,7 @@ DEBUG_MODE = Client.debug
 
 
 class Database:
-    auth_token = environ.get("CONFIG_AUTH")
-    url = yarl.URL(environ.get("CONFIG_ROOT"))
+    postgres_bind: str = environ.get("DB_BIND", "")
 
 
 class CloudAHK:
