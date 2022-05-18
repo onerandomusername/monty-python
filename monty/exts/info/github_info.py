@@ -136,7 +136,7 @@ class GithubCache(Generic[KT, VT]):
     def __init__(self):
         self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
         self._rediscache = cachingutils.redis.async_session(constants.Client.redis_prefix)
-        self._redis_timeout = timedelta(hours=4)
+        self._redis_timeout = timedelta(hours=4).total_seconds()
 
     async def get(self, key: Any, default: Optional[VT] = None) -> Optional[VT]:
         """Get the provided key from the internal caches."""
