@@ -270,7 +270,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     colour=constants.Colours.soft_red,
                 )
 
-                await ctx.send(embed=embed)
+                components = DeleteButton(ctx.author, initial_message=ctx.message)
+                await ctx.send(embed=embed, components=components)
                 return
 
             org_data = await self.fetch_data(user_data["organizations_url"], headers=REQUEST_HEADERS)
@@ -327,7 +328,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 )
             embed.add_field(name="Website", value=blog)
 
-        await ctx.send(embed=embed)
+        components = DeleteButton(ctx.author, initial_message=ctx.message)
+        await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="repository", aliases=("repo",), root_aliases=("repo",))
     async def github_repo_info(self, ctx: commands.Context, *repo: str) -> None:
@@ -344,7 +346,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 colour=constants.Colours.soft_red,
             )
 
-            await ctx.send(embed=embed)
+            components = DeleteButton(ctx.author, initial_message=ctx.message)
+            await ctx.send(embed=embed, components=components)
             return
 
         async with ctx.typing():
@@ -357,8 +360,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     description="The requested repository was not found.",
                     colour=constants.Colours.soft_red,
                 )
-
-                await ctx.send(embed=embed)
+                components = DeleteButton(ctx.author, initial_message=ctx.message)
+                await ctx.send(embed=embed, components=components)
                 return
 
         embed = disnake.Embed(
@@ -395,7 +398,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             )
         )
 
-        await ctx.send(embed=embed)
+        components = DeleteButton(ctx.author, initial_message=ctx.message)
+        await ctx.send(embed=embed, components=components)
 
     @staticmethod
     def remove_codeblocks(message: str) -> str:
@@ -493,12 +497,15 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
-            await ctx.send(embed=embed)
+            components = DeleteButton(ctx.author, initial_message=ctx.message)
+            await ctx.send(embed=embed, components=components)
             if isinstance(ctx, commands.Context):
                 await invoke_help_command(ctx)
+            return
 
+        components = DeleteButton(ctx.author)
         results = [await self.fetch_issues(number, repository, user) for number in numbers]
-        await ctx.send(embed=self.format_embed(results, user, repository))
+        await ctx.send(embed=self.format_embed(results, user, repository), components=components)
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
@@ -545,7 +552,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     color=constants.Colours.soft_red,
                     description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
                 )
-                await message.channel.send(embed=embed, delete_after=5)
+
+                components = DeleteButton(message.author)
+                await message.channel.send(embed=embed, components=components)
                 return
 
             for repo_issue in issues:
