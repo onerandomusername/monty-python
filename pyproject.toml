@@ -9,28 +9,25 @@ license = "MIT"
 python = "~=3.9"
 aiodns = "~=2.0"
 aiohttp = "~=3.8.1"
-# currently kept as fakeredis depends on this
-aioredis = "~=2.0.1"
 arrow = "~=1.2.2"
 asyncpg = "^0.25.0"
 base65536 = "^0.1.1"
 beautifulsoup4 = "^4.10.0"
-cachingutils = {git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2'}
+cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=14.0"
-disnake = {git = "https://github.com/DisnakeDev/disnake.git", rev='master'}
-emoji = "~=1.7.0"
-fakeredis = {version = "^1.7.5", optional = true}
-feedparser = "~=6.0.2"
+disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master' }
+fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 lxml = "^4.6.4"
 markdownify = "==0.11.2"
-redis = "^4.3.1"
+redis = { version = "^4.3.1", extras = ['hiredis'] }
 Pillow = "^9.0.0"
 psutil = "^5.9.0"
-python-dateutil = "~=2.8"
-python-frontmatter = "~=1.0.0"
 rapidfuzz = "~=1.4"
 statsd = "^3.3.0"
+
+[tool.poetry.extras]
+fakeredis = ['fakeredis']
 
 
 [tool.poetry.dev-dependencies]

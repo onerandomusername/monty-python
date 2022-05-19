@@ -13,8 +13,8 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import URLs
+from monty.errors import APIError
 from monty.log import get_logger
-from monty.utils.exceptions import APIError
 from monty.utils.extensions import invoke_help_command
 from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service

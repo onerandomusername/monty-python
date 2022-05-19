@@ -4,7 +4,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.utils.checks import BotAccountRequired
+from monty.errors import BotAccountRequired
 
 
 logger = logging.getLogger(__name__)

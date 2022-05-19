@@ -8,8 +8,8 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
+from monty.errors import APIError
 from monty.utils import LinePaginator
-from monty.utils.exceptions import APIError
 
 
 log = logging.getLogger(__name__)
