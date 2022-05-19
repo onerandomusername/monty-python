@@ -45,10 +45,13 @@ class DeleteButton(disnake.ui.Button):
         *,
         allow_manage_messages: bool = True,
         initial_message: Optional[Union[int, disnake.Message]] = None,
-        style: disnake.ButtonStyle = disnake.ButtonStyle.grey,
+        style: Optional[disnake.ButtonStyle] = None,
+        emoji: Optional[Union[disnake.Emoji, disnake.PartialEmoji, str]] = None,
     ):
         if isinstance(user, (disnake.User, disnake.Member)):
-            user = user.id
+            user_id = user.id
+        else:
+            user_id = user
 
         super().__init__()
         self.custom_id = DELETE_ID_V2
@@ -56,7 +59,7 @@ class DeleteButton(disnake.ui.Button):
         if allow_manage_messages:
             permissions.manage_messages = True
         self.custom_id += str(permissions.value) + ":"
-        self.custom_id += str(user)
+        self.custom_id += str(user_id)
 
         self.custom_id += ":"
         if initial_message:
@@ -64,8 +67,30 @@ class DeleteButton(disnake.ui.Button):
                 initial_message = initial_message.id
             self.custom_id += str(initial_message)
 
-        self.style = style
-        self.emoji = constants.Emojis.trashcan
+        # set style based on if the message was provided
+        if style is None:
+            if initial_message:
+                self.style = disnake.ButtonStyle.danger
+            else:
+                self.style = disnake.ButtonStyle.secondary
+        else:
+            self.style = style
+
+        # set emoji based on the style
+        if emoji is None:
+
+            # use the cat trashcan in disnake and nextcord
+            if isinstance(user, disnake.Member) and user.guild.id in (
+                constants.Guilds.disnake,
+                constants.Guilds.nextcord,
+            ):
+                self.emoji = constants.Emojis.trashcat_special
+            elif self.style == disnake.ButtonStyle.danger:
+                self.emoji = constants.Emojis.trashcan_on_red
+            else:
+                self.emoji = constants.Emojis.trashcan
+        else:
+            self.emoji = emoji
 
 
 class DeleteView(disnake.ui.View):

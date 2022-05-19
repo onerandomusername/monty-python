@@ -102,6 +102,8 @@ class Emojis:
     check = "\u2611"
     envelope = "\U0001F4E8"
     trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
+    trashcan_on_red = environ.get("TRASHCAN_ON_RED_EMOJI", "<:trashcan:976669056587415592>")
+    trashcat_special = environ.get("TRASHCAT_SPECIAL_EMOJI", "<:catborked:976598820651679794>")
     ok_hand = ":ok_hand:"
     hand_raised = "\U0001F64B"
     black = "<:black_format:928530654143066143>"
