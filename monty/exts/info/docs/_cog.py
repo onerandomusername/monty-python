@@ -11,7 +11,7 @@ import typing
 from collections import ChainMap, defaultdict
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, TypedDict, Union
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
 
 import aiohttp
 import asyncpg
@@ -53,22 +53,24 @@ FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 COMMAND_LOCK_SINGLETON = "inventory refresh"
 
 DOCS_LINK_REGEX = re.compile(r"!`([\w.]+)`")
-
-
-class DocDict(TypedDict):
-    """Documentation source attributes."""
-
-    package: str
-    base_url: str
-    inventory_url: str
-
+CUSTOM_ID_PREFIX = "docs_"
 
 BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
     constants.Guilds.nextcord: ["disnake", "dislash"],
 }
 
-CUSTOM_ID_PREFIX = "docs_"
+
+@dataclasses.dataclass()
+class PackageInfo:
+    """Holds package information."""
+
+    name: str
+    inventory_url: str
+    base_url: Optional[str] = None
+    hidden: bool = False
+    guilds_whitelist: Optional[List[int]] = None
+    guilds_blacklist: Optional[List[int]] = None
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -292,10 +294,8 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def update_single(
         self,
-        package_name: str,
-        base_url: str,
+        package: PackageInfo,
         inventory: InventoryDict,
-        blacklist_guilds: list[int] = None,
     ) -> None:
         """
         Build the inventory for a single package.
@@ -306,7 +306,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 absolute paths that link to specific symbols
             * `package` is the content of a intersphinx inventory.
         """
-        self.base_urls[package_name] = base_url
+        self.base_urls[package.name] = package.base_url
 
         for group, items in inventory.items():
             for symbol_name, relative_doc_url, *_ in items:
@@ -314,7 +314,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
                 symbol_name = self.ensure_unique_symbol_name(
-                    package_name,
+                    package.name,
                     group_name,
                     symbol_name,
                 )
@@ -322,23 +322,23 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 relative_url_path, _, symbol_id = relative_doc_url.partition("#")
                 # Intern fields that have shared content so we're not storing unique strings for every object
                 doc_item = DocItem(
-                    package_name,
+                    package.name,
                     sys.intern(group_name),
-                    base_url,
+                    package.base_url,
                     sys.intern(relative_url_path),
                     symbol_id,
                     symbol_name,
                 )
-                self.doc_symbols_new.setdefault(package_name, {})[sys.intern(symbol_name)] = doc_item
-                if blacklist_guilds:
-                    for guild_id in blacklist_guilds:
+                self.doc_symbols_new.setdefault(package.name, {})[sys.intern(symbol_name)] = doc_item
+                if package.guilds_blacklist:
+                    for guild_id in package.guilds_blacklist:
                         if BLACKLIST.get(guild_id) is None:
                             BLACKLIST[guild_id] = set()
                         BLACKLIST[guild_id].add(symbol_name)
 
                 if (
-                    parent := self.doc_symbols_new[package_name].get(symbol_name.rsplit(".", 1)[0])
-                ) and parent.package == package_name:
+                    parent := self.doc_symbols_new[package.name].get(symbol_name.rsplit(".", 1)[0])
+                ) and parent.package == package.name:
                     parent.attributes.append(doc_item)
                 self.item_fetcher.add_item(doc_item)
 
@@ -348,14 +348,9 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         except AttributeError:
             pass
 
-        log.trace(f"Fetched inventory for {package_name}.")
+        log.trace(f"Fetched inventory for {package.name}.")
 
-    async def update_or_reschedule_inventory(
-        self,
-        api_package_name: str,
-        base_url: str,
-        inventory_url: str,
-    ) -> None:
+    async def update_or_reschedule_inventory(self, package: PackageInfo) -> None:
         """
         Update the cog's inventories, or reschedule this method to execute again if the remote inventory is unreachable.
 
@@ -363,34 +358,34 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
         """
         try:
-            package = await fetch_inventory(self.bot, inventory_url)
+            inventory = await fetch_inventory(self.bot, package.inventory_url)
         except InvalidHeaderError as e:
             # Do not reschedule if the header is invalid, as the request went through but the contents are invalid.
-            log.warning(f"Invalid inventory header at {inventory_url}. Reason: {e}")
+            log.warning(f"Invalid inventory header at {package.inventory_url}. Reason: {e}")
             return
 
-        if not package:
-            if api_package_name in self.inventory_scheduler:
-                self.inventory_scheduler.cancel(api_package_name)
+        if not inventory:
+            if package.name in self.inventory_scheduler:
+                self.inventory_scheduler.cancel(package.name)
                 delay = FETCH_RESCHEDULE_DELAY.repeated
             else:
                 delay = FETCH_RESCHEDULE_DELAY.first
             log.info(f"Failed to fetch inventory; attempting again in {delay} minutes.")
             self.inventory_scheduler.schedule_later(
                 delay * 60,
-                api_package_name,
-                self.update_or_reschedule_inventory(api_package_name, base_url, inventory_url),
+                package.name,
+                self.update_or_reschedule_inventory(package),
             )
         else:
-            if not base_url:
-                base_url = self.base_url_from_inventory_url(inventory_url)
+            if not package.base_url:
+                package.base_url = self.base_url_from_inventory_url(package.inventory_url)
             # determine blacklist
             blacklist_guilds = []
             for g, packs in BLACKLIST_MAPPING.items():
-                if api_package_name in packs:
+                if package.name in packs:
                     blacklist_guilds.append(g)
 
-            self.update_single(api_package_name, base_url, package, blacklist_guilds)
+            self.update_single(package, inventory)
 
     def ensure_unique_symbol_name(self, package_name: str, group_name: str, symbol_name: str) -> str:
         """
@@ -484,10 +479,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         packages: List[Dict[str, Any]] = await self.bot.db.fetch("SELECT * FROM docs_inventory")
 
-        coros = [
-            self.update_or_reschedule_inventory(package["name"], package["base_url"], package["inventory_url"])
-            for package in packages
-        ]
+        coros = [self.update_or_reschedule_inventory(PackageInfo(**package)) for package in packages]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
         log.debug("Refreshing whitelist and blacklist")
@@ -1047,10 +1039,11 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 continue
             whitelist.append(guild_id)
 
-        print(
-            await self.bot.db.execute(
-                "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1", package_name, whitelist
-            )
+        await self.bot.db.execute(
+            "UPDATE docs_inventory SET guilds_whitelist = $2 hidden = $3 WHERE name = $1",
+            package_name,
+            whitelist or None,
+            bool(whitelist),
         )
 
         await self.refresh_whitelist_and_blacklist()
@@ -1093,10 +1086,11 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 continue
             whitelist.remove(guild_id)
 
-        print(
-            await self.bot.db.execute(
-                "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1", package_name, whitelist
-            )
+        await self.bot.db.execute(
+            "UPDATE docs_inventory SET guilds_whitelist = $2 hidden = $3 WHERE name = $1",
+            package_name,
+            whitelist or None,
+            bool(whitelist),
         )
 
         await self.refresh_whitelist_and_blacklist()
