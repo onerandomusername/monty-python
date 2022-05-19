@@ -133,7 +133,7 @@ class GithubCache(Generic[KT, VT]):
     def __init__(self):
         self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
         self._rediscache = cachingutils.redis.async_session(constants.Client.redis_prefix)
-        self._redis_timeout = timedelta(hours=4).total_seconds()
+        self._redis_timeout = timedelta(hours=8).total_seconds()
         self._locks: WeakValueDictionary[KT, asyncio.Lock] = WeakValueDictionary()
 
     async def get(self, key: KT, default: Optional[VT] = None) -> Optional[VT]:
