@@ -16,7 +16,7 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
-from monty.constants import NEGATIVE_REPLIES, Colours, RedirectOutput
+from monty.constants import NEGATIVE_REPLIES, Colours
 from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
@@ -33,7 +33,6 @@ PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 MAX_CACHE = 15
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
-INVALID_INPUT_DELETE_DELAY = RedirectOutput.delete_delay
 MAX_RESULTS = 15
 log = logging.getLogger(__name__)
 

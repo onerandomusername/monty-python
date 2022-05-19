@@ -23,7 +23,6 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
-from monty.constants import RedirectOutput
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.converters import Inventory, PackageName, ValidURL
@@ -48,16 +47,10 @@ FORCE_PREFIX_GROUPS = (
     "pdbcommand",
     "2to3fixer",
 )
-NOT_FOUND_DELETE_DELAY = RedirectOutput.delete_delay
 # Delay to wait before trying to reach a rescheduled inventory again, in minutes
 FETCH_RESCHEDULE_DELAY = SimpleNamespace(first=2, repeated=5)
 
 COMMAND_LOCK_SINGLETON = "inventory refresh"
-
-CONFIG_DOC_PREFIX = "global.documentation"
-CONFIG_DOC_INVENTORIES = CONFIG_DOC_PREFIX + ".inventories"
-CONFIG_DOC_WHITELIST = CONFIG_DOC_PREFIX + ".whitelist"
-CONFIG_DOC_BLACKLIST = CONFIG_DOC_PREFIX + ".blacklist"
 
 DOCS_LINK_REGEX = re.compile(r"!`([\w.]+)`")
 

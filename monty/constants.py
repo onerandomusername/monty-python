@@ -15,7 +15,6 @@ __all__ = (
     "Tokens",
     "RedisConfig",
     "Wolfram",
-    "RedirectOutput",
     "ERROR_REPLIES",
     "NEGATIVE_REPLIES",
     "POSITIVE_REPLIES",
@@ -206,10 +205,6 @@ class Wolfram(NamedTuple):
 class Source:
     github = Client.github_bot_repo
     github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
-
-
-class RedirectOutput:
-    delete_delay: int = 10
 
 
 # Bot replies
