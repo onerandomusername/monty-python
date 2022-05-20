@@ -937,7 +937,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(":x: No package found with that name.", components=components)
             return
 
-        await self.bot.db.execute("DELETE * FROM docs_inventory WHERE name = $1", package_name)
+        await self.bot.db.execute("DELETE FROM docs_inventory WHERE name = $1", package_name)
 
         async with ctx.typing():
             await self.refresh_inventories()
