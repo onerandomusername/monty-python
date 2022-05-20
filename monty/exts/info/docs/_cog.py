@@ -14,8 +14,8 @@ from types import SimpleNamespace
 from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
 
 import aiohttp
-import asyncpg
 import disnake
+import ormar
 import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
@@ -23,6 +23,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
+from monty.database import PackageInfo
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.converters import Inventory, PackageName, ValidURL
@@ -59,18 +60,6 @@ BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
     constants.Guilds.nextcord: ["disnake", "dislash"],
 }
-
-
-@dataclasses.dataclass()
-class PackageInfo:
-    """Holds package information."""
-
-    name: str
-    inventory_url: str
-    base_url: Optional[str] = None
-    hidden: bool = False
-    guilds_whitelist: Optional[List[int]] = None
-    guilds_blacklist: Optional[List[int]] = None
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -205,23 +194,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     async def cog_load(self) -> None:
-        """Set up the necessary database table."""
-        # todo: refactor this out of here eventually
-        conn: asyncpg.Connection
-        async with self.bot.db.acquire() as conn:
-            res = await conn.execute(
-                """CREATE TABLE IF NOT EXISTS docs_inventory (
-                name TEXT NOT NULL,
-                inventory_url TEXT NOT NULL,
-                base_url TEXT,
-                hidden BOOL NOT NULL DEFAULT false,
-                guilds_whitelist BIGINT[],
-                guilds_blacklist BIGINT[]
-                );"""
-            )
-            if res == "CREATE TABLE":
-                log.info("Created the docs_inventory table.")
-
+        """Refresh inventories."""
         await self.refresh_inventories()
 
     @cached_property
@@ -444,14 +417,12 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Refresh internal whitelist and blacklist."""
         self.whitelist.clear()
 
-        guilds_whitelist = await self.bot.db.fetch(
-            "SELECT * FROM docs_inventory WHERE docs_inventory.guilds_whitelist IS NOT NULL"
-        )
+        guilds_whitelist = await PackageInfo.objects.filter(~(PackageInfo.guilds_whitelist >> None)).all()
 
         for package in guilds_whitelist:
-            for guild_id in package["guilds_whitelist"]:
+            for guild_id in package.guilds_whitelist:
                 self.whitelist.setdefault(guild_id, set())
-                self.whitelist[guild_id].add(package["name"])
+                self.whitelist[guild_id].add(package.name)
 
         # delete the cached doc_symbols
         try:
@@ -477,9 +448,9 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         except AttributeError:
             pass
 
-        packages: List[Dict[str, Any]] = await self.bot.db.fetch("SELECT * FROM docs_inventory")
+        packages = await PackageInfo.objects.all()
 
-        coros = [self.update_or_reschedule_inventory(PackageInfo(**package)) for package in packages]
+        coros = [self.update_or_reschedule_inventory(package) for package in packages]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
         log.debug("Refreshing whitelist and blacklist")
@@ -896,20 +867,16 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         inventory_url, inventory_dict = inventory
 
-        res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1", package_name)
+        res = await PackageInfo.objects.filter(name=package_name).exists()
 
         if res:
             await ctx.send(":x: That package is already added!", components=components)
             return
 
-        package = PackageInfo(package_name, str(inventory_url), base_url)
-
-        await self.bot.db.execute(
-            "INSERT INTO docs_inventory (name, inventory_url, base_url) VALUES ($1, $2, $3)",
-            package.name,
-            package.inventory_url,
-            package.base_url,
+        package = await PackageInfo.objects.create(
+            name=package_name, inventory_url=str(inventory_url), base_url=base_url
         )
+
         if not package.base_url:
             package.base_url = self.base_url_from_inventory_url(inventory_url)
 
@@ -932,12 +899,11 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 
-        res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
-        if not res:
+        deleted = await PackageInfo.objects.delete(name=package_name)
+
+        if not deleted:
             await ctx.send(":x: No package found with that name.", components=components)
             return
-
-        await self.bot.db.execute("DELETE FROM docs_inventory WHERE name = $1", package_name)
 
         async with ctx.typing():
             await self.refresh_inventories()
@@ -1018,26 +984,22 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
 
-        res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
-        if not res:
+        try:
+            package = await PackageInfo.objects.get(name=package_name)
+        except ormar.NoMatch:
             await ctx.send(":x: No package found with that name.", components=components)
             return
-        res = res[0]
 
         guild_ids = [g.id for g in guild_ids]
 
-        whitelist: List[int] = res["guilds_whitelist"] or []
+        whitelist: List[int] = package.guilds_whitelist or []
         for guild_id in guild_ids:
             if guild_id in whitelist:
                 log.debug(f"{package_name} is already whitelisted in {guild_id}")
                 continue
             whitelist.append(guild_id)
 
-        await self.bot.db.execute(
-            "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1",
-            package_name,
-            whitelist or None,
-        )
+        await package.update(guilds_whitelist=whitelist)
 
         await self.refresh_whitelist_and_blacklist()
 
@@ -1062,28 +1024,25 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not guild_ids:
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
-        res = await self.bot.db.fetch("SELECT * FROM docs_inventory WHERE name = $1 LIMIT 1", package_name)
-        if not res:
+        try:
+            package = await PackageInfo.objects.get(name=package_name)
+        except ormar.NoMatch:
             await ctx.send(":x: No package found with that name.", components=components)
             return
-        res = res[0]
-        if not res["guilds_whitelist"]:
+
+        if not package.guilds_whitelist:
             await ctx.send("No whitelist configured for that package.", components=components)
             return
 
         guild_ids = [g.id for g in guild_ids]
-        whitelist: List[int] = res["guilds_whitelist"]
+        whitelist: List[int] = package.guilds_whitelist
         for guild_id in guild_ids:
             if guild_id not in whitelist:
                 log.debug(f"{package_name} is not whitelisted in {guild_id}")
                 continue
             whitelist.remove(guild_id)
 
-        await self.bot.db.execute(
-            "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1",
-            package_name,
-            whitelist or None,
-        )
+        await package.update()
 
         await self.refresh_whitelist_and_blacklist()
 

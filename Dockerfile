@@ -30,4 +30,4 @@ COPY . .
 # install the package using pep 517
 RUN pip install . --no-deps
 
-ENTRYPOINT ["python3", "-m", "monty"]
+ENTRYPOINT ["sh", "entrypoint.sh"]

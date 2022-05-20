@@ -23,8 +23,6 @@ log.setup()
 if os.name == "nt":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-monkey_patches.patch_typing()
-
 # Monkey-patch discord.py decorators to use the both the Command and Group subclasses which supports root aliases.
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=monkey_patches.Command)

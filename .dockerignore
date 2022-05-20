@@ -2,7 +2,9 @@
 *
 
 # Make exceptions for what's needed
-!monty
+|alembic.ini
+!monty/
 !pyproject.toml
 !poetry.lock
 !LICENSE
+!entrypoint.sh

@@ -3,15 +3,15 @@ import logging
 import signal
 import sys
 
-import asyncpg
 import cachingutils
 import cachingutils.redis
 import disnake
 import redis.asyncio
 from disnake.ext import commands
 
-from monty import constants
+from monty import constants, monkey_patches
 from monty.bot import Monty
+from monty.database.metadata import database
 
 
 log = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ _intents.voice_states = False
 async def main() -> None:
     """Create and run the bot."""
     disnake.Embed.set_default_colour(constants.Colours.python_yellow)
+    monkey_patches.patch_typing()
 
     # we make our redis session here and pass it to cachingutils
     if not constants.RedisConfig.use_fakeredis:
@@ -53,7 +54,7 @@ async def main() -> None:
         constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
     )
 
-    database: asyncpg.Pool = await asyncpg.create_pool(constants.Database.postgres_bind)
+    await database.connect()
 
     bot = Monty(
         redis_session=redis_session,

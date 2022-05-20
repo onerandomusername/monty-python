@@ -57,6 +57,7 @@ def setup() -> None:
     logging.getLogger("disnake").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("cachingutils").setLevel(logging.INFO)
+    logging.getLogger("databases").setLevel(logging.INFO)
 
     _set_trace_loggers()
 
@@ -94,8 +95,8 @@ def _set_trace_loggers() -> None:
         elif level_filter.startswith("!"):
             logging.getLogger().setLevel(logging.TRACE)
             for logger_name in level_filter.strip("!,").split(","):
-                logging.getLogger(logger_name).setLevel(logging.DEBUG)
+                logging.getLogger(logger_name.strip()).setLevel(logging.DEBUG)
 
         else:
             for logger_name in level_filter.strip(",").split(","):
-                logging.getLogger(logger_name).setLevel(logging.TRACE)
+                logging.getLogger(logger_name.strip()).setLevel(logging.TRACE)

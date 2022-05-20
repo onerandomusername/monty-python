@@ -6,13 +6,14 @@ from typing import Optional
 
 import aiohttp
 import arrow
-import asyncpg
 import cachingutils.redis
+import databases
 import disnake
 import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
+from monty.database.metadata import metadata
 from monty.statsd import AsyncStatsClient
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
@@ -44,7 +45,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, database: asyncpg.Pool, **kwargs):
+    def __init__(self, redis_session: redis.asyncio.Redis, database: databases.Database, **kwargs):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
@@ -57,7 +58,8 @@ class Monty(commands.Bot):
 
         self.create_http_session()
 
-        self.db: asyncpg.Pool = database
+        self.db: databases.Database = database
+        self.db_metadata = metadata
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
         self.stats: AsyncStatsClient = None
@@ -120,8 +122,6 @@ class Monty(commands.Bot):
         """Close sessions when bot is shutting down."""
         await super().close()
 
-        await self.db.close()
-
         if self.http_session:
             await self.http_session.close()
 
@@ -129,19 +129,19 @@ class Monty(commands.Bot):
             await self.redis_session.close(close_connection_pool=True)
 
         if self.db:
-            await self.db.close()
+            await self.db.disconnect()
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
         if constants.Client.extensions:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
-        for ext, metadata in walk_extensions():
+        for ext, ext_metadata in walk_extensions():
             if not constants.Client.extensions:
                 self.load_extension(ext)
                 continue
 
-            if metadata.core or ext in constants.Client.extensions:
+            if ext_metadata.core or ext in constants.Client.extensions:
                 self.load_extension(ext)
                 continue
             log.trace(f"SKIPPING loading {ext} as per environment variables.")
