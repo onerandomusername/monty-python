@@ -295,7 +295,7 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ----------
         name: Colour name, by close match.
         """
-        await self.name(inter, user_colour_name=name)
+        await self.name(inter, name=name)
 
     @colour.command()
     async def random(self, ctx: commands.Context) -> None:
