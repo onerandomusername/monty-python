@@ -902,28 +902,22 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(":x: That package is already added!", components=components)
             return
 
+        package = PackageInfo(package_name, str(inventory_url), base_url)
+
         await self.bot.db.execute(
             "INSERT INTO docs_inventory (name, inventory_url, base_url) VALUES ($1, $2, $3)",
-            package_name,
-            str(inventory_url),
-            str(base_url),
+            package.name,
+            package.inventory_url,
+            package.base_url,
         )
+        if not package.base_url:
+            package.base_url = self.base_url_from_inventory_url(inventory_url)
 
-        body = {
-            "package": package_name,
-            "base_url": str(base_url),
-            "inventory_url": str(inventory_url),
-        }
-        log.info(
-            f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n"
-            + "\n".join(f"{key}: {value}" for key, value in body.items())
-        )
+        log.info(f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n" + repr(package))
 
-        if not base_url:
-            base_url = self.base_url_from_inventory_url(inventory_url)
-        self.update_single(package_name, base_url, inventory_dict)
+        self.update_single(package, inventory_dict)
         await ctx.send(
-            f"Added the package `{package_name}` to the database and updated the inventories.", components=components
+            f"Added the package `{package.name}` to the database and updated the inventories.", components=components
         )
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
