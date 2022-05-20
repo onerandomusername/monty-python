@@ -164,7 +164,7 @@ if __name__ == "__main__":
         else:
             print("This package isn't supported right now.")
             sys.exit(8)
-        if top_module_name != "arrow":
+        if top_module_name not in ("arrow", "ormar"):
             version = f"v{version}"
         url += f"/blob/{version}/{filename}{lines_extension}"
     # used to be able to slice code to ignore import side-effects
