@@ -2,7 +2,7 @@
 *
 
 # Make exceptions for what's needed
-|alembic.ini
+!alembic.ini
 !monty/
 !pyproject.toml
 !poetry.lock
