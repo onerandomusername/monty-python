@@ -1034,10 +1034,9 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             whitelist.append(guild_id)
 
         await self.bot.db.execute(
-            "UPDATE docs_inventory SET guilds_whitelist = $2 hidden = $3 WHERE name = $1",
+            "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1",
             package_name,
             whitelist or None,
-            bool(whitelist),
         )
 
         await self.refresh_whitelist_and_blacklist()
@@ -1081,10 +1080,9 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             whitelist.remove(guild_id)
 
         await self.bot.db.execute(
-            "UPDATE docs_inventory SET guilds_whitelist = $2 hidden = $3 WHERE name = $1",
+            "UPDATE docs_inventory SET guilds_whitelist = $2 WHERE name = $1",
             package_name,
             whitelist or None,
-            bool(whitelist),
         )
 
         await self.refresh_whitelist_and_blacklist()
