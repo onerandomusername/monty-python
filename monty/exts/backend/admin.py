@@ -150,7 +150,10 @@ class Admin(
             reference = None
 
         if resp is None and error is None:
-            components = DeleteButton(ctx.author, allow_manage_messages=False)
+            components = [
+                DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+                DeleteButton(ctx.author, allow_manage_messages=False),
+            ]
             await ctx.send(
                 "No output.",
                 allowed_mentions=disnake.AllowedMentions(replied_user=False),
@@ -194,7 +197,10 @@ class Admin(
         for f in resp_file, error_file:
             if f is not None:
                 files.append(f)
-        components = DeleteButton(ctx.author, allow_manage_messages=False)
+        components = [
+            DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+            DeleteButton(ctx.author, allow_manage_messages=False),
+        ]
 
         await ctx.send(
             out,
