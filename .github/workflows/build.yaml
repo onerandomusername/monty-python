@@ -54,7 +54,7 @@ jobs:
           context: monty/
           file: monty/Dockerfile
           push: true
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}//monty-python:latest
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/monty-python:latest
           cache-to: type=inline
           tags: |
             ghcr.io/${{ github.repository_owner }}/monty-python:latest
