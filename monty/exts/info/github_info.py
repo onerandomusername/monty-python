@@ -568,10 +568,14 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         user, _ = await self.fetch_user_and_repo(message)
 
-        issues = [
-            FoundIssue(*match.group("org", "repo", "number"))
-            for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content))
-        ]
+        issues: List[FoundIssue] = []
+        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
+            org = match.group("org") or user
+            if not org:
+                continue
+
+            issues.append(FoundIssue(org, *match.group("repo", "number")))
+
         links = []
 
         if issues:
