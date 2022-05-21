@@ -1,14 +1,18 @@
 import asyncio
 import logging
+import os
 import signal
 import sys
 
+import alembic.command
+import alembic.config
 import cachingutils
 import cachingutils.redis
 import disnake
 import redis.asyncio
 from disnake.ext import commands
 
+import monty.alembic
 from monty import constants, monkey_patches
 from monty.bot import Monty
 from monty.database.metadata import database
@@ -54,6 +58,13 @@ async def main() -> None:
         constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
     )
 
+    # run alembic migrations
+    alembic_cfg = alembic.config.Config()
+    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
+    alembic_cfg.set_main_option("sqlalchemy.url", str(database.url))
+    alembic.command.upgrade(alembic_cfg, "head")
+
+    # connect to the database
     await database.connect()
 
     bot = Monty(
