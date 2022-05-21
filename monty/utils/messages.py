@@ -104,9 +104,6 @@ class DeleteView(disnake.ui.View):
         allow_manage_messages: bool = True,
         initial_message: Optional[Union[int, disnake.Message]] = None,
     ):
-        if isinstance(user, (disnake.User, disnake.Member)):
-            user = user.id
-
         self.delete_button = DeleteButton(
             user=user, allow_manage_messages=allow_manage_messages, initial_message=initial_message
         )
