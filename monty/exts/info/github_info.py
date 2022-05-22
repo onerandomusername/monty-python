@@ -585,7 +585,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
             log.trace(f"Found {issues = }")
             # Remove duplicates
-            issues = dict.fromkeys(issues, None).keys()
+            issues = list(dict.fromkeys(issues, None))
 
             if len(issues) > MAXIMUM_ISSUES:
                 embed = disnake.Embed(
@@ -614,7 +614,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
         components = DeleteButton(message.author)
         response = await message.channel.send(embed=embed, components=components)
-        self.autolink_cache.set(message.id, (response, links))
+        self.autolink_cache.set(message.id, (response, issues))
 
     @commands.Cog.listener("on_message_edit")
     async def on_message_edit_automatic_issue_link(self, before: disnake.Message, after: disnake.Message) -> None:
@@ -657,7 +657,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await sent_msg.edit(embed=embed)
 
         # update the cache time
-        self.autolink_cache.set(after.id, (sent_msg, links))
+        self.autolink_cache.set(after.id, (sent_msg, after_issues))
 
     @commands.Cog.listener("on_message_delete")
     async def on_message_delete(self, message: disnake.Message) -> None:
