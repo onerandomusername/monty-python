@@ -664,6 +664,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if isinstance(result, IssueState):
                 links.append(result)
 
+        if not links:
+            # see above comments
+            return
+
         embed = self.format_embed(links, user)
 
         try:
