@@ -642,6 +642,18 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if before_issues == after_issues:
             return
 
+        if not after_issues:
+            # while we could delete the issue response, I don't think its necessary
+            # there is a delete button on it, and anyone who has perms and
+            # wants to delete it can press the button
+            # we're also still keeping the message in the cache for the time being
+            # as I don't see a reason to remove it
+            self.autolink_cache.set(after.id, (sent_msg, []))
+            # the one thing here is that we're keeping old functionality
+            # messages were able to be edited to have their issue links removed
+            # and we should continue to support that.
+            return
+
         links: List[IssueState] = []
         for repo_issue in after_issues:
             result = await self.fetch_issues(
@@ -654,7 +666,11 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         embed = self.format_embed(links, user)
 
-        await sent_msg.edit(embed=embed)
+        try:
+            await sent_msg.edit(embed=embed)
+        except disnake.HTTPException:
+            del self.autolink_cache[after.id]
+            return
 
         # update the cache time
         self.autolink_cache.set(after.id, (sent_msg, after_issues))
