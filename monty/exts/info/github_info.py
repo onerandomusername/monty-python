@@ -171,6 +171,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.repo_refresh.start()
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.request_cache: GithubCache[str, Tuple[str, Any]] = GithubCache()
+        self.autolink_cache: cachingutils.MemoryCache[
+            str, Tuple[disnake.Message, List[FoundIssue]]
+        ] = cachingutils.MemoryCache(timeout=600)
 
         self.guilds: Dict[str, str] = {}
 
@@ -485,7 +488,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             elif isinstance(result, FetchError):
                 description_list.append(f":x: [{result.return_code}] {result.message}")
             else:
-                description_list.append("something internal went wrong lol.")
+                description_list.append("Something internal went wrong.")
 
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
@@ -576,7 +579,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
             issues.append(FoundIssue(org, *match.group("repo", "number")))
 
-        links = []
+        links: List[IssueState] = []
 
         if issues:
 
@@ -599,7 +602,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 result = await self.fetch_issues(
                     int(repo_issue.number),
                     repo_issue.repository,
-                    repo_issue.organisation or user,
+                    repo_issue.organisation,
                 )
                 if isinstance(result, IssueState):
                     links.append(result)
@@ -607,10 +610,63 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not links:
             return
 
-        resp = self.format_embed(links, user)
+        embed = self.format_embed(links, user)
         log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
         components = DeleteButton(message.author)
-        await message.channel.send(embed=resp, components=components)
+        response = await message.channel.send(embed=embed, components=components)
+        self.autolink_cache.set(message.id, (response, links))
+
+    @commands.Cog.listener("on_message_edit")
+    async def on_message_edit_automatic_issue_link(self, before: disnake.Message, after: disnake.Message) -> None:
+        """Update the list of messages if the original message was edited."""
+        if before.content == after.content:
+            return
+
+        try:
+            sent_msg, before_issues = self.autolink_cache[after.id]
+        except KeyError:
+            return
+
+        user, _ = await self.fetch_user_and_repo(before)
+        after_issues: List[FoundIssue] = []
+        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(after.content)):
+            org = match.group("org") or user
+            if not org:
+                continue
+
+            after_issues.append(FoundIssue(org, *match.group("repo", "number")))
+
+        # if a user provides too many issues here, just forgo it
+        after_issues = after_issues[:MAXIMUM_ISSUES]
+
+        if before_issues == after_issues:
+            return
+
+        links: List[IssueState] = []
+        for repo_issue in after_issues:
+            result = await self.fetch_issues(
+                int(repo_issue.number),
+                repo_issue.repository,
+                repo_issue.organisation,
+            )
+            if isinstance(result, IssueState):
+                links.append(result)
+
+        embed = self.format_embed(links, user)
+
+        await sent_msg.edit(embed=embed)
+
+        # update the cache time
+        self.autolink_cache.set(after.id, (sent_msg, links))
+
+    @commands.Cog.listener("on_message_delete")
+    async def on_message_delete(self, message: disnake.Message) -> None:
+        """Clear the message from the cache."""
+        # todo: refactor the cache to prune itself *somehow*
+        try:
+            del self.autolink_cache[message.id]
+        except KeyError:
+            pass
 
     @commands.slash_command()
     async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
