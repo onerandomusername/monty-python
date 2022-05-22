@@ -10,7 +10,6 @@ import cachingutils
 import cachingutils.redis
 import disnake
 import redis.asyncio
-from disnake.ext import commands
 
 import monty.alembic
 from monty import constants, monkey_patches
@@ -75,8 +74,8 @@ async def main() -> None:
     bot = Monty(
         redis_session=redis_session,
         database=database,
-        command_prefix=commands.when_mentioned_or(constants.Client.prefix),
-        activity=disnake.Game(name=f"Commands: {constants.Client.prefix}help"),
+        command_prefix=constants.Client.default_command_prefix,
+        activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
         allowed_mentions=disnake.AllowedMentions(everyone=False),
         intents=_intents,
     )

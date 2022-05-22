@@ -28,7 +28,7 @@ class Client(NamedTuple):
     name = "Monty Python"
     redis_prefix = config_prefix = "monty-python"
     version = environ.get("GIT_SHA", "main")[:7]
-    prefix = environ.get("PREFIX", "-")
+    default_command_prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-python"

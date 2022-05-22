@@ -391,10 +391,7 @@ class HelpSession:
                 return []
             strikeout = "~~"
 
-        if isinstance(self.query, commands.Command):
-            prefix = ""
-        else:
-            prefix = constants.Client.prefix
+        prefix = ""
 
         signature = self._get_command_params(command)
         info = f"{strikeout}**`{prefix}{signature}`**{strikeout}"

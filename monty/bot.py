@@ -2,7 +2,7 @@ import collections
 import logging
 import socket
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, Union
 
 import aiohttp
 import arrow
@@ -13,6 +13,7 @@ import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
+from monty.database.guild_config import GuildConfig
 from monty.database.metadata import metadata
 from monty.statsd import AsyncStatsClient
 from monty.utils.extensions import EXTENSIONS, walk_extensions
@@ -107,6 +108,17 @@ class Monty(commands.Bot):
         else:
             self.invite_permissions = constants.Client.invite_permissions
         return self.invite_permissions
+
+    async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
+        prefixes = []
+        if message.guild:
+            config = await GuildConfig.objects.get_or_none(id=message.guild.id)
+            if config and config.prefix:
+                prefixes.append(config.prefix)
+            else:
+                prefixes.append(self.command_prefix)
+        prefixes.extend(commands.when_mentioned(self, message))
+        return prefixes
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
