@@ -151,13 +151,8 @@ class Endpoints:
 
 class Guilds:
     disnake = 808030843078836254
-    modmail = 798235512208490526
     nextcord = 881118111967883295
-    cat_dev_group = 808854246119178250
-    dexp = 798235585130266654
-    gurkult = 789192517375623228
     testing = 789603028382122014
-    branding = 928111022085144636
 
 
 class Icons:

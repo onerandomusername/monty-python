@@ -1,12 +1,20 @@
 from typing import Optional
 
+import aiohttp
 import disnake
+import pydantic
 from disnake.ext import commands
 
+from monty import constants
 from monty.bot import Monty
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.utils.messages import DeleteButton
+
+
+GITHUB_REQUEST_HEADERS = {}
+if GITHUB_TOKEN := constants.Tokens.github:
+    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 
 class Configuration(
@@ -29,6 +37,15 @@ class Configuration(
             return
 
         await guild_config.delete()
+
+    async def fetch_guild_config(self, guild_id: int, *, create: bool = False) -> GuildConfig:
+        """Fetch the configuration for the specified guild."""
+        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
+        if not guild_config:
+            guild_config = GuildConfig(id=guild_id)
+            if create:
+                guild_config.save()
+        return guild_config
 
     @commands.slash_command()
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
@@ -65,10 +82,7 @@ class Configuration(
         """
         guild_config = await GuildConfig.objects.get_or_none(id=inter.guild_id)
         if not guild_config:
-            created = True
             guild_config = GuildConfig(id=inter.guild_id)
-        else:
-            created = False
 
         old_prefix = guild_config.prefix
         guild_config.prefix = new_prefix
@@ -81,10 +95,7 @@ class Configuration(
             default_prefix: str = self.bot.command_prefix
             msg = f"Successfully cleared the prefix for this guild. The default prefix is `{default_prefix}`."
 
-        if created:
-            await guild_config.save()
-        else:
-            await guild_config.update()
+        await guild_config.upsert()
 
         await inter.response.send_message(msg, ephemeral=True)
 
@@ -118,6 +129,60 @@ class Configuration(
         msg = await self._get_prefix_msg(ctx.guild.id)
 
         await ctx.send(msg, components=DeleteButton(ctx.author, initial_message=ctx.message))
+
+    @config.sub_command_group("github-org")
+    async def config_github_org(self, inter: disnake.GuildCommandInteraction) -> None:
+        """Configure the default organisation or user for automatic github issue linking."""
+        pass
+
+    @config_github_org.sub_command("view")
+    async def config_github_org_view(self, inter: disnake.GuildCommandInteraction) -> None:
+        """View the currently configured organisation or user for issue linking."""
+        guild_config = await self.fetch_guild_config(inter.guild_id)
+        org = guild_config.github_issues_org
+        if org:
+            await inter.response.send_message(
+                f"The currently configured organisation for issue linking is `{org}`.", ephemeral=True
+            )
+        else:
+            await inter.response.send_message("There is no configured organisation for issue linking.", ephemeral=True)
+
+    @config_github_org.sub_command("set")
+    async def config_github_org_set(self, inter: disnake.GuildCommandInteraction, org: str) -> None:
+        """
+        Set an organisation or user for issue linking.
+
+        Parameters
+        ----------
+        org: The organisation or user to default to linking issues from.
+        """
+        guild_config = await self.fetch_guild_config(inter.guild_id, create=True)
+        try:
+            guild_config.github_issues_org = org
+            async with self.bot.http_session.head(
+                f"https://github.com/{org}", headers=GITHUB_REQUEST_HEADERS, raise_for_status=True
+            ):
+                pass
+        except pydantic.ValidationError:
+            raise commands.UserInputError(
+                "organsation must be between 1 and 39 characters and only contain alphanumeric characters or hypens."
+            )
+        except aiohttp.ClientResponseError:
+            raise commands.UserInputError("organisation must be a valid github user or organsation.")
+
+        await guild_config.update()
+
+        await inter.response.send_message(
+            f"Successfully set the organisation for issue linking to `{org}`.", ephemeral=True
+        )
+
+    @config_github_org.sub_command("clear")
+    async def config_github_org_clear(self, inter: disnake.GuildCommandInteraction) -> None:
+        """Clear the organisation or user from issue linking."""
+        guild_config = await self.fetch_guild_config(inter.guild_id, create=True)
+
+        guild_config.github_issues_org = None
+        await guild_config.upsert()
 
 
 def setup(bot: Monty) -> None:

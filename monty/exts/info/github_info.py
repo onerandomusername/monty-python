@@ -16,6 +16,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
+from monty.database import GuildConfig
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
@@ -47,16 +48,6 @@ REQUEST_HEADERS = {
 if GITHUB_TOKEN := constants.Tokens.github:
     REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
-_GUILD_WHITELIST = {
-    constants.Guilds.modmail: "discord-modmail",
-    constants.Guilds.dexp: "bast0006",
-    constants.Guilds.cat_dev_group: "cat-dev-group",
-    constants.Guilds.disnake: "DisnakeDev",
-    constants.Guilds.nextcord: "nextcord",
-    constants.Guilds.testing: "onerandomusername",
-    constants.Guilds.gurkult: "gurkult",
-    constants.Guilds.branding: "gustavwilliam",
-}
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
 
@@ -183,8 +174,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.guilds: Dict[str, str] = {}
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
-        """Fetch the list of repos and their guilds."""
-        return _GUILD_WHITELIST.get(guild_id)
+        """Fetch the org that matches to a specific guild_id."""
+        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
+        return guild_config and guild_config.github_issues_org
 
     async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""

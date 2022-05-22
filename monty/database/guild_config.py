@@ -11,3 +11,6 @@ class GuildConfig(ormar.Model):
 
     id: str = ormar.BigInteger(primary_key=True, autoincrement=False)
     prefix: str = ormar.String(max_length=50, nullable=True, default=None)
+    github_issues_org: str = ormar.String(
+        max_length=39, min_length=1, nullable=True, default=None, regex=r"[a-zA-Z0-9\-]+"
+    )
