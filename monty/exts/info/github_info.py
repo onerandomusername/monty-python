@@ -126,9 +126,7 @@ class GithubCache(Generic[KT, VT]):
         self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
 
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
-        self._rediscache = cachingutils.redis.AsyncRedisCache(
-            prefix=session._prefix + "github-requests", session=session._redis
-        )
+        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
 
         self._redis_timeout = timedelta(hours=8).total_seconds()
         self._locks: WeakValueDictionary[KT, asyncio.Lock] = WeakValueDictionary()
