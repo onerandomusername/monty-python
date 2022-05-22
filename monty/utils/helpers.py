@@ -103,6 +103,7 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
     return loop.create_task(internal_task())
 
 
+# vendored from cachingutils, but as they're internal, they're put here in case they change
 def _extend_posargs(sig: list[int], posargs: list[int], *args: Any) -> None:
     for i in posargs:
         val = args[i]
@@ -137,13 +138,13 @@ def _get_sig(
 ) -> Tuple[int]:
     signature: list[int] = [id(func)]
 
-    if include_posargs:
+    if include_posargs is not None:
         _extend_posargs(signature, include_posargs, *args)
     else:
         for arg in args:
             signature.append(hash(arg))
 
-    if include_kwargs:
+    if include_kwargs is not None:
         _extend_kwargs(signature, include_kwargs, allow_unset, **kwargs)
     else:
         for name, value in kwargs.items():
@@ -155,11 +156,13 @@ def _get_sig(
 # caching
 def redis_cache(
     prefix: str,
-    key_func: Any = None,
     /,
+    key_func: Any = None,
     skip_cache_func: Any = lambda *args, **kwargs: False,
     timeout: Optional[Union[int, float, datetime.timedelta]] = 60 * 60 * 24 * 7,
-    include_first_arg: bool = False,
+    include_posargs: Optional[list[int]] = None,
+    include_kwargs: Optional[list[str]] = None,
+    allow_unset: bool = False,
     cache_cls: Optional[Type[cachingutils.redis.AsyncRedisCache]] = None,
     cache: Any = None,
     **kwargs,
@@ -187,16 +190,32 @@ def redis_cache(
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
-            if not include_first_arg:
-                key_args = args[1:]
-            else:
-                key_args = args
-            if key_func:
-                key = prefix + key_func(*key_args, **kwargs)
-            else:
-                key = prefix + str(_get_sig(func, key_args, kwargs))
+            if key_func is not None:
+                if include_posargs is not None:
+                    key_args = tuple(k for i, k in enumerate(args) if i in include_posargs)
+                else:
+                    key_args = args
 
-            if not skip_cache_func(*key_args, **kwargs):
+                if include_kwargs is not None:
+                    key_kwargs = {k: v for k, v in kwargs if k in include_kwargs}
+                else:
+                    key_kwargs = kwargs.copy()
+
+                key = prefix + key_func(*key_args, **key_kwargs)
+
+            else:
+                key = prefix + str(
+                    _get_sig(
+                        func,
+                        args,
+                        kwargs,
+                        include_posargs=include_posargs,
+                        include_kwargs=include_kwargs,
+                        allow_unset=allow_unset,
+                    )
+                )
+
+            if not skip_cache_func(*args, **kwargs):
                 value = await _cache.get(key, UNSET)
 
                 if value is not UNSET:
