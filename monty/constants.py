@@ -61,6 +61,8 @@ DEBUG_MODE = Client.debug
 
 class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
+    run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
+    migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
 
 
 class CloudAHK:

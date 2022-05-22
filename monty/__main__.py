@@ -59,10 +59,15 @@ async def main() -> None:
     )
 
     # run alembic migrations
-    alembic_cfg = alembic.config.Config()
-    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
-    alembic_cfg.set_main_option("sqlalchemy.url", str(database.url))
-    alembic.command.upgrade(alembic_cfg, "head")
+    if constants.Database.run_migrations:
+        log.info(f"Running database migrations to target {constants.Database.migration_target}")
+        alembic_cfg = alembic.config.Config()
+        alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
+        alembic_cfg.set_main_option("sqlalchemy.url", str(database.url))
+        alembic.command.upgrade(alembic_cfg, constants.Database.migration_target)
+
+    else:
+        log.warning("Not running database migrations per environment settings.")
 
     # connect to the database
     await database.connect()
