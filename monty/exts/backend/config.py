@@ -44,7 +44,7 @@ class Configuration(
         if not guild_config:
             guild_config = GuildConfig(id=guild_id)
             if create:
-                guild_config.save()
+                await guild_config.save()
         return guild_config
 
     @commands.slash_command()
