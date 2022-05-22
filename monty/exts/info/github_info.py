@@ -12,12 +12,13 @@ from weakref import WeakValueDictionary
 import cachingutils
 import cachingutils.redis
 import disnake
-from disnake.ext import commands, tasks
+from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import redis_cache
 from monty.utils.messages import DeleteButton
 
 
@@ -132,7 +133,12 @@ class GithubCache(Generic[KT, VT]):
 
     def __init__(self):
         self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
-        self._rediscache = cachingutils.redis.async_session(constants.Client.redis_prefix)
+
+        session = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        self._rediscache = cachingutils.redis.AsyncRedisCache(
+            prefix=session._prefix + "github-requests", session=session._redis
+        )
+
         self._redis_timeout = timedelta(hours=8).total_seconds()
         self._locks: WeakValueDictionary[KT, asyncio.Lock] = WeakValueDictionary()
 
@@ -167,8 +173,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def __init__(self, bot: Monty):
         self.bot = bot
-        self.repos: dict[str, list[str]] = {}
-        self.repo_refresh.start()
+
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.request_cache: GithubCache[str, Tuple[str, Any]] = GithubCache()
         self.autolink_cache: cachingutils.MemoryCache[
@@ -177,28 +182,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         self.guilds: Dict[str, str] = {}
 
-    async def fetch_guild_to_org(self) -> Dict[int, str]:
+    async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the list of repos and their guilds."""
-        return _GUILD_WHITELIST
-
-    @tasks.loop(hours=6)
-    async def repo_refresh(self) -> None:
-        """Fetch and populate the repos on load."""
-        await self.bot.wait_until_ready()
-        guilds = await self.fetch_guild_to_org()
-        for guild, user in guilds.items():
-            if not self.bot.get_guild(guild):
-                continue
-            url = ORG_REPOS_ENDPOINT.format(org=user)
-            resp = await self.fetch_data(url)
-            if isinstance(resp, dict) and resp.get("message"):
-                url = USER_REPOS_ENDPOINT.format(user=user)
-                resp = await self.fetch_data(url)
-            self.repos[user] = sorted(i["name"] for i in resp)
-
-    def cog_unload(self) -> None:
-        """Stop tasks on cog unload."""
-        self.repo_refresh.stop()
+        return _GUILD_WHITELIST.get(guild_id)
 
     async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
@@ -237,6 +223,29 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
 
+    @redis_cache(
+        "github-user-repos",
+        key_func=lambda user: user,
+        timeout=timedelta(hours=6),
+        include_posargs=[1],
+        include_kwargs=["user"],
+        allow_unset=True,
+    )
+    async def fetch_repos(self, user: str) -> dict[str, str]:
+        """Returns the first 100 repos for a user, a dict format."""
+        url = ORG_REPOS_ENDPOINT.format(org=user)
+        resp = await self.fetch_data(url)
+        if isinstance(resp, dict) and resp.get("message"):
+            url = USER_REPOS_ENDPOINT.format(user=user)
+            resp = await self.fetch_data(url)
+
+        repos = {}
+        for repo in resp:
+            name = repo["name"]
+            repos[name.lower()] = name
+
+        return repos
+
     async def fetch_user_and_repo(
         self,
         inter: Union[disnake.CommandInteraction, disnake.Message],
@@ -253,12 +262,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         # todo: get from the database
         guild_id = inter.guild_id if isinstance(inter, disnake.Interaction) else (inter.guild and inter.guild.id)
-        guilds = await self.fetch_guild_to_org()
-        if guild_id in guilds:
-            user = user or guilds[guild_id]
+        user_guild = await self.fetch_guild_to_org(guild_id)
 
-            if user.lower() == "disnakedev":
-                repo = repo or "disnake"
+        user = user or user_guild
 
         return RepoTarget(user, repo)
 
@@ -569,15 +575,21 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not getattr(perms, req_perm):
             return
 
-        user, _ = await self.fetch_user_and_repo(message)
+        default_user, _ = await self.fetch_user_and_repo(message)
 
         issues: List[FoundIssue] = []
         for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
-            org = match.group("org") or user
-            if not org:
-                continue
+            repo = match.group("repo").lower()
+            if not (org := match.group("org")):
+                if not default_user:
+                    continue
+                org = default_user
+                repos = await self.fetch_repos(org)
+                if repo not in repos:
+                    continue
+                repo = repos[repo]
 
-            issues.append(FoundIssue(org, *match.group("repo", "number")))
+            issues.append(FoundIssue(org, repo, match.group("number")))
 
         links: List[IssueState] = []
 
@@ -610,7 +622,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not links:
             return
 
-        embed = self.format_embed(links, user)
+        embed = self.format_embed(links, default_user)
         log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
         components = DeleteButton(message.author)
         response = await message.channel.send(embed=embed, components=components)
@@ -709,27 +721,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         repo = repo and repo.rsplit("/", 1)[-1]
         await self.github_issue(inter, [num], repo=repo, user=user)
 
-    @github_pull_slash.autocomplete("repo")
-    async def github_pull_autocomplete(self, inter: disnake.CommandInteraction, query: str) -> list[str]:
-        """Autocomplete for github command."""
-        if not (user := inter.filled_options.get("user")):
-            user, _ = await self.fetch_user_and_repo(inter)
-
-        resp = []
-        for item in self.repos:
-            if user.lower() == item.lower():
-                user = item
-                break
-        else:
-            return []
-
-        for repo in self.repos[user]:
-            resp.append(f"{user}/{repo}")
-            if len(resp) >= 25:
-                break
-
-        return resp
-
     @github.sub_command("issue")
     async def github_issue_slash(
         self, inter: disnake.ApplicationCommandInteraction, num: int, repo_user: RepoTarget
@@ -745,18 +736,6 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         user, repo = repo_user
         repo = repo.rsplit("/", 1)[-1]
         await self.github_issue(inter, [num], repo=repo, user=user)
-
-    @github_issue_slash.autocomplete("repo")
-    async def github_issue_autocomplete(self, inter: disnake.Interaction, query: str) -> list[str]:
-        """Autocomplete for issue command."""
-        user, repo = await self.fetch_user_and_repo(inter)
-        resp = {}
-        for repo in self.repos[user]:
-            resp[repo] = f"{user}/{repo}"
-            if len(resp) >= 25:
-                break
-
-        return resp
 
 
 def setup(bot: Monty) -> None:
