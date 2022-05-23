@@ -123,7 +123,8 @@ class GithubCache(Generic[KT, VT]):
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
     def __init__(self):
-        self._memcache = cachingutils.MemoryCache(timeout=timedelta(minutes=30))
+        # todo: possibly store all of this in redis
+        self._memcache = cachingutils.MemoryCache(timeout=timedelta(hours=3))
 
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
@@ -216,7 +217,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @redis_cache(
         "github-user-repos",
         key_func=lambda user: user,
-        timeout=timedelta(hours=6),
+        timeout=timedelta(hours=8),
         include_posargs=[1],
         include_kwargs=["user"],
         allow_unset=True,
