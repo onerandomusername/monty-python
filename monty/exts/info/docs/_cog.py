@@ -323,7 +323,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         log.trace(f"Fetched inventory for {package.name}.")
 
-    async def update_or_reschedule_inventory(self, package: PackageInfo) -> None:
+    async def update_or_reschedule_inventory(self, package: PackageInfo, *, use_cache: bool = True) -> None:
         """
         Update the cog's inventories, or reschedule this method to execute again if the remote inventory is unreachable.
 
@@ -331,7 +331,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         in `FETCH_RESCHEDULE_DELAY.repeated` minutes.
         """
         try:
-            inventory = await fetch_inventory(self.bot, package.inventory_url)
+            inventory = await fetch_inventory(self.bot, package.inventory_url, use_cache=use_cache)
         except InvalidHeaderError as e:
             # Do not reschedule if the header is invalid, as the request went through but the contents are invalid.
             log.warning(f"Invalid inventory header at {package.inventory_url}. Reason: {e}")
@@ -347,7 +347,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             self.inventory_scheduler.schedule_later(
                 delay * 60,
                 package.name,
-                self.update_or_reschedule_inventory(package),
+                self.update_or_reschedule_inventory(package, use_cache=use_cache),
             )
         else:
             if not package.base_url:
@@ -431,7 +431,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
             pass
         log.debug("Finished setting up the whitelist.")
 
-    async def refresh_inventories(self) -> None:
+    async def refresh_inventories(self, *, use_cache: bool = True) -> None:
         """Refresh internal documentation inventories."""
         self.refresh_event.clear()
         await self.symbol_get_event.wait()
@@ -450,7 +450,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         packages = await PackageInfo.objects.all()
 
-        coros = [self.update_or_reschedule_inventory(package) for package in packages]
+        coros = [self.update_or_reschedule_inventory(package, use_cache=use_cache) for package in packages]
         await asyncio.gather(*coros)
         log.debug("Finished inventory refresh.")
         log.debug("Refreshing whitelist and blacklist")
@@ -917,7 +917,7 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Refresh inventories and show the difference."""
         old_inventories = set(self.base_urls)
         with ctx.typing():
-            await self.refresh_inventories()
+            await self.refresh_inventories(use_cache=False)
         new_inventories = set(self.base_urls)
 
         if added := ", ".join(new_inventories - old_inventories):
