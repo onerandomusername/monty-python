@@ -299,7 +299,7 @@ class HelpSession:
         self._pages = paginator.pages
 
     async def _add_command_signature(self, paginator: LinePaginator) -> None:
-        prefix = constants.Client.prefix
+        prefix = ""
 
         signature = self._get_command_params(self.query)
         parent = self.query.full_parent_name + " " if self.query.parent else ""
