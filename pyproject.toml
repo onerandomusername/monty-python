@@ -33,7 +33,7 @@ databases = "^0.5.5"
 ormar = {git = "https://github.com/collerek/ormar.git", rev ='master'}
 psycopg2-binary = "^2.9.3"
 pydantic = "^1.9.0"
-SQLAlchemy = "^1.4.31"
+SQLAlchemy = "^1.4.36"
 ormar-postgres-extensions = "^2.1.0"
 
 [tool.poetry.extras]
