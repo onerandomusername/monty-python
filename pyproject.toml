@@ -32,7 +32,7 @@ databases = "^0.5.5"
 # currently using master as the published pypi version has a dependencies bug which requires aiosqlite
 ormar = {git = "https://github.com/collerek/ormar.git", rev ='master'}
 psycopg2-binary = "^2.9.3"
-pydantic = "^1.9.0"
+pydantic = "^1.9.1"
 SQLAlchemy = "^1.4.36"
 ormar-postgres-extensions = "^2.1.0"
 
