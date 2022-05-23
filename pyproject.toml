@@ -23,7 +23,7 @@ markdownify = "==0.11.2"
 redis = { version = "^4.3.1", extras = ['hiredis'] }
 Pillow = "^9.0.0"
 psutil = "^5.9.1"
-rapidfuzz = "~=1.4"
+rapidfuzz = "^2.0.11"
 statsd = "^3.3.0"
 # database dependencies
 alembic = "^1.7.7"
