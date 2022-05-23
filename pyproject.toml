@@ -15,7 +15,7 @@ base65536 = "^0.1.1"
 beautifulsoup4 = "^4.10.0"
 cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
 colorama = { version = "~=0.4.3", markers = "sys_platform == 'win32'" }
-coloredlogs = "~=14.0"
+coloredlogs = "~=15.0"
 disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master' }
 fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 lxml = "^4.6.4"
