@@ -184,6 +184,8 @@ class Configuration(
         guild_config.github_issues_org = None
         await guild_config.upsert()
 
+        await inter.response.send_message("Successfully cleared the organisation for issue linking.", ephemeral=True)
+
 
 def setup(bot: Monty) -> None:
     """Add the configuration cog to the bot."""
