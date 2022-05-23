@@ -27,7 +27,7 @@ jobs:
           echo "::set-output name=tag::$tag"
       # Check out the current repository in the `monty` subdirectory
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: monty
 

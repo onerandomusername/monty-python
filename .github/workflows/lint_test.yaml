@@ -46,7 +46,7 @@ jobs:
 
       # Checks out the repository in the current folder.
       - name: Checks out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Set up the right version of Python
       - name: Set up Python ${{ env.PYTHON_VERSION }}
