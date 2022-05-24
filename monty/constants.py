@@ -1,6 +1,6 @@
 import logging
 from os import environ
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 import disnake
 
@@ -23,7 +23,7 @@ __all__ = (
 log = logging.getLogger(__name__)
 
 
-class Client(NamedTuple):
+class Client:
 
     name = "Monty Python"
     redis_prefix = config_prefix = "monty-python"
@@ -33,6 +33,7 @@ class Client(NamedTuple):
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
+    log_mode: Literal["daily", "dev"] = environ.get("BOT_LOG_MODE", "dev").lower()
     extensions = environ.get("BOT_EXTENSIONS", None) and {
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")
     }

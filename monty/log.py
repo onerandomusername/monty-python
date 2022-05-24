@@ -29,13 +29,23 @@ def setup() -> None:
     log_file = Path("logs/monty-python.log")
     log_file.parent.mkdir(exist_ok=True)
 
-    # File handler rotates logs every 5 MB
-    file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=5 * (2**20),
-        backupCount=10,
-        encoding="utf-8",
-    )
+    # we use a rotating sized log handler for local development.
+    # in production, we log each day's logs to a new file and delete it after 14 days
+    if Client.log_mode == "daily":
+        file_handler = logging.handlers.TimedRotatingFileHandler(
+            log_file,
+            "midnight",
+            backupCount=14,
+            encoding="utf-8",
+        )
+    else:
+        # File handler rotates logs every 5 MB
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_file,
+            maxBytes=5 * (2**20),
+            backupCount=10,
+            encoding="utf-8",
+        )
     file_handler.setFormatter(log_format)
     root_logger.addHandler(file_handler)
 
