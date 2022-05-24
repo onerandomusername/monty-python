@@ -545,9 +545,6 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if package in self.base_urls:
             return self.base_urls[package]
 
-        if package in self.doc_symbols:
-            return self.doc_symbols[package].url
-
         return None
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
@@ -899,15 +896,15 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 
-        deleted = await PackageInfo.objects.delete(name=package_name)
-
-        if not deleted:
+        res = await PackageInfo.objects.filter(name=package_name).get_or_none()
+        if not res:
             await ctx.send(":x: No package found with that name.", components=components)
             return
 
         async with ctx.typing():
-            await self.refresh_inventories()
+            await res.delete()
             await doc_cache.delete(package_name)
+            await self.refresh_inventories()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.", components=components)
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
