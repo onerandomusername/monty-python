@@ -162,7 +162,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
             memory_usage=memory_usage,
             cpu_usage=self.process.cpu_percent(),
-            version=Client.version,
+            version=Client.version[:7],
         )
 
         components = DeleteButton(inter.author)
