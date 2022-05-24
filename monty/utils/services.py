@@ -4,6 +4,7 @@ from aiohttp import ClientConnectorError
 
 from monty.bot import Monty
 from monty.constants import URLs
+from monty.errors import APIError
 from monty.log import get_logger
 
 
@@ -32,6 +33,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
     }
     if extension:
         json["language"] = extension
+    response = None
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
             async with bot.http_session.post(paste_url, json=json, raise_for_status=True) as response:
@@ -68,3 +70,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             f"Got unexpected JSON response from paste service: {response_json}\n"
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
+
+    raise APIError(
+        "workbin", response.status if response else None, "The paste service could not be used at this time."
+    )
