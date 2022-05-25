@@ -117,7 +117,7 @@ class Monty(commands.Bot):
             guild_id = message.guild.id
             config = self.guild_configs.get(guild_id)
             if not config:
-                config = await GuildConfig.objects.get_or_none(id=guild_id)
+                config, _ = await GuildConfig.objects.get_or_create(id=guild_id)
                 self.guild_configs[guild_id] = config
             if config and config.prefix:
                 prefixes.insert(0, config.prefix)
