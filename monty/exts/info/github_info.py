@@ -465,6 +465,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             issue_url = json_data["html_url"]
             if json_data.get("state") == "open":
                 emoji = constants.Emojis.issue_open
+            elif (reason := json_data.get("state_reason")) == "not_planned":
+                emoji = constants.Emojis.issue_closed_unplanned
+            elif reason == "completed":
+                emoji = constants.Emojis.issue_closed_completed
             else:
                 emoji = constants.Emojis.issue_closed
 
