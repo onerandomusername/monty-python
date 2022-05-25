@@ -35,6 +35,7 @@ def setup() -> None:
         file_handler = logging.handlers.TimedRotatingFileHandler(
             log_file,
             "midnight",
+            utc=True,
             backupCount=14,
             encoding="utf-8",
         )
