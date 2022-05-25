@@ -38,13 +38,20 @@ class Configuration(
 
         await guild_config.delete()
 
-    async def fetch_guild_config(self, guild_id: int, *, create: bool = False) -> GuildConfig:
+        # also remove it from the cache
+        try:
+            del self.bot.guild_configs[guild.id]
+        except KeyError:
+            pass
+
+    async def getch_guild_config(self, guild_id: int, *, create: bool = False) -> GuildConfig:
         """Fetch the configuration for the specified guild."""
-        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
+        guild_config = self.bot.guild_configs.get(guild_id) or await GuildConfig.objects.get_or_none(id=guild_id)
         if not guild_config:
             guild_config = GuildConfig(id=guild_id)
             if create:
                 await guild_config.save()
+            self.bot.guild_configs[guild_id] = guild_config
         return guild_config
 
     @commands.slash_command()
@@ -80,9 +87,7 @@ class Configuration(
         ----------
         new_prefix: the new prefix for commands
         """
-        guild_config = await GuildConfig.objects.get_or_none(id=inter.guild_id)
-        if not guild_config:
-            guild_config = GuildConfig(id=inter.guild_id)
+        guild_config = await self.getch_guild_config(inter.guild_id)
 
         old_prefix = guild_config.prefix
         guild_config.prefix = new_prefix
@@ -105,7 +110,7 @@ class Configuration(
         await self.set_prefix(inter, None)
 
     async def _get_prefix_msg(self, guild_id: int) -> str:
-        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
+        guild_config = self.bot.guild_configs.get(guild_id) or await GuildConfig.objects.get_or_none(id=guild_id)
         prefix = None
         if guild_config:
             prefix = guild_config.prefix
@@ -138,7 +143,7 @@ class Configuration(
     @config_github_org.sub_command("view")
     async def config_github_org_view(self, inter: disnake.GuildCommandInteraction) -> None:
         """View the currently configured organisation or user for issue linking."""
-        guild_config = await self.fetch_guild_config(inter.guild_id)
+        guild_config = await self.getch_guild_config(inter.guild_id)
         org = guild_config.github_issues_org
         if org:
             await inter.response.send_message(
@@ -156,7 +161,7 @@ class Configuration(
         ----------
         org: The organisation or user to default to linking issues from.
         """
-        guild_config = await self.fetch_guild_config(inter.guild_id, create=True)
+        guild_config = await self.getch_guild_config(inter.guild_id, create=True)
         try:
             guild_config.github_issues_org = org
             async with self.bot.http_session.head(
@@ -179,7 +184,7 @@ class Configuration(
     @config_github_org.sub_command("clear")
     async def config_github_org_clear(self, inter: disnake.GuildCommandInteraction) -> None:
         """Clear the organisation or user from issue linking."""
-        guild_config = await self.fetch_guild_config(inter.guild_id, create=True)
+        guild_config = await self.getch_guild_config(inter.guild_id, create=True)
 
         guild_config.github_issues_org = None
         await guild_config.upsert()

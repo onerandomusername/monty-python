@@ -61,6 +61,8 @@ class Monty(commands.Bot):
 
         self.db: databases.Database = database
         self.db_metadata = metadata
+        self.guild_configs: dict[int, GuildConfig] = {}
+
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow = None
         self.stats: AsyncStatsClient = None
@@ -110,14 +112,17 @@ class Monty(commands.Bot):
         return self.invite_permissions
 
     async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
-        prefixes = []
+        prefixes = commands.when_mentioned(self, message)
         if message.guild:
-            config = await GuildConfig.objects.get_or_none(id=message.guild.id)
+            guild_id = message.guild.id
+            config = self.guild_configs.get(guild_id)
+            if not config:
+                config = await GuildConfig.objects.get_or_none(id=guild_id)
+                self.guild_configs[guild_id] = config
             if config and config.prefix:
-                prefixes.append(config.prefix)
+                prefixes.insert(0, config.prefix)
             else:
-                prefixes.append(self.command_prefix)
-        prefixes.extend(commands.when_mentioned(self, message))
+                prefixes.insert(0, self.command_prefix)
         return prefixes
 
     async def login(self, token: str) -> None:

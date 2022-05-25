@@ -174,7 +174,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the org that matches to a specific guild_id."""
-        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
+        guild_config = self.bot.guild_configs.get(guild_id) or await GuildConfig.objects.get_or_none(id=guild_id)
         return guild_config and guild_config.github_issues_org
 
     async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
@@ -566,6 +566,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not getattr(perms, req_perm):
             return
 
+        # todo: move this to be after the regex, since there's no reason to fetch if the regex doesn't match
         default_user, _ = await self.fetch_user_and_repo(message)
 
         issues: List[FoundIssue] = []
@@ -630,6 +631,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         except KeyError:
             return
 
+        # todo: move this to be after the regex, since there's no reason to fetch if the regex doesn't match
         user, _ = await self.fetch_user_and_repo(before)
         after_issues: List[FoundIssue] = []
         for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(after.content)):
