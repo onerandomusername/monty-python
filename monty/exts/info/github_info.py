@@ -12,6 +12,7 @@ import cachingutils
 import cachingutils.redis
 import disnake
 import gql
+import gql.client
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportError
@@ -182,6 +183,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ] = cachingutils.MemoryCache(timeout=600)
 
         self.guilds: Dict[str, str] = {}
+
+    async def cog_load(self) -> None:
+        """Fetch the gql schema from github."""
+        # todo: cache the schema in redis and load from there
+        async with self.gql:
+            pass
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the org that matches to a specific guild_id."""
