@@ -79,8 +79,12 @@ async def main() -> None:
         allowed_mentions=disnake.AllowedMentions(everyone=False),
         intents=_intents,
     )
+    try:
+        bot.load_extensions()
+    except Exception:
+        await bot.close()
+        raise
 
-    bot.load_extensions()
     loop = asyncio.get_running_loop()
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token), loop=loop)
