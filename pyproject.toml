@@ -59,6 +59,7 @@ python-dotenv = "~=0.20.0"
 pytest = "~=7.1.2"
 pytest-cov = "~=3.0.0"
 pytest-xdist = { version = "~=2.5.0", extras = ["psutil"] }
+pyright = "^1.1.249"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -74,6 +75,7 @@ export = 'poetry export --without-hashes -o requirements.txt'
 start = "python -m monty"
 lint = "pre-commit run --all-files"
 precommit = "pre-commit install"
+pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
 test-nocov = "pytest -n auto"
 test = "pytest -n auto --cov-report= --cov"
 html = "coverage html"
@@ -83,3 +85,11 @@ report = "coverage report"
 branch = true
 source_pkgs = ["bot"]
 source = ["tests"]
+
+
+[tool.pyright]
+typeCheckingMode = "basic"
+include = [
+    "monty",
+    "*.py",
+]

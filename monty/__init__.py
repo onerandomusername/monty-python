@@ -26,7 +26,7 @@ if os.name == "nt":
 # Monkey-patch discord.py decorators to use the both the Command and Group subclasses which supports root aliases.
 # Must be patched before any cogs are added.
 commands.command = partial(commands.command, cls=monkey_patches.Command)
-commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=monkey_patches.Command)
+commands.GroupMixin.command = partialmethod(commands.GroupMixin.command, cls=monkey_patches.Command)  # type: ignore
 
 commands.group = partial(commands.group, cls=monkey_patches.Group)
-commands.GroupMixin.group = partialmethod(commands.GroupMixin.group, cls=monkey_patches.Group)
+commands.GroupMixin.group = partialmethod(commands.GroupMixin.group, cls=monkey_patches.Group)  # type: ignore

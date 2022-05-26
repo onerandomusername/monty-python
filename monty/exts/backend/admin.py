@@ -13,7 +13,6 @@ import asyncio
 import builtins
 import inspect
 import io
-import logging
 import os
 import sys
 import textwrap
@@ -31,6 +30,7 @@ import arrow
 import disnake
 from disnake.ext import commands
 
+from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton
 
@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     from monty.bot import Bot
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 Executor = Union[exec, eval]
 

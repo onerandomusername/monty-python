@@ -3,23 +3,41 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
+from typing import cast
 
 import coloredlogs
 
 from monty.constants import Client
 
 
-def get_logger(*args, **kwargs) -> logging.Logger:
+TRACE = 5
+
+
+def get_logger(*args, **kwargs) -> "MontyLogger":
     """Stub method for logging.getLogger."""
-    return logging.getLogger(*args, **kwargs)
+    return cast("MontyLogger", logging.getLogger(*args, **kwargs))
+
+
+class MontyLogger(logging.Logger):
+    """Custom logger which implements the trace level."""
+
+    def trace(self, msg: str, *args, **kwargs) -> None:
+        """
+        Log 'msg % args' with severity 'TRACE'.
+
+        To pass exception information, use the keyword argument exc_info with a true value, e.g.
+        logger.trace("Houston, we have a %s", "tiny detail.", exc_info=1)
+        """
+        if self.isEnabledFor(TRACE):
+            self._log(TRACE, msg, args, **kwargs)
 
 
 def setup() -> None:
     """Set up loggers."""
     # Configure the "TRACE" logging level (e.g. "log.trace(message)")
-    logging.TRACE = 5
-    logging.addLevelName(logging.TRACE, "TRACE")
-    logging.Logger.trace = _monkeypatch_trace
+    logging.TRACE = TRACE  # type: ignore
+    logging.addLevelName(TRACE, "TRACE")
+    logging.setLoggerClass(MontyLogger)
 
     format_string = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
     log_format = logging.Formatter(format_string)
@@ -61,7 +79,7 @@ def setup() -> None:
     if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
         coloredlogs.DEFAULT_LOG_FORMAT = format_string
 
-    coloredlogs.install(level=logging.TRACE, stream=sys.stdout)
+    coloredlogs.install(level=TRACE, stream=sys.stdout)
 
     root_logger.setLevel(logging.DEBUG if Client.debug else logging.INFO)
     # Silence irrelevant loggers
@@ -73,17 +91,6 @@ def setup() -> None:
     _set_trace_loggers()
 
     root_logger.info("Logging initialization complete")
-
-
-def _monkeypatch_trace(self: logging.Logger, msg: str, *args, **kwargs) -> None:
-    """
-    Log 'msg % args' with severity 'TRACE'.
-
-    To pass exception information, use the keyword argument exc_info with a true value, e.g.
-    logger.trace("Houston, we have an %s", "interesting problem", exc_info=1)
-    """
-    if self.isEnabledFor(logging.TRACE):
-        self._log(logging.TRACE, msg, args, **kwargs)
 
 
 def _set_trace_loggers() -> None:
@@ -101,13 +108,13 @@ def _set_trace_loggers() -> None:
     level_filter = Client.trace_loggers
     if level_filter:
         if level_filter.startswith("*"):
-            logging.getLogger().setLevel(logging.TRACE)
+            logging.getLogger().setLevel(TRACE)
 
         elif level_filter.startswith("!"):
-            logging.getLogger().setLevel(logging.TRACE)
+            logging.getLogger().setLevel(TRACE)
             for logger_name in level_filter.strip("!,").split(","):
                 logging.getLogger(logger_name.strip()).setLevel(logging.DEBUG)
 
         else:
             for logger_name in level_filter.strip(",").split(","):
-                logging.getLogger(logger_name.strip()).setLevel(logging.TRACE)
+                logging.getLogger(logger_name.strip()).setLevel(TRACE)

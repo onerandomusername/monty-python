@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import re
 import unicodedata
 from typing import Tuple
@@ -9,11 +8,12 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
+from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):

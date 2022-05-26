@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import datetime
 import functools
-import logging
 import re
 from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
@@ -14,6 +13,7 @@ import cachingutils.redis
 import disnake
 
 from monty import constants
+from monty.log import get_logger
 
 
 if TYPE_CHECKING:
@@ -183,7 +183,7 @@ def redis_cache(
         elif isinstance(timeout, float):
             timeout = int(timeout)
 
-    cache_logger = logging.getLogger(__package__ + ".caching")
+    cache_logger = get_logger(__package__ + ".caching")
 
     prefix = prefix + ":"
 

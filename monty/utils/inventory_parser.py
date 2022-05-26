@@ -117,9 +117,9 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
 
 @redis_cache(
     "sphinx-inventory",
-    lambda url, **kw: url,
+    lambda url, **kw: url,  # type: ignore
     include_posargs=[1],
-    skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),
+    skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
     timeout=timedelta(hours=12),
 )
 async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Optional[InventoryDict]:

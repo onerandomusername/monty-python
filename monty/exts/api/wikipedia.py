@@ -1,4 +1,3 @@
-import logging
 import re
 from datetime import datetime
 from html import unescape
@@ -9,10 +8,11 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.errors import APIError
+from monty.log import get_logger
 from monty.utils import LinePaginator
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 SEARCH_API = "https://en.wikipedia.org/w/api.php"
 WIKI_PARAMS = {
@@ -37,7 +37,7 @@ class WikipediaSearch(commands.Cog, slash_command_attrs={"dm_permission": False}
     def __init__(self, bot: Bot):
         self.bot = bot
 
-    async def wiki_request(self, channel: disnake.TextChannel, search: str) -> List[str]:
+    async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> List[str]:
         """Search wikipedia search string and return formatted first 10 pages found."""
         params = WIKI_PARAMS | {"srlimit": 10, "srsearch": search}
         async with self.bot.http_session.get(url=SEARCH_API, params=params) as resp:

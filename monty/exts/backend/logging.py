@@ -1,4 +1,3 @@
-import logging
 import sys
 import traceback
 from typing import Any
@@ -7,11 +6,12 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Bot
+from monty.log import get_logger
 from monty.metadata import ExtMetadata
 
 
 EXT_METADATA = ExtMetadata(core=True)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False}):

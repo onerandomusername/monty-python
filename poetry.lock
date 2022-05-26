@@ -290,7 +290,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.6.0a4219+g743ed5b6"
+version = "2.6.0a4224+g45bdfec4"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -309,8 +309,8 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 [package.source]
 type = "git"
 url = "https://github.com/DisnakeDev/disnake.git"
-reference = "master"
-resolved_reference = "743ed5b6eda9e2a3bee9499401fcd411707d8ae0"
+reference = 'master'
+resolved_reference = "45bdfec45d6863fe3bcf628cea165ebc6ecd9ba8"
 
 [[package]]
 name = "distlib"
@@ -883,6 +883,21 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "pyright"
+version = "1.1.249"
+description = "Command line wrapper for pyright"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+nodeenv = ">=1.6.0"
+
+[package.extras]
+all = ["twine (>=3.4.1)"]
+dev = ["twine (>=3.4.1)"]
+
+[[package]]
 name = "pytest"
 version = "7.1.2"
 description = "pytest: simple powerful testing with Python"
@@ -1178,7 +1193,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "dad73d042c7d3eb7e940ee2b42870b67022d87d1105ad8f45781061a24891b33"
+content-hash = "e4573616ccff500d2d8257c4fb2bd2ccd0f32e2c9e60ffa972eea80bb3da5424"
 
 [metadata.files]
 aiodns = [
@@ -2218,6 +2233,10 @@ pyparsing = [
 pyreadline3 = [
     {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
     {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
+]
+pyright = [
+    {file = "pyright-1.1.249-py3-none-any.whl", hash = "sha256:f30138654f57d041e4af27e71a737de502d7475c5b588ab5a9990c1a30a0b6f9"},
+    {file = "pyright-1.1.249.tar.gz", hash = "sha256:b7989a32462131b5edb1940944b6e1cfb660ae490c3a86c3221a39a643eb8663"},
 ]
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},

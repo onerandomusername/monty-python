@@ -1,13 +1,12 @@
-import logging
-
 import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.errors import BotAccountRequired
+from monty.log import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):

@@ -6,12 +6,13 @@ These help ensure consistency between errors, as they will all be consistent bet
 Note: these are to used for general success or general errors. Typically, the error handler will make a
 response if a command raises a disnake.ext.commands.CommandError exception.
 """
-import logging
 import random
-import typing
+from typing import Any, List, Literal
 
 import disnake
 from disnake.ext import commands
+
+from monty.log import get_logger
 
 
 __all__ = (
@@ -24,13 +25,13 @@ __all__ = (
     "send_negatory_response",
 )
 
-_UNSET = object()
+_UNSET: Any = object()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 DEFAULT_SUCCESS_COLOUR = disnake.Colour.green()
-SUCCESS_HEADERS: typing.List[str] = [
+SUCCESS_HEADERS: List[str] = [
     "Affirmative",
     "As you wish",
     "Done",
@@ -43,7 +44,7 @@ SUCCESS_HEADERS: typing.List[str] = [
 ]
 
 DEFAULT_FAILURE_COLOUR = disnake.Colour.red()
-FAILURE_HEADERS: typing.List[str] = [
+FAILURE_HEADERS: List[str] = [
     "Abort!",
     "I cannot do that",
     "Hold up!",
@@ -64,7 +65,7 @@ async def send_general_response(
     embed: disnake.Embed = _UNSET,
     colour: disnake.Colour = None,
     title: str = None,
-    tag_as: typing.Literal["general", "affirmative", "negatory"] = "general",
+    tag_as: Literal["general", "affirmative", "negatory"] = "general",
     **kwargs,
 ) -> disnake.Message:
     """

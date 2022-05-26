@@ -1,7 +1,6 @@
 # Help command from Python bot. All commands that will be added to there in futures should be added to here too.
 import asyncio
 import itertools
-import logging
 from contextlib import suppress
 from typing import List, NamedTuple, Optional, Union
 
@@ -12,6 +11,7 @@ from rapidfuzz import fuzz, process
 from monty import constants
 from monty.bot import Bot
 from monty.constants import Emojis
+from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LinePaginator
 
@@ -38,7 +38,7 @@ class Cog(NamedTuple):
     commands: List[commands.Command]
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class HelpQueryNotFound(ValueError):

@@ -1,5 +1,4 @@
 import collections
-import logging
 import socket
 from types import SimpleNamespace
 from typing import Optional, Union
@@ -15,11 +14,12 @@ from disnake.ext import commands
 from monty import constants
 from monty.database.guild_config import GuildConfig
 from monty.database.metadata import metadata
+from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 try:
     import dotenv
@@ -64,8 +64,9 @@ class Monty(commands.Bot):
         self.guild_configs: dict[int, GuildConfig] = {}
 
         self.socket_events = collections.Counter()
-        self.start_time: arrow.Arrow = None
-        self.stats: AsyncStatsClient = None
+        self.start_time: arrow.Arrow
+        self.stats: AsyncStatsClient
+        self.command_prefix: str
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
         self.loop.create_task(self.get_self_invite_perms())
 
@@ -73,7 +74,7 @@ class Monty(commands.Bot):
         """Create the aiohttp session and set the trace logger, if desired."""
         trace_configs = []
         if constants.Client.debug:
-            aiohttp_log = logging.getLogger(__package__ + ".http")
+            aiohttp_log = get_logger(__package__ + ".http")
 
             async def on_request_end(
                 session: aiohttp.ClientSession,
@@ -161,7 +162,7 @@ class Monty(commands.Bot):
             if ext_metadata.core or ext in constants.Client.extensions:
                 self.load_extension(ext)
                 continue
-            log.trace(f"SKIPPING loading {ext} as per environment variables.")
+            log.debug(f"SKIPPING loading {ext} as per environment variables.")
         log.info("Completed loading extensions.")
 
     def add_cog(self, cog: commands.Cog) -> None:
@@ -195,10 +196,10 @@ class Monty(commands.Bot):
 
     async def on_command_error(self, context: commands.Context, exception: disnake.DiscordException) -> None:
         """Check command errors for UserInputError and reset the cooldown if thrown."""
-        if isinstance(exception, commands.UserInputError):
+        if isinstance(exception, commands.UserInputError) and context.command:
             context.command.reset_cooldown(context)
         else:
-            await super().on_command_error(context, exception)
+            await super().on_command_error(context, exception)  # type:ignore
 
     def _add_root_aliases(self, command: commands.Command) -> None:
         """Recursively add root aliases for `command` and any of its subcommands."""

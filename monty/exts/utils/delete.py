@@ -1,15 +1,14 @@
-import logging
-
 import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
+from monty.log import get_logger
 from monty.utils.messages import DELETE_ID_V2
 
 
 VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):

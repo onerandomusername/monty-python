@@ -1,12 +1,13 @@
-import logging
 from datetime import datetime, timedelta
 
 import disnake
 import disnake.http
 from disnake.ext import commands
 
+from monty.log import get_logger
 
-log = logging.getLogger(__name__)
+
+log = get_logger(__name__)
 
 
 class Command(commands.Command):
@@ -66,4 +67,4 @@ def patch_typing() -> None:
             log.warning("Got a 403 from typing event!")
             pass
 
-    disnake.http.HTTPClient.send_typing = honeybadger_type
+    disnake.http.HTTPClient.send_typing = honeybadger_type  # type: ignore

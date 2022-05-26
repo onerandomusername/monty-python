@@ -2,12 +2,11 @@ import asyncio
 import datetime
 import functools
 import itertools
-import logging
 import random
 import re
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Optional
+from typing import Any, Optional
 
 import bs4
 import disnake
@@ -17,6 +16,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import NEGATIVE_REPLIES, Colours
+from monty.log import get_logger
 from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
@@ -34,7 +34,7 @@ PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 MAX_CACHE = 15
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 MAX_RESULTS = 15
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 @dataclass
@@ -61,7 +61,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return re.search(ILLEGAL_CHARACTERS, package)
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
-    async def fetch_package(self, package: str) -> Optional[str]:
+    async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
         """Fetch a package from pypi."""
         async with self.bot.http_session.get(JSON_URL.format(package=package)) as response:
             if response.status == 200 and response.content_type == "application/json":
@@ -174,7 +174,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await inter.send(embed=embed, ephemeral=True)
             return
 
-        components = [DeleteButton(inter.author)]
+        components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if embed.url:
             components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
         await inter.send(embed=embed, components=components)
@@ -258,26 +258,30 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         defer_task = maybe_defer(inter, delay=2)
 
         current_time = datetime.datetime.now()
-        packages, query_url = await self.fetch_pypi_search(query)
 
-        embed = disnake.Embed(description="", title=f"PYPI Package Search: {query}")
+        # todo: fix typing for async_cached
+        result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)
+        packages, query_url = result
+
+        embed = disnake.Embed(title=f"PYPI Package Search: {query}")
+        description: str = ""
         embed.url = str(query_url)
         # packages = sorted(packages, key=lambda pack: pack.name)
         packages = packages[:max_results]
         for num, pack in enumerate(packages):
-            embed.description += (
-                f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
-            )
+            description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
         embed.timestamp = current_time
         embed.set_footer(text="Requested at:")
         if len(packages) >= max_results:
-            embed.description += f"*Only showing the top {max_results} results.*"
+            description += f"*Only showing the top {max_results} results.*"
 
-        if not len(embed.description):
-            embed.description = "Sorry, no results found."
+        if not len(description):
+            description = "Sorry, no results found."
         components = DeleteButton(inter.author)
+
+        embed.description = description
         await inter.send(embed=embed, components=components)
         defer_task.cancel()
 

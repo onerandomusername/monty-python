@@ -1,4 +1,3 @@
-import logging
 import re
 from random import randint
 from typing import Dict, Optional, Union
@@ -8,9 +7,10 @@ from disnake.ext import commands, tasks
 
 from monty.bot import Bot
 from monty.constants import Colours
+from monty.log import get_logger
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"

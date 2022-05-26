@@ -1,6 +1,5 @@
 import asyncio
 import contextlib
-import logging
 import random
 import re
 from dataclasses import dataclass
@@ -18,6 +17,7 @@ from monty import constants
 from monty.bot import Monty
 from monty.database import GuildConfig
 from monty.exts.info.codesnippets import GITHUB_HEADERS
+from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
 from monty.utils.messages import DeleteButton
@@ -67,7 +67,7 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class RepoTarget(NamedTuple):

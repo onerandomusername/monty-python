@@ -1,11 +1,11 @@
 import asyncio
-import logging
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 import disnake
 from disnake.ext import commands
 
 from monty.constants import Emojis
+from monty.log import get_logger
 
 
 FIRST_EMOJI = "\u23EE"  # [:track_previous:]
@@ -22,7 +22,7 @@ PAGINATION_EMOJI: dict[str, str] = {
     "stop": DELETE_EMOJI,
 }
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 class EmptyPaginatorEmbedError(Exception):
@@ -106,7 +106,7 @@ class LinePaginator(commands.Paginator):
         max_size: int = 500,
         empty: bool = True,
         linesep: str = "\n",
-        restrict_to_user: disnake.abc.User = None,
+        restrict_to_user: Union[disnake.User, disnake.Member] = None,
         timeout: int = 300,
         footer_text: str = None,
         url: str = None,
@@ -234,7 +234,7 @@ class LinePaginator(commands.Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            event_name = cls.strip_custom_id(inter.data.custom_id)
+            event_name = inter.component.custom_id[len(CUSTOM_ID_PREFIX) :]
 
             if PAGINATION_EMOJI.get(event_name) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode
                 log.debug("Got delete inter")

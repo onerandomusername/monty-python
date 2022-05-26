@@ -12,6 +12,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Bot
+from monty.log import get_logger
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.messages import DeleteButton
 
@@ -19,7 +20,7 @@ from monty.utils.messages import DeleteButton
 if TYPE_CHECKING:
     from monty.exts.info.github_info import GithubInfo
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 GITHUB_RE = re.compile(

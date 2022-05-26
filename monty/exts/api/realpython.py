@@ -1,4 +1,3 @@
-import logging
 from html import unescape
 from urllib.parse import quote_plus
 
@@ -7,9 +6,10 @@ from disnake.ext import commands
 
 from monty import bot
 from monty.constants import Colours
+from monty.log import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 API_ROOT = "https://realpython.com/search/api/v1/"

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import random
 import typing
 from typing import Optional, Union
@@ -9,11 +8,12 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import ERROR_REPLIES, Colours, Icons
+from monty.log import get_logger
 from monty.utils.converters import WrappedMessageConverter
 from monty.utils.messages import DeleteButton
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 # Number of seconds to wait for other users to bookmark the same message
 TIMEOUT = 120

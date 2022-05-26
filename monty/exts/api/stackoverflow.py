@@ -1,4 +1,3 @@
-import logging
 from html import unescape
 from urllib.parse import quote_plus
 
@@ -7,9 +6,10 @@ from disnake.ext import commands
 
 from monty import bot
 from monty.constants import Colours, Emojis
+from monty.log import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 BASE_URL = "https://api.stackexchange.com/2.2/search/advanced"
 SO_PARAMS = {"order": "desc", "sort": "activity", "site": "stackoverflow"}

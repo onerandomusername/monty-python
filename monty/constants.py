@@ -1,10 +1,12 @@
 import logging
 from os import environ
-from typing import Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple, cast
 
 import disnake
 
 
+if TYPE_CHECKING:
+    from monty.log import MontyLogger
 __all__ = (
     "Client",
     "CloudAHK",
@@ -20,7 +22,8 @@ __all__ = (
     "POSITIVE_REPLIES",
 )
 
-log = logging.getLogger(__name__)
+# due to recursive imports, we have to use this
+log = cast("MontyLogger", logging.getLogger(__name__))
 
 
 class Client:
@@ -33,9 +36,9 @@ class Client:
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
-    log_mode: Literal["daily", "dev"] = environ.get("BOT_LOG_MODE", "dev").lower()
+    log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
     extensions = environ.get("BOT_EXTENSIONS", None) and {
-        ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")
+        ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")  # type: ignore reportOptionalMemberAccess
     }
     support_server = "mPscM4FjWB"
     invite_permissions = disnake.Permissions(
@@ -167,7 +170,7 @@ class Icons:
 
 
 class URLs:
-    paste_service = environ.get("PASTE_SERVICE")
+    paste_service = environ.get("PASTE_SERVICE", "")
     snekbox_api = environ.get("SNEKBOX_URL")
     snekbox_auth = environ.get("SNEKBOX_AUTH")
     black_formatter = environ.get("BLACK_API")

@@ -35,7 +35,7 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
         arg_pos = name_or_pos
 
         try:
-            name, value = arg_values[arg_pos]
+            _, value = arg_values[arg_pos]
             return value
         except IndexError:
             raise ValueError(f"Argument position {arg_pos} is out of bounds.")
@@ -91,7 +91,7 @@ def update_wrapper_globals(
     wrapper: types.FunctionType,
     wrapped: types.FunctionType,
     *,
-    ignored_conflict_names: t.Set[str] = frozenset(),
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
 ) -> types.FunctionType:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -107,6 +107,9 @@ def update_wrapper_globals(
     `wrapped`'s typehints and is not in `ignored_conflict_names`,
     as this can cause incorrect objects being used by discordpy's converters.
     """
+    if ignored_conflict_names is None:
+        ignored_conflict_names = frozenset()
+
     annotation_global_names = (
         ann.split(".", maxsplit=1)[0] for ann in wrapped.__annotations__.values() if isinstance(ann, str)
     )
@@ -136,9 +139,11 @@ def command_wraps(
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
-    ignored_conflict_names: t.Set[str] = frozenset(),
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
 ) -> t.Callable[[types.FunctionType], types.FunctionType]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
+    if ignored_conflict_names is None:
+        ignored_conflict_names = frozenset()
 
     def decorator(wrapper: types.FunctionType) -> types.FunctionType:
         return functools.update_wrapper(

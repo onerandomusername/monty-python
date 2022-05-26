@@ -10,6 +10,7 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.constants import Client
+from monty.log import get_logger
 from monty.utils import responses
 from monty.utils.messages import DeleteButton
 
@@ -17,7 +18,7 @@ from monty.utils.messages import DeleteButton
 if typing.TYPE_CHECKING:
     AnyContext = typing.Union[commands.Context, disnake.Interaction]
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 ERROR_COLOUR = responses.DEFAULT_FAILURE_COLOUR

@@ -1,11 +1,12 @@
-import logging
 import pkgutil
 from typing import Iterator
+
+from monty.log import get_logger
 
 
 __all__ = ("get_package_names",)
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def get_package_names() -> Iterator[str]:

@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Tuple
 from urllib.parse import urljoin
@@ -13,13 +12,14 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Bot
+from monty.log import get_logger
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
 
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 BASE_URL = "https://peps.python.org"

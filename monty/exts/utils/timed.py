@@ -23,9 +23,7 @@ class TimedCommands(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Time the command execution of a command."""
         new_ctx = await self.create_execution_context(ctx, command)
 
-        ctx.subcontext = new_ctx
-
-        if not ctx.subcontext.command:
+        if not new_ctx.command:
             help_command = f"{ctx.prefix}help"
             error = f"The command you are trying to time doesn't exist. Use `{help_command}` for a list of commands."
 

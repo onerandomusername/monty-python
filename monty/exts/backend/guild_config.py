@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union
 
@@ -14,6 +13,7 @@ from monty import constants
 from monty.bot import Monty
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
+from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 
 
@@ -21,7 +21,7 @@ GITHUB_REQUEST_HEADERS = {}
 if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired

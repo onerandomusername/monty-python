@@ -12,7 +12,7 @@ log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
-PASTE_DISABLED = URLs.paste_service is None
+PASTE_DISABLED = not URLs.paste_service
 
 
 async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
@@ -36,8 +36,10 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
     response = None
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
-            async with bot.http_session.post(paste_url, json=json, raise_for_status=True) as response:
+            async with bot.http_session.post(paste_url, json=json) as response:
                 response_json = await response.json()
+                if not 200 <= response.status < 300 and attempt == FAILED_REQUEST_ATTEMPTS:
+                    raise APIError("workbin", response.status, "The paste service could not be used at this time.")
         except ClientConnectorError:
             log.warning(
                 f"Failed to connect to paste service at url {paste_url}, "
@@ -71,6 +73,4 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
 
-    raise APIError(
-        "workbin", response.status if response else None, "The paste service could not be used at this time."
-    )
+    raise APIError("workbin", response.status if response else 0, "The paste service could not be used at this time.")

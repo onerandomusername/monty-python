@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 from typing import TYPE_CHECKING, Final, List
 from urllib.parse import urldefrag
@@ -8,6 +7,7 @@ from urllib.parse import urldefrag
 import disnake
 from disnake.ext import commands, tasks
 
+from monty.log import get_logger
 from monty.utils.helpers import encode_github_link
 from monty.utils.messages import DeleteButton
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from monty.bot import Bot
     from monty.exts.eval import Snekbox
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
 
 

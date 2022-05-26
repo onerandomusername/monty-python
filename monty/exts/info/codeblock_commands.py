@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import re
 import urllib.parse
 from typing import TYPE_CHECKING, Optional
@@ -10,6 +9,7 @@ from disnake.ext import commands
 
 from monty.bot import Bot
 from monty.constants import Paste, URLs
+from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from monty.exts.eval import Snekbox
     from monty.exts.info.codeblock._cog import CodeBlockCog
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 TIMEOUT = 180
 

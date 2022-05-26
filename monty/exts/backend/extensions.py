@@ -1,5 +1,4 @@
 import functools
-import logging
 import typing as t
 from enum import Enum
 
@@ -9,6 +8,7 @@ from disnake.ext import commands
 from monty import exts
 from monty.bot import Bot
 from monty.constants import Client
+from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.converters import Extension
 from monty.utils.extensions import EXTENSIONS, invoke_help_command
@@ -18,7 +18,7 @@ from monty.utils.pagination import LinePaginator
 
 EXT_METADATA = ExtMetadata(core=True)
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 UNLOAD_BLACKLIST = {__name__}
