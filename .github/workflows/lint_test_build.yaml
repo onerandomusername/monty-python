@@ -170,7 +170,6 @@ jobs:
   artifact:
     name: Generate Artifact
     if: always()
-    needs: [lint, build]
     runs-on: ubuntu-latest
     steps:
       # Prepare the Pull Request Payload artifact. If this fails, we
