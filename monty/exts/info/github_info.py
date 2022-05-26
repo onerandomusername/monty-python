@@ -14,6 +14,7 @@ import disnake
 import gql
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportError
 
 from monty import constants
 from monty.bot import Monty
@@ -501,14 +502,18 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 }
                 """
             )
-            json_data = await self.gql.execute_async(
-                query,
-                variable_values={
-                    "user": user,
-                    "repository": repository,
-                    "number": number,
-                },
-            )
+            try:
+                json_data = await self.gql.execute_async(
+                    query,
+                    variable_values={
+                        "user": user,
+                        "repository": repository,
+                        "number": number,
+                    },
+                )
+            except TransportError:
+                return FetchError(-1, "Issue not found.")
+
             json_data = json_data["repository"]["discussion"]
             is_discussion = True
         # Since all pulls are issues, all of the data exists as a result of an issue request
