@@ -116,6 +116,7 @@ class Emojis:
     snekbox = "\U0001f40d"
 
     # These icons are from Github's repo https://github.com/primer/octicons/
+    discussion_answered = "<:discussion_answered:979267343710584894>"
     issue_open = "<:issue_open:882464248951877682>"
     issue_closed = "<:issue_closed:882464248972865536>"
     issue_closed_completed = "<:issue_closed_completed:979047130847117343>"

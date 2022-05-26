@@ -11,7 +11,9 @@ from weakref import WeakValueDictionary
 import cachingutils
 import cachingutils.redis
 import disnake
+import gql
 from disnake.ext import commands
+from gql.transport.aiohttp import AIOHTTPTransport
 
 from monty import constants
 from monty.bot import Monty
@@ -167,6 +169,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def __init__(self, bot: Monty):
         self.bot = bot
+
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS)
+
+        self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.request_cache: GithubCache = GithubCache()
@@ -461,7 +467,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Remove any codeblock in a message."""
         return re.sub(CODE_BLOCK_RE, "", message)
 
-    async def fetch_issues(self, number: int, repository: str, user: str) -> Union[IssueState, FetchError]:
+    async def fetch_issues(
+        self, number: int, repository: str, user: str, gql_opt_in: bool = False
+    ) -> Union[IssueState, FetchError]:
         """
         Retrieve an issue from a GitHub repository.
 
@@ -471,9 +479,38 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
 
+        is_discussion: bool = False
         if "message" in json_data:
-            return FetchError(-1, "Issue not found.")
-
+            # fetch with gql
+            # no caching right now, and only enabled in the disnake guild
+            if not gql_opt_in:
+                return FetchError(-1, "Issue not found.")
+            query = gql.gql(
+                """
+                query getDiscussion($user: String!, $repository: String!, $number: Int!) {
+                    repository(followRenames: true, owner: $user, name: $repository) {
+                        discussion(number: $number) {
+                            id
+                            title
+                            answer {
+                                id
+                            }
+                            url
+                        }
+                    }
+                }
+                """
+            )
+            json_data = await self.gql.execute_async(
+                query,
+                variable_values={
+                    "user": user,
+                    "repository": repository,
+                    "number": number,
+                },
+            )
+            json_data = json_data["repository"]["discussion"]
+            is_discussion = True
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
         # of if the pull was merged or not is returned in the json body under pull_request.merged_at
@@ -491,6 +528,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 emoji = constants.Emojis.pull_request_draft
             else:
                 emoji = constants.Emojis.pull_request_open
+        elif is_discussion:
+            issue_url = json_data["url"]
+            if json_data.get("answer"):
+                emoji = constants.Emojis.discussion_answered
+            else:
+                emoji = constants.Emojis.issue_draft
         else:
             # this is a definite issue and not a pull request, and should be treated as such
             issue_url = json_data["html_url"]
@@ -645,6 +688,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     int(repo_issue.number),
                     repo_issue.repository,
                     repo_issue.organisation,
+                    gql_opt_in=message.guild.id in (constants.Guilds.disnake, constants.Guilds.testing),
                 )
                 if isinstance(result, IssueState):
                     links.append(result)
@@ -664,20 +708,33 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if before.content == after.content:
             return
 
+        if not after.guild:
+            return
+
         try:
             sent_msg, before_issues = self.autolink_cache[after.id]
         except KeyError:
             return
 
-        # todo: move this to be after the regex, since there's no reason to fetch if the regex doesn't match
-        user, _ = await self.fetch_user_and_repo(before)
+        default_user: Optional[str] = ""
+
         after_issues: List[FoundIssue] = []
         for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(after.content)):
-            org = match.group("org") or user
-            if not org:
-                continue
+            repo = match.group("repo").lower()
+            if not (org := match.group("org")):
+                if not default_user:
+                    if default_user == "":
+                        default_user, _ = await self.fetch_user_and_repo(after)
+                        default_user = default_user or None
+                    if default_user is None:
+                        continue
+                org = default_user
+                repos = await self.fetch_repos(org)
+                if repo not in repos:
+                    continue
+                repo = repos[repo]
 
-            after_issues.append(FoundIssue(org, *match.group("repo", "number")))
+            after_issues.append(FoundIssue(org, repo, match.group("number")))
 
         # if a user provides too many issues here, just forgo it
         after_issues = after_issues[:MAXIMUM_ISSUES]
@@ -706,6 +763,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 int(repo_issue.number),
                 repo_issue.repository,
                 repo_issue.organisation,
+                gql_opt_in=after.guild.id in (constants.Guilds.disnake, constants.Guilds.testing),
             )
             if isinstance(result, IssueState):
                 links.append(result)

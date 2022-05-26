@@ -87,7 +87,7 @@ def setup() -> None:
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("cachingutils").setLevel(logging.INFO)
     logging.getLogger("databases").setLevel(logging.INFO)
-
+    logging.getLogger("gql.transport.aiohttp").setLevel(logging.WARNING)
     _set_trace_loggers()
 
     root_logger.info("Logging initialization complete")
