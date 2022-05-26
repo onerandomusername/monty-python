@@ -1122,7 +1122,7 @@ python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -1178,7 +1178,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "16d0d0853529155263d19da0008d030490b658b55ad9af1a2f097606afaddd86"
+content-hash = "dad73d042c7d3eb7e940ee2b42870b67022d87d1105ad8f45781061a24891b33"
 
 [metadata.files]
 aiodns = [
