@@ -4,7 +4,7 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, Generator, Generic, List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import Any, AsyncGenerator, Callable, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 from weakref import WeakValueDictionary
 
@@ -73,8 +73,8 @@ log = get_logger(__name__)
 class RepoTarget(NamedTuple):
     """Used for the repo and user injection."""
 
-    user: Optional[str]
-    repo: Optional[str]
+    user: str
+    repo: str
 
 
 @dataclass
@@ -119,34 +119,38 @@ def whitelisted_autolink() -> Callable[[commands.Command], commands.Command]:
     return commands.check(predicate)
 
 
-class GithubCache(Generic[KT, VT]):
+class GithubCache:
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
     def __init__(self):
         # todo: possibly store all of this in redis
-        self._memcache = cachingutils.MemoryCache(timeout=timedelta(hours=3))
+        self._memcache: cachingutils.MemoryCache[str, tuple[Optional[str], Any]] = cachingutils.MemoryCache(
+            timeout=timedelta(hours=3)
+        )
 
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
 
         self._redis_timeout = timedelta(hours=8).total_seconds()
-        self._locks: WeakValueDictionary[KT, asyncio.Lock] = WeakValueDictionary()
+        self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 
-    async def get(self, key: KT, default: Optional[VT] = None) -> Optional[VT]:
+    async def get(
+        self, key: str, default: Optional[tuple[Optional[str], Any]] = None
+    ) -> Optional[tuple[Optional[str], Any]]:
         """Get the provided key from the internal caches."""
         # only requests for repos go to redis
         if "/repos?" in key:
             return await self._rediscache.get(key, default=default)
         return self._memcache.get(key, default=default)
 
-    async def set(self, key: KT, value: VT, *, timeout: Optional[float] = None) -> None:
+    async def set(self, key: str, value: Tuple[Optional[str], Any], *, timeout: Optional[float] = None) -> None:
         """Set the provided key and value into the internal caches."""
         if "/repos?" in key:
             return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
         return self._memcache.set(key, value=value, timeout=timeout)
 
     @contextlib.asynccontextmanager
-    async def lock(self, key: KT) -> Generator[None, None, None]:
+    async def lock(self, key: str) -> AsyncGenerator[None, None]:
         """Runs a lock with the provided key."""
         if key not in self._locks:
             lock = asyncio.Lock()
@@ -165,9 +169,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.bot = bot
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.request_cache: GithubCache[str, Tuple[str, Any]] = GithubCache()
+        self.request_cache: GithubCache = GithubCache()
         self.autolink_cache: cachingutils.MemoryCache[
-            str, Tuple[disnake.Message, List[FoundIssue]]
+            int, Tuple[disnake.Message, List[FoundIssue]]
         ] = cachingutils.MemoryCache(timeout=600)
 
         self.guilds: Dict[str, str] = {}
@@ -177,7 +181,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         guild_config = self.bot.guild_configs.get(guild_id) or await GuildConfig.objects.get_or_none(id=guild_id)
         return guild_config and guild_config.github_issues_org
 
-    async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict, str, list, Any]:
+    async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict[str, Any], str, list[Any], Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
         if "headers" in kw:
             og = kw["headers"]
@@ -225,10 +229,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def fetch_repos(self, user: str) -> dict[str, str]:
         """Returns the first 100 repos for a user, a dict format."""
         url = ORG_REPOS_ENDPOINT.format(org=user)
-        resp = await self.fetch_data(url)
+        resp: list[Any] = await self.fetch_data(url)  # type: ignore
         if isinstance(resp, dict) and resp.get("message"):
             url = USER_REPOS_ENDPOINT.format(user=user)
-            resp = await self.fetch_data(url)
+            resp: list[Any] = await self.fetch_data(url)  # type: ignore
 
         repos = {}
         for repo in resp:
@@ -237,11 +241,29 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         return repos
 
-    async def fetch_user_and_repo(
+    @overload
+    async def fetch_user_and_repo(  # noqa: D102
         self,
         inter: Union[disnake.CommandInteraction, disnake.Message],
-        user: Optional[str] = None,
         repo: Optional[str] = None,
+        user: Optional[str] = None,
+    ) -> tuple[Optional[str], Optional[str]]:
+        ...
+
+    @overload
+    async def fetch_user_and_repo(  # noqa: D102
+        self,
+        inter: Union[disnake.CommandInteraction, disnake.Message],
+        repo: str,
+        user: Optional[str] = None,
+    ) -> RepoTarget:
+        ...
+
+    async def fetch_user_and_repo(  # type: ignore
+        self,
+        inter: Union[disnake.CommandInteraction, disnake.Message],
+        repo: Optional[str] = None,
+        user: Optional[str] = None,
     ) -> RepoTarget:
         """
         Adds a user and repo parameter to all slash commands.
@@ -253,11 +275,13 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         # todo: get from the database
         guild_id = inter.guild_id if isinstance(inter, disnake.Interaction) else (inter.guild and inter.guild.id)
-        user_guild = await self.fetch_guild_to_org(guild_id)
+        if guild_id:
+            user = user or await self.fetch_guild_to_org(guild_id)
 
-        user = user or user_guild
+        if not user:
+            raise commands.UserInputError("user must be provided" " or configured for this guild." if guild_id else ".")
 
-        return RepoTarget(user, repo)
+        return RepoTarget(user, repo)  # type: ignore
 
     # this should be a decorator but the typing is a bit scuffed on it right now
     commands.register_injection(fetch_user_and_repo)
@@ -272,10 +296,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
         """Fetches a user's GitHub information."""
         async with ctx.typing():
-            user_data = await self.fetch_data(
+            user_data: dict[str, Any] = await self.fetch_data(
                 f"{GITHUB_API_URL}/users/{quote_plus(username)}",
                 headers=REQUEST_HEADERS,
-            )
+            )  # type: ignore
 
             # User_data will not have a message key if the user exists
             if "message" in user_data:
@@ -289,7 +313,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 await ctx.send(embed=embed, components=components)
                 return
 
-            org_data = await self.fetch_data(user_data["organizations_url"], headers=REQUEST_HEADERS)
+            org_data: list[dict[str, Any]] = await self.fetch_data(
+                user_data["organizations_url"],
+                headers=REQUEST_HEADERS,
+            )  # type: ignore
             orgs = [f"[{org['login']}](https://github.com/{org['login']})" for org in org_data]
             orgs_to_add = " | ".join(orgs)
 
@@ -357,7 +384,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         The repository should look like `user/reponame` or `user reponame`.
         """
-        repo = "/".join(repo)
+        repo: str = "/".join(repo)
         if repo.count("/") != 1:
             embed = disnake.Embed(
                 title=random.choice(constants.NEGATIVE_REPLIES),
@@ -370,7 +397,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         async with ctx.typing():
-            repo_data = await self.fetch_data(f"{GITHUB_API_URL}/repos/{quote(repo)}", headers=REQUEST_HEADERS)
+            repo_data: dict[str, Any] = await self.fetch_data(
+                f"{GITHUB_API_URL}/repos/{quote(repo)}",
+                headers=REQUEST_HEADERS,
+            )  # type: ignore
 
             # There won't be a message key if this repo exists
             if "message" in repo_data:
@@ -384,9 +414,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 return
 
         html_url = repo_data["html_url"]
+        description = repo_data["description"]
         embed = disnake.Embed(
             title=repo_data["name"],
-            description=repo_data["description"],
             colour=disnake.Colour.blurple(),
             url=html_url,
         )
@@ -394,10 +424,11 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # If it's a fork, then it will have a parent key
         try:
             parent = repo_data["parent"]
-            embed.description += f"\n\nForked from [{parent['full_name']}]({parent['html_url']})"
+            description += f"\n\nForked from [{parent['full_name']}]({parent['html_url']})"
         except KeyError:
             log.debug("Repository is not a fork.")
 
+        embed.description = description
         repo_owner = repo_data["owner"]
 
         embed.set_author(
@@ -438,10 +469,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
 
-        json_data = await self.fetch_data(url, headers=GITHUB_HEADERS)
+        json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
 
         if "message" in json_data:
-            return FetchError("unknown", "Issue not found.")
+            return FetchError(-1, "Issue not found.")
 
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
@@ -476,9 +507,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @staticmethod
     def format_embed(
-        results: List[Union[IssueState, FetchError]],
-        user: str,
-        repository: Optional[str] = None,
+        results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
@@ -493,8 +522,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
-        embed_url = f"https://github.com/{user}/{repository}" if repository else f"https://github.com/{user}"
-        resp.set_author(name="GitHub", url=embed_url)
+        resp.set_author(name="GitHub")
         return resp
 
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
@@ -503,13 +531,13 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ctx: Union[commands.Context, disnake.CommandInteraction],
         numbers: commands.Greedy[int],
         repo: str,
-        user: str = None,
+        user: Optional[str] = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
         if not user or not repo:
             user, repo = await self.fetch_user_and_repo(
                 ctx.message if isinstance(ctx, commands.Context) else ctx, user, repo
-            )
+            )  # type: ignore
             if not user or not repo:
                 if not user:
                     if not repo:
@@ -543,7 +571,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
-        await ctx.send(embed=self.format_embed(results, user, repo), components=components)
+        await ctx.send(embed=self.format_embed(results), components=components)
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
@@ -570,15 +598,18 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not getattr(perms, req_perm):
             return
 
-        # todo: move this to be after the regex, since there's no reason to fetch if the regex doesn't match
-        default_user, _ = await self.fetch_user_and_repo(message)
+        default_user: Optional[str] = ""
 
         issues: List[FoundIssue] = []
         for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if not default_user:
-                    continue
+                    if default_user == "":
+                        default_user, _ = await self.fetch_user_and_repo(message)
+                        default_user = default_user or None
+                    if default_user is None:
+                        continue
                 org = default_user
                 repos = await self.fetch_repos(org)
                 if repo not in repos:
@@ -587,7 +618,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
             issues.append(FoundIssue(org, repo, match.group("number")))
 
-        links: List[IssueState] = []
+        links: list[IssueState] = []
 
         if issues:
 
@@ -607,6 +638,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 return
 
             for repo_issue in issues:
+                if repo_issue.organisation is None:
+                    continue
+
                 result = await self.fetch_issues(
                     int(repo_issue.number),
                     repo_issue.repository,
@@ -618,8 +652,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not links:
             return
 
-        embed = self.format_embed(links, default_user)
-        log.debug(f"Sending github issues to {message.channel} in guild {message.channel.guild}.")
+        embed = self.format_embed(links)
+        log.debug(f"Sending github issues to {message.channel} in guild {message.guild}.")
         components = DeleteButton(message.author)
         response = await message.channel.send(embed=embed, components=components)
         self.autolink_cache.set(message.id, (response, issues))
@@ -665,6 +699,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         links: List[IssueState] = []
         for repo_issue in after_issues:
+            if repo_issue.organisation is None:
+                continue
+
             result = await self.fetch_issues(
                 int(repo_issue.number),
                 repo_issue.repository,
@@ -677,7 +714,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             # see above comments
             return
 
-        embed = self.format_embed(links, user)
+        embed = self.format_embed(links)
 
         try:
             await sent_msg.edit(embed=embed)
@@ -731,8 +768,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         repo: the repo to get the issue from
         """
         user, repo = repo_user
-        repo = repo.rsplit("/", 1)[-1]
-        await self.github_issue(inter, [num], repo=repo, user=user)
+        repo = repo and repo.rsplit("/", 1)[-1]
+        await self.github_issue(inter, numbers=[num], repo=repo, user=user)  # type: ignore
 
 
 def setup(bot: Monty) -> None:
