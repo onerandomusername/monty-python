@@ -1,7 +1,8 @@
 # Github Action Workflow enforcing our code style and running tests.
 
 # misnomer, but not worth changing it
-name: Lint & Test
+# still not worth changing imo
+name: Lint, Test, Build
 
 # Trigger the workflow on both push (to the main repository)
 # and pull requests (against the main repository, but from any repo).
@@ -117,10 +118,59 @@ jobs:
         --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
         [flake8] %(code)s: %(text)s'"
 
+  build:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Build & Push
+    needs: [lint]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      # Create a commit SHA-based tag for the container repositories
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "::set-output name=tag::$tag"
+      # Check out the current repository in the `monty` subdirectory
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: monty
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN  }}
+
+      # Build and push the container to the GitHub Container
+      # Repository. The container will be tagged as "latest"
+      # and with the short SHA of the commit.
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: monty/
+          file: monty/Dockerfile
+          push: true
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/monty-python:latest
+          cache-to: type=inline
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/monty-python:latest
+            ghcr.io/${{ github.repository_owner }}/monty-python:${{ steps.sha_tag.outputs.tag }}
+          build-args: |
+            git_sha=${{ github.sha }}
+
+
   artifact:
     name: Generate Artifact
     if: always()
-    needs: [lint]
+    needs: [lint, build]
     runs-on: ubuntu-latest
     steps:
       # Prepare the Pull Request Payload artifact. If this fails, we
