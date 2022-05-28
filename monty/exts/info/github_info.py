@@ -15,7 +15,7 @@ import gql
 import gql.client
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.exceptions import TransportError
+from gql.transport.exceptions import TransportError, TransportQueryError
 
 from monty import constants
 from monty.bot import Monty
@@ -518,7 +518,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                         "number": number,
                     },
                 )
-            except TransportError:
+            except (TransportError, TransportQueryError):
                 return FetchError(-1, "Issue not found.")
 
             json_data = json_data["repository"]["discussion"]
