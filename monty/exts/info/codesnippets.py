@@ -76,7 +76,12 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # make the request with the github_info cog if it is loaded
         if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GithubInfo")):
             cog: GithubInfo
-            return await cog.fetch_data(url, as_text=True if response_format == "text" else False, **kwargs)
+            return await cog.fetch_data(
+                url,
+                as_text=True if response_format == "text" else False,
+                raise_for_status=True,
+                **kwargs,
+            )
 
         key = (url, response_format)
         if cached := self.request_cache.get(key):
