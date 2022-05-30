@@ -1,15 +1,24 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
-import types
 from collections import defaultdict
 from functools import partial
-from typing import Any, Awaitable, Callable, Hashable, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Coroutine, Hashable, Literal, TypeVar, Union, overload
 from weakref import WeakValueDictionary
 
 from monty.errors import LockedResourceError
 from monty.log import get_logger
 from monty.utils import function
 from monty.utils.function import command_wraps
+
+
+if TYPE_CHECKING:
+    from typing_extensions import ParamSpec
+
+    P = ParamSpec("P")
+    T = TypeVar("T")
+    Coro = Coroutine[Any, Any, T]
 
 
 log = get_logger(__name__)
@@ -49,13 +58,35 @@ class SharedEvent:
         await self._event.wait()
 
 
+@overload
+def lock(
+    namespace: Hashable,
+    resource_id: ResourceId,
+    *,
+    raise_error: Literal[False] = False,
+    wait: bool = ...,
+) -> Callable[[Callable[P, Coro[T]]], Callable[P, Coro[T | None]]]:
+    ...
+
+
+@overload
+def lock(
+    namespace: Hashable,
+    resource_id: ResourceId,
+    *,
+    raise_error: Literal[True],
+    wait: bool = False,
+) -> Callable[[Callable[P, Coro[T]]], Callable[P, Coro[T]]]:
+    ...
+
+
 def lock(
     namespace: Hashable,
     resource_id: ResourceId,
     *,
     raise_error: bool = False,
     wait: bool = False,
-) -> Callable:
+) -> Callable[[Callable[P, Coro[T]]], Callable[P, Coro[T | None]]]:
     """
     Turn the decorated coroutine function into a mutually exclusive operation on a `resource_id`.
 
@@ -74,11 +105,11 @@ def lock(
     If decorating a command, this decorator must go before (below) the `command` decorator.
     """
 
-    def decorator(func: types.FunctionType) -> types.FunctionType:
+    def decorator(func: Callable[P, Coro[T]]) -> Callable[P, Coro[T | None]]:
         name = func.__name__
 
         @command_wraps(func)
-        async def wrapper(*args, **kwargs) -> Any:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T | None:
             log.trace(f"{name}: mutually exclusive decorator called")
 
             if callable(resource_id):

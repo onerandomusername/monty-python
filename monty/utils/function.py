@@ -10,9 +10,13 @@ from monty.log import get_logger
 
 log = get_logger(__name__)
 
+AnyCallable = t.Callable[..., t.Any]
+FuncT = t.TypeVar("FuncT", bound=AnyCallable)
+OtherFuncT = t.TypeVar("OtherFuncT", bound=AnyCallable)
+
 Argument = t.Union[int, str]
 BoundArgs = t.OrderedDict[str, t.Any]
-Decorator = t.Callable[[t.Callable], t.Callable]
+Decorator = t.Callable[[FuncT], OtherFuncT]
 ArgValGetter = t.Callable[[BoundArgs], t.Any]
 
 
@@ -50,10 +54,10 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
 
 
 def get_arg_value_wrapper(
-    decorator_func: t.Callable[[ArgValGetter], Decorator],
+    decorator_func: t.Callable[[ArgValGetter], Decorator[FuncT, OtherFuncT]],
     name_or_pos: Argument,
     func: t.Callable[[t.Any], t.Any] = None,
-) -> Decorator:
+) -> Decorator[FuncT, OtherFuncT]:
     """
     Call `decorator_func` with the value of the arg at the given name/position.
 
@@ -88,11 +92,11 @@ def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) 
 
 
 def update_wrapper_globals(
-    wrapper: types.FunctionType,
-    wrapped: types.FunctionType,
+    wrapper: FuncT,
+    wrapped: AnyCallable,
     *,
     ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
-) -> types.FunctionType:
+) -> FuncT:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
 
@@ -131,21 +135,21 @@ def update_wrapper_globals(
         name=wrapper.__name__,
         argdefs=wrapper.__defaults__,
         closure=wrapper.__closure__,
-    )
+    )  # type: ignore
 
 
 def command_wraps(
-    wrapped: types.FunctionType,
+    wrapped: AnyCallable,
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
     ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
-) -> t.Callable[[types.FunctionType], types.FunctionType]:
+) -> t.Callable[[FuncT], FuncT]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
     if ignored_conflict_names is None:
         ignored_conflict_names = frozenset()
 
-    def decorator(wrapper: types.FunctionType) -> types.FunctionType:
+    def decorator(wrapper: FuncT) -> FuncT:
         return functools.update_wrapper(
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
             wrapped,

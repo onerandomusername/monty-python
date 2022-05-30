@@ -1,7 +1,7 @@
 import importlib
 import inspect
 import pkgutil
-from typing import TYPE_CHECKING, Generator, NewType, NoReturn, Tuple
+from typing import TYPE_CHECKING, Generator, NoReturn, Tuple
 
 from disnake.ext import commands
 
@@ -12,7 +12,6 @@ from monty.log import get_logger
 if TYPE_CHECKING:
     from monty.metadata import ExtMetadata
 
-ModuleName = NewType("ModuleName", str)
 log = get_logger(__name__)
 
 
@@ -21,7 +20,7 @@ def unqualify(name: str) -> str:
     return name.rsplit(".", maxsplit=1)[-1]
 
 
-def walk_extensions() -> Generator[Tuple[ModuleName, "ExtMetadata"], None, None]:
+def walk_extensions() -> Generator[Tuple[str, "ExtMetadata"], None, None]:
     """Yield extension names from monty.exts subpackage."""
     from monty.metadata import ExtMetadata
 
@@ -38,7 +37,7 @@ def walk_extensions() -> Generator[Tuple[ModuleName, "ExtMetadata"], None, None]
             # If it lacks a setup function, it's not an extension.
             continue
 
-        ext_metadata: ExtMetadata = getattr(imported, "EXT_METADATA", None)
+        ext_metadata = getattr(imported, "EXT_METADATA", None)
         if ext_metadata is not None:
             if not isinstance(ext_metadata, ExtMetadata):
                 if ext_metadata == ExtMetadata:
@@ -69,7 +68,7 @@ async def invoke_help_command(ctx: commands.Context) -> None:
     """Invoke the help command or default help command if help extensions is not loaded."""
     if "monty.exts.backend.help" in ctx.bot.extensions:
         help_command = ctx.bot.get_command("help")
-        await ctx.invoke(help_command, ctx.command.qualified_name)
+        await ctx.invoke(help_command, ctx.command.qualified_name)  # type: ignore
         return
     await ctx.send_help(ctx.command)
 

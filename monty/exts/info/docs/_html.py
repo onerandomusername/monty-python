@@ -99,7 +99,7 @@ def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
     return match_tag
 
 
-def get_general_description(start_element: Tag) -> List[Union[Tag, NavigableString]]:
+def get_general_description(start_element: PageElement) -> List[Union[Tag, NavigableString]]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 

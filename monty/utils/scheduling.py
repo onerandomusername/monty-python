@@ -8,6 +8,9 @@ from functools import partial
 from monty.log import get_logger
 
 
+T = t.TypeVar("T")
+
+
 class Scheduler:
     """
     Schedule the execution of coroutines and keep track of them.
@@ -162,12 +165,12 @@ class Scheduler:
 
 
 def create_task(
-    coro: t.Awaitable,
+    coro: t.Coroutine[t.Any, t.Any, T],
     *,
-    suppressed_exceptions: tuple[t.Type[Exception]] = (),
+    suppressed_exceptions: tuple[t.Type[Exception], ...] = (),
     event_loop: t.Optional[asyncio.AbstractEventLoop] = None,
     **kwargs,
-) -> asyncio.Task:
+) -> asyncio.Task[T]:
     """
     Wrapper for creating asyncio `Task`s which logs exceptions raised in the task.
 
@@ -181,7 +184,7 @@ def create_task(
     return task
 
 
-def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception]]) -> None:
+def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception], ...]) -> None:
     """Retrieve and log the exception raised in `task` if one exists."""
     with contextlib.suppress(asyncio.CancelledError):
         exception = task.exception()
