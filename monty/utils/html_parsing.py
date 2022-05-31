@@ -229,22 +229,24 @@ def _get_truncated_description(
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
-def _create_markdown(signatures: Optional[List[str]], description: Iterable[Tag], url: str) -> str:
+def _create_markdown(
+    signatures: Optional[List[str]], description: Iterable[Union[Tag, NavigableString]], url: str
+) -> str:
     """
     Create a Markdown string with the signatures at the top, and the converted html description below them.
 
     The signatures are wrapped in python codeblocks, separated from the description by a newline.
     The result Markdown string is max 750 rendered characters for the description with signatures at the start.
     """
-    description = _get_truncated_description(
+    description_str = _get_truncated_description(
         description, markdown_converter=DocMarkdownConverter(bullets="•", page_url=url), max_length=750, max_lines=13
     )
-    description = _WHITESPACE_AFTER_NEWLINES_RE.sub("", description)
+    description_str = _WHITESPACE_AFTER_NEWLINES_RE.sub("", description_str)
     if signatures is not None:
         signature = "".join(f"```py\n{signature}```" for signature in _truncate_signatures(signatures))
-        return f"{signature}\n{description}"
+        return f"{signature}\n{description_str}"
     else:
-        return description
+        return description_str
 
 
 def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:

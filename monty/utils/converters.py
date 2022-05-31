@@ -302,12 +302,12 @@ class SourceConverter(commands.Converter):
 
 
 if t.TYPE_CHECKING:
-    Extension = str  # noqa: F811
-    PackageName = str  # noqa: F811
-    ValidURL = str  # noqa: F811
-    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # noqa: F811
-    Snowflake = int  # noqa: F811
-    UnambiguousUser = disnake.User  # noqa: F811
-    UnambiguousMember = disnake.Member  # noqa: F811
-    WrappedMessageConverter = disnake.Message  # noqa: F811
-    SourceConverter = SourceType  # noqa: F811
+    Extension = str  # type: ignore  # noqa: F811
+    PackageName = str  # type: ignore  # noqa: F811
+    ValidURL = str  # type: ignore  # noqa: F811
+    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
+    Snowflake = int  # type: ignore  # noqa: F811
+    UnambiguousUser = disnake.User  # type: ignore  # noqa: F811
+    UnambiguousMember = disnake.Member  # type: ignore  # noqa: F811
+    WrappedMessageConverter = disnake.Message  # type: ignore  # noqa: F811
+    SourceConverter = SourceType  # type: ignore  # noqa: F811

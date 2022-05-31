@@ -4,7 +4,7 @@ import asyncio
 import datetime
 import functools
 import re
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Tuple, Type, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
     P = ParamSpec("P")
     T = TypeVar("T")
+    Coro = Coroutine[Any, Any, T]
 UNSET = object()
 
 
@@ -47,7 +48,7 @@ def has_lines(string: str, count: int) -> bool:
     split = string.split("\n", count - 1)
 
     # Make sure the last part isn't empty, which would happen if there was a final newline.
-    return split[-1] and len(split) == count
+    return bool(split[-1]) and len(split) == count
 
 
 def pad_base64(data: str) -> str:
@@ -165,31 +166,29 @@ def redis_cache(
     allow_unset: bool = False,
     cache_cls: Optional[Type[cachingutils.redis.AsyncRedisCache]] = None,
     cache: Any = None,
-    **kwargs,
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
+) -> Callable[[Callable[P, Coro[T]]], Callable[P, Coro[T]]]:
     """Decorate a function to cache its result in redis."""
     redis_cache = cachingutils.redis.async_session(constants.Client.config_prefix)
     if cache_cls:
         # we actually want to do it this way, as it is important that they are *actually* the same class
         if cache and type(cache_cls) is not type(cache):
             raise TypeError("cache cannot be provided if cache_cls is provided and cache and cache_cls are different")
-        _cache: cachingutils.redis.AsyncRedisCache = cache_cls(session=redis_cache._redis)
+        _cache: cachingutils.redis.AsyncRedisCache = cache_cls(session=redis_cache._redis)  # type: ignore
     else:
         _cache = redis_cache
 
-    if timeout:
-        if isinstance(timeout, datetime.timedelta):
-            timeout = int(timeout.total_seconds())
-        elif isinstance(timeout, float):
-            timeout = int(timeout)
+    if isinstance(timeout, datetime.timedelta):
+        timeout = int(timeout.total_seconds())
+    elif isinstance(timeout, float):
+        timeout = int(timeout)
 
     cache_logger = get_logger(__package__ + ".caching")
 
     prefix = prefix + ":"
 
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+    def decorator(func: Callable[P, Coro[T]]) -> Callable[P, Coro[T]]:
         @functools.wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> T:
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             if key_func is not None:
                 if include_posargs is not None:
                     key_args = tuple(k for i, k in enumerate(args) if i in include_posargs)

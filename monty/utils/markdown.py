@@ -2,7 +2,7 @@ import re
 from typing import Any, Optional
 from urllib.parse import urljoin
 
-from bs4.element import PageElement
+from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
 
 
@@ -26,7 +26,7 @@ class DocMarkdownConverter(MarkdownConverter):
         """Remove images from the parsed contents, we don't want them."""
         return ""
 
-    def convert_li(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_li(self, el: Tag, text: str, convert_as_inline: bool) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
         parent = el.parent
         if parent is not None and parent.name == "ol":
@@ -34,10 +34,11 @@ class DocMarkdownConverter(MarkdownConverter):
             bullet = f"{li_tags.index(el)+1}."
         else:
             depth = -1
-            while el:
-                if el.name == "ul":
+            curr_el = el
+            while curr_el:
+                if curr_el.name == "ul":
                     depth += 1
-                el = el.parent
+                curr_el = curr_el.parent
             bullets = self.options["bullets"]
             bullet = bullets[depth % len(bullets)]
         return f"{bullet} {text}\n"
@@ -52,14 +53,16 @@ class DocMarkdownConverter(MarkdownConverter):
         """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace("\\", "")
 
-    def convert_pre(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_pre(self, el: Tag, text: str, convert_as_inline: bool) -> str:
         """Wrap any codeblocks in `py` for syntax highlighting."""
         code = "".join(el.strings)
         return f"```py\n{code}```"
 
-    def convert_a(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_a(self, el: Tag, text: str, convert_as_inline: bool) -> str:
         """Resolve relative URLs to `self.page_url`."""
-        el["href"] = urljoin(self.page_url, el["href"])
+        href = el["href"]
+        assert isinstance(href, str)
+        el["href"] = urljoin(self.page_url, href)
         return super().convert_a(el, text, convert_as_inline)
 
     def convert_p(self, el: PageElement, text: str, convert_as_inline: bool) -> str:

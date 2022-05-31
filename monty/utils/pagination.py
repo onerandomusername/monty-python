@@ -1,5 +1,5 @@
 import asyncio
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union, cast
 
 import disnake
 from disnake.ext import commands
@@ -170,7 +170,7 @@ class LinePaginator(commands.Paginator):
                 raise EmptyPaginatorEmbedError("No lines to paginate")
 
             log.debug("No lines to add to paginator, adding '(nothing to display)' message")
-            lines.append("(nothing to display)")
+            lines = ("(nothing to display)",)
 
         for line in lines:
             try:
@@ -234,7 +234,8 @@ class LinePaginator(commands.Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            event_name = inter.component.custom_id[len(CUSTOM_ID_PREFIX) :]
+            custom_id = cast(str, inter.component.custom_id)
+            event_name = custom_id[len(CUSTOM_ID_PREFIX) :]
 
             if PAGINATION_EMOJI.get(event_name) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode
                 log.debug("Got delete inter")
@@ -420,6 +421,8 @@ class ImagePaginator(commands.Paginator):
 
             # Deletes the users reaction
             await message.remove_reaction(reaction.emoji, user)
+
+            reaction_type = "unknown"
 
             # Delete reaction press - [:trashcan:]
             if str(reaction.emoji) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode
