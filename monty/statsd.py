@@ -10,7 +10,7 @@ class AsyncStatsClient(StatsClientBase):
 
     def __init__(self, *, host: str, port: int, prefix: str = None):
         """Create a new client."""
-        self._addr = (host, port)
+        self._addr = (socket.gethostbyname(host), port)
         self._prefix = prefix
         self._transport = None
         self._loop = asyncio.get_running_loop()
