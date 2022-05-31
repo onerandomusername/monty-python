@@ -94,3 +94,5 @@ include = [
     "monty",
     "*.py",
 ]
+
+strictParameterNoneValue = false
