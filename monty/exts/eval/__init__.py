@@ -11,7 +11,7 @@ import disnake
 import yarl
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import URLs
 from monty.errors import APIError
 from monty.log import get_logger
@@ -92,7 +92,7 @@ def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: disnake.React
 class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Safe evaluation of Python code using Snekbox."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.url = yarl.URL(URLs.snekbox_api)
         self.jobs = {}
@@ -531,6 +531,6 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Snekbox cog."""
     bot.add_cog(Snekbox(bot))

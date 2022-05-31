@@ -14,7 +14,7 @@ import yarl
 from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours
 from monty.log import get_logger
 from monty.utils.helpers import maybe_defer
@@ -50,7 +50,7 @@ class Package:
 class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for getting information about PyPi packages."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.searches = {}
         self.fetch_lock = asyncio.Lock()
@@ -286,6 +286,6 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         defer_task.cancel()
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the PyPi cog."""
     bot.add_cog(PyPi(bot))

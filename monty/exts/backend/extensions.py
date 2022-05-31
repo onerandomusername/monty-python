@@ -6,7 +6,7 @@ import disnake
 from disnake.ext import commands
 
 from monty import exts
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Client
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
@@ -29,15 +29,15 @@ class Action(Enum):
     """Represents an action to perform on an extension."""
 
     # Need to be partial otherwise they are considered to be function definitions.
-    LOAD = functools.partial(Bot.load_extension)
-    UNLOAD = functools.partial(Bot.unload_extension)
-    RELOAD = functools.partial(Bot.reload_extension)
+    LOAD = functools.partial(Monty.load_extension)
+    UNLOAD = functools.partial(Monty.unload_extension)
+    RELOAD = functools.partial(Monty.reload_extension)
 
 
 class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Extension management commands."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @commands.group(
@@ -234,6 +234,6 @@ class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
             error.handled = True
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Extensions cog."""
     bot.add_cog(Extensions(bot))

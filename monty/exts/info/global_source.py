@@ -13,7 +13,7 @@ from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
-    from monty.bot import Bot
+    from monty.bot import Monty
     from monty.exts.eval import Snekbox
 
 logger = get_logger(__name__)
@@ -23,7 +23,7 @@ CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
 class GlobalSource(commands.Cog):
     """Global source for python objects."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         with open(CODE_FILE, "r") as f:
             self.code: Final[str] = f.read()
@@ -164,6 +164,6 @@ class GlobalSource(commands.Cog):
         self.refresh_code.start(ctx, query)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Add the global source cog to the bot."""
     bot.add_cog(GlobalSource(bot))

@@ -11,7 +11,7 @@ from aiohttp import ClientResponseError
 from disnake.ext import commands
 
 from monty import constants
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.messages import DeleteButton
@@ -58,7 +58,7 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         """Initializes the cog's bot."""
         self.bot = bot
 
@@ -318,6 +318,6 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await inter.followup.send(snippet, components=components)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the CodeSnippets cog."""
     bot.add_cog(CodeSnippets(bot))

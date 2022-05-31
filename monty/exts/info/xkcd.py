@@ -5,7 +5,7 @@ from typing import Dict, Optional, Union
 import disnake
 from disnake.ext import commands, tasks
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Colours
 from monty.log import get_logger
 
@@ -19,7 +19,7 @@ BASE_URL = "https://xkcd.com"
 class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Retrieving XKCD comics."""
 
-    def __init__(self, bot: Bot) -> None:
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.latest_comic_info: Dict[str, Union[str, int]] = {}
         self.get_latest_comic_info.start()
@@ -94,6 +94,6 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await inter.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the XKCD cog."""
     bot.add_cog(XKCD(bot))

@@ -6,7 +6,7 @@ from typing import Optional, Union
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import ERROR_REPLIES, Colours, Icons
 from monty.log import get_logger
 from monty.utils.converters import WrappedMessageConverter
@@ -70,7 +70,7 @@ class Bookmark(
 ):
     """Creates personal bookmarks by relaying a message link to the user's DMs."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @staticmethod
@@ -292,6 +292,6 @@ class Bookmark(
         )
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Bookmark cog."""
     bot.add_cog(Bookmark(bot))

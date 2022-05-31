@@ -32,7 +32,7 @@ else:
         log.info("TEST_GUILDS FOUND")
 
 
-__all__ = ("Bot",)
+__all__ = ("Monty",)
 
 
 class Monty(commands.Bot):
@@ -113,6 +113,7 @@ class Monty(commands.Bot):
         return self.invite_permissions
 
     async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
+        """Get the bot prefix."""
         prefixes = commands.when_mentioned(self, message)
         if message.guild:
             guild_id = message.guild.id
@@ -221,7 +222,3 @@ class Monty(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
-
-
-# temp: for backwards compatibilty
-Bot = Monty

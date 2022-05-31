@@ -27,7 +27,7 @@ ERROR_EMBED = disnake.Embed(
 class RealPython(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """User initiated command to search for a Real Python article."""
 
-    def __init__(self, bot: bot.Bot):
+    def __init__(self, bot: bot.Monty):
         self.bot = bot
 
     @commands.command(aliases=["rp"])
@@ -68,6 +68,6 @@ class RealPython(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await ctx.send(embed=article_embed)
 
 
-def setup(bot: bot.Bot) -> None:
+def setup(bot: bot.Monty) -> None:
     """Load the Real Python Cog."""
     bot.add_cog(RealPython(bot))

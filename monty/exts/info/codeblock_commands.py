@@ -7,7 +7,7 @@ import aiohttp
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Paste, URLs
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
@@ -38,7 +38,7 @@ class CodeButtons(
 ):
     """Adds automatic buttons to codeblocks if they match commands."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.black_endpoint = URLs.black_formatter
 
@@ -374,7 +374,7 @@ class CodeButtons(
         await inter.edit_original_message(content=msg, components=components)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Add the CodeButtons cog to the bot."""
     if not URLs.black_formatter:
         logger.warning("Not loading codeblock buttons as black_formatter is not set.")

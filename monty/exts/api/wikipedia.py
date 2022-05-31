@@ -6,7 +6,7 @@ from typing import List
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils import LinePaginator
@@ -34,7 +34,7 @@ WIKI_SEARCH_RESULT = "**[{name}]({url})**\n" "{description}\n"
 class WikipediaSearch(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Get info from wikipedia."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> List[str]:
@@ -79,6 +79,6 @@ class WikipediaSearch(commands.Cog, slash_command_attrs={"dm_permission": False}
             await ctx.send("Sorry, we could not find a wikipedia article using that search term.")
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the WikipediaSearch cog."""
     bot.add_cog(WikipediaSearch(bot))

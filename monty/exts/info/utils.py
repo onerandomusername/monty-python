@@ -7,7 +7,7 @@ from typing import Tuple
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
@@ -19,7 +19,7 @@ log = get_logger(__name__)
 class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """A selection of utilities which don't have a clear category."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @commands.slash_command(name="char-info")
@@ -109,6 +109,6 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await inter.send(embed=embed, components=components)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Utils cog."""
     bot.add_cog(Utils(bot))

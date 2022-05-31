@@ -7,7 +7,7 @@ import disnake
 from disnake.ext import commands
 
 from monty import utils
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Guilds
 from monty.log import get_logger
 from monty.utils.messages import format_user
@@ -60,7 +60,7 @@ class Token(t.NamedTuple):
 class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Scans messages for potential discord client tokens and removes them."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     async def maybe_delete(self, msg: disnake.Message) -> bool:
@@ -296,6 +296,6 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return True
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the TokenRemover cog."""
     bot.add_cog(TokenRemover(bot))

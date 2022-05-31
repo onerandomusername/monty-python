@@ -70,7 +70,7 @@ def create_file_obj(
 
 
 if TYPE_CHECKING:
-    from monty.bot import Bot
+    from monty.bot import Monty
 
 
 log = get_logger(__name__)
@@ -87,7 +87,7 @@ class Admin(
 ):
     """Admin-only eval command and repr."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         log.debug("loading cog Admin")
         self.bot = bot
         self._last_result = None
@@ -435,6 +435,6 @@ class Admin(
         await ctx.send(embed=embed, components=components)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Add the Admin plugin to the bot."""
     bot.add_cog(Admin(bot))

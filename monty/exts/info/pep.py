@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
@@ -62,7 +62,7 @@ class PEPHeaders:
 class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for displaying information about PEPs."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.peps: Dict[int, str] = {}
         self.autocomplete: dict[str, int] = {}
@@ -301,6 +301,6 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         return completion
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the PEP cog."""
     bot.add_cog(PythonEnhancementProposals(bot))

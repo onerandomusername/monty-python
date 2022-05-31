@@ -6,7 +6,7 @@ from urllib.parse import urldefrag
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
 from monty.utils.helpers import encode_github_link
@@ -155,6 +155,6 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return embed, url
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the BotSource cog."""
     bot.add_cog(BotSource())

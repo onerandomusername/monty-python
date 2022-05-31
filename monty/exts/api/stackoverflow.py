@@ -27,7 +27,7 @@ ERR_EMBED = disnake.Embed(
 class Stackoverflow(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Contains command to interact with stackoverflow from disnake."""
 
-    def __init__(self, bot: bot.Bot):
+    def __init__(self, bot: bot.Monty):
         self.bot = bot
 
     @commands.command(aliases=["so"])
@@ -83,6 +83,6 @@ class Stackoverflow(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(embed=search_query_too_long)
 
 
-def setup(bot: bot.Bot) -> None:
+def setup(bot: bot.Monty) -> None:
     """Load the Stackoverflow Cog."""
     bot.add_cog(Stackoverflow(bot))

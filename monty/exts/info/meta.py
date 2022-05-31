@@ -5,7 +5,7 @@ import psutil
 from disnake.ext import commands
 from disnake.ext.commands import Range
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Client, Colours
 from monty.utils.messages import DeleteButton
 
@@ -63,7 +63,7 @@ COLOURS = (Colours.python_blue, Colours.python_yellow)
 class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Get meta information about the bot."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         self.process = psutil.Process()
 
@@ -195,6 +195,6 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await inter.send(embed=embed, components=components)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Ping cog."""
     bot.add_cog(Meta(bot))

@@ -4,7 +4,7 @@ from time import perf_counter
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 
 
 class TimedCommands(commands.Cog, slash_command_attrs={"dm_permission": False}):
@@ -41,6 +41,6 @@ class TimedCommands(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await ctx.send(f"Command execution for `{new_ctx.command}` finished in {(t_end - t_start):.4f} seconds.")
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Timed cog."""
     bot.add_cog(TimedCommands())

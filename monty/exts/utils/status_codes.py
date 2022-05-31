@@ -4,7 +4,7 @@ from random import choice
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 
 
 HTTP_DOG_URL = "https://httpstatusdogs.com/img/{code}.jpg"
@@ -18,7 +18,7 @@ class HTTPStatusCodes(commands.Cog, slash_command_attrs={"dm_permission": False}
     If neither animal is selected a cat or dog is chosen randomly for the given status code.
     """
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @commands.group(
@@ -83,6 +83,6 @@ class HTTPStatusCodes(commands.Cog, slash_command_attrs={"dm_permission": False}
             await ctx.send(embed=embed)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the HTTPStatusCodes cog."""
     bot.add_cog(HTTPStatusCodes(bot))

@@ -6,7 +6,7 @@ import disnake
 from disnake.ext import commands
 
 from monty import constants
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.exts.filters.token_remover import TokenRemover
 from monty.exts.filters.webhook_remover import WEBHOOK_URL_RE
 from monty.exts.info.codeblock._instructions import get_instructions
@@ -63,7 +63,7 @@ class CodeBlockCog(
     For configurable parameters, see the `code_block` section in config-default.py.
     """
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.

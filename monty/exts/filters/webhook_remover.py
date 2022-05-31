@@ -3,7 +3,7 @@ import re
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Guilds
 from monty.log import get_logger
 from monty.utils.messages import format_user
@@ -28,7 +28,7 @@ log = get_logger(__name__)
 class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Scan messages to detect Discord webhooks links."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     async def maybe_delete(self, msg: disnake.Message) -> bool:
@@ -100,6 +100,6 @@ class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False})
         await self.on_message(after)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load `WebhookRemover` cog."""
     bot.add_cog(WebhookRemover(bot))

@@ -9,7 +9,7 @@ from disnake.ext import commands
 from rapidfuzz import fuzz, process
 
 from monty import constants
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.constants import Emojis
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
@@ -526,7 +526,7 @@ class Help(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(embed=embed)
 
 
-def unload(bot: Bot) -> None:
+def unload(bot: Monty) -> None:
     """
     Reinstates the original help command.
 
@@ -536,7 +536,7 @@ def unload(bot: Bot) -> None:
     bot.add_command(bot._old_help)
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """
     The setup for the help extension.
 
@@ -557,7 +557,7 @@ def setup(bot: Bot) -> None:
         raise
 
 
-def teardown(bot: Bot) -> None:
+def teardown(bot: Monty) -> None:
     """
     The teardown for the help extension.
 

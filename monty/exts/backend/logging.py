@@ -5,7 +5,7 @@ from typing import Any
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 
@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Internal logging for debug and abuse handling."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -81,6 +81,6 @@ class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False})
         logger.info(f"slash command by {inter.author} has completed!")
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Add the internal logger cog to the bot."""
     bot.add_cog(InternalLogger(bot))

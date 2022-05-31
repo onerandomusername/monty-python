@@ -11,7 +11,7 @@ import rapidfuzz
 from disnake.ext import commands
 from PIL import Image, ImageColor
 
-from monty.bot import Bot
+from monty.bot import Monty
 from monty.utils.extensions import invoke_help_command
 from monty.utils.messages import DeleteButton
 
@@ -22,7 +22,7 @@ THUMBNAIL_SIZE = (80, 80)
 class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for the Colour command."""
 
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Monty):
         self.bot = bot
         with open(pathlib.Path("monty/resources/ryanzec_colours.json")) as f:
             self.colour_mapping = json.load(f)
@@ -382,6 +382,6 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return f"#{self.colour_mapping[match]}"
 
 
-def setup(bot: Bot) -> None:
+def setup(bot: Monty) -> None:
     """Load the Colour cog."""
     bot.add_cog(Colour(bot))
