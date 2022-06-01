@@ -19,7 +19,7 @@ coloredlogs = "~=15.0"
 disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master' }
 fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 gql = "^3.3.0"
-lxml = "^4.6.4"
+lxml = "^4.9.0"
 markdownify = "==0.11.2"
 redis = { version = "^4.3.1", extras = ['hiredis'] }
 Pillow = "^9.0.0"
