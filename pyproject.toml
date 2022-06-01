@@ -28,7 +28,7 @@ rapidfuzz = "^2.0.11"
 statsd = "^3.3.0"
 tomli = "^2.0.1"
 # database dependencies
-alembic = "^1.7.7"
+alembic = "^1.8.0"
 asyncpg = "^0.25.0"
 databases = "^0.5.5"
 # currently using master as the published pypi version has a dependencies bug which requires aiosqlite
