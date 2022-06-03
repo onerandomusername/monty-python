@@ -89,7 +89,7 @@ class HelpSession:
     ):
         """Creates an instance of the HelpSession class."""
         self._ctx = ctx
-        self._bot = ctx.bot
+        self._bot: Monty = ctx.bot
         self.title = "Command Help"
 
         # set the query details for the session
@@ -190,6 +190,9 @@ class HelpSession:
     async def on_message_interaction(self, inter: disnake.MessageInteraction) -> None:
         """Event handler for when reactions are added on the help message."""
         # ensure it was the relevant session message
+        if not self.message:
+            return
+
         if inter.message.id != self.message.id:
             return
         name = self.strip_custom_id(inter.data.custom_id)
@@ -214,7 +217,7 @@ class HelpSession:
 
     async def on_message_delete(self, message: disnake.Message) -> None:
         """Closes the help session when the help message is deleted."""
-        if message.id == self.message.id:
+        if self.message and message.id == self.message.id:
             await self.stop()
 
     async def prepare(self) -> None:
@@ -459,6 +462,8 @@ class HelpSession:
         """Stops the help session, removes event listeners and attempts to delete the help message."""
         self._bot.remove_listener(self.on_message_interaction)
         self._bot.remove_listener(self.on_message_delete)
+        if not self.message:
+            return
 
         # ignore if permission issue, or the message doesn't exist
         with suppress(disnake.HTTPException, AttributeError):
@@ -503,7 +508,8 @@ class HelpSession:
 
     async def do_stop(self) -> None:
         """Event that is called when the user requests to stop the help session."""
-        await self.message.delete()
+        if self.message:
+            await self.message.delete()
 
 
 class Help(commands.Cog, slash_command_attrs={"dm_permission": False}):
