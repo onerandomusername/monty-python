@@ -16,7 +16,7 @@ on:
 # It is useful for pull requests coming from the main repository since both triggers will match.
 concurrency:
   group: ${{ github.workflow }}-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   read-all
