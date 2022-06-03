@@ -30,7 +30,7 @@ tomli = "^2.0.1"
 # database dependencies
 alembic = "^1.8.0"
 asyncpg = "^0.25.0"
-databases = "^0.5.5"
+databases = "^0.6.0"
 # currently using master as the published pypi version has a dependencies bug which requires aiosqlite
 ormar = {git = "https://github.com/collerek/ormar.git", rev ='master'}
 psycopg2-binary = "^2.9.3"
