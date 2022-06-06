@@ -113,7 +113,7 @@ class DocView(DeleteView):
 
     def sync_attribute_dropdown(self, current_attribute: str = None) -> None:
         """Set up the attribute select menu."""
-        self.attribute_select._underlying.options = []
+        self.attribute_select.options.clear()
         for attr in self.attributes[:25]:
             if attr == self.docitem:
                 continue
