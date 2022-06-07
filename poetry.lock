@@ -293,7 +293,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.6.0a4275+gd90c8dc0"
+version = "2.6.0a4240+ga71e8df2"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -311,9 +311,9 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 
 [package.source]
 type = "git"
-url = "https://github.com/onerandomusername/disnake.git"
-reference = 'refactor/embed'
-resolved_reference = "d90c8dc06834dd5b90f80d7d7de8609d0b117c13"
+url = "https://github.com/DisnakeDev/disnake.git"
+reference = 'master'
+resolved_reference = "a71e8df29f2928f2814ff2cc16bfefabcad5d00b"
 
 [[package]]
 name = "distlib"
@@ -1226,7 +1226,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "bacd508c841f4248dd3bb278bc7c4d9031669d47d37e7c79ad8a945b7fe576c0"
+content-hash = "4ef83dd04b0c0c951729c1d50c7f603f4bffdabd35009c31c73af53dd319d108"
 
 [metadata.files]
 aiodns = [
