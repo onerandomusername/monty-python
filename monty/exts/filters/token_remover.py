@@ -1,19 +1,31 @@
+# TODO: add caching to the api requests that error
+
 import base64
 import contextlib
 import re
+import sys
 import typing as t
 
+import aiohttp
+import attr
 import disnake
 from disnake.ext import commands
 
-from monty import utils
+from monty import constants, utils
 from monty.bot import Monty
-from monty.constants import Guilds
 from monty.log import get_logger
 from monty.utils.messages import format_user
 
 
 log = get_logger(__name__)
+
+GITHUB_API_GISTS = "https://api.github.com/gists"
+GITHUB_REQUEST_HEADERS = {"Accept": "application/vnd.github.v3+json"}
+if constants.Tokens.github:
+    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
+
+DISCORD_API_VALIDATION = "https://discord.com/api/v10/oauth2/applications/@me"
+DISCORD_REQUEST_HEADERS = {}
 
 LOG_MESSAGE = (
     "Censored a seemingly valid token sent by {author} in {channel}, " "token was `{user_id}.{timestamp}.{hmac}`"
@@ -28,7 +40,7 @@ DELETION_MESSAGE_TEMPLATE = (
     "token in your message. "
     "This means that your token has been **compromised**. "
     "Please change your token **immediately** at: "
-    "<https://discord.com/developers/applications>\n\n"
+    "<https://discord.com/developers/applications/{client_id}>\n"
     # "Feel free to re-post it with the token removed. "
     # "If you believe this was a mistake, please let us know!"
 )
@@ -46,15 +58,26 @@ TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27,}
 MFA_TOKEN_RE = re.compile(r"(mfa\.[a-z0-9_-]{20,})", re.IGNORECASE)
 
 
-WHITELIST = [Guilds.disnake, Guilds.nextcord, Guilds.testing]
+WHITELIST = [
+    constants.Guilds.disnake,
+    constants.Guilds.nextcord,
+    constants.Guilds.testing,
+]
 
 
-class Token(t.NamedTuple):
+@attr.s(kw_only=False, auto_attribs=True)
+class Token:
     """A Discord Bot token."""
 
     user_id: str
     timestamp: str
     hmac: str
+
+    def __attrs_post_init__(self, *args, **kwargs):
+        self.application_id: int = TokenRemover.extract_user_id(self.user_id)
+
+    def __str__(self):
+        return f"{self.user_id}.{self.timestamp}.{self.hmac}"
 
 
 class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
@@ -62,6 +85,10 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def __init__(self, bot: Monty):
         self.bot = bot
+        user_agent = "DiscordBot (https://github.com/DisnakeDev/disnake {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
+        DISCORD_REQUEST_HEADERS["User-Agent"] = user_agent.format(
+            disnake.__version__, sys.version_info, aiohttp.__version__
+        )
 
     async def maybe_delete(self, msg: disnake.Message) -> bool:
         """
@@ -81,18 +108,26 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         Check each message for a string that matches Discord's token pattern.
 
-        See: https://discordapp.com/developers/docs/reference#snowflakes
+        See: https://discord.com/developers/docs/reference#snowflakes
         """
         # Ignore DMs; can't delete messages in there anyway.
-        if not msg.guild or msg.author.bot:
+        if not msg.guild:
             return
 
         if msg.guild.id not in WHITELIST:
             return
 
-        found_token = self.find_token_in_message(msg)
-        if found_token:
-            await self.take_action(msg, found_token)
+        found_tokens = self.find_token_in_message(msg)
+        if found_tokens:
+            # now check if the token is valid
+            ids = await self.check_valid(*found_tokens)
+            for token, application_id in zip(found_tokens, ids):
+                if application_id:
+                    token.application_id = application_id
+                else:
+                    found_tokens.remove(token)
+        if found_tokens:
+            await self.take_action(msg, found_tokens)
 
         # check for mfa tokens
         await self.handle_mfa_token(msg)
@@ -102,7 +137,7 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         Check each edit for a string that matches Discord's token pattern.
 
-        See: https://discordapp.com/developers/docs/reference#snowflakes
+        See: https://discord.com/developers/docs/reference#snowflakes
         """
         if before.content == after.content:
             return
@@ -113,30 +148,53 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         await self.on_message(after)
 
-    async def take_action(self, msg: disnake.Message, found_token: Token) -> None:
+    async def check_valid(self, *tokens: Token) -> list[t.Optional[int]]:
+        """Check if the provided tokens were valid or not."""
+        statuses: list[t.Optional[str]] = []
+        headers = DISCORD_REQUEST_HEADERS.copy()
+        for token in tokens:
+            headers["Authorization"] = "Bot " + str(token)
+            async with self.bot.http_session.get(DISCORD_API_VALIDATION, headers=headers) as resp:
+                if 200 <= resp.status < 300:
+                    body = await resp.json()
+                    statuses.append(int(body["id"]))
+                else:
+                    statuses.append(None)
+        return statuses
+
+    async def invalidate_tokens(self, *tokens: Token) -> t.Optional[str]:
+        """Post the provided tokens to github to invalidate it."""
+        if not tokens:
+            return None
+        content = "\n".join(str(token) for token in tokens)
+        body = {
+            "files": {"token.txt": {"content": content}},
+            "public": True,
+        }
+        async with self.bot.http_session.post(GITHUB_API_GISTS, headers=GITHUB_REQUEST_HEADERS, json=body) as resp:
+            if resp.status != 201:
+                body = await resp.json()
+                log.error(f"Received unexpected response from {GITHUB_API_GISTS}: {body}")
+                return None
+            body = await resp.json()
+        return body["html_url"]
+
+    async def take_action(self, msg: disnake.Message, found_tokens: list[Token]) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
         try:
             await self.maybe_delete(msg)
         except disnake.NotFound:
             log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
-            return
 
-        await msg.channel.send(DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention))
+        url = await self.invalidate_tokens(*found_tokens)
+        text = DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention, client_id=found_tokens[0].application_id)
+        if url:
+            text += f"Your token was sent to <{url}> to be invalidated."
+        await msg.channel.send(text)
 
-        log_message = self.format_log_message(msg, found_token)
-        userid_message, mention_everyone = await self.format_userid_log_message(msg, found_token)
-        log.debug(log_message)
-
-        # Send pretty mod log embed to mod-alerts
-        # await self.mod_log.send_log_message(
-        #     icon_url=Icons.token_removed,
-        #     colour=Colour(Colours.soft_red),
-        #     title="Token removed!",
-        #     text=log_message + "\n" + userid_message,
-        #     thumbnail=msg.author.display_avatar.url,
-        #     channel_id=Channels.mod_alerts,
-        #     ping_everyone=mention_everyone,
-        # )
+        for token in found_tokens:
+            log_message = self.format_log_message(msg, token)
+            log.debug(log_message)
 
     async def handle_mfa_token(self, msg: disnake.Message) -> None:
         """
@@ -219,10 +277,9 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
 
     @classmethod
-    def find_token_in_message(cls, msg: disnake.Message) -> t.Optional[Token]:
+    def find_token_in_message(cls, msg: disnake.Message) -> t.Optional[list[Token]]:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
-        # Use finditer rather than search to guard against method calls prematurely returning the
-        # token check (e.g. `message.channel.send` also matches our token pattern)
+        tokens = []
         for match in TOKEN_RE.finditer(msg.content):
             token = Token(*match.groups())
             if (
@@ -230,11 +287,12 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 and cls.is_valid_timestamp(token.timestamp)
                 and cls.is_maybe_valid_hmac(token.hmac)
             ):
-                # Short-circuit on first match
-                return token
+                tokens.append(token)
+                # shortcircuit after we find two tokens as any more would be someone abusing us.
+                if len(tokens) > 2:
+                    break
 
-        # No matching substring
-        return None
+        return tokens or None
 
     @staticmethod
     def extract_user_id(b64_content: str) -> t.Optional[int]:
