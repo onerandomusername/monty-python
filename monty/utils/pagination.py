@@ -468,7 +468,7 @@ class ImagePaginator(commands.Paginator):
             # Magic happens here, after page and reaction_type is set
             embed.description = paginator.pages[current_page]
 
-            image = paginator.images[current_page] or disnake.Embed.Empty
+            image = paginator.images[current_page] or None
             embed.set_image(url=image)
 
             embed.set_footer(text=f"Page {current_page + 1}/{len(paginator.pages)}")

@@ -88,7 +88,7 @@ async def send_general_response(
             return await message.edit(response, **kwargs)
 
     if embed is _UNSET:  # pragma: no branch
-        embed = disnake.Embed(colour=colour or disnake.Embed.Empty)
+        embed = disnake.Embed(colour=colour)
 
     if title is not None:
         embed.title = title
