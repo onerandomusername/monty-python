@@ -9,14 +9,12 @@ if TYPE_CHECKING:
     from monty.log import MontyLogger
 __all__ = (
     "Client",
-    "CloudAHK",
     "Colours",
     "Emojis",
     "Icons",
     "Stats",
     "Tokens",
     "RedisConfig",
-    "Wolfram",
     "ERROR_REPLIES",
     "NEGATIVE_REPLIES",
     "POSITIVE_REPLIES",
@@ -67,12 +65,6 @@ class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
     run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
     migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
-
-
-class CloudAHK:
-    url = environ.get("CLOUDAHK_URL", None)
-    user = environ.get("CLOUDAHK_USER", None)
-    password = environ.get("CLOUDAHK_PASS", None)
 
 
 class CodeBlock:
@@ -198,12 +190,6 @@ class RedisConfig(NamedTuple):
     password = environ.get("REDIS_PASSWORD")
     use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
     prefix = Client.redis_prefix + ":"
-
-
-class Wolfram(NamedTuple):
-    user_limit_day = int(environ.get("WOLFRAM_USER_LIMIT_DAY", 10))
-    guild_limit_day = int(environ.get("WOLFRAM_GUILD_LIMIT_DAY", 67))
-    key = environ.get("WOLFRAM_API_KEY")
 
 
 class Source:

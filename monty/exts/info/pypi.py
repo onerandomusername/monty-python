@@ -28,7 +28,7 @@ HTML_URL = f"{BASE_PYPI_URL}/project/{{package}}"
 JSON_URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
 SEARCH_URL = f"{BASE_PYPI_URL}/search"
 
-PYPI_ICON = "https://cdn.discordapp.com/emojis/766274397257334814.png"
+PYPI_ICON = "https://github.com/pypa/warehouse/raw/main/warehouse/static/images/logo-small.png"
 
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 MAX_CACHE = 15
