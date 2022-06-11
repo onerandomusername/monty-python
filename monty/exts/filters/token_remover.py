@@ -181,12 +181,13 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def take_action(self, msg: disnake.Message, found_tokens: list[Token]) -> None:
         """Remove the `msg` containing the `found_token` and send a mod log message."""
+        url = await self.invalidate_tokens(*found_tokens)
+
         try:
             await self.maybe_delete(msg)
         except disnake.NotFound:
             log.debug(f"Failed to remove token in message {msg.id}: message already deleted.")
 
-        url = await self.invalidate_tokens(*found_tokens)
         text = DELETION_MESSAGE_TEMPLATE.format(mention=msg.author.mention, client_id=found_tokens[0].application_id)
         if url:
             text += f"Your token was sent to <{url}> to be invalidated."
