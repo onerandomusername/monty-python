@@ -185,9 +185,7 @@ class Tokens(NamedTuple):
 
 
 class RedisConfig(NamedTuple):
-    host = environ.get("REDIS_HOST", "redis")
-    port = environ.get("REDIS_PORT", 6379)
-    password = environ.get("REDIS_PASSWORD")
+    uri = environ.get("REDIS_URI", "redis://redis:6379")
     use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
     prefix = Client.redis_prefix + ":"
 

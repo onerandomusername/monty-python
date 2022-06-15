@@ -37,12 +37,10 @@ async def main() -> None:
     # we make our redis session here and pass it to cachingutils
     if not constants.RedisConfig.use_fakeredis:
 
-        pool = redis.asyncio.BlockingConnectionPool(
+        pool = redis.asyncio.BlockingConnectionPool.from_url(
+            constants.RedisConfig.uri,
             max_connections=20,
             timeout=300,
-            host=constants.RedisConfig.host,
-            port=constants.RedisConfig.port,
-            password=constants.RedisConfig.password,
         )
         redis_session = redis.asyncio.Redis(connection_pool=pool)
 
@@ -52,7 +50,7 @@ async def main() -> None:
             import fakeredis.aioredis
         except ImportError as e:
             raise RuntimeError("fakeredis must be installed to use fake redis") from e
-        redis_session = fakeredis.aioredis.FakeRedis()
+        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.RedisConfig.uri)
     cachingutils.redis.async_session(
         constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
     )
@@ -70,6 +68,9 @@ async def main() -> None:
 
     # connect to the database
     await database.connect()
+
+    # ping redis
+    await redis_session.ping()
 
     bot = Monty(
         redis_session=redis_session,
