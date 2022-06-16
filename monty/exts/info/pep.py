@@ -40,7 +40,7 @@ class HeaderParser:
         # readd title to headers
         # this was removed from the headers in python/peps#2532
         h1 = soup.find("h1", attrs={"class": "page-title"})
-        results["Title"] = h1.text.split("–", 1)[-1]
+        results["title"] = h1.text.split("–", 1)[-1]
 
         return results
 
@@ -115,7 +115,7 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed
         pep_embed = disnake.Embed(
-            title=f"PEP {pep_nr} - {pep_header['Title']}",
+            title=f"PEP {pep_nr} - {pep_header['title']}",
             url=self.peps[pep_nr],
         )
 
@@ -126,8 +126,8 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         for field in fields_to_check:
             # Check for a PEP metadata field that is present but has an empty value
             # embed field values can't contain an empty string
-            if pep_header.get(field):
-                pep_embed.add_field(name=field, value=pep_header[field])
+            if pep_header.get(field.lower()):
+                pep_embed.add_field(name=field, value=pep_header[field.lower()])
 
         return pep_embed
 
@@ -140,6 +140,12 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
         soup = await self.bot.loop.run_in_executor(None, BeautifulSoup, pep_content, "lxml")
 
         pep_header = HeaderParser().parse(soup)
+        for key, value in pep_header.copy().items():
+            new_key = key.strip().strip(":").lower()
+            if new_key != key:
+                pep_header[new_key] = value
+                del pep_header[key]
+
         return pep_header, soup
 
     async def get_pep_embed(self, pep_nr: int) -> Tuple[disnake.Embed, bool]:
@@ -187,7 +193,7 @@ class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permissi
             description=text,
             url=urljoin(url, tag.a["href"]),
         )
-        embed.set_author(name=f"PEP {number} - {tags['Title']}", url=url)
+        embed.set_author(name=f"PEP {number} - {tags['title']}", url=url)
 
         embed.set_thumbnail(url=ICON_URL)
         if tags.get("Created"):
