@@ -108,6 +108,10 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 ref = possible_ref["name"]
                 file_path = path[len(ref) + 1 :]
                 break
+
+        # remove the query parameters from the file path
+        file_path = file_path.split("?", 1)[0]
+
         return ref, file_path
 
     async def _fetch_github_snippet(self, repo: str, path: str, start_line: str, end_line: str) -> str:
