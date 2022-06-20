@@ -9,13 +9,31 @@ else:
 
 
 import asyncio
+import logging
 import os
 from functools import partial, partialmethod
 
+import sentry_sdk
 from disnake.ext import commands
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 
 from monty import log, monkey_patches
 
+
+sentry_logging = LoggingIntegration(
+    level=5,  # this is the same as logging.TRACE
+    event_level=logging.WARNING,
+)
+
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN"),
+    integrations=[
+        sentry_logging,
+        RedisIntegration(),
+    ],
+    release=f"monty@{os.environ.get('GIT_SHA', 'dev')}",
+)
 
 log.setup()
 
