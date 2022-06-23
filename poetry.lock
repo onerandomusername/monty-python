@@ -925,7 +925,7 @@ python-versions = "*"
 
 [[package]]
 name = "pyright"
-version = "1.1.254"
+version = "1.1.255"
 description = "Command line wrapper for pyright"
 category = "dev"
 optional = false
@@ -1277,7 +1277,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "7c891bdc7f29c4a2edb3850701364ea1536216122afd2eb42afccc32891a75ac"
+content-hash = "96bcc7b26a3ceff16e8d4d60d8ad84c28353d7f2ff60df14f48ddedcb4fc57df"
 
 [metadata.files]
 aiodns = [
@@ -2341,8 +2341,8 @@ pyreadline3 = [
     {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
 ]
 pyright = [
-    {file = "pyright-1.1.254-py3-none-any.whl", hash = "sha256:4a12432a29359195738685091da9e5b39f830940d265c85ce8920fa936e92b31"},
-    {file = "pyright-1.1.254.tar.gz", hash = "sha256:55394e1198b0feef261552a7fcca13c7705cb89fd9c77e8c4cfa79b27f4af549"},
+    {file = "pyright-1.1.255-py3-none-any.whl", hash = "sha256:3ad2789f51b261c48bf312b71275232e97ea30ad880fa920e1d667420d30a1a9"},
+    {file = "pyright-1.1.255.tar.gz", hash = "sha256:ccfe8796a0264fcaa2148bc4b9c348e99ad4e77482307371bd0682bd20c6617c"},
 ]
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},
