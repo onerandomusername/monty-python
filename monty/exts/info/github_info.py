@@ -110,6 +110,7 @@ class IssueState:
     url: str
     title: str
     emoji: str
+    raw_json: Optional[dict[str, Any]] = None
 
 
 def whitelisted_autolink() -> Callable[[commands.Command], commands.Command]:
@@ -558,7 +559,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             else:
                 emoji = constants.Emojis.issue_closed
 
-        return IssueState(repository, number, issue_url, json_data.get("title", ""), emoji)
+        return IssueState(repository, number, issue_url, json_data.get("title", ""), emoji, raw_json=json_data)
 
     @staticmethod
     def format_embed(
@@ -566,6 +567,35 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
+        if len(results) == 1 and isinstance(issue := results[0], IssueState) and issue.raw_json is not None:
+            # show considerably more information about the issue if there is a single provided issue
+            json_data = issue.raw_json
+            embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
+            embed.set_author(
+                name=json_data["user"]["login"],
+                url=json_data["user"]["html_url"],
+                icon_url=json_data["user"]["avatar_url"],
+            )
+            embed.title = issue.emoji + " " + issue.title
+
+            if json_data["labels"]:
+                labels = ", ".join(sorted([label["name"] for label in json_data["labels"]]))
+                if len(labels) > 1024:
+                    labels = labels[:1020] + "..."
+                embed.add_field("Labels", labels)
+
+            embed.url = issue.url
+            embed.timestamp = datetime.strptime(json_data["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
+
+            body: Optional[str] = json_data["body"]
+            if body:
+                embed.description = (
+                    body if len(body) < 200 and body.count("\n") <= 6 else "\n".join(body.split("\n", 6))[:200] + "..."
+                )
+            else:
+                embed.description = "*No body provided*"
+            return embed
 
         for result in results:
             if isinstance(result, IssueState):
