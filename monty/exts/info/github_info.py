@@ -661,8 +661,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if not (org := match.group("org")):
                 if not default_user:
                     if default_user == "":
-                        default_user, _ = await self.fetch_user_and_repo(message)
-                        default_user = default_user or None
+                        try:
+                            default_user, _ = await self.fetch_user_and_repo(message)
+                        except commands.UserInputError:
+                            continue
+                        else:
+                            default_user = default_user or None
                     if default_user is None:
                         continue
                 org = default_user
