@@ -4,6 +4,7 @@ import textwrap
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Coroutine, List, Tuple
 from urllib.parse import quote_plus
+from urllib.parse import unquote as urlunquote
 
 import cachingutils
 import disnake
@@ -110,7 +111,7 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 break
 
         # remove the query parameters from the file path
-        file_path = file_path.split("?", 1)[0]
+        file_path = file_path.rsplit("?", 1)[0]
 
         return ref, file_path
 
@@ -124,13 +125,17 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
         tags = await self._fetch_response(f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_HEADERS)
         refs = branches + tags
-        ref, file_path = self._find_ref(path, refs)
+        ref, encoded_file_path = self._find_ref(path, refs)
 
         file_contents = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/contents/{file_path}?ref={ref}",
+            f"https://api.github.com/repos/{repo}/contents/{encoded_file_path}?ref={ref}",
             "text",
             headers=GITHUB_HEADERS,
         )
+
+        # decode the file_path before calling snippet to codeblock
+        file_path = urlunquote(encoded_file_path)
+
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
     async def _fetch_github_gist_snippet(
@@ -228,16 +233,30 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not is_valid_language:
             language = ""
 
+        # escape and fix the file_path
+        if "`" in file_path:
+            if file_path.startswith("`"):
+                file_path = "\u200b" + file_path
+            file_path = file_path.replace("`", "`\u200b")
+
         # Adds a label showing the file path to the snippet
-        if start_line == end_line:
-            ret = f"`{file_path}` line {start_line}\n"
+
+        # as two ` doesn't render well on every platform or version,
+        # don't use them if we don't have to
+        if "`" in file_path:
+            qu = "``"
         else:
-            ret = f"`{file_path}` lines {start_line} to {end_line}\n"
+            qu = "`"
+
+        if start_line == end_line:
+            ret = f"{qu}{file_path}{qu} line {start_line}\n"
+        else:
+            ret = f"{qu}{file_path}{qu} lines {start_line} to {end_line}\n"
 
         if len(required) != 0:
-            return f"{ret}```{language}\n{required}```"
+            return f"{ret}```{language}\n{required}\n```"
         # Returns an empty codeblock if the snippet is empty
-        return f"{ret}``` ```"
+        return f"{ret}```\n```"
 
     async def _parse_snippets(self, content: str) -> str:
         """Parse message content and return a string with a code block for each URL found."""
