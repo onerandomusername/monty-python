@@ -16,7 +16,7 @@ beautifulsoup4 = "^4.10.0"
 cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
 colorama = { version = "~=0.4.5", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=15.0"
-disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master' }
+disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master', extras = ["speed"] }
 fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 gql = "^3.3.0"
 lxml = "^4.9.0"
@@ -32,8 +32,7 @@ tomli = "^2.0.1"
 alembic = "^1.8.0"
 asyncpg = "^0.25.0"
 databases = "^0.6.0"
-# currently using master as the published pypi version has a dependencies bug which requires aiosqlite
-ormar = {git = "https://github.com/collerek/ormar.git", rev ='master'}
+ormar = { version = "0.11.1", extras = ["orjson"] }
 psycopg2-binary = "^2.9.3"
 pydantic = "^1.9.1"
 SQLAlchemy = "^1.4.36"

@@ -123,19 +123,6 @@ class Configuration(
         )
         raise BotAccountRequired(msg)
 
-    async def getch_guild_config(self, guild_id: int, *, create: bool = False) -> GuildConfig:
-        """Fetch the configuration for the specified guild."""
-        if guild_id in self.bot.guild_configs:
-            return self.bot.guild_configs[guild_id]
-
-        guild_config = await GuildConfig.objects.get_or_none(id=guild_id)
-        if not guild_config:
-            guild_config = GuildConfig(id=guild_id)
-            if create:
-                await guild_config.save()
-        self.bot.guild_configs[guild_id] = guild_config
-        return guild_config
-
     @commands.slash_command()
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
         """[ALPHA] Manage per-guild configuration for Monty."""
@@ -156,7 +143,7 @@ class Configuration(
         option: the configuration option to set.
         value: the new value of the configuration option.
         """
-        config = await self.getch_guild_config(inter.guild_id, create=True)
+        config = await self.bot.ensure_guild_config(inter.guild_id)
 
         if option in self.name_to_option:
             option = self.name_to_option[option]
@@ -203,7 +190,7 @@ class Configuration(
         ----------
         The config option to view the currently set item.
         """
-        config = await self.getch_guild_config(inter.guild_id)
+        config = await self.bot.ensure_guild_config(inter.guild_id)
         if option in self.name_to_option:
             option = self.name_to_option[option]
         if option not in config.__fields__:
@@ -226,7 +213,7 @@ class Configuration(
         ----------
         The config option to clear.
         """
-        config = await self.getch_guild_config(inter.guild_id)
+        config = await self.bot.ensure_guild_config(inter.guild_id)
         if option in self.name_to_option:
             option = self.name_to_option[option]
         if option not in config.__fields__:
@@ -266,7 +253,7 @@ class Configuration(
     @commands.command(name="prefix", hidden=True)
     async def show_prefix(self, ctx: commands.Context) -> None:
         """Show the currently set prefix for the guild. To set a prefix, use `/config prefix set`."""
-        config = await self.getch_guild_config(ctx.guild.id)
+        config = await self.bot.ensure_guild_config(ctx.guild.id)
         components = DeleteButton(ctx.author, initial_message=ctx.message)
         if config.prefix:
             await ctx.send(

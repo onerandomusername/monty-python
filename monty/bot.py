@@ -112,15 +112,19 @@ class Monty(commands.Bot):
             self.invite_permissions = constants.Client.invite_permissions
         return self.invite_permissions
 
+    async def ensure_guild_config(self, guild_id: int) -> GuildConfig:
+        """Fetch and return a guild config, creating if it does not exist."""
+        config = self.guild_configs.get(guild_id)
+        if not config:
+            config, _ = await GuildConfig.objects.get_or_create(id=guild_id)
+            self.guild_configs[guild_id] = config
+        return config
+
     async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
         """Get the bot prefix."""
         prefixes = commands.when_mentioned(self, message)
         if message.guild:
-            guild_id = message.guild.id
-            config = self.guild_configs.get(guild_id)
-            if not config:
-                config, _ = await GuildConfig.objects.get_or_create(id=guild_id)
-                self.guild_configs[guild_id] = config
+            config = await self.ensure_guild_config(message.guild.id)
             if config and config.prefix:
                 prefixes.insert(0, config.prefix)
             else:

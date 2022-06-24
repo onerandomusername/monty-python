@@ -20,7 +20,6 @@ from gql.transport.exceptions import TransportError, TransportQueryError
 
 from monty import constants
 from monty.bot import Monty
-from monty.database import GuildConfig
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
@@ -195,7 +194,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the org that matches to a specific guild_id."""
-        guild_config = self.bot.guild_configs.get(guild_id) or await GuildConfig.objects.get_or_none(id=guild_id)
+        guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
 
     async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict[str, Any], str, list[Any], Any]:
