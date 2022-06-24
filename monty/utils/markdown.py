@@ -167,7 +167,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def codespan(self, text: str) -> str:
         """Return the text in a codeblock."""
-        return "```\n" + text + "```"
+        char = "``" if "`" in text else "`"
+        return char + text + char
 
     def paragraph(self, text: str) -> str:
         """Return a paragraph with a newline postceeding."""
