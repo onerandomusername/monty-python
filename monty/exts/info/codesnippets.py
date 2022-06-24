@@ -268,24 +268,34 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not message.guild or message.guild.id in BLACKLIST:
             return
 
+        me = message.guild.me
+        my_perms = message.channel.permissions_for(me, ignore_timeout=False)
+        # return early if we don't have send perms
+        if not my_perms.send_messages:
+            return
+
         message_to_send = await self._parse_snippets(message.content)
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
 
-            try:
-                if message.channel.permissions_for(message.guild.me).manage_messages:
+            if my_perms.manage_messages:
+                try:
                     await message.edit(suppress_embeds=True)
-            except disnake.NotFound:
-                # Don't send snippets if the original message was deleted.
-                return
-            except disnake.Forbidden:
-                # we're missing permissions to edit the message to remove the embed
-                # its fine, since this bot is public and shouldn't require that.
-                pass
+                except disnake.NotFound:
+                    # Don't send snippets if the original message was deleted.
+                    return
+                except disnake.Forbidden:
+                    # we're missing permissions to edit the message to remove the embed
+                    # its fine, since this bot is public and shouldn't require that.
+                    pass
 
             components = DeleteButton(message.author)
-            await destination.send(message_to_send, components=components)
+            await destination.send(
+                message_to_send,
+                components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
 
     @commands.Cog.listener("on_button_click")
     async def send_expanded_links(self, inter: disnake.MessageInteraction) -> None:
