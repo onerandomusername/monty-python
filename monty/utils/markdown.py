@@ -2,6 +2,7 @@ import re
 from typing import Any, Optional
 from urllib.parse import urljoin
 
+import mistune.renderers
 from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
 
@@ -78,3 +79,108 @@ class DocMarkdownConverter(MarkdownConverter):
     def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
         """Convert hr tags to nothing. This is because later versions added this method."""
         return ""
+
+
+# todo: this will be expanded over time as necessary
+class DiscordRenderer(mistune.renderers.BaseRenderer):
+    """Custom renderer for markdown to discord compatiable markdown."""
+
+    def text(self, text: str) -> str:
+        """No op."""
+        return text
+
+    def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
+        """Properly format a link."""
+        if text or title:
+            if not text:
+                text = link
+            if title:
+                paran = f'({link} "{title}")'
+            else:
+                paran = f"({link})"
+            return f"[{text}]{paran}"
+        else:
+            return link
+
+    def image(self, src: str, alt: str = "", title: str = None) -> str:
+        """Return a link to the provided image."""
+        return self.link(src, text="image", title=title)
+
+    def emphasis(self, text: str) -> str:
+        """Return italiced text."""
+        return f"*{text}*"
+
+    def strong(self, text: str) -> str:
+        """Return bold text."""
+        return f"**{text}**"
+
+    def heading(self, text: str, level: int) -> str:
+        """Format the heading to be bold if its large enough. Otherwise underline it."""
+        if level in (1, 2, 3):
+            return f"\n**{text}**\n"
+        else:
+            return f"\n__{text}__\n"
+
+    def newline(self) -> str:
+        """Return a new line."""
+        return "\n"
+
+    def linebreak(self) -> str:
+        """Return two new lines."""
+        return "\n\n"
+
+    def inline_html(self, html: str) -> str:
+        """No op."""
+        return ""
+
+    def thematic_break(self) -> str:
+        """No op."""
+        return ""
+
+    def block_text(self, text: str) -> str:
+        """No op."""
+        return text
+
+    def block_code(self, code: str, info: str = None) -> str:
+        """Put the code in a codeblock."""
+        md = "```"
+        if info is not None:
+            info = info.strip()
+        if info:
+            lang = info.split(None, 1)[0]
+            md += lang
+        return md + code.replace("`" * 3, "`\u200b" * 3) + "\n```"
+
+    def block_quote(self, text: str) -> str:
+        """Quote the provided text."""
+        if text:
+            return "> " + "> ".join(text) + "\n"
+        return ""
+
+    def block_html(self, html: str) -> str:
+        """No op."""
+        return ""
+
+    def block_error(self, html: str) -> str:
+        """No op."""
+        return ""
+
+    def codespan(self, text: str) -> str:
+        """Return the text in a codeblock."""
+        return "```\n" + text + "```"
+
+    def paragraph(self, text: str) -> str:
+        """Return a paragraph with a newline postceeding."""
+        return text + "\n"
+
+    def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
+        """Do nothing when encountering a list."""
+        return ""
+
+    def list_item(self, text: Any, level: int) -> str:
+        """Do nothing when encountering a list."""
+        return ""
+
+    def finalize(self, data: Any) -> str:
+        """Finalize the data."""
+        return "".join(data)

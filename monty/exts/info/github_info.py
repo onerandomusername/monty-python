@@ -13,6 +13,7 @@ import cachingutils.redis
 import disnake
 import gql
 import gql.client
+import mistune
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportError, TransportQueryError
@@ -24,6 +25,7 @@ from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
+from monty.utils.markdown import DiscordRenderer
 from monty.utils.messages import DeleteButton
 
 
@@ -589,12 +591,16 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
 
             body: Optional[str] = json_data["body"]
-            if body:
-                embed.description = (
-                    body if len(body) < 200 and body.count("\n") <= 6 else "\n".join(body.split("\n", 6))[:200] + "..."
-                )
-            else:
-                embed.description = "*No body provided*"
+            if body and not body.isspace():
+                # escape wack stuff from the markdown
+                markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
+                body = markdown(body) or ""
+                if len(body) > 700:
+                    embed.description = body[:697] + "..."
+                else:
+                    embed.description = body
+            if not body or body.isspace():
+                embed.description = "*No description provided.*"
             return embed
 
         for result in results:
