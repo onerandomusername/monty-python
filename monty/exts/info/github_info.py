@@ -560,7 +560,14 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             else:
                 emoji = constants.Emojis.issue_closed
 
-        return IssueState(repository, number, issue_url, json_data.get("title", ""), emoji, raw_json=json_data)
+        return IssueState(
+            repository,
+            number,
+            issue_url,
+            json_data.get("title", ""),
+            emoji,
+            raw_json=None if is_discussion else json_data,
+        )
 
     @staticmethod
     def format_embed(
