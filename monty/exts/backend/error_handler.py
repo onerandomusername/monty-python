@@ -208,8 +208,13 @@ class ErrorHandler(
     @commands.Cog.listener(name="on_message_command_error")
     async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
+        # add the support button
+        components = disnake.ui.MessageActionRow()
+        components.add_button(
+            style=disnake.ButtonStyle.url, label="Support Server", url=f"https://discord.gg/{Client.support_server}"
+        )
         if isinstance(ctx, commands.Context):
-            components = DeleteButton(ctx.author, initial_message=ctx.message)
+            components.insert_item(0, DeleteButton(ctx.author, initial_message=ctx.message))
             if ctx.channel.permissions_for(ctx.me).read_message_history:
                 ctx.send_error = functools.partial(
                     ctx.reply,
@@ -221,9 +226,17 @@ class ErrorHandler(
                 ctx.send_error = functools.partial(ctx.send, components=components)
         elif isinstance(ctx, disnake.Interaction):
             if ctx.response.is_done():
-                ctx.send_error = functools.partial(ctx.followup.send, ephemeral=True)
+                ctx.send_error = functools.partial(
+                    ctx.followup.send,
+                    ephemeral=True,
+                    components=components,
+                )
             else:
-                ctx.send_error = functools.partial(ctx.send, ephemeral=True)
+                ctx.send_error = functools.partial(
+                    ctx.send,
+                    ephemeral=True,
+                    components=components,
+                )
 
             if isinstance(
                 ctx,
