@@ -4,7 +4,6 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Guilds
 from monty.log import get_logger
 from monty.utils.messages import format_user
 
@@ -20,7 +19,7 @@ ALERT_MESSAGE_TEMPLATE = (
     "mistake, please let us know."
 )
 
-WHITELIST = [Guilds.disnake, Guilds.nextcord, Guilds.testing]
+WEBHOOK_REMOVER_FEATURE_NAME = "DISCORD_WEBHOOK_FILTER"
 
 log = get_logger(__name__)
 
@@ -81,7 +80,7 @@ class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False})
         # Ignore DMs; can't delete messages in there anyway.
         if not msg.guild or msg.author.bot:
             return
-        if msg.guild.id not in WHITELIST:
+        if not await self.bot.guild_has_feature(msg.guild, WEBHOOK_REMOVER_FEATURE_NAME):
             return
 
         matches = WEBHOOK_URL_RE.search(msg.content)

@@ -19,7 +19,7 @@ from monty.utils.messages import DeleteButton
 
 log = get_logger(__name__)
 
-WHITELISTED_GUILDS = [constants.Guilds.disnake, constants.Guilds.nextcord, constants.Guilds.testing]
+CODEBLOCK_FEATURE_NAME = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
 
 # seconds until the delete button is shown
 DELETE_PAUSE = 7
@@ -109,10 +109,10 @@ class CodeBlockCog(
         cooldown = constants.CodeBlock.cooldown_seconds
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < cooldown
 
-    def is_valid_channel(self, channel: disnake.TextChannel) -> bool:
+    async def is_valid_channel(self, channel: disnake.TextChannel) -> bool:
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
-        res = channel.guild and channel.guild.id in WHITELISTED_GUILDS
+        res = channel.guild and await self.bot.guild_has_feature(channel.guild, CODEBLOCK_FEATURE_NAME)
         return res
 
     async def send_instructions(self, message: disnake.Message, instructions: str) -> None:
@@ -134,7 +134,7 @@ class CodeBlockCog(
 
         scheduling.create_task(add_task(), event_loop=self.bot.loop)
 
-    def should_parse(self, message: disnake.Message) -> bool:
+    async def should_parse(self, message: disnake.Message) -> bool:
         """
         Return True if `message` should be parsed.
 
@@ -147,7 +147,7 @@ class CodeBlockCog(
         """
         return (
             not message.author.bot
-            and self.is_valid_channel(message.channel)
+            and await self.is_valid_channel(message.channel)
             and has_lines(message.content, constants.CodeBlock.minimum_lines)
             and not TokenRemover.find_token_in_message(message)
             and not WEBHOOK_URL_RE.search(message.content)
@@ -166,7 +166,7 @@ class CodeBlockCog(
         ):
             return
 
-        if not self.should_parse(msg):
+        if not await self.should_parse(msg):
             log.trace(f"Skipping code block detection of {msg.id}: message doesn't qualify.")
             return
 

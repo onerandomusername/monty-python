@@ -57,12 +57,7 @@ TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27,}
 # because its not possible.
 MFA_TOKEN_RE = re.compile(r"(mfa\.[a-z0-9_-]{20,})", re.IGNORECASE)
 
-
-WHITELIST = [
-    constants.Guilds.disnake,
-    constants.Guilds.nextcord,
-    constants.Guilds.testing,
-]
+TOKEN_REMOVER_FEATURE_NAME = "DISCORD_BOT_TOKEN_FILTER"
 
 
 @attr.s(kw_only=False, auto_attribs=True)
@@ -114,7 +109,7 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not msg.guild:
             return
 
-        if msg.guild.id not in WHITELIST:
+        if not await self.bot.guild_has_feature(msg.guild, TOKEN_REMOVER_FEATURE_NAME):
             return
 
         found_tokens = self.find_token_in_message(msg)
