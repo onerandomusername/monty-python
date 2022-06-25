@@ -13,6 +13,7 @@ from monty import exts
 from monty.log import get_logger
 from monty.utils import inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
+from monty.utils.features import NAME_REGEX as FEATURE_NAME_REGEX
 
 
 log = get_logger(__name__)
@@ -21,24 +22,19 @@ DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
 
-def allowed_strings(*values, preserve_case: bool = False) -> t.Callable[[str], str]:
+class MaybeFeature(commands.Converter):
     """
-    Return a converter which only allows arguments equal to one of the given values.
+    Match that the provided string is a valid Feature name.
 
-    Unless preserve_case is True, the argument is converted to lowercase. All values are then
-    expected to have already been given in lowercase too.
+    This does not check if the argument is a valid feature.
     """
 
-    def converter(arg: str) -> str:
-        if not preserve_case:
-            arg = arg.lower()
-
-        if arg not in values:
-            raise commands.BadArgument(f"Only the following values are allowed:\n```{', '.join(values)}```")
-        else:
-            return arg
-
-    return converter
+    async def convert(self, ctx: commands.Context, argument: str) -> str:
+        """Check that the argument is a possible feature name."""
+        match = FEATURE_NAME_REGEX.fullmatch(argument)
+        if not match:
+            raise commands.BadArgument(f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``.")
+        return argument
 
 
 class Extension(commands.Converter):
@@ -302,6 +298,7 @@ class SourceConverter(commands.Converter):
 
 
 if t.TYPE_CHECKING:
+    MaybeFeature = str  # type: ignore  # noqa: F811
     Extension = str  # type: ignore  # noqa: F811
     PackageName = str  # type: ignore  # noqa: F811
     ValidURL = str  # type: ignore  # noqa: F811

@@ -12,7 +12,7 @@ import redis.asyncio
 from disnake.ext import commands
 
 from monty import constants
-from monty.database.guild_config import GuildConfig
+from monty.database import Feature, Guild, GuildConfig
 from monty.database.metadata import metadata
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
@@ -62,6 +62,8 @@ class Monty(commands.Bot):
         self.db: databases.Database = database
         self.db_metadata = metadata
         self.guild_configs: dict[int, GuildConfig] = {}
+        self.guild_db: dict[int, Guild] = {}
+        self.features: dict[str, Feature] = {}
 
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow
@@ -112,12 +114,26 @@ class Monty(commands.Bot):
             self.invite_permissions = constants.Client.invite_permissions
         return self.invite_permissions
 
+    async def ensure_guild(self, guild_id: int) -> Guild:
+        """Fetch and return a guild config, creating if it does not exist."""
+        guild = self.guild_db.get(guild_id)
+        if not guild:
+            guild, _ = await Guild.objects.get_or_create(id=guild_id)
+            self.guild_db[guild_id] = guild
+        return guild
+
     async def ensure_guild_config(self, guild_id: int) -> GuildConfig:
         """Fetch and return a guild config, creating if it does not exist."""
         config = self.guild_configs.get(guild_id)
         if not config:
             config, _ = await GuildConfig.objects.get_or_create(id=guild_id)
             self.guild_configs[guild_id] = config
+
+        if not config.guild:
+            guild = await self.ensure_guild(guild_id)
+            config.guild = guild
+            await config.update()
+
         return config
 
     async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
@@ -130,6 +146,50 @@ class Monty(commands.Bot):
             else:
                 prefixes.insert(0, self.command_prefix)
         return prefixes
+
+    async def guild_has_feature(
+        self,
+        guild: Optional[Union[int, disnake.abc.Snowflake]],
+        feature: str,
+        *,
+        include_feature_status: bool = True,
+        create_if_not_exists: bool = True,
+    ) -> bool:
+        """
+        Return whether or not the provided guild has the provided feature.
+
+        By default, this considers the feature's enabled status,
+        which can be disabled with `include_feature_status` set to False.
+        """
+        # first create the feature if we are told to create it
+        if feature in self.features:
+            feature_instance = self.features[feature]
+        else:
+            # attempt a fetch first
+            feature_instance = await Feature.objects.get_or_none(name=feature)
+            if not feature_instance and create_if_not_exists:
+                feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
+
+        # we're defaulting to non-existing features as None, rather than False.
+        # this might change later.
+        if include_feature_status and feature_instance:
+            if feature_instance.enabled is not None:
+                return feature_instance.enabled
+
+        # the feature's enabled status is None, so we should check the guild
+        # support the guild being None to make it easier to use
+        if guild is None:
+            return False
+        if not isinstance(guild, int):
+            guild = guild.id
+
+        guild_db = await self.ensure_guild(guild)
+        return feature in guild_db.features
+
+    async def on_connect(self) -> None:
+        """Fetch the list of features once we create our internal sessions."""
+        self.features.update({feature.name: feature for feature in await Feature.objects.all()})
+        log.info("Fetched the features from the database.")
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""

@@ -4,7 +4,7 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, AsyncGenerator, Callable, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
+from typing import Any, AsyncGenerator, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 from weakref import WeakValueDictionary
 
@@ -72,6 +72,9 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
+# discussions feature name
+DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
+
 log = get_logger(__name__)
 
 
@@ -112,17 +115,6 @@ class IssueState:
     title: str
     emoji: str
     raw_json: Optional[dict[str, Any]] = None
-
-
-def whitelisted_autolink() -> Callable[[commands.Command], commands.Command]:
-    """Decorator to whitelist a guild for automatic linking."""
-
-    async def predicate(ctx: commands.Context) -> bool:
-        cog: "GithubInfo" = ctx.bot.get_cog("GithubInfo")
-        user, _ = await cog.fetch_user_and_repo(ctx.message)
-        return bool(user)
-
-    return commands.check(predicate)
 
 
 class GithubCache:
@@ -478,7 +470,12 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return re.sub(CODE_BLOCK_RE, "", message)
 
     async def fetch_issues(
-        self, number: int, repository: str, user: str, gql_opt_in: bool = False
+        self,
+        number: int,
+        repository: str,
+        user: str,
+        *,
+        allow_discussions: bool = False,
     ) -> Union[IssueState, FetchError]:
         """
         Retrieve an issue from a GitHub repository.
@@ -493,7 +490,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if "message" in json_data:
             # fetch with gql
             # no caching right now, and only enabled in the disnake guild
-            if not gql_opt_in:
+            if not allow_discussions:
                 return FetchError(-1, "Issue not found.")
             query = gql.gql(
                 """
@@ -746,7 +743,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     int(repo_issue.number),
                     repo_issue.repository,
                     repo_issue.organisation,
-                    gql_opt_in=message.guild.id in (constants.Guilds.disnake, constants.Guilds.testing),
+                    allow_discussions=await self.bot.guild_has_feature(message.guild.id, DISCUSSIONS_FEATURE_NAME),
                 )
                 if isinstance(result, IssueState):
                     links.append(result)
@@ -821,7 +818,7 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 int(repo_issue.number),
                 repo_issue.repository,
                 repo_issue.organisation,
-                gql_opt_in=after.guild.id in (constants.Guilds.disnake, constants.Guilds.testing),
+                allow_discussions=await self.bot.guild_has_feature(after.guild.id, DISCUSSIONS_FEATURE_NAME),
             )
             if isinstance(result, IssueState):
                 links.append(result)

@@ -26,6 +26,13 @@ class BotAccountRequired(commands.CheckFailure):
         return self.msg
 
 
+class FeatureDisabled(commands.CheckFailure):
+    """Raised when a feature is attempted to be used that is currently disabled for that guild."""
+
+    def __init__(self) -> None:
+        super().__init__("This feature is currently disabled.")
+
+
 class LockedResourceError(RuntimeError):
     """
     Exception raised when an operation is attempted on a locked resource.
