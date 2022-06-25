@@ -75,6 +75,8 @@ CODE_BLOCK_RE = re.compile(
 # discussions feature name
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
 
+ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+
 log = get_logger(__name__)
 
 
@@ -569,10 +571,17 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @staticmethod
     def format_embed(
         results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
+        *,
+        can_expand_one_issue: bool = False,
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
-        if len(results) == 1 and isinstance(issue := results[0], IssueState) and issue.raw_json is not None:
+        if (
+            can_expand_one_issue
+            and len(results) == 1
+            and isinstance(issue := results[0], IssueState)
+            and issue.raw_json is not None
+        ):
             # show considerably more information about the issue if there is a single provided issue
             json_data = issue.raw_json
             embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
@@ -665,7 +674,10 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
-        await ctx.send(embed=self.format_embed(results), components=components)
+        can_expand_one_issue = await self.bot.guild_has_feature(ctx.guild, ISSUE_EXPAND_FEATURE_NAME)
+        await ctx.send(
+            embed=self.format_embed(results, can_expand_one_issue=can_expand_one_issue), components=components
+        )
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
@@ -751,7 +763,8 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not links:
             return
 
-        embed = self.format_embed(links)
+        can_expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+        embed = self.format_embed(links, can_expand_one_issue=can_expand_one_issue)
         log.debug(f"Sending github issues to {message.channel} in guild {message.guild}.")
         components = DeleteButton(message.author)
         response = await message.channel.send(embed=embed, components=components)
@@ -826,8 +839,9 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not links:
             # see above comments
             return
+        can_expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
-        embed = self.format_embed(links)
+        embed = self.format_embed(links, can_expand_one_issue=can_expand_one_issue)
 
         try:
             await sent_msg.edit(embed=embed)
