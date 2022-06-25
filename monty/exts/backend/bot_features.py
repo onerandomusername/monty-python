@@ -1,13 +1,19 @@
 import asyncio
-from typing import NoReturn, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.database import Feature
-from monty.utils.converters import MaybeFeature
+from monty.database.guild import Guild
 from monty.utils.messages import DeleteButton
+
+
+if TYPE_CHECKING:
+    MaybeFeature = str
+else:
+    from monty.utils.converters import MaybeFeature
 
 
 class FeatureManagement(commands.Cog):
@@ -193,98 +199,168 @@ class FeatureManagement(commands.Cog):
         await ctx.send(embed=embed, components=button)
 
     @cmd_features.group(name="guild", invoke_without_command=True)
-    async def cmd_guild(self, ctx: commands.Context) -> NoReturn:
+    async def cmd_guild(
+        self,
+        ctx: commands.Context,
+        guild: Union[disnake.Guild, disnake.Object] = None,
+    ) -> None:  # type: ignore
         """Commands for managing guild features."""
-        raise commands.BadArgument("You must use add or remove subcommands.")
+        # list the features by default
+        if guild is None:
+            guild: disnake.Guild = ctx.guild  # type: ignore
+        name = guild.name if isinstance(guild, disnake.Guild) else "Guild ID " + str(guild.id)
+        embed = disnake.Embed(
+            title=f"Features for {name}", description="No features are enabled for this specific guild."
+        )
+        guild_db = await self.bot.ensure_guild(guild.id)
+        if guild_db.features:
+            guild_features = []
+            for feature in guild_db.features:
+                guild_features.append(feature)
+            guild_features.sort()
+            embed.description = "`" + "`\n`".join(guild_features) + "`"
 
-    @cmd_guild.command(name="add", aliases=("a",))
+        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+        await ctx.send(embed=embed, components=button)
+
+    @cmd_guild.command(name="add", aliases=("a", "enable"), require_var_positional=True)
     async def cmd_guild_add(
         self,
         ctx: commands.Context,
-        guild: Optional[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
-        name: MaybeFeature = None,
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        *names: MaybeFeature,
     ) -> None:
-        """Add the feature to the provided guild, defaulting to the local guild."""
-        if guild is None:
-            guild: disnake.Guild = ctx.guild  # type: ignore # this cannot be None due to cog checks
+        """Add the features to the provided guilds, defaulting to the local guild."""
+        if not guilds or guilds is None:
+            guilds: list[disnake.Guild] = [ctx.guild]  # type:ignore
 
-        if name is None:
-            raise commands.BadArgument("name is a required argument that is missing.")
-        feature = self.features.get(name)
-
+        # only give feature create option if there is only one feature
         ctx_or_inter: Union[disnake.MessageInteraction, commands.Context[Monty]] = ctx
+        features: list[Feature]
+        if len(names) == 1:
+            name = names[0]
+            feature = self.features.get(name)
 
-        if not feature:
-            ...
-            confirmed, inter, components = await self.wait_for_confirmation(
-                ctx.message,
-                f"The feature `{name}` does not exist. Would you like to create it?\n\u200b",
-                timeout=30,
-                confirm_button_text="Create feature",
-                deny_button_text="Abort",
-            )
-            if confirmed is None or inter is None:
-                # we timed out, and this was taken care of in the above method.
-                return
-            if not confirmed:
-                await inter.response.edit_message(content="Aborting.", components=components)
-                return
+            if not feature:
+                ...
+                confirmed, inter, components = await self.wait_for_confirmation(
+                    ctx.message,
+                    f"The feature `{name}` does not exist. Would you like to create it?\n\u200b",
+                    timeout=30,
+                    confirm_button_text="Create feature",
+                    deny_button_text="Abort",
+                )
+                if confirmed is None or inter is None:
+                    # we timed out, and this was taken care of in the above method.
+                    return
+                if not confirmed:
+                    await inter.response.edit_message(content="Aborting.", components=components)
+                    return
 
-            # defer just in case the database calls take a bit long
-            await inter.response.defer()
+                # defer just in case the database calls take a bit long
+                await inter.response.defer()
 
-            # replace ctx with the interaction for the next response
-            ctx_or_inter = inter
+                # replace ctx with the interaction for the next response
+                ctx_or_inter = inter
 
-            feature = await Feature.objects.create(name=name)
+                feature = await Feature.objects.create(name=name)
+            feature_names = [feature.name]
+        else:
+            # there were more than 1 provided features here
+            invalids = []
+            feature_names: list[str] = []
+            for name in names:
+                feature = self.features.get(name)
+                if feature is not None:
+                    feature_names.append(feature.name)
+                else:
+                    invalids.append(name)
+            if invalids:
+                raise commands.UserInputError(
+                    "One or more of the provided features do not exist: `" + "`, `".join(invalids) + "`."
+                )
+        guild_dbs: list[Guild] = []
+        for guild in guilds:
+            guild_db = await self.bot.ensure_guild(guild.id)
+            guild_dbs.append(guild_db)
 
-        guild_db = await self.bot.ensure_guild(guild.id)
-        if feature.name in guild_db.features:
-            raise commands.UserInputError(f"That feature is already enabled in guild ID `{guild.id}`.")
-        try:
-            guild_db.features.append(feature.name)
-            await guild_db.update(["features"])
-        except Exception as e:
+            more_features = []
+            for name in feature_names:
+                if name in guild_db.features:
+                    if len(guilds) == 1:
+                        raise commands.UserInputError(f"That feature is already enabled in guild ID `{guild.id}`.")
+                    else:
+                        continue
+                more_features.append(name)
+            guild_db.features.extend(more_features)
             try:
-                guild_db.features.remove(feature.name)
-            except Exception:
-                pass
-            raise e
+                await guild_db.update(["features"])
+            except Exception as e:
+                try:
+                    for item in more_features:
+                        guild_db.features.remove(item)
+                except Exception:
+                    pass
+                raise e
 
         button = DeleteButton(ctx_or_inter.author, allow_manage_messages=False, initial_message=ctx.message)
         if isinstance(ctx_or_inter, disnake.Interaction):
             method = ctx_or_inter.edit_original_message
         else:
             method = ctx.reply
-        await method(f"Added guild id `{guild.id}` to feature set `{feature.name}`.", components=button)
+        await method(
+            f"Added guild IDs `{'`, `'.join(str(g.id) for g in guilds)}` "
+            "to the following features:`{'`, `'.join(sorted(feature_names))}`.",
+            components=button,
+        )
 
-    @cmd_guild.command(name="remove", aliases=("r",))
+    @cmd_guild.command(name="remove", aliases=("r", "disable"), require_var_positional=True)
     async def cmd_guild_remove(
         self,
         ctx: commands.Context,
-        guild: Optional[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
-        name: MaybeFeature = None,
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        *names: MaybeFeature,
     ) -> None:
-        """Add the feature to the provided guild, defaulting to the local guild."""
-        if guild is None:
-            guild: disnake.Guild = ctx.guild  # type: ignore # this cannot be None due to cog checks
+        """Remove the features from the provided guilds, defaulting to the local guild."""
+        if not guilds or guilds is None:
+            guilds: list[disnake.Guild] = [ctx.guild]  # type:ignore
 
-        if name is None:
-            raise commands.BadArgument("name is a required argument that is missing.")
-        feature = self.features.get(name)
+        invalids = []
+        feature_names: list[str] = []
+        for name in names:
+            feature = self.features.get(name)
+            if feature is not None:
+                feature_names.append(feature.name)
+            else:
+                invalids.append(name)
+        if invalids:
+            raise commands.UserInputError(
+                "One or more of the provided features do not exist: `" + "`, `".join(invalids) + "`."
+            )
 
-        if not feature:
-            raise commands.BadArgument("That feature does not exist, and as such cannot be removed.")
+        guild_dbs: list[Guild] = []
+        for guild in guilds:
+            guild_db = await self.bot.ensure_guild(guild.id)
+            guild_dbs.append(guild_db)
 
-        guild_db = await self.bot.ensure_guild(guild.id)
-        if feature.name not in guild_db.features:
-            raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
-
-        guild_db.features.remove(feature.name)
-        await guild_db.update(["features"])
+            remove_features = []
+            for name in feature_names:
+                if name not in guild_db.features:
+                    if len(guilds) == 1:
+                        raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
+                    else:
+                        continue
+                remove_features.append(name)
+            for feature in remove_features:
+                guild_db.features.remove(feature)
+            await guild_db.update(["features"])
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.reply(f"Removed guild ID `{guild.id}` from feature set `{feature.name}`.", components=button)
+        await ctx.reply(
+            f"Removed guild IDs `{'`, `'.join(str(g.id) for g in guilds)}` "
+            "from the following features:`{'`, `'.join(sorted(feature_names))}`.",
+            components=button,
+        )
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Require all commands in this cog are by the bot author and are in guilds."""
