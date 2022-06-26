@@ -198,7 +198,7 @@ class CodeButtons(
     async def slash_paste(
         self,
         inter: disnake.ApplicationCommandInteraction,
-        message: str,
+        message: disnake.Message,
     ) -> None:
         """
         Paste a messages contents to workbin..
@@ -208,11 +208,6 @@ class CodeButtons(
         message: A message to paste. This can be a link or id.
         """
         inter.channel_id = inter.channel.id
-        try:
-            message = await commands.MessageConverter().convert(inter, message)
-        except (commands.MessageNotFound, commands.ChannelNotFound, commands.ChannelNotReadable):
-            await inter.send("That message is not valid, or I do not have permissions to read it.", ephemeral=True)
-            return
 
         success, msg, url = await self._upload_to_workbin(message, provide_link=True)
         if not success:

@@ -196,7 +196,7 @@ class Bookmark(
     async def bookmark_slash(
         self,
         inter: disnake.ApplicationCommandInteraction,
-        message: str,
+        message: disnake.Message,
         title: str = "Bookmark",
     ) -> None:
         """
@@ -208,11 +208,6 @@ class Bookmark(
         title: An optional title for your direct message.
         """
         inter.channel_id = inter.channel.id
-        try:
-            message = await commands.MessageConverter().convert(inter, message)
-        except (commands.MessageNotFound, commands.ChannelNotFound, commands.ChannelNotReadable):
-            await inter.send("That message is not valid, or I do not have permissions to read it.", ephemeral=True)
-            return
         await self.bookmark(inter, message, title=title)
 
     @commands.message_command(name="Bookmark")
