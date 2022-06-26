@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Optional
+from typing import Optional, Union
 
 import disnake
 from disnake.ext import commands
@@ -18,6 +18,8 @@ from monty.utils.messages import DeleteButton
 
 
 log = get_logger(__name__)
+
+GuildMessageable = Union[disnake.TextChannel, disnake.Thread, disnake.VoiceChannel]
 
 CODEBLOCK_FEATURE_NAME = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
 
@@ -90,7 +92,8 @@ class CodeBlockCog(
         deleted either manually via a reaction or automatically by a timer.
         """
         log.trace(f"Retrieving instructions message for ID {payload.message_id}")
-        channel = self.bot.get_channel(payload.channel_id)
+        channel: disnake.abc.MessageableChannel
+        channel = self.bot.get_channel(payload.channel_id)  # type: ignore # this channel is obviously a messageable
 
         try:
             return await channel.fetch_message(self.codeblock_message_ids[payload.message_id])
@@ -98,7 +101,7 @@ class CodeBlockCog(
             log.debug("Could not find instructions message; it was probably deleted.")
             return None
 
-    def is_on_cooldown(self, channel: disnake.TextChannel) -> bool:
+    def is_on_cooldown(self, channel: Union[GuildMessageable, disnake.DMChannel]) -> bool:
         """
         Return True if an embed was sent too recently for `channel`.
 
@@ -109,9 +112,11 @@ class CodeBlockCog(
         cooldown = constants.CodeBlock.cooldown_seconds
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < cooldown
 
-    async def is_valid_channel(self, channel: disnake.TextChannel) -> bool:
+    async def is_valid_channel(self, channel: Union[GuildMessageable, disnake.DMChannel]) -> bool:
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
+        if isinstance(channel, disnake.DMChannel):
+            return False
         res = channel.guild and await self.bot.guild_has_feature(channel.guild, CODEBLOCK_FEATURE_NAME)
         return res
 
@@ -190,12 +195,12 @@ class CodeBlockCog(
             log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")
             return
 
-        if payload.data.get("content") is None or payload.data.get("channel_id") is None:
+        content: Optional[str]
+        if (content := payload.data.get("content")) is None or payload.data.get("channel_id") is None:
             log.trace(f"Ignoring message edit {payload.message_id}: missing content or channel ID.")
             return
 
         # Parse the message to see if the code blocks have been fixed.
-        content = payload.data.get("content")
         instructions = get_instructions(content)
 
         bot_message = await self.get_sent_instructions(payload)

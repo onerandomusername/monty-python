@@ -184,7 +184,8 @@ def _get_leading_spaces(content: str) -> int:
         if char == " ":
             leading_spaces += 1
         else:
-            return leading_spaces
+            break
+    return leading_spaces
 
 
 def _fix_indentation(content: str) -> str:

@@ -5,7 +5,6 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
-from monty.utils.messages import format_user
 
 
 WEBHOOK_URL_RE = re.compile(
@@ -36,6 +35,8 @@ class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False})
 
         Returns True on success.
         """
+        if not msg.guild:
+            return False
         can_delete = msg.author == msg.guild.me or msg.channel.permissions_for(msg.guild.me).manage_messages
         if not can_delete:
             return False
@@ -45,34 +46,16 @@ class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False})
 
     async def delete_and_respond(self, msg: disnake.Message, redacted_url: str, *, webhook_deleted: bool) -> None:
         """Delete `msg` and send a warning that it contained the Discord webhook `redacted_url`."""
-        # Don't log this, due internal delete, not by user. Will make different entry.
-
-        # try:
-        #     await self.maybe_delete(msg)
-        # except NotFound:
-        #     log.debug(f"Failed to remove webhook in message {msg.id}: message already deleted.")
-        #     return
-
         if webhook_deleted:
             await msg.channel.send(ALERT_MESSAGE_TEMPLATE.format(user=msg.author.mention))
             delete_state = "The webhook was successfully deleted."
         else:
             delete_state = "There was an error when deleting the webhook, it might have already been removed."
         message = (
-            f"{format_user(msg.author)} posted a Discord webhook URL to {msg.channel.mention}. {delete_state} "
+            f"{msg.author} ({msg.author.id!s}) posted a Discord webhook URL to {msg.channel.id}. {delete_state} "
             f"Webhook URL was `{redacted_url}`"
         )
         log.debug(message)
-
-        # Send entry to moderation alerts.
-        # await self.mod_log.send_log_message(
-        #     icon_url=Icons.token_removed,
-        #     colour=Colour(Colours.soft_red),
-        #     title="Discord webhook URL removed!",
-        #     text=message,
-        #     thumbnail=msg.author.display_avatar.url,
-        #     channel_id=Channels.mod_alerts
-        # )
 
     @commands.Cog.listener()
     async def on_message(self, msg: disnake.Message) -> None:

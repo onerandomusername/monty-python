@@ -14,7 +14,6 @@ from disnake.ext import commands
 from monty import constants, utils
 from monty.bot import Monty
 from monty.log import get_logger
-from monty.utils.messages import format_user
 
 
 log = get_logger(__name__)
@@ -69,7 +68,7 @@ class Token:
     hmac: str
 
     def __attrs_post_init__(self, *args, **kwargs):
-        self.application_id: int = TokenRemover.extract_user_id(self.user_id)
+        self.application_id: t.Optional[int] = TokenRemover.extract_user_id(self.user_id)
 
     def __str__(self):
         return f"{self.user_id}.{self.timestamp}.{self.hmac}"
@@ -91,6 +90,8 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         Returns True on success.
         """
+        if not msg.guild:
+            return False
         can_delete = msg.author == msg.guild.me or msg.channel.permissions_for(msg.guild.me).manage_messages
         if not can_delete:
             return False
@@ -145,7 +146,7 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def check_valid(self, *tokens: Token) -> list[t.Optional[int]]:
         """Check if the provided tokens were valid or not."""
-        statuses: list[t.Optional[str]] = []
+        statuses: list[t.Optional[int]] = []
         headers = DISCORD_REQUEST_HEADERS.copy()
         for token in tokens:
             headers["Authorization"] = "Bot " + str(token)
@@ -203,12 +204,13 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         was_valid = False
+        match = None
         for match in MFA_TOKEN_RE.finditer(msg.content):
 
             if self.is_maybe_valid_hmac(match.group()):
                 was_valid = True
                 break
-        if not was_valid:
+        if not was_valid or not match:
             return
 
         token = match.group()
@@ -224,49 +226,12 @@ class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         log.info(log_message)
 
-        # await self.mod_log.send_log_message(
-        #     icon_url=Icons.token_removed,
-        #     colour=Colour(Colours.soft_red),
-        #     title="MFA Token removed!",
-        #     text=log_message,
-        #     thumbnail=msg.author.display_avatar.url,
-        #     channel_id=Channels.mod_alerts,
-        #     ping_everyone=True,
-        # )
-
-    @classmethod
-    async def format_userid_log_message(cls, msg: disnake.Message, token: Token) -> t.Tuple[str, bool]:
-        """
-        Format the portion of the log message that includes details about the detected user ID.
-
-        If the user is resolved to a member, the format includes the user ID, name, and the
-        kind of user detected.
-
-        If we resolve to a member and it is not a bot, we also return True to ping everyone.
-
-        Returns a tuple of (log_message, mention_everyone)
-        """
-        user_id = cls.extract_user_id(token.user_id)
-        user = await msg.guild.getch_member(user_id)
-
-        if user:
-            return (
-                KNOWN_USER_LOG_MESSAGE.format(
-                    user_id=user_id,
-                    user_name=str(user),
-                    kind="BOT" if user.bot else "USER",
-                ),
-                True,
-            )
-        else:
-            return UNKNOWN_USER_LOG_MESSAGE.format(user_id=user_id), False
-
     @staticmethod
     def format_log_message(msg: disnake.Message, token: Token) -> str:
         """Return the generic portion of the log message to send for `token` being censored in `msg`."""
         return LOG_MESSAGE.format(
-            author=format_user(msg.author),
-            channel=msg.channel.mention,
+            author=f"{msg.author} ({msg.author.id})",
+            channel=msg.channel.id,
             user_id=token.user_id,
             timestamp=token.timestamp,
             hmac="x" * (len(token.hmac) - 3) + token.hmac[-3:],

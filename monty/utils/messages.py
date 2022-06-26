@@ -31,11 +31,6 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return username  # Empty string or None
 
 
-def format_user(user: disnake.abc.User) -> str:
-    """Return a string for `user` which has their mention and ID."""
-    return f"{user.mention} (`{user.id}`)"
-
-
 class DeleteButton(disnake.ui.Button):
     """A button that when pressed, has a listener that will delete the message."""
 
