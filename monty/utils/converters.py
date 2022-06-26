@@ -33,6 +33,8 @@ class MaybeFeature(commands.Converter):
 
     async def convert(self, ctx: commands.Context, argument: str) -> str:
         """Check that the argument is a possible feature name."""
+        # convert the name to uppercase for the benefit of the user and normalize `-` characters
+        argument = argument.upper().replace("-", "_")
         match = FEATURE_NAME_REGEX.fullmatch(argument)
         if not match:
             raise commands.BadArgument(f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``.")
