@@ -202,8 +202,8 @@ class FeatureManagement(commands.Cog):
     async def cmd_guild(
         self,
         ctx: commands.Context,
-        guild: Union[disnake.Guild, disnake.Object] = None,
-    ) -> None:  # type: ignore
+        guild: Union[disnake.Guild, disnake.Object] = None,  # type: ignore
+    ) -> None:
         """Commands for managing guild features."""
         # list the features by default
         if guild is None:
