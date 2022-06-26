@@ -4,7 +4,6 @@ Do not import this file.
 NOTE: THIS RUNS ON PYTHON 3.10
 """
 
-
 # exit codes:
 # 0: success
 # 1: indeterminate error
@@ -62,15 +61,15 @@ if __name__ == "__main__":
         filename = frame.filename
         first_lineno = frame.lineno
         lines_extension = f"#L{frame.lineno}"
-        parents = []
+        parents: list[str] = []
         try:
-            name = src.__qualname__
+            name: str = src.__qualname__
         except AttributeError:
             name = object_name.rsplit(".", 1)[-1]
         else:
             if "." in name:
-                parents, name = name.rsplit(".", 1)
-            parents = parents.split(".")
+                parents_str, name = name.rsplit(".", 1)
+                parents = parents_str.split(".")
         try:
             with open(filename) as f:
                 sourcecode = f.read()
@@ -99,8 +98,11 @@ if __name__ == "__main__":
                     continue
             elif getattr(target, "id", None) != name:
                 continue
-
-            _endlines.add((node.lineno, node.end_lineno))
+            if node.end_lineno:
+                end_lineno = node.end_lineno
+            else:
+                end_lineno = node.lineno
+            _endlines.add((node.lineno, end_lineno))
 
         if _endlines:
             lineno, end_lineno = sorted(_endlines, key=lambda i: i[0])[0]
@@ -124,21 +126,23 @@ if __name__ == "__main__":
         sys.exit(6)
 
     if not module_name:
-        module_name = inspect.getmodule(src).__name__
+        module = inspect.getmodule(src)
+        if not module:
+            sys.exit(4)
+        module_name = module.__name__
     top_module_name = module_name.split(".", 1)[0]
 
     # determine the actual file name
     try:
-        filename = str(
-            pathlib.Path(filename).relative_to(
-                pathlib.Path(inspect.getsourcefile(importlib.import_module(top_module_name))).parent.parent
-            )
-        )
+        file = inspect.getsourcefile(importlib.import_module(top_module_name))
+        if file is None:
+            raise ValueError
+        filename = str(pathlib.Path(filename).relative_to(pathlib.Path(file).parent.parent))
     except ValueError:
         sys.exit(5)
 
     # get the version and link to the source of the module
-    if top_module_name in sys.stdlib_module_names:
+    if top_module_name in sys.stdlib_module_names:  # type: ignore # this code runs on py3.10
         if top_module_name in sys.builtin_module_names:
             sys.exit(6)
         # handle the object being part of the stdlib
@@ -157,7 +161,7 @@ if __name__ == "__main__":
             sys.exit(7)
         # print(metadata.keys())
         version = metadata["Version"]
-        for url in [metadata.get("Home-page"), *metadata.json.get("project_url", [])]:
+        for url in [metadata.get("Home-page"), *metadata.json.get("project_url", [])]:  # type: ignore # runs on py3.10
             url = url.split(",", 1)[-1].strip().rstrip("/")
             # there are 4 `/` in a github link
             if url.startswith(("https://github.com/", "http://github.com/")) and url.count("/") == 4:

@@ -27,6 +27,7 @@ class GlobalSource(commands.Cog):
     def __init__(self, bot: Monty):
         self.bot = bot
         with open(CODE_FILE, "r") as f:
+            # this is declared as final as we should *not* be writing to it
             self.code: Final[str] = f.read()
 
     def cog_unload(self) -> None:
@@ -36,7 +37,8 @@ class GlobalSource(commands.Cog):
     @property
     def snekbox(self) -> Snekbox:
         """Return the snekbox cog where the code is ran."""
-        if snekbox := self.bot.get_cog("Snekbox"):
+        snekbox: Snekbox
+        if snekbox := self.bot.get_cog("Snekbox"):  # type: ignore # this will always be a Snekbox instance
             return snekbox
         raise RuntimeError("Snekbox is not loaded")
 
@@ -131,7 +133,7 @@ class GlobalSource(commands.Cog):
             return
         self.last_modified = modified
         with open(CODE_FILE, "r") as f:
-            self.code = f.read()
+            self.code = f.read()  # type: ignore # this is the one time we can write to the code
             logger.debug("Updated global_source code")
 
         try:
@@ -161,7 +163,7 @@ class GlobalSource(commands.Cog):
             class FakeParam:
                 name = "query"
 
-            raise commands.MissingRequiredArgument(FakeParam)
+            raise commands.MissingRequiredArgument(FakeParam)  # type: ignore # we don't need an entire Parameter obj
         await ctx.send("Starting the global source debug task.")
         self.refresh_code.start(ctx, query)
 
