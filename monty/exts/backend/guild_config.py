@@ -88,13 +88,7 @@ class Configuration(
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
-        guild_config = await GuildConfig.objects.get_or_none(id=guild.id)
-
-        if not guild_config:
-            # nothing to delete
-            return
-
-        await guild_config.delete()
+        await GuildConfig.objects.delete(id=guild.id)
 
         # also remove it from the cache
         try:

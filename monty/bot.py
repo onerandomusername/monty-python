@@ -1,7 +1,9 @@
+import asyncio
 import collections
 import socket
 from types import SimpleNamespace
 from typing import Optional, Union
+from weakref import WeakValueDictionary
 
 import aiohttp
 import arrow
@@ -64,6 +66,8 @@ class Monty(commands.Bot):
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
         self.features: dict[str, Feature] = {}
+        self._feature_db_lock = asyncio.Lock()
+        self._guild_db_locks: WeakValueDictionary[int, asyncio.Lock] = WeakValueDictionary()
 
         self.socket_events = collections.Counter()
         self.start_time: arrow.Arrow
@@ -118,8 +122,15 @@ class Monty(commands.Bot):
         """Fetch and return a guild config, creating if it does not exist."""
         guild = self.guild_db.get(guild_id)
         if not guild:
-            guild, _ = await Guild.objects.get_or_create(id=guild_id)
-            self.guild_db[guild_id] = guild
+            lock = self._guild_db_locks.get(guild_id)
+            if not lock:
+                lock = self._guild_db_locks[guild_id] = asyncio.Lock()
+            async with lock:
+                # once again use the cache just in case
+                guild = self.guild_db.get(guild_id)
+                if not guild:
+                    guild, _ = await Guild.objects.get_or_create(id=guild_id)
+                    self.guild_db[guild_id] = guild
         return guild
 
     async def ensure_guild_config(self, guild_id: int) -> GuildConfig:
@@ -165,11 +176,16 @@ class Monty(commands.Bot):
         if feature in self.features:
             feature_instance = self.features[feature]
         else:
-            # attempt a fetch first
-            feature_instance = await Feature.objects.get_or_none(name=feature)
-            if not feature_instance and create_if_not_exists:
-                feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
-
+            # if its not cached
+            # we don't need to seperate this based on features as we aren't creating features that often
+            async with self._feature_db_lock:
+                # attempt a fetch first
+                # get from cached features once within the lock
+                feature_instance = self.features.get(feature)
+                if not feature_instance:
+                    feature_instance = await Feature.objects.get_or_none(name=feature)
+                    if not feature_instance and create_if_not_exists:
+                        feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
         if include_feature_status and feature_instance:
