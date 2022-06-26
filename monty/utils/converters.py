@@ -269,6 +269,7 @@ class SourceConverter(commands.Converter):
     @staticmethod
     async def convert(ctx: AnyContext, argument: str) -> SourceType:
         """Convert argument into source object."""
+        # todo: add support for specifying the type
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog

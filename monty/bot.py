@@ -254,15 +254,27 @@ class Monty(commands.Bot):
         """
         super().add_cog(cog)
         log.info(f"Cog loaded: {cog.qualified_name}")
+        self.dispatch("cog_load", cog)
+
+    def remove_cog(self, name: str) -> Optional[commands.Cog]:
+        """Remove the cog from the bot and dispatch a cog_remove event."""
+        cog = super().remove_cog(name)
+        if cog is None:
+            return None
+        self.dispatch("cog_remove", cog)
+        return cog
 
     def add_command(self, command: commands.Command) -> None:
         """Add `command` as normal and then add its root aliases to the bot."""
         super().add_command(command)
         self._add_root_aliases(command)
+        self.dispatch("command_add", command)
 
     def remove_command(self, name: str) -> Optional[commands.Command]:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
+
+        This also dispatches the command_remove event.
 
         Individual root aliases cannot be removed by this function.
         To remove them, either remove the entire command or manually edit `bot.all_commands`.
@@ -272,6 +284,7 @@ class Monty(commands.Bot):
             # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
             return
 
+        self.dispatch("command_remove", command)
         self._remove_root_aliases(command)
         return command
 
