@@ -25,14 +25,15 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if self._bot_invite_link:
             return
 
+        # todo: don't require a fake guild object
         class FakeGuild:
-            id = "{guild_id}"
+            id: str = "{guild_id}"
 
         guild = FakeGuild
         self._bot_invite_link = disnake.utils.oauth_url(
             self.bot.user.id,
             disable_guild_select=True,
-            guild=guild,
+            guild=guild,  # type: ignore # this is totally wrong
             scopes={"applications.commands", "bot"},
             permissions=self.bot.invite_permissions,
         )

@@ -122,7 +122,13 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if ephemeral is None:
             ephemeral = bool(inter.guild_id)
 
-        invite_command = self.bot.get_slash_command("discord").children["app-invite"]
+        # ignore because we don't have any spaces in the command name
+        # therefore, it will always be a slash command and not a subcommand or group
+        discord_command: commands.InvokableSlashCommand = self.bot.get_slash_command("discord")  # type: ignore
+
+        if not discord_command:
+            raise commands.CommandError("Could not create an invite link right now.")
+        invite_command = discord_command.children["app-invite"]
         await invite_command(
             inter,
             client_id=self.bot.user.id,
