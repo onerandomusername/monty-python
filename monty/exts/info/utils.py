@@ -69,8 +69,8 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not snowflakes:
             raise commands.BadArgument("At least one snowflake must be provided.")
 
-        # clear any dup keys
-        snowflakes = list(set(snowflakes))
+        # clear any duplicated keys
+        snowflakes = tuple(set(snowflakes))
 
         embed = disnake.Embed(colour=disnake.Colour.blue())
         embed.set_author(
