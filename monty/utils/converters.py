@@ -21,6 +21,8 @@ log = get_logger(__name__)
 DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
+AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context]
+
 
 class MaybeFeature(commands.Converter):
     """
@@ -252,6 +254,8 @@ SourceType = t.Union[
     commands.Command,
     commands.Cog,
     commands.InvokableSlashCommand,
+    commands.InvokableMessageCommand,
+    commands.InvokableUserCommand,
     commands.SubCommand,
     commands.SubCommandGroup,
 ]
@@ -261,7 +265,7 @@ class SourceConverter(commands.Converter):
     """Convert an argument into a command or cog."""
 
     @staticmethod
-    async def convert(ctx: commands.Context, argument: str) -> SourceType:
+    async def convert(ctx: AnyContext, argument: str) -> SourceType:
         """Convert argument into source object."""
         cog = ctx.bot.get_cog(argument)
         if cog:

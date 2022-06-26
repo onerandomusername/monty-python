@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, TypeVar, Union
 from urllib.parse import urldefrag
 
 import disnake
@@ -11,6 +11,13 @@ from monty.constants import Client, Source
 from monty.utils.converters import SourceConverter, SourceType
 from monty.utils.helpers import encode_github_link
 from monty.utils.messages import DeleteButton
+
+
+commands.register_injection(SourceConverter.convert)
+
+if TYPE_CHECKING:
+    SourceConverter = SourceType
+T = TypeVar("T")
 
 
 class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
@@ -57,7 +64,7 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await send_message(embed, components=components)
 
     @commands.slash_command(name="source")
-    async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str = None) -> None:
+    async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: SourceType) -> None:
         """
         Get the source of my commands and cogs.
 
@@ -65,13 +72,7 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ----------
         item: The command or cog to display the source code of.
         """
-        if item is not None:
-            try:
-                item = await SourceConverter().convert(inter, item)
-            except commands.BadArgument as e:
-                await inter.response.send_message(str(e), ephemeral=True)
-                return
-        await self.source_command(inter, source_item=item)
+        await self.source_command(inter, source_item=item)  # type: ignore
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
         """
@@ -89,11 +90,11 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 commands.InvokableMessageCommand,
             ),
         ):
-            meth = inspect.unwrap(source_item.callback)
+            meth: Callable[..., Any] = inspect.unwrap(source_item.callback)
             src = meth.__code__
             filename = src.co_filename
         elif isinstance(source_item, commands.Command):
-            callback = inspect.unwrap(source_item.callback)
+            callback: Callable[..., Any] = inspect.unwrap(source_item.callback)
             src = callback.__code__
             filename = src.co_filename
         else:
@@ -101,6 +102,8 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
             try:
                 filename = inspect.getsourcefile(src)
             except TypeError:
+                filename = None
+            if filename is None:
                 raise commands.BadArgument("Cannot get source for a dynamically-created object.")
 
         if not isinstance(source_item, str):
@@ -120,7 +123,7 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         return url, file_location, first_line_no or None
 
-    def build_embed(self, source_object: SourceType) -> Optional[Tuple[disnake.Embed, str]]:
+    def build_embed(self, source_object: SourceType) -> Tuple[disnake.Embed, str]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 
@@ -132,16 +135,16 @@ class BotSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
             description = source_object.description
         elif isinstance(source_object, commands.SubCommandGroup):
             title = f"Slash Sub Command Group: {source_object.qualified_name}"
-            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
+            description = inspect.cleandoc(source_object.callback.__doc__ or "").split("\n", 1)[0]
         elif isinstance(source_object, commands.SubCommand):
             title = f"Slash Sub-Command: {source_object.qualified_name}"
             description = source_object.option.description
         elif isinstance(source_object, commands.InvokableUserCommand):
             title = f"User Command: {source_object.qualified_name}"
-            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
+            description = inspect.cleandoc(source_object.callback.__doc__ or "").split("\n", 1)[0]
         elif isinstance(source_object, commands.InvokableMessageCommand):
             title = f"Message Command: {source_object.qualified_name}"
-            description = inspect.cleandoc(source_object.callback.__doc__).split("\n", 1)[0]
+            description = inspect.cleandoc(source_object.callback.__doc__ or "").split("\n", 1)[0]
         else:
             title = f"Cog: {source_object.qualified_name}"
             description = source_object.description.splitlines()[0]
