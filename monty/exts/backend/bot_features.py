@@ -7,6 +7,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 from monty.database import Feature
 from monty.database.guild import Guild
+from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 
 
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     MaybeFeature = str
 else:
     from monty.utils.converters import MaybeFeature
+
+logger = get_logger(__name__)
 
 
 class FeatureManagement(commands.Cog):
@@ -108,11 +111,13 @@ class FeatureManagement(commands.Cog):
             await inter.response.edit_message("Aborted.", components=components)
             return
 
+        logger.info(f"Attempting to enable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
         await feature.update(["enabled"], enabled=True)
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully **enabled** feature `{name}` globally.", components=button
         )
+        logger.info(f"Successsfully enabled feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
 
     @cmd_global.command(name="disable")
     async def cmd_global_disable(self, ctx: commands.Context, name: MaybeFeature) -> None:
@@ -132,11 +137,13 @@ class FeatureManagement(commands.Cog):
             await inter.response.edit_message("Aborted.", components=components)
             return
 
+        logger.info(f"Attempting to disable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
         await feature.update(["enabled"], enabled=False)
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully **disabled** feature `{name}` globally.", components=button
         )
+        logger.info(f"Successsfully disabled feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
 
     @cmd_global.command(name="default")
     async def cmd_global_default(self, ctx: commands.Context, name: MaybeFeature) -> None:
@@ -157,10 +164,17 @@ class FeatureManagement(commands.Cog):
             await inter.response.edit_message("Aborted.", components=components)
             return
 
+        logger.info(
+            f"Attempting to globally set feature {name} to guild overrides "
+            f"as requested by {ctx.author} ({ctx.author.id})."
+        )
         await feature.update(["enabled"], enabled=None)
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully changed feature `{name}` to guild overrides.", components=button
+        )
+        logger.info(
+            f"Successfully changed feature {name} to guild overrides as requested by {ctx.author} ({ctx.author.id})."
         )
 
     @cmd_features.command(name="list")
@@ -222,6 +236,7 @@ class FeatureManagement(commands.Cog):
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(embed=embed, components=button)
+        logger.debug(f"User {ctx.author} ({ctx.author.id}) requested guild features for {name}")
 
     @cmd_guild.command(name="add", aliases=("a", "enable"), require_var_positional=True)
     async def cmd_guild_add(
