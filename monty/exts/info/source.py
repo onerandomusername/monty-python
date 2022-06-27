@@ -275,7 +275,6 @@ class MetaSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
 
         # make the completion
-        print(fuzz_results)
         return {key: value for value, score, key in fuzz_results}
 
     def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
