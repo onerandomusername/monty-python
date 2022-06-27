@@ -140,7 +140,24 @@ class MetaSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
             for cmd in self.bot.walk_commands():
                 self.all_prefix_commands[cmd.qualified_name] = cmd
 
-            self.all_slash_commands = types.MappingProxyType(self.bot.all_slash_commands)
+            # also need to add children, hence why this is a copy
+            self.all_slash_commands: dict[
+                str, Union[commands.InvokableSlashCommand, commands.SubCommand, commands.SubCommandGroup]
+            ] = {}
+            self.all_slash_commands.update(self.bot.all_slash_commands)
+
+            for command in self.bot.all_slash_commands.values():
+                if not command.children:
+                    continue
+
+                children = command.children
+
+                for child in children.values():
+                    self.all_slash_commands[child.qualified_name] = child
+                    if isinstance(child, commands.SubCommandGroup) and child.children:
+                        for sub_child in child.children.values():
+                            self.all_slash_commands[sub_child.qualified_name] = sub_child
+
             self.all_message_commands = types.MappingProxyType(self.bot.all_message_commands)
             self.all_user_commands = types.MappingProxyType(self.bot.all_user_commands)
 
