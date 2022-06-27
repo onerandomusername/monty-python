@@ -55,6 +55,9 @@ Channels: `{channels}`
 
 CPU Usage: `{cpu_usage}%`
 Memory Usage: `{memory_usage:.2f} MiB`
+
+Latency: `{latency}`
+Up since: <t:{uptime}:R>
 """
 
 COLOURS = (Colours.python_blue, Colours.python_yellow)
@@ -147,6 +150,9 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             colour=Colours.bright_green,
             description=f"Gateway Latency: {round(self.bot.latency * 1000)}ms",
         )
+        embed.set_footer(text="Up since")
+        embed.timestamp = self.bot.start_time.datetime
+
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
@@ -160,6 +166,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
         memory_usage = self.process.memory_info()
         memory_usage = memory_usage.rss / 1024**2
+
         e.description = STATS.format(
             disnake_version=disnake.__version__,
             disnake_version_level=disnake.version_info.releaselevel,
@@ -169,6 +176,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             memory_usage=memory_usage,
             cpu_usage=self.process.cpu_percent(),
             version=Client.version[:7],
+            latency=f"{round(self.bot.latency * 1000)}ms",
+            uptime=round(float(self.bot.start_time.format("X"))),
         )
 
         components = DeleteButton(inter.author)
