@@ -310,7 +310,7 @@ class FeatureManagement(commands.Cog):
             method = ctx.reply
         await method(
             f"Added guild IDs `{'`, `'.join(str(g.id) for g in guilds)}` "
-            f"to the following features:`{'`, `'.join(sorted(feature_names))}`.",
+            f"to the following features: `{'`, `'.join(sorted(feature_names))}`.",
             components=button,
         )
 
@@ -358,7 +358,7 @@ class FeatureManagement(commands.Cog):
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.reply(
             f"Removed guild IDs `{'`, `'.join(str(g.id) for g in guilds)}` "
-            f"from the following features:`{'`, `'.join(sorted(feature_names))}`.",
+            f"from the following features: `{'`, `'.join(sorted(feature_names))}`.",
             components=button,
         )
 
