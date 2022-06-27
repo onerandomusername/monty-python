@@ -41,17 +41,6 @@ python-versions = ">=3.6"
 frozenlist = ">=1.1.0"
 
 [[package]]
-name = "aiosqlite"
-version = "0.17.0"
-description = "asyncio bridge to the standard sqlite3 module"
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.dependencies]
-typing_extensions = ">=3.7.2"
-
-[[package]]
 name = "alembic"
 version = "1.8.0"
 description = "A database migration tool for SQLAlchemy."
@@ -741,25 +730,26 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "ormar"
-version = "0.11.1"
+version = "0.11.2"
 description = "A simple async ORM with fastapi in mind and pydantic validation."
 category = "main"
 optional = false
 python-versions = ">=3.7.0,<4.0.0"
 
 [package.dependencies]
-aiosqlite = ">=0.17.0,<0.18.0"
 databases = ">=0.3.2,<0.5.0 || >0.5.0,<0.5.1 || >0.5.1,<0.5.2 || >0.5.2,<0.5.3 || >0.5.3,<0.6.1"
-orjson = {version = ">=3.6.4", optional = true, markers = "extra == \"orjson\" or extra == \"dev\""}
+orjson = {version = ">=3.6.4", optional = true, markers = "extra == \"orjson\" or extra == \"all\""}
 pydantic = ">=1.6.1,<1.7 || >1.7,<1.7.1 || >1.7.1,<1.7.2 || >1.7.2,<1.7.3 || >1.7.3,<1.8 || >1.8,<1.8.1 || >1.8.1,<=1.9.1"
-SQLAlchemy = ">=1.3.18,<1.4.38"
+SQLAlchemy = ">=1.3.18,<1.4.39"
 
 [package.extras]
+crypto = ["cryptography (>=35,<38)"]
+all = ["cryptography (>=35,<38)", "aiosqlite (>=0.17.0,<0.18.0)", "aiomysql (>=0.0.21,<0.0.23)", "aiopg (>=1.3.3,<2.0.0)", "asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)", "mysqlclient (>=2.1.0,<3.0.0)", "PyMySQL (>=0.9,<=0.9.3)", "orjson (>=3.6.4)"]
+sqlite = ["aiosqlite (>=0.17.0,<0.18.0)"]
+mysql = ["aiomysql (>=0.0.21,<0.0.23)", "PyMySQL (>=0.9,<=0.9.3)"]
+aiopg = ["aiopg (>=1.3.3,<2.0.0)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
 postgresql = ["asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
 postgres = ["asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
-dev = ["asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)", "aiomysql (>=0.0.21,<0.0.23)", "cryptography (>=35,<38)", "orjson (>=3.6.4)"]
-mysql = ["aiomysql (>=0.0.21,<0.0.23)"]
-crypto = ["cryptography (>=35,<38)"]
 orjson = ["orjson (>=3.6.4)"]
 
 [[package]]
@@ -1318,7 +1308,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "b8ab70bc7dc1be0ec688b45aede10bc25a369e88c946ce6bebecf2197a900c68"
+content-hash = "26d095e5e52edc2ab12fab7e1bc14140455ec0740e5c0d3ef34fadd113950bd7"
 
 [metadata.files]
 aiodns = [
@@ -1402,10 +1392,6 @@ aiohttp = [
 aiosignal = [
     {file = "aiosignal-1.2.0-py3-none-any.whl", hash = "sha256:26e62109036cd181df6e6ad646f91f0dcfd05fe16d0cb924138ff2ab75d64e3a"},
     {file = "aiosignal-1.2.0.tar.gz", hash = "sha256:78ed67db6c7b7ced4f98e495e572106d5c432a93e1ddd1bf475e1dc05f5b7df2"},
-]
-aiosqlite = [
-    {file = "aiosqlite-0.17.0-py3-none-any.whl", hash = "sha256:6c49dc6d3405929b1d08eeccc72306d3677503cc5e5e43771efc1e00232e8231"},
-    {file = "aiosqlite-0.17.0.tar.gz", hash = "sha256:f0e6acc24bc4864149267ac82fb46dfb3be4455f99fe21df82609cc6e6baee51"},
 ]
 alembic = [
     {file = "alembic-1.8.0-py3-none-any.whl", hash = "sha256:b5ae4bbfc7d1302ed413989d39474d102e7cfa158f6d5969d2497955ffe85a30"},
@@ -2269,8 +2255,8 @@ orjson = [
     {file = "orjson-3.7.3.tar.gz", hash = "sha256:6998ff27b9b9aaa4906f6ad40c6c973339c772143f56e8e920f4843fd6c04e75"},
 ]
 ormar = [
-    {file = "ormar-0.11.1-py3-none-any.whl", hash = "sha256:a12f83165502b515310a1c20fbccbbcb9a1257716040d74c24503adbb890b86a"},
-    {file = "ormar-0.11.1.tar.gz", hash = "sha256:f72733b3727794a1b3e03effa95377f632e4019bda5e06889632c89393ddc69f"},
+    {file = "ormar-0.11.2-py3-none-any.whl", hash = "sha256:22f8c561bf9991c59eecb3a88d7acde10bfe5380cb36211f2e987fd7fedcd7b0"},
+    {file = "ormar-0.11.2.tar.gz", hash = "sha256:f0fefade9e3650184343de48ef3b90763bb4ba576359a26177ca78e66c529c70"},
 ]
 ormar-postgres-extensions = [
     {file = "ormar-postgres-extensions-2.1.0.tar.gz", hash = "sha256:fe7f6fc120066ca5ccd6108e67b17aa74d0b6c70456316b8d28ba4119acd3a8e"},
