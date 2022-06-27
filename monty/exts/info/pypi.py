@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import aiohttp
 import bs4
 import disnake
 import rapidfuzz.distance
@@ -30,6 +31,7 @@ JSON_URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
 SEARCH_URL = f"{BASE_PYPI_URL}/search"
 
 SIMPLE_INDEX = Endpoints.pypi_simple
+TOP_PACKAGES = Endpoints.top_pypi_packages
 
 PYPI_ICON = "https://github.com/pypa/warehouse/raw/main/warehouse/static/images/logo-small.png"
 
@@ -61,6 +63,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.fetch_lock = asyncio.Lock()
 
         self.all_packages: set[str] = set()
+        self.top_packages: list[str] = []
 
     async def cog_load(self) -> None:
         """Load the package list on cog load."""
@@ -85,11 +88,12 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         include_posargs=[],
         key_func=lambda *args, **kwargs: "packages",
         skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
-        timeout=datetime.timedelta(hours=12),
+        timeout=datetime.timedelta(hours=36),
     )
-    async def _fetch_package_list(self, *, use_cache: bool = True) -> set[str]:
+    async def _fetch_package_list(self, *, use_cache: bool = True) -> tuple[set[str], list[str]]:
         """Fetch all packages from pypi and cache them."""
-        new_packages = set()
+        new_packages: set[str] = set()
+        top_packages: list[str] = []
 
         log.debug("Started fetching package list from pypi.")
         async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True) as resp:
@@ -98,16 +102,33 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
         new_packages.update(pack.text for pack in parsed.find_all("a"))
 
-        return new_packages
+        # fetch the top packages as well, if the endpoint is set
+        if TOP_PACKAGES:
+            try:
+                async with self.bot.http_session.get(TOP_PACKAGES, raise_for_status=True) as resp:
+                    json = await resp.json()
+            except aiohttp.ClientError:
+                log.warning("Could not fetch the top packages.")
+            else:
+                # limit to the top 300 packages
+                try:
+                    top_packages.extend([pack["project"] for pack in json["rows"][:300]])
+                except Exception:
+                    log.error("Encountered an error with setting the top packages", exc_info=True)
+
+        return new_packages, top_packages
 
     # run this once a day
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
     async def fetch_package_list(self, *, use_cache: bool = True) -> None:
         """Fetch all packages from pypi and cache them."""
         log.debug("Might fetch packages from pypi or use cache.")
-        new_packages = await self._fetch_package_list(use_cache=use_cache)
+        all_packages, top_packages = await self._fetch_package_list(use_cache=use_cache)
         self.all_packages.clear()
-        self.all_packages.update(new_packages)
+        self.all_packages.update(all_packages)
+
+        self.top_packages.clear()
+        self.top_packages.extend(top_packages)
         log.info("Loaded list of all PyPI packages.")
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
@@ -242,10 +263,14 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         # otherwise fuzzy-match the package name
 
-        # todo: weight the first results based on usage
         if not query:
+            if self.top_packages:
+                the_sample = self.top_packages
+            else:
+                the_sample = self.all_packages
+
             # we need to shortcircuit and skip the fuzzing results
-            return [name for name in random.sample(self.all_packages, k=min(25, len(self.all_packages)))]
+            return [name for name in random.sample(the_sample, k=min(25, len(the_sample)))]
 
         scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
         fuzz_results = rapidfuzz.process.extract(
