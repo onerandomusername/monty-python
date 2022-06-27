@@ -5,19 +5,20 @@ import itertools
 import random
 import re
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import Any, Optional
 
 import bs4
 import disnake
+import rapidfuzz.distance
+import rapidfuzz.process
 import yarl
 from cachingutils import LRUMemoryCache, async_cached
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 
 from monty.bot import Monty
-from monty.constants import NEGATIVE_REPLIES, Colours
+from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints
 from monty.log import get_logger
-from monty.utils.helpers import maybe_defer
+from monty.utils.helpers import maybe_defer, redis_cache
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
@@ -28,12 +29,16 @@ HTML_URL = f"{BASE_PYPI_URL}/project/{{package}}"
 JSON_URL = f"{BASE_PYPI_URL}/pypi/{{package}}/json"
 SEARCH_URL = f"{BASE_PYPI_URL}/search"
 
+SIMPLE_INDEX = Endpoints.pypi_simple
+
 PYPI_ICON = "https://github.com/pypa/warehouse/raw/main/warehouse/static/images/logo-small.png"
 
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 MAX_CACHE = 15
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 MAX_RESULTS = 15
+
+PYPI_AUTOCOMPLETE_FEATURE_NAME = "PYPI_PACKAGE_AUTOCOMPLETE"
 log = get_logger(__name__)
 
 
@@ -55,10 +60,55 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.searches = {}
         self.fetch_lock = asyncio.Lock()
 
+        self.all_packages: set[str] = set()
+
+    async def cog_load(self) -> None:
+        """Load the package list on cog load."""
+        # create the feature if it doesn't exist
+        await self.bot.guild_has_feature(None, PYPI_AUTOCOMPLETE_FEATURE_NAME)
+
+        self.fetch_package_list.start(use_cache=False)
+        await self.fetch_package_list(use_cache=True)
+        # also start the task
+
+    async def cog_unload(self) -> None:
+        """Remove the autocomplete task on cog unload."""
+        self.fetch_package_list.cancel()
+
     @staticmethod
     def check_characters(package: str) -> Optional[re.Match]:
         """Check if the package is valid."""
         return re.search(ILLEGAL_CHARACTERS, package)
+
+    @redis_cache(
+        "pypi-package-list",
+        include_posargs=[],
+        key_func=lambda *args, **kwargs: "packages",
+        skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
+        timeout=datetime.timedelta(hours=12),
+    )
+    async def _fetch_package_list(self, *, use_cache: bool = True) -> set[str]:
+        """Fetch all packages from pypi and cache them."""
+        new_packages = set()
+
+        log.debug("Started fetching package list from pypi.")
+        async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True) as resp:
+            html = await resp.text()
+
+        parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
+        new_packages.update(pack.text for pack in parsed.find_all("a"))
+
+        return new_packages
+
+    # run this once a day
+    @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
+    async def fetch_package_list(self, *, use_cache: bool = True) -> None:
+        """Fetch all packages from pypi and cache them."""
+        log.debug("Might fetch packages from pypi or use cache.")
+        new_packages = await self._fetch_package_list(use_cache=use_cache)
+        self.all_packages.clear()
+        self.all_packages.update(new_packages)
+        log.info("Loaded list of all PyPI packages.")
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
@@ -181,6 +231,34 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if defer_task:
             defer_task.cancel()
 
+    @pypi_package.autocomplete("package")
+    async def package_autocomplete(self, inter: disnake.CommandInteraction, query: str) -> list[str]:
+        """Autocomplete package names based on the pypi index."""
+        # the packages aren't yet or failed to be loaded
+        if not self.all_packages or not await self.bot.guild_has_feature(
+            inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
+        ):
+            return [query] if query else []
+
+        # otherwise fuzzy-match the package name
+
+        # todo: weight the first results based on usage
+        if not query:
+            # we need to shortcircuit and skip the fuzzing results
+            return [name for name in random.sample(self.all_packages, k=min(25, len(self.all_packages)))]
+
+        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
+        fuzz_results = rapidfuzz.process.extract(
+            query,
+            self.all_packages,
+            scorer=scorer,  # type: ignore
+            limit=25,
+            score_cutoff=0.4,
+        )
+
+        # make the completion
+        return [value for value, score, key in fuzz_results]
+
     async def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
         results = []
@@ -211,7 +289,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         return results
 
     @async_cached(
-        timeout=int(timedelta(minutes=10).total_seconds()),
+        timeout=int(datetime.timedelta(minutes=10).total_seconds()),
         include_posargs=[0, 1],
         include_kwargs=[],
         allow_unset=True,

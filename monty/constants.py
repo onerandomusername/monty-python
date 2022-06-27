@@ -146,6 +146,7 @@ class Emojis:
 
 class Endpoints:
     app_info = environ.get("APPLICATION_INFO_ENDPOINT")
+    pypi_simple = environ.get("PYPI_SIMPLE_ENDPOINT", "https://pypi.org/simple/")
 
 
 class Guilds:
