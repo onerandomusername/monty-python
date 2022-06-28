@@ -13,8 +13,9 @@ from monty.utils.messages import DeleteButton
 
 if TYPE_CHECKING:
     MaybeFeature = str
+    FeatureConverter = Feature
 else:
-    from monty.utils.converters import MaybeFeature
+    from monty.utils.converters import FeatureConverter, MaybeFeature
 
 logger = get_logger(__name__)
 
@@ -83,10 +84,14 @@ class FeatureManagement(commands.Cog):
 
         return (True, inter, components)
 
+    # commands
+
     @commands.group(name="features", invoke_without_command=True)
     async def cmd_features(self, ctx: commands.Context) -> None:
         """Manage features."""
         await self.cmd_list(ctx)
+
+    # feature global state commands
 
     @cmd_features.group(name="global", invoke_without_command=True)
     async def cmd_global(self, ctx: commands.Context) -> None:
@@ -177,6 +182,27 @@ class FeatureManagement(commands.Cog):
             f"Successfully changed feature {name} to guild overrides as requested by {ctx.author} ({ctx.author.id})."
         )
 
+    @cmd_features.command(name="view", aliases=("show",))
+    async def cmd_show(self, ctx: commands.Context, feature: FeatureConverter, with_guilds: bool = False) -> None:
+        """Show properties of the provided feature."""
+        embed = disnake.Embed(title=f"Feature info: {feature.name}")
+        embed.add_field("Enabled", feature.enabled)
+        embed.add_field("Rollout", feature.rollout.name if feature.rollout else "None")
+        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+
+        if with_guilds:
+            guilds = await Guild.objects.filter(features__array_contains=[feature.name]).all()
+            guild_names = []
+            for g in guilds:
+                if dis_guild := self.bot.get_guild(g.id):
+                    guild_names.append(f"{dis_guild.name} ({g.id})")
+                else:
+                    guild_names.append(g.id)
+            guild_names.sort()
+            embed.add_field(name="Guilds", value="\n".join(guild_names) or "No guilds have overrides.", inline=False)
+
+        await ctx.send(embed=embed, components=button)
+
     @cmd_features.command(name="list")
     async def cmd_list(self, ctx: commands.Context) -> None:
         """List all existing features."""
@@ -211,6 +237,8 @@ class FeatureManagement(commands.Cog):
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(embed=embed, components=button)
+
+    # guild commands
 
     @cmd_features.group(name="guild", invoke_without_command=True)
     async def cmd_guild(

@@ -10,6 +10,7 @@ from aiohttp import ClientConnectorError
 from disnake.ext import commands
 
 from monty import exts
+from monty.database import Feature
 from monty.log import get_logger
 from monty.utils import inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
@@ -39,6 +40,23 @@ class MaybeFeature(commands.Converter):
         if not match:
             raise commands.BadArgument(f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``.")
         return argument
+
+
+class FeatureConverter(MaybeFeature):
+    """
+    Match that the provided string is a valid Feature name.
+
+    This does not check if the argument is a valid feature.
+    """
+
+    async def convert(self, ctx: commands.Context, argument: str) -> Feature:
+        """Check that the argument is a possible feature name."""
+        # convert the name to uppercase for the benefit of the user and normalize `-` characters
+        argument = await super().convert(ctx, argument)
+        try:
+            return ctx.bot.features[argument]
+        except KeyError:
+            raise commands.BadArgument(f"No feature with name `{argument}` exists.")
 
 
 class Extension(commands.Converter):
