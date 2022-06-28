@@ -16,8 +16,10 @@ from disnake.ext import commands
 from monty import constants
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.metadata import metadata
+from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
+from monty.utils import rollouts
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -158,6 +160,13 @@ class Monty(commands.Bot):
                 prefixes.insert(0, self.command_prefix)
         return prefixes
 
+    async def refresh_features(self) -> None:
+        """Refresh the feature cache."""
+        async with self._feature_db_lock:
+            features = await Feature.objects.all()
+            self.features.clear()
+            self.features.update({feature.name: feature for feature in features})
+
     async def guild_has_feature(
         self,
         guild: Optional[Union[int, disnake.abc.Snowflake]],
@@ -200,7 +209,17 @@ class Monty(commands.Bot):
             guild = guild.id
 
         guild_db = await self.ensure_guild(guild)
-        return feature in guild_db.features
+        if feature in guild_db.features:
+            return True
+
+        # check if this feature has an active rollout
+        if feature_instance and feature_instance.rollout:
+            if not feature_instance.rollout.saved:
+                feature_instance.rollout = await Rollout.objects.get(id=feature_instance.rollout.id)
+
+            return rollouts.is_rolled_out_to(guild, rollout=feature_instance.rollout)
+
+        return False
 
     async def on_connect(self) -> None:
         """Fetch the list of features once we create our internal sessions."""

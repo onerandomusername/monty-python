@@ -13,7 +13,7 @@ class Guild(ormar.Model):
     class Meta(BaseMeta):
         tablename: str = "guilds"
 
-    id: str = ormar.BigInteger(primary_key=True, autoincrement=False)  # type: ignore
+    id: int = ormar.BigInteger(primary_key=True, autoincrement=False)  # type: ignore
     features: List[str] = ormar_pg_ext.ARRAY(
         item_type=ormar.ForeignKey(Feature).column_type,
         nullable=False,

@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import re
 import typing as t
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from ssl import CertificateError
 
+import arrow
 import disnake
+import ormar
 from aiohttp import ClientConnectorError
 from disnake.ext import commands
 
 from monty import exts
-from monty.database import Feature
+from monty.database import Feature, Rollout
 from monty.log import get_logger
 from monty.utils import inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
@@ -23,6 +25,71 @@ DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
 AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context]
+
+TIMEDELTA_REGEX = re.compile(
+    r"^"
+    r"((?P<years>-?\d+)(?:Y|y|[Yy]ears?))?"
+    r"((?P<months>-?\d+)(?:M|[Mm]onths?))?"
+    r"((?P<weeks>-?\d+)(?:W|w|[Ww]eeks?))?"
+    r"((?P<days>-?\d+)(?:D|d|[Dd]ays?))?"
+    r"((?P<hours>-?\d+)(?:H|h|[Hh]ours?))?"
+    r"((?P<minutes>-?\d+)(?:m|[Mm]inutes?))?"
+    r"((?P<seconds>-?\d+)(?:S|s|[Ss]econds?))?"
+    r"$",
+)
+
+
+def str_timedelta_from_now(human: str, /) -> t.Optional[timedelta]:
+    """Convert a string to a timedelta relative to the current time."""
+    match = TIMEDELTA_REGEX.fullmatch(human)
+    if not match:
+        return None
+
+    parts = {k: int(v) for k, v in match.groupdict().items() if v}
+
+    # to support years and months we have to make some assumptions about the current time
+    # for that we can use arrow which does this for us.
+    if "years" in parts or "months" in parts:
+        now = arrow.utcnow()
+        then = now.shift(**parts)
+        return then - now
+
+    return timedelta(**parts)
+
+
+class ArrowConverter(commands.Converter):
+    """
+    Get a datetime argument out of the provided argument.
+
+    This uses arrow and dateutil to maximize options.
+    """
+
+    async def convert(self, ctx: AnyContext, argument: str) -> arrow.Arrow:
+        """Convert the provided argument into an arrow.Arrow object."""
+        # first convert our provided match
+        try:
+            delta = str_timedelta_from_now(argument)
+        except Exception:
+            pass
+        else:
+            if delta is not None:
+                return arrow.utcnow() + delta
+
+        try:
+            return arrow.get(argument)
+        except Exception:
+            raise commands.BadArgument(f"{argument} could not be converted into a valid datetime.")
+
+
+class RolloutConverter(commands.Converter):
+    """Convert the provided argument into a rollout."""
+
+    async def convert(self, ctx: AnyContext, argument: str) -> Rollout:
+        """Convert the provided argument into a rollout."""
+        try:
+            return await Rollout.objects.get(name=argument)
+        except ormar.NoMatch:
+            raise commands.BadArgument(f"`{argument}` is not a valid rollout name.")
 
 
 class MaybeFeature(commands.Converter):
