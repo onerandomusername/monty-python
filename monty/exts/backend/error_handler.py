@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 import re
+import traceback
 import typing
 
 import disnake
@@ -144,8 +145,6 @@ class ErrorHandler(
             # handle_check_failure may send its own error if its a BotMissingPermissions error.
             if embed is None:
                 should_respond = False
-        elif isinstance(error, commands.ConversionError):
-            error = error.original
         elif isinstance(error, commands.DisabledCommand):
             if ctx.command.hidden:
                 should_respond = False
@@ -165,24 +164,26 @@ class ErrorHandler(
                     await self.bot.process_application_commands(ctx)
                     should_respond = False
 
-        elif isinstance(error, commands.CommandInvokeError):
+        elif isinstance(error, (commands.CommandInvokeError, commands.ConversionError)):
             if isinstance(error.original, disnake.Forbidden):
                 logger.warn(f"Permissions error occurred in {ctx.command}.")
                 await self.handle_bot_missing_perms(ctx, error.original)
                 should_respond = False
             else:
-                # todo: this should properly handle plugin errors and note that they are not bot bugs
-                # todo: this should log somewhere else since this is a bot bug.
                 # generic error
                 logger.error("Error occurred in command or message component", exc_info=error.original)
                 # built in command msg
                 title = "Internal Error"
-                error_str = str(error.original).replace("``", "`\u200b`")
+                error_str = "".join(
+                    traceback.format_exception(
+                        type(error.original), error.original, tb=error.original.__traceback__, limit=-3
+                    )
+                ).replace("``", "`\u200b`")
                 msg = (
                     "Something went wrong internally in the action you were trying to execute. "
                     "Please report this error and the code below and what you were trying to do in "
                     f"the [support server](https://discord.gg/{Client.support_server})."
-                    f"\n\n``{error_str}``"
+                    f"\n\n```py\n{error_str}\n```"
                 )
 
                 embed = self.error_embed(title, msg)
