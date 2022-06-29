@@ -74,7 +74,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         await self.fetch_package_list(use_cache=True)
         # also start the task
 
-    async def cog_unload(self) -> None:
+    def cog_unload(self) -> None:
         """Remove the autocomplete task on cog unload."""
         self.fetch_package_list.cancel()
 
