@@ -307,6 +307,19 @@ class Monty(commands.Bot):
         self._remove_root_aliases(command)
         return command
 
+    def add_slash_command(self, slash_command: commands.InvokableSlashCommand) -> None:
+        """Add the slash command to the bot and dispatch a slash_command_add event."""
+        super().add_slash_command(slash_command)
+        self.dispatch("slash_command_add", slash_command)
+
+    def remove_slash_command(self, name: str) -> Optional[commands.InvokableSlashCommand]:
+        """Remove the slash command from the bot and dispatch a slash_command_remove event."""
+        slash_command = super().remove_slash_command(name)
+        if slash_command is None:
+            return None
+        self.dispatch("slash_command_remove", slash_command)
+        return slash_command
+
     async def on_command_error(self, context: commands.Context, exception: disnake.DiscordException) -> None:
         """Check command errors for UserInputError and reset the cooldown if thrown."""
         if isinstance(exception, commands.UserInputError) and context.command:

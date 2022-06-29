@@ -111,12 +111,18 @@ class MetaSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @commands.Cog.listener("on_cog_remove")
     @commands.Cog.listener("on_command_add")
     @commands.Cog.listener("on_command_remove")
-    async def refresh_cache(self, obj: Optional[Union[commands.Command, commands.Cog]] = None) -> None:
+    @commands.Cog.listener("on_slash_command_add")
+    @commands.Cog.listener("on_slash_command_remove")
+    async def refresh_cache(
+        self, obj: Optional[Union[commands.Command, commands.Cog, commands.InvokableSlashCommand]] = None
+    ) -> None:
         """Refreshes the cache when a cog is added or removed."""
         # sleep for a second in the event that multiple cogs are reloaded or commands are added/removed
         # do nothing if the cog is this cog
-        if obj and (obj is self or (isinstance(obj, commands.Command) and obj.cog is self)):
-            logger.info("returning early as our own cog was acted upon")
+        if obj and (
+            obj is self or (isinstance(obj, (commands.Command, commands.InvokableSlashCommand)) and obj.cog is self)
+        ):
+            logger.debug("returning early as our own cog was acted upon")
             return
         if self.refresh_active.locked():
             logger.trace("Received an event to refresh the cache but cache refresh is already active.")
