@@ -247,13 +247,14 @@ class RolloutCog(commands.Cog):
     @cmd_rollouts.command("start")
     async def cmd_rollouts_start(self, ctx: commands.Context, rollout: RolloutConverter, dt: ArrowConverter) -> None:
         """Start a rollout now to end at the specified time."""
-        if disnake.utils.utcnow() > dt:
+        now = disnake.utils.utcnow()
+        if now > dt:
             raise commands.BadArgument("A rollout must end in the future.")
 
         if rollout.rollout_by is not None:
             raise commands.CommandError("That rollout already has a time set.")
 
-        await rollout.update(rollout_by=dt.datetime)
+        await rollout.update(hashes_last_updated=now, rollout_by=dt.datetime)
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(f"Started rolling out `{rollout.name}`", components=button)
 
