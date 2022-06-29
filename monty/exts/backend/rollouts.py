@@ -164,7 +164,7 @@ class RolloutCog(commands.Cog):
 
         # pick a random starting number divisible by 100
         # this means the rollout is effectively not enabled, as both limits are the same value
-        hash_low = hash_high = random.choice(range(0, 10000, 100))
+        hash_low = hash_high = random.choice(range(0, 10_000, 100))
         rollout = Rollout(
             name=name,
             rollout_hash_low=hash_low,
