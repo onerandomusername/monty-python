@@ -110,9 +110,15 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # due to an lxml memory leak, we have to use a seperate process
         results_queue = multiprocessing.Queue()
         parse_process = multiprocessing.Process(target=parse_simple_index, args=(html, results_queue))
-        parse_process.daemon = True
-        parse_process.start()
-        all_packages = await self.bot.loop.run_in_executor(None, results_queue.get)
+        try:
+            parse_process.daemon = True
+            parse_process.start()
+            all_packages = await self.bot.loop.run_in_executor(None, results_queue.get)
+        except Exception:
+            parse_process.kill()
+            raise
+        else:
+            parse_process.terminate()
 
         # fetch the top packages as well, if the endpoint is set
         if TOP_PACKAGES:
