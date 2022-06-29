@@ -228,7 +228,7 @@ class Monty(commands.Bot):
 
     async def on_connect(self) -> None:
         """Fetch the list of features once we create our internal sessions."""
-        self.features.update({feature.name: feature for feature in await Feature.objects.all()})
+        await self.refresh_features()
         log.info("Fetched the features from the database.")
 
     async def login(self, token: str) -> None:
