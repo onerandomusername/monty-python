@@ -166,7 +166,7 @@ class Monty(commands.Bot):
             features = await Feature.objects.all()
             full_features = []
             for feature in features:
-                full_features.append(await feature.load())
+                full_features.append(await feature.load_all())
             self.features.clear()
             self.features.update({feature.name: feature for feature in full_features})
 
@@ -199,7 +199,7 @@ class Monty(commands.Bot):
                     if not feature_instance and create_if_not_exists:
                         feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
                     elif feature_instance:
-                        feature_instance = self.features[feature] = await feature_instance.load()
+                        feature_instance = self.features[feature] = await feature_instance.load_all()
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
         if include_feature_status and feature_instance:
