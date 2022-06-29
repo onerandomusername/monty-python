@@ -164,8 +164,11 @@ class Monty(commands.Bot):
         """Refresh the feature cache."""
         async with self._feature_db_lock:
             features = await Feature.objects.all()
+            full_features = []
+            for feature in features:
+                full_features.append(await feature.load())
             self.features.clear()
-            self.features.update({feature.name: feature for feature in features})
+            self.features.update({feature.name: feature for feature in full_features})
 
     async def guild_has_feature(
         self,
@@ -195,6 +198,8 @@ class Monty(commands.Bot):
                     feature_instance = await Feature.objects.get_or_none(name=feature)
                     if not feature_instance and create_if_not_exists:
                         feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
+                    elif feature_instance:
+                        feature_instance = self.features[feature] = await feature_instance.load()
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
         if include_feature_status and feature_instance:
