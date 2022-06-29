@@ -270,7 +270,8 @@ class RolloutCog(commands.Cog):
         """Show information about a rollout."""
         embed = disnake.Embed(title="Rollout Information")
         embed.set_author(name=rollout.name)
-        embed.add_field("Current Percent", f"{rollouts.compute_current_percent(rollout) * 100:6.2f}%", inline=False)
+        embed.add_field("Current Percent", f"{rollouts.compute_current_percent(rollout) * 100:6.2f}%", inline=True)
+        embed.add_field("Goal Percent", f"{rollout.rollout_to_percent:6.2f}%", inline=True)
 
         if rollout.rollout_by:
             rollout_by = disnake.utils.format_dt(rollout.rollout_by, "F")
