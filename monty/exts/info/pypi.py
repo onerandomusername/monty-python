@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import functools
 import itertools
+import multiprocessing
 import random
 import re
 from dataclasses import dataclass
@@ -54,6 +55,13 @@ class Package:
     url: str
 
 
+def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Queue) -> None:
+    """Parse the provided simple index html."""
+    soup = bs4.BeautifulSoup(html, "lxml")
+    result = {str(pack.text) for pack in soup.find_all("a")}
+    results_queue.put(result)
+
+
 class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for getting information about PyPi packages."""
 
@@ -92,15 +100,19 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     )
     async def _fetch_package_list(self, *, use_cache: bool = True) -> tuple[set[str], list[str]]:
         """Fetch all packages from pypi and cache them."""
-        new_packages: set[str] = set()
+        all_packages: set[str] = set()
         top_packages: list[str] = []
 
         log.debug("Started fetching package list from pypi.")
         async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True) as resp:
             html = await resp.text()
 
-        parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
-        new_packages.update(pack.text for pack in parsed.find_all("a"))
+        # due to an lxml memory leak, we have to use a seperate process
+        results_queue = multiprocessing.Queue()
+        parse_process = multiprocessing.Process(target=parse_simple_index, args=(html, results_queue))
+        parse_process.daemon = True
+        parse_process.start()
+        all_packages = await self.bot.loop.run_in_executor(None, results_queue.get)
 
         # fetch the top packages as well, if the endpoint is set
         if TOP_PACKAGES:
@@ -116,7 +128,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 except Exception:
                     log.error("Encountered an error with setting the top packages", exc_info=True)
 
-        return new_packages, top_packages
+        return all_packages, top_packages
 
     # run this once a day
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
@@ -308,7 +320,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if not description:
                 description = ""
             url = BASE_PYPI_URL + result.get("href")
-            result = Package(name, version, description.strip(), url)
+            result = Package(str(name), str(version), description.strip(), str(url))
             results.append(result)
 
         return results
