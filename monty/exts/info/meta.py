@@ -1,3 +1,4 @@
+import importlib.metadata
 import random
 
 import disnake
@@ -47,7 +48,7 @@ A majority of features were initially implemented on python-discord's **bot**, a
 
 STATS = """
 Version: `{version}`
-Disnake version: `{disnake_version} {disnake_version_level}`
+Disnake version: `{disnake_version}`
 
 Guilds: `{guilds}`
 Users: `{users}`
@@ -168,8 +169,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         memory_usage = memory_usage.rss / 1024**2
 
         e.description = STATS.format(
-            disnake_version=disnake.__version__,
-            disnake_version_level=disnake.version_info.releaselevel,
+            disnake_version=importlib.metadata.version("disnake"),
             guilds=len(self.bot.guilds),
             users=sum([guild.member_count for guild in self.bot.guilds]),
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
