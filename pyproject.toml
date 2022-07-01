@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "~=3.9"
 aiodns = "~=3.0"
-aiohttp = "~=3.8.1"
+aiohttp = { version = "~=3.8.1", extras = ['speedups'] }
 arrow = "~=1.2.2"
 attrs = "^21.4.0"
 base65536 = "^0.1.1"
@@ -16,7 +16,7 @@ beautifulsoup4 = "^4.10.0"
 cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
 colorama = { version = "~=0.4.5", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=15.0"
-disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master', extras = ["speed"] }
+disnake = { git = "https://github.com/DisnakeDev/disnake.git", rev='master' }
 fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 gql = "^3.3.0"
 lxml = "^4.9.0"
