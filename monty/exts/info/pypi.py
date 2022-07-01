@@ -193,12 +193,13 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         try:
             release_info = json["releases"][info["version"]]
-            embed.set_footer(text="Last updated")
             embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
                 tzinfo=datetime.timezone.utc
             )
-        except KeyError:
+        except (KeyError, IndexError):
             pass
+        else:
+            embed.set_footer(text="Last updated")
 
         embed.colour = next(PYPI_COLOURS)
 
