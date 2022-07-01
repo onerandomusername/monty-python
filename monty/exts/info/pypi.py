@@ -113,12 +113,21 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         try:
             parse_process.daemon = True
             parse_process.start()
-            all_packages = await self.bot.loop.run_in_executor(None, results_queue.get)
+            log.debug("Waiting for /pypi/simple results queue.")
+            wait_for = functools.partial(results_queue.get, timeout=300)
+            all_packages = await self.bot.loop.run_in_executor(None, wait_for)
+            log.debug("Received list of all packages with %s results from %s", len(all_packages), SIMPLE_INDEX)
         except Exception:
             parse_process.kill()
+            parse_process.close()
             raise
         else:
-            parse_process.terminate()
+            wait_for = functools.partial(parse_process.join, timeout=10)
+            log.debug("Waiting for /pypi/simple parsing process to stop.")
+            await self.bot.loop.run_in_executor(None, wait_for)
+            log.debug("Closing /pypi/simple parsing process.")
+            await asyncio.sleep(1)
+            parse_process.close()
 
         # fetch the top packages as well, if the endpoint is set
         if TOP_PACKAGES:
