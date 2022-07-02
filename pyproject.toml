@@ -44,7 +44,7 @@ fakeredis = ['fakeredis']
 
 
 [tool.poetry.dev-dependencies]
-black = "^22.0"
+black = "^22.6"
 coverage = "~=6.4"
 flake8 = "^4.0"
 flake8-annotations = "~=2.9.0"
