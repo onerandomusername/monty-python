@@ -78,9 +78,13 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # create the feature if it doesn't exist
         await self.bot.guild_has_feature(None, PYPI_AUTOCOMPLETE_FEATURE_NAME)
 
-        self.fetch_package_list.start(use_cache=False)
-        await self.fetch_package_list(use_cache=True)
-        # also start the task
+        if self.bot.features[PYPI_AUTOCOMPLETE_FEATURE_NAME].enabled is not False:
+            # start the task
+            self.fetch_package_list.start(use_cache=False)
+            # pre-fill the autocomplete once
+            await self.fetch_package_list(use_cache=True)
+        else:
+            log.warning("Not loading pypi autocomplete as the feature is fully disabled.")
 
     def cog_unload(self) -> None:
         """Remove the autocomplete task on cog unload."""
