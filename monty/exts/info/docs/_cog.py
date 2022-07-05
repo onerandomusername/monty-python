@@ -60,7 +60,7 @@ CUSTOM_ID_PREFIX = "docs_"
 
 BLACKLIST: dict[int, set[str]] = {}
 BLACKLIST_MAPPING: dict[int, list[str]] = {
-    constants.Guilds.nextcord: ["disnake", "dislash"],
+    # constants.Guilds.nextcord: ["disnake", "dislash"],
 }
 
 
