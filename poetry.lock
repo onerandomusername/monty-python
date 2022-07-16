@@ -113,6 +113,14 @@ tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)"
 tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "cloudpickle"]
 
 [[package]]
+name = "backoff"
+version = "2.1.2"
+description = "Function decoration for backoff and retry"
+category = "main"
+optional = false
+python-versions = ">=3.7,<4.0"
+
+[[package]]
 name = "base65536"
 version = "0.1.1"
 description = "Base-65536 Python implementation"
@@ -506,13 +514,14 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "gql"
-version = "3.3.0"
+version = "3.4.0"
 description = "GraphQL client for Python"
 category = "main"
 optional = false
 python-versions = "*"
 
 [package.dependencies]
+backoff = ">=1.11.1,<3.0"
 graphql-core = ">=3.2,<3.3"
 yarl = ">=1.6,<2.0"
 
@@ -1307,7 +1316,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "ba6638f5917e17f01e4bb09bb448ad83f2174ef297278b7bc2cfa7eb11688df1"
+content-hash = "23bd479cf0c86069352768c9899404eddd9d4798006c376038c9147f8da53538"
 
 [metadata.files]
 aiodns = [
@@ -1439,6 +1448,10 @@ atomicwrites = [
 attrs = [
     {file = "attrs-21.4.0-py2.py3-none-any.whl", hash = "sha256:2d27e3784d7a565d36ab851fe94887c5eccd6a463168875832a1be79c82828b4"},
     {file = "attrs-21.4.0.tar.gz", hash = "sha256:626ba8234211db98e869df76230a137c4c40a12d72445c45d5f5b716f076e2fd"},
+]
+backoff = [
+    {file = "backoff-2.1.2-py3-none-any.whl", hash = "sha256:b135e6d7c7513ba2bfd6895bc32bc8c66c6f3b0279b4c6cd866053cfd7d3126b"},
+    {file = "backoff-2.1.2.tar.gz", hash = "sha256:407f1bc0f22723648a8880821b935ce5df8475cf04f7b6b5017ae264d30f6069"},
 ]
 base65536 = [
     {file = "base65536-0.1.1.tar.gz", hash = "sha256:f06c559abe1f49855e7f14fa44750fd3b2dbfa2d2ec5f71a6149fcf911a823ea"},
@@ -1802,8 +1815,8 @@ frozenlist = [
     {file = "frozenlist-1.3.0.tar.gz", hash = "sha256:ce6f2ba0edb7b0c1d8976565298ad2deba6f8064d2bebb6ffce2ca896eb35b0b"},
 ]
 gql = [
-    {file = "gql-3.3.0-py2.py3-none-any.whl", hash = "sha256:77fbc0a47c2df4edb8a98afa8c9c23aead5e0b4ab26d424e2dcfeb3fa2a2319d"},
-    {file = "gql-3.3.0.tar.gz", hash = "sha256:efa405aebe0e7b2fe342b43cfc70fd57e2e385fcae04f79c509366ad48a64381"},
+    {file = "gql-3.4.0-py2.py3-none-any.whl", hash = "sha256:59c8a0b8f0a2f3b0b2ff970c94de86f82f65cb1da3340bfe57143e5f7ea82f71"},
+    {file = "gql-3.4.0.tar.gz", hash = "sha256:ca81aa8314fa88a8c57dd1ce34941278e0c352d762eb721edcba0387829ea7c0"},
 ]
 graphql-core = [
     {file = "graphql-core-3.2.1.tar.gz", hash = "sha256:9d1bf141427b7d54be944587c8349df791ce60ade2e3cccaf9c56368c133c201"},
