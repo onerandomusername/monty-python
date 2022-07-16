@@ -112,7 +112,7 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
                 raise InvalidHeaderError("'zlib' not found in header of compressed inventory.")
             return await _load_v2(stream)
 
-        raise InvalidHeaderError("Incompatible inventory version.")
+    raise InvalidHeaderError("Incompatible inventory version.")
 
 
 @redis_cache(

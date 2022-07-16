@@ -35,6 +35,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         json["language"] = extension
     response = None
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
+        response_json = {}
         try:
             async with bot.http_session.post(paste_url, json=json) as response:
                 response_json = await response.json()
