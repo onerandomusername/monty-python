@@ -681,7 +681,7 @@ python-versions = "*"
 
 [[package]]
 name = "mistune"
-version = "2.0.3"
+version = "2.0.4"
 description = "A sane Markdown parser with useful plugins and renderers"
 category = "main"
 optional = false
@@ -1307,7 +1307,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "0a5ccd9d5f628d99a0a480eeaf738ba1e79cf2ecfb109b8d0e9474ec55ffb9f4"
+content-hash = "ba6638f5917e17f01e4bb09bb448ad83f2174ef297278b7bc2cfa7eb11688df1"
 
 [metadata.files]
 aiodns = [
@@ -2145,8 +2145,8 @@ mccabe = [
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
 mistune = [
-    {file = "mistune-2.0.3-py2.py3-none-any.whl", hash = "sha256:e3964140c0775535fba50bd616fe180920044a64bc21850253267b07bff89924"},
-    {file = "mistune-2.0.3.tar.gz", hash = "sha256:d7605b46b6156b53b7d52a465202b29a6f00f4ea4130ad5d25e9d5547d6b7e50"},
+    {file = "mistune-2.0.4-py2.py3-none-any.whl", hash = "sha256:182cc5ee6f8ed1b807de6b7bb50155df7b66495412836b9a74c8fbdfc75fe36d"},
+    {file = "mistune-2.0.4.tar.gz", hash = "sha256:9ee0a66053e2267aba772c71e06891fa8f1af6d4b01d5e84e267b4570d4d9808"},
 ]
 mslex = [
     {file = "mslex-0.3.0-py2.py3-none-any.whl", hash = "sha256:380cb14abf8fabf40e56df5c8b21a6d533dc5cbdcfe42406bbf08dda8f42e42a"},
