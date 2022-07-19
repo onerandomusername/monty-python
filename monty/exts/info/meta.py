@@ -194,10 +194,17 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         if ephemeral is None:
             ephemeral = bool(inter.guild_id)
+
+        if not ephemeral:
+            components = (DeleteButton(inter.author, allow_manage_messages=False),)
+        else:
+            components = []
+
         await inter.send(
             "If you find yourself in need of support, please join the support server: "
             "https://discord.gg/{invite}".format(invite=Client.support_server),
             ephemeral=ephemeral,
+            components=components,
         )
 
     @monty.sub_command()
