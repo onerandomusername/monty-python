@@ -328,7 +328,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.6.0a4290+g9e716dd2"
+version = "2.6.0a4300+gafb0c3d1"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -347,8 +347,8 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 [package.source]
 type = "git"
 url = "https://github.com/DisnakeDev/disnake.git"
-reference = 'master'
-resolved_reference = "9e716dd2ffc7641142fb59edb33d7ec295eb9b43"
+reference = "master"
+resolved_reference = "afb0c3d1a6e9253a8a425a2d1c406cb39a2fadf7"
 
 [[package]]
 name = "distlib"
@@ -964,7 +964,7 @@ python-versions = "*"
 
 [[package]]
 name = "pyright"
-version = "1.1.261"
+version = "1.1.262"
 description = "Command line wrapper for pyright"
 category = "dev"
 optional = false
@@ -1316,7 +1316,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "121f6ba755496309e796e1f4b832892ce0c6f8fe1fa4c092f83f06b956d72e9d"
+content-hash = "9a0af130650a07b1a7af0903d843b4fe7fae959e8712bea54abd7d977c997f1d"
 
 [metadata.files]
 aiodns = [
@@ -2552,8 +2552,8 @@ pyreadline3 = [
     {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
 ]
 pyright = [
-    {file = "pyright-1.1.261-py3-none-any.whl", hash = "sha256:56d3a10d0fe938cb26864728e65c02f625fe40b2d4b0babba057ff4ac4479eae"},
-    {file = "pyright-1.1.261.tar.gz", hash = "sha256:bbae6f40d31e61ac5754b45f0a80942a7473dd4ebeb86325d44f200d6a0615e4"},
+    {file = "pyright-1.1.262-py3-none-any.whl", hash = "sha256:ad9f6dd33f0039e0f0f9bc81e5c07a445d14a65e6dcf67c5ca1c75b5d9ae9f9f"},
+    {file = "pyright-1.1.262.tar.gz", hash = "sha256:3c77ccaca6e273b0f3a7b13efd0d0a225616e8334c428c4dc0d03453896645b5"},
 ]
 pytest = [
     {file = "pytest-7.1.2-py3-none-any.whl", hash = "sha256:13d0e3ccfc2b6e26be000cb6568c832ba67ba32e719443bfe725814d3c42433c"},
