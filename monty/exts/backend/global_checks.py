@@ -16,9 +16,6 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.bot = bot
         self._bot_invite_link: str = ""
 
-        self._checks = {attr: getattr(self, attr) for attr in dir(self) if attr.startswith("global_check_")}
-        self.add_checks()
-
     @commands.Cog.listener("on_ready")
     async def set_invite_link(self) -> None:
         """Set the invite link when the bot is ready."""
@@ -38,33 +35,15 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
             permissions=self.bot.invite_permissions,
         )
 
-    def add_checks(self) -> None:
-        """Adds all checks to the bot."""
-        for name, check in self._checks.items():
-            if name.startswith("global_check_app_cmd"):
-                self.bot.add_app_command_check(
-                    check, call_once=True, slash_commands=True, user_commands=True, message_commands=True
-                )
-            elif name.startswith("global_check_prefix_cmd"):
-                self.bot.add_check(check, call_once=True)
-            else:
-                logger.warn(f"Invalid named check in {type(self).__name__} cog")
+    def bot_slash_command_check(self, inter: disnake.CommandInteraction) -> bool:
+        """
+        Require all commands in guilds have the bot scope.
 
-    def remove_checks(self) -> None:
-        """Removes all cog checks from the bot."""
-        for name, check in self._checks.items():
-            if name.startswith("global_check_app_cmd"):
-                self.bot.remove_app_command_check(
-                    check, call_once=True, slash_commands=True, user_commands=True, message_commands=True
-                )
-            elif name.startswith("global_check_prefix_cmd"):
-                self.bot.remove_check(check, call_once=True)
-            else:
-                # no warning here as it was warned for during load
-                pass
+        This essentially prevents commands from running when the Bot is not in a guild.
 
-    def global_check_app_cmd(self, inter: disnake.CommandInteraction) -> bool:
-        """Require all commands be in a guild and have the bot scope."""
+        However, this does allow slash commands in DMs as those are now controlled via
+        the dm_permisions attribute on each app command.
+        """
         if inter.guild or not inter.guild_id:
             return True
 
@@ -81,13 +60,14 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
             )
         raise BotAccountRequired(msg)
 
-    def global_check_prefix_cmd(self, ctx: commands.Context) -> bool:
+    bot_user_command_check = bot_slash_command_check
+    bot_message_command_check = bot_slash_command_check
+
+    async def bot_check_once(self, ctx: commands.Context) -> bool:
         """Require all commands be in guild."""
         if ctx.guild:
             return True
         raise commands.NoPrivateMessage()
-
-    cog_unload = remove_checks
 
 
 def setup(bot: Monty) -> None:
