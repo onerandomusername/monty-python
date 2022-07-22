@@ -44,6 +44,8 @@ MAX_RESULTS = 15
 PYPI_AUTOCOMPLETE_FEATURE_NAME = "PYPI_PACKAGE_AUTOCOMPLETE"
 log = get_logger(__name__)
 
+PYPI_API_HEADERS = {"Accept": "application/vnd.pypi.simple.v1+json"}
+
 
 @dataclass
 class Package:
@@ -108,31 +110,10 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         top_packages: list[str] = []
 
         log.debug("Started fetching package list from pypi.")
-        async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True) as resp:
-            html = await resp.text()
+        async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True, headers=PYPI_API_HEADERS) as resp:
+            json = await resp.json()
 
-        # due to an lxml memory leak, we have to use a seperate process
-        results_queue = multiprocessing.Queue()
-        parse_process = multiprocessing.Process(target=parse_simple_index, args=(html, results_queue))
-        try:
-            parse_process.daemon = True
-            parse_process.start()
-            log.debug("Waiting for /pypi/simple results queue.")
-            wait_for = functools.partial(results_queue.get, timeout=300)
-            all_packages = await self.bot.loop.run_in_executor(None, wait_for)
-            log.debug("Received list of all packages with %s results from %s", len(all_packages), SIMPLE_INDEX)
-        except Exception:
-            parse_process.kill()
-            parse_process.close()
-            raise
-        else:
-            wait_for = functools.partial(parse_process.join, timeout=10)
-            log.debug("Waiting for /pypi/simple parsing process to stop.")
-            await self.bot.loop.run_in_executor(None, wait_for)
-            log.debug("Closing /pypi/simple parsing process.")
-            await asyncio.sleep(1)
-            parse_process.close()
-
+        all_packages.update(proj["name"] for proj in json["projects"])
         # fetch the top packages as well, if the endpoint is set
         if TOP_PACKAGES:
             try:
@@ -165,7 +146,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
         """Fetch a package from pypi."""
-        async with self.bot.http_session.get(JSON_URL.format(package=package)) as response:
+        async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:
             if response.status == 200 and response.content_type == "application/json":
                 return await response.json()
             return None
@@ -174,7 +155,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
         """Fetch a description parsed into markdown from pypi."""
         url = HTML_URL.format(package=package)
-        async with self.bot.http_session.get(url) as response:
+        async with self.bot.http_session.get(url, headers=PYPI_API_HEADERS) as response:
             if response.status != 200:
                 return None
             html = await response.text()
@@ -284,38 +265,6 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if defer_task:
             defer_task.cancel()
 
-    @pypi_package.autocomplete("package")
-    async def package_autocomplete(self, inter: disnake.CommandInteraction, query: str) -> list[str]:
-        """Autocomplete package names based on the pypi index."""
-        # the packages aren't yet or failed to be loaded
-        if not self.all_packages or not await self.bot.guild_has_feature(
-            inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
-        ):
-            return [query] if query else []
-
-        # otherwise fuzzy-match the package name
-
-        if not query:
-            if self.top_packages:
-                the_sample = self.top_packages
-            else:
-                the_sample = self.all_packages
-
-            # we need to shortcircuit and skip the fuzzing results
-            return [name for name in random.sample(the_sample, k=min(25, len(the_sample)))]
-
-        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
-        fuzz_results = rapidfuzz.process.extract(
-            query,
-            self.all_packages,
-            scorer=scorer,  # type: ignore
-            limit=25,
-            score_cutoff=0.4,
-        )
-
-        # make the completion
-        return [value for value, score, key in fuzz_results]
-
     async def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse pypi search results."""
         results = []
@@ -358,7 +307,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
             params = {"q": query}
 
             # todo: cache with redis
-            async with self.bot.http_session.get(SEARCH_URL, params=params) as resp:
+            async with self.bot.http_session.get(SEARCH_URL, params=params, headers=PYPI_API_HEADERS) as resp:
                 txt = await resp.text()
 
             packages = await self.parse_pypi_search(txt)
@@ -419,6 +368,52 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed.description = description
         await inter.send(embed=embed, components=components)
         defer_task.cancel()
+
+    @pypi_package.autocomplete("package")
+    async def package_autocomplete(
+        self, inter: disnake.CommandInteraction, query: str, *, include_query: bool = False
+    ) -> list[str]:
+        """Autocomplete package names based on the pypi index."""
+        # the packages aren't yet or failed to be loaded
+        if not self.all_packages or not await self.bot.guild_has_feature(
+            inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
+        ):
+            return [query] if query else []
+
+        # otherwise fuzzy-match the package name
+
+        if not query:
+            if self.top_packages:
+                the_sample = self.top_packages
+            else:
+                the_sample = self.all_packages
+
+            # we need to shortcircuit and skip the fuzzing results
+            return [name for name in random.sample(the_sample, k=min(25, len(the_sample)))]
+
+        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
+        fuzz_results = rapidfuzz.process.extract(
+            query,
+            self.all_packages,
+            scorer=scorer,  # type: ignore
+            limit=25,
+            score_cutoff=0.4,
+        )
+
+        # make the completion
+        res = [value for value, score, key in fuzz_results]
+
+        # we need to make sure the query is included and at the top if we're supposed to include it
+        if include_query:
+            if query in res:
+                res.remove(query)
+                res.insert(0, query)
+            elif len(res) > 24:
+                res.pop()
+            res.insert(0, query)
+        return res
+
+    pypi_search.autocomplete("query")(functools.partial(package_autocomplete, include_query=True))
 
 
 def setup(bot: Monty) -> None:
