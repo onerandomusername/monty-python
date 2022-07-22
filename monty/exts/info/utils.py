@@ -41,7 +41,8 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         if len(characters) > 50:
-            await ctx.send("Too many characters ({len(characters)}/50)")
+            await ctx.send(f"Too many characters ({len(characters)}*50)")
+            return
 
         def get_info(char: str) -> Tuple[str, str]:
             digit = f"{ord(char):x}"
