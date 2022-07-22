@@ -28,15 +28,17 @@ class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False})
         spl = spl.split("\n")
         if command is None:
             command: commands.Command = ctx.command
-        qualname = command.qualified_name.replace(".", "_")
-        self.bot.stats.incr("prefix_commands." + qualname + ".uses")
+        qualname = command.qualified_name
+        self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".uses")
         logger.info(
-            "command {command!s} {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
-                author=ctx.author,
-                channel=ctx.channel,
-                command=command,
-                content=spl[0] + (" ..." if len(spl) > 1 else ""),
-            )
+            "command %s by %s (%s) in channel %s (%s) in guild %s: %s",
+            qualname,
+            ctx.author,
+            ctx.author.id,
+            ctx.channel,
+            ctx.channel.id,
+            ctx.guild.id,
+            spl[0] + (" ..." if len(spl) > 1 else ""),
         )
 
     @commands.Cog.listener()
@@ -48,10 +50,18 @@ class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False})
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
         """Log a successful command completion."""
-        logger.info(f"command by {ctx.author} has completed!")
+        qualname = ctx.command.qualified_name
+        logger.info(
+            "command %s by %s (%s) in channel %s (%s) in guild %s has completed!",
+            qualname,
+            ctx.author,
+            ctx.author.id,
+            ctx.channel,
+            ctx.channel.id,
+            ctx.guild.id,
+        )
 
-        qualname = ctx.command.qualified_name.replace(".", "_")
-        self.bot.stats.incr("prefix_commands." + qualname + ".completion")
+        self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".completion")
 
     @commands.Cog.listener()
     async def on_slash_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
@@ -61,24 +71,34 @@ class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False})
         # todo: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
             return
-        qualname = inter.application_command.qualified_name.replace(".", "_")
-        self.bot.stats.incr("slash_commands." + qualname + ".uses")
+        qualname = inter.application_command.qualified_name
+        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".uses")
 
         logger.info(
-            "Slash command `{command!s}` by {author!s} ({author.id}) in {channel!s} ({channel.id}): {content}".format(
-                author=inter.author,
-                channel=inter.channel,
-                command=inter.application_command.qualified_name,
-                content=spl[0] + (" ..." if len(spl) > 1 else ""),
-            )
+            "slash command `%s` by %s (%s) in channel %s (%s) in guild %s: %s",
+            inter.application_command.qualified_name,
+            inter.author,
+            inter.author.id,
+            inter.channel,
+            inter.channel_id,
+            inter.guild_id,
+            spl[0] + (" ..." if len(spl) > 1 else ""),
         )
 
     @commands.Cog.listener()
     async def on_slash_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Log slash command completion."""
-        qualname = inter.application_command.qualified_name.replace(".", "_")
-        self.bot.stats.incr("slash_commands." + qualname + ".completion")
-        logger.info(f"slash command by {inter.author} has completed!")
+        qualname = inter.application_command.qualified_name
+        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".completion")
+        logger.info(
+            "slash command `%s` by %s (%s) in channel %s (%s) in guild %s has completed!",
+            qualname,
+            inter.author,
+            inter.author.id,
+            inter.channel,
+            inter.channel_id,
+            inter.guild_id,
+        )
 
 
 def setup(bot: Monty) -> None:
