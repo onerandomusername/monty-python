@@ -179,6 +179,8 @@ class ErrorHandler(
                         type(error.original), error.original, tb=error.original.__traceback__, limit=-3
                     )
                 ).replace("``", "`\u200b`")
+                if len(error_str) > 3000:
+                    error_str = error_str[-3000:]
                 msg = (
                     "Something went wrong internally in the action you were trying to execute. "
                     "Please report this error and the code below and what you were trying to do in "
