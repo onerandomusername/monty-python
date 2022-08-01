@@ -19,13 +19,13 @@ def update_counts_to_time(rollout: Rollout, current_time: datetime.datetime) -> 
     if abs(rollout.rollout_by - current_time) < datetime.timedelta(minutes=5):
         return find_new_hash_levels(rollout, goal_percent=rollout.rollout_to_percent)
 
-    old_level = compute_current_percent(rollout)
+    old_level = compute_current_percent(rollout) * 100
     goal = rollout.rollout_to_percent
     seconds_elapsed = (current_time - rollout.hashes_last_updated).total_seconds()
     total_seconds = (rollout.rollout_by - rollout.hashes_last_updated).total_seconds()
 
-    new_diff = math.floor(seconds_elapsed / (total_seconds) * (goal - old_level))
-    return find_new_hash_levels(rollout, new_diff)
+    new_diff = round(seconds_elapsed / (total_seconds) * (goal - old_level), 2)
+    return find_new_hash_levels(rollout, new_diff + old_level)
 
 
 def compute_current_percent(rollout: Rollout) -> float:
@@ -36,7 +36,7 @@ def compute_current_percent(rollout: Rollout) -> float:
 def find_new_hash_levels(rollout: Rollout, goal_percent: float) -> tuple[int, int]:
     """Calcuate the new hash levels from the provided goal percentage."""
     # the goal_percent comes as 0 to 100, instead of 0 to 1.
-    goal_percent /= 100
+    goal_percent = round(goal_percent / 100, 5)
     high: float = rollout.rollout_hash_high
     low: float = rollout.rollout_hash_low
 
