@@ -33,6 +33,7 @@ async def main() -> None:
     """Create and run the bot."""
     disnake.Embed.set_default_colour(constants.Colours.python_yellow)
     monkey_patches.patch_typing()
+    monkey_patches.patch_inter_send()
 
     # we make our redis session here and pass it to cachingutils
     if not constants.RedisConfig.use_fakeredis:

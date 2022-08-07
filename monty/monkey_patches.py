@@ -68,3 +68,21 @@ def patch_typing() -> None:
             pass
 
     disnake.http.HTTPClient.send_typing = honeybadger_type  # type: ignore
+
+
+original_inter_send = disnake.Interaction.send
+
+
+def patch_inter_send() -> None:
+    """Patch disnake.Interaction.send to always send a message, even if we encounter a race condition."""
+    log.debug("Patching disnake.Interaction.send before a fix is submitted to the upstream version.")
+
+    async def always_send(self: disnake.Interaction, *args, **kwargs) -> None:
+        try:
+            return await original_inter_send(self, *args, **kwargs)
+        except disnake.HTTPException as e:
+            if e.code != 40060:  # interaction already responded
+                raise
+            return await self.followup.send(*args, **kwargs)  # type: ignore
+
+    disnake.Interaction.send = always_send
