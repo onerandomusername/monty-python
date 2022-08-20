@@ -124,7 +124,8 @@ class CodeButtons(
         return self.bot.get_cog("Code Block")
 
     async def _upload_to_workbin(
-        self, message: disnake.Message, *, provide_link: bool = False
+        self,
+        message: disnake.Message,
     ) -> tuple[bool, str, Optional[str]]:
         success, code, is_paste = await self.parse_code(
             message,
@@ -140,33 +141,33 @@ class CodeButtons(
 
         url = await send_to_paste_service(self.bot, code, extension="python")
 
-        if provide_link:
-            msg = f"I've uploaded [this message]({message.jump_url}) to paste, you can view it here: <{url}>"
-        else:
-            msg = f"I've uploaded this message to paste, you can view it here: <{url}>"
+        msg = f"I've uploaded this message to paste, you can view it here: <{url}>"
         return True, msg, url
         ...
 
     @commands.message_command(name="Upload to Workbin")
     async def message_command_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
         """Upload the message to the paste service."""
-        success, msg, url = await self._upload_to_workbin(inter.target, provide_link=True)
+        success, msg, url = await self._upload_to_workbin(inter.target)
         if not success:
             await inter.send(msg, ephemeral=True)
             return
 
-        button = disnake.ui.Button(
-            style=disnake.ButtonStyle.url,
-            label="Click to open in workbin",
-            url=url,
-        )
-        await inter.send(msg, components=button)
+        components = [
+            disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=url,
+            ),
+            disnake.ui.Button(label="View original message", url=inter.target.jump_url),
+        ]
+        await inter.send(msg, components=components)
 
     @commands.command(name="paste", aliases=("p",))
     async def prefix_paste(self, ctx: commands.Context, message: disnake.Message = None) -> None:
         """Paste the contents of the provided message on workbin."""
         if not message:
-            if not ctx.message.reference:
+            if not ctx.message.reference or not isinstance(ctx.message.reference.resolved, disnake.Message):
                 raise commands.UserInputError(
                     "You must either provide a valid message to paste, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
@@ -185,14 +186,17 @@ class CodeButtons(
             await ctx.send(msg, reference=reference, allowed_mentions=mentions)
             return
 
-        button = None
+        components = []
         if url and url.startswith("http"):
-            button = disnake.ui.Button(
-                style=disnake.ButtonStyle.url,
-                label="Click to open in workbin",
-                url=url,
+            components.append(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.url,
+                    label="Click to open in workbin",
+                    url=url,
+                )
             )
-        await ctx.send(msg, components=button, reference=reference, allowed_mentions=mentions)
+        components.append(disnake.ui.Button(label="View original message", url=message.jump_url))
+        await ctx.send(msg, components=components, reference=reference, allowed_mentions=mentions)
 
     @commands.slash_command(name="paste", description="Paste a message to the workbin.")
     async def slash_paste(
@@ -209,16 +213,21 @@ class CodeButtons(
         """
         inter.channel_id = inter.channel.id
 
-        success, msg, url = await self._upload_to_workbin(message, provide_link=True)
+        success, msg, url = await self._upload_to_workbin(message)
         if not success:
             await inter.send(msg, ephemeral=True)
             return
-        button = disnake.ui.Button(
-            style=disnake.ButtonStyle.url,
-            label="Click to open in workbin",
-            url=url,
-        )
-        await inter.send(msg, components=button)
+
+        components = [
+            disnake.ui.Button(
+                style=disnake.ButtonStyle.url,
+                label="Click to open in workbin",
+                url=url,
+            ),
+            disnake.ui.Button(url=message.jump_url, label="Jump to message"),
+        ]
+
+        await inter.send(msg, components=components)
 
     async def _format_black(
         self,
@@ -267,19 +276,22 @@ class CodeButtons(
     @commands.message_command(name="Format with Black")
     async def message_command_black(self, inter: disnake.MessageCommandInteraction) -> None:
         """Format the provided message with black."""
-        success, msg, url = await self._format_black(inter.target, include_message=True)
+        success, msg, url = await self._format_black(inter.target)
         if not success:
             await inter.send(msg, ephemeral=True)
             return
-        button = disnake.utils.MISSING
-        if url:
 
-            button = disnake.ui.Button(
-                style=disnake.ButtonStyle.url,
-                label="Click to open in workbin",
-                url=url,
+        components = []
+        if url:
+            components.append(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.url,
+                    label="Click to open in workbin",
+                    url=url,
+                )
             )
-        await inter.send(msg, components=button)
+        components.append(disnake.ui.Button(label="View original message", url=inter.target.jump_url))
+        await inter.send(msg, components=components)
 
     @commands.command(name="blackify", aliases=("black", "bl"))
     async def prefix_black(self, ctx: commands.Context, message: disnake.Message = None) -> None:
