@@ -153,7 +153,8 @@ class CodeButtons(
             await inter.send(msg, ephemeral=True)
             return
 
-        components = [
+        components: list[disnake.ui.Button] = [
+            DeleteButton(inter.author),
             disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
@@ -186,7 +187,7 @@ class CodeButtons(
             await ctx.send(msg, reference=reference, allowed_mentions=mentions)
             return
 
-        components = []
+        components: list[disnake.ui.Button] = [DeleteButton(ctx.author)]
         if url and url.startswith("http"):
             components.append(
                 disnake.ui.Button(
@@ -218,7 +219,8 @@ class CodeButtons(
             await inter.send(msg, ephemeral=True)
             return
 
-        components = [
+        components: list[disnake.ui.Button] = [
+            DeleteButton(inter.author),
             disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",
@@ -281,7 +283,7 @@ class CodeButtons(
             await inter.send(msg, ephemeral=True)
             return
 
-        components = []
+        components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if url:
             components.append(
                 disnake.ui.Button(
@@ -343,11 +345,15 @@ class CodeButtons(
 
         # only provide a modal if the code is short enough
         if len(code) <= 4000:
-            components = disnake.ui.TextInput(
-                label="Code", custom_id="code", style=disnake.TextInputStyle.long, value=code, required=True
+            modal_components = disnake.ui.TextInput(
+                label="Code",
+                custom_id="code",
+                style=disnake.TextInputStyle.long,
+                value=code,
+                required=True,
             )
             await inter.response.send_modal(
-                title="Run in Snekbox", custom_id=f"snekbox-eval-{inter.id}", components=components
+                title="Run in Snekbox", custom_id=f"snekbox-eval-{inter.id}", components=modal_components
             )
 
             try:
@@ -369,14 +375,15 @@ class CodeButtons(
             target, code, return_result=True, original_source=original_source
         )
 
-        components = [DeleteButton(inter.author)]
+        components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if link and link.startswith("http"):
-            button = disnake.ui.Button(
-                style=disnake.ButtonStyle.url,
-                label="Click to open in workbin",
-                url=link,
+            components.append(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.url,
+                    label="Click to open in workbin",
+                    url=link,
+                )
             )
-            components.append(button)
 
         await inter.edit_original_message(content=msg, components=components)
 
