@@ -77,7 +77,6 @@ class Bookmark(
     def build_bookmark_dm(target_message: disnake.Message, title: str) -> disnake.Embed:
         """Build the embed to DM the bookmark requester."""
         embed = disnake.Embed(title=title, description=target_message.content, colour=Colours.soft_green)
-        embed.add_field(name="Wanna give it a visit?", value=f"[Visit original message]({target_message.jump_url})")
         embed.set_author(name=target_message.author, icon_url=target_message.author.display_avatar.url)
         embed.set_thumbnail(url=Icons.bookmark)
 
@@ -112,10 +111,17 @@ class Bookmark(
                 description="You don't have permission to view that channel.",
             )
         embed = self.build_bookmark_dm(target_message, title)
+        components = [
+            disnake.ui.ActionRow(
+                disnake.ui.Button(url=target_message.jump_url, label="Jump to Message"),
+            ),
+            disnake.ui.ActionRow(
+                disnake.ui.Button(
+                    custom_id=DELETE_CUSTOM_ID, label="Delete this bookmark", style=disnake.ButtonStyle.red
+                )
+            ),
+        ]
         try:
-            components = disnake.ui.Button(
-                custom_id=DELETE_CUSTOM_ID, label="Delete this bookmark", style=disnake.ButtonStyle.red
-            )
             message = await user.send(embed=embed, components=components)
         except disnake.Forbidden:
             error_embed = self.build_error_embed(user)
@@ -130,17 +136,19 @@ class Bookmark(
     ) -> disnake.Message:
         """Sends an embed, with a button, so users can click to bookmark the message too."""
         embed = disnake.Embed(
-            description=(
-                f"Click the button below to be sent your very own bookmark to "
-                f"[this message]({target_message.jump_url})."
-            ),
+            description=("Click the button below to be sent your very own bookmark to the linked message!"),
             colour=Colours.soft_green,
         )
-        components = disnake.ui.Button(
-            custom_id=f"{CUSTOM_ID}{target_message.channel.id}-{target_message.id}",
-            style=disnake.ButtonStyle.blurple,
-            emoji=BOOKMARK_EMOJI,
-        )
+        components = [
+            disnake.ui.ActionRow(
+                disnake.ui.Button(
+                    custom_id=f"{CUSTOM_ID}{target_message.channel.id}-{target_message.id}",
+                    style=disnake.ButtonStyle.blurple,
+                    emoji=BOOKMARK_EMOJI,
+                ),
+                disnake.ui.Button(label="Jump to Message", url=target_message.jump_url),
+            ),
+        ]
         if isinstance(ctx, commands.Context) and ctx.channel == target_message.channel:
             if ctx.channel.permissions_for(ctx.me).read_message_history:
                 reference = target_message.to_reference(fail_if_not_exists=False)
@@ -272,7 +280,8 @@ class Bookmark(
         if isinstance(maybe_error, disnake.Embed):
             await inter.send(embed=maybe_error, ephemeral=True)
         else:
-            await inter.send(f"Sent you a [direct message](<{maybe_error.jump_url}>).", ephemeral=True)
+            components = disnake.ui.Button(url=maybe_error.jump_url, label="Jump to Direct Messages")
+            await inter.send("Sent you a direct message.", ephemeral=True, components=components)
 
     @commands.Cog.listener("on_button_click")
     async def maybe_delete_bookmark_button(self, inter: disnake.MessageInteraction) -> None:
