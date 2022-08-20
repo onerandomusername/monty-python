@@ -328,7 +328,7 @@ dev = ["tox", "bump2version (<1)", "sphinx (<2)", "importlib-metadata (<3)", "im
 
 [[package]]
 name = "disnake"
-version = "2.6.0a4317+g6769f80d"
+version = "2.6.0a4337+gb4311439"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -348,7 +348,7 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 type = "git"
 url = "https://github.com/DisnakeDev/disnake.git"
 reference = 'master'
-resolved_reference = "6769f80d5ad346752777755cf006031928d80767"
+resolved_reference = "b43114395556d4c776c06595c0b1f6a429174872"
 
 [[package]]
 name = "distlib"
@@ -525,14 +525,14 @@ graphql-core = ">=3.2,<3.3"
 yarl = ">=1.6,<2.0"
 
 [package.extras]
-aiohttp = ["aiohttp (>=3.7.1,<3.9.0)"]
-all = ["aiohttp (>=3.7.1,<3.9.0)", "requests (>=2.26,<3)", "requests-toolbelt (>=0.9.1,<1)", "urllib3 (>=1.26)", "botocore (>=1.21,<2)", "websockets (>=9,<10)", "websockets (>=10,<11)"]
+websockets = ["websockets (>=10,<11)", "websockets (>=9,<10)"]
+test_no_transport = ["aiofiles", "vcrpy (==4.0.2)", "mock (==4.0.2)", "pytest-cov (==3.0.0)", "pytest-console-scripts (==1.3.1)", "pytest-asyncio (==0.16.0)", "pytest (==6.2.5)", "parse (==1.15.0)"]
+test = ["websockets (>=10,<11)", "websockets (>=9,<10)", "aiofiles", "vcrpy (==4.0.2)", "mock (==4.0.2)", "pytest-cov (==3.0.0)", "pytest-console-scripts (==1.3.1)", "pytest-asyncio (==0.16.0)", "pytest (==6.2.5)", "parse (==1.15.0)", "botocore (>=1.21,<2)", "urllib3 (>=1.26)", "requests-toolbelt (>=0.9.1,<1)", "requests (>=2.26,<3)", "aiohttp (>=3.7.1,<3.9.0)"]
+requests = ["urllib3 (>=1.26)", "requests-toolbelt (>=0.9.1,<1)", "requests (>=2.26,<3)"]
+dev = ["websockets (>=10,<11)", "websockets (>=9,<10)", "aiofiles", "vcrpy (==4.0.2)", "mock (==4.0.2)", "pytest-cov (==3.0.0)", "pytest-console-scripts (==1.3.1)", "pytest-asyncio (==0.16.0)", "pytest (==6.2.5)", "parse (==1.15.0)", "types-requests", "types-mock", "types-aiofiles", "sphinx-argparse (==0.2.5)", "sphinx-rtd-theme (>=0.4,<1)", "sphinx (>=3.0.0,<4)", "mypy (==0.910)", "isort (==4.3.21)", "flake8 (==3.8.1)", "check-manifest (>=0.42,<1)", "black (==22.3.0)", "botocore (>=1.21,<2)", "urllib3 (>=1.26)", "requests-toolbelt (>=0.9.1,<1)", "requests (>=2.26,<3)", "aiohttp (>=3.7.1,<3.9.0)"]
 botocore = ["botocore (>=1.21,<2)"]
-dev = ["aiohttp (>=3.7.1,<3.9.0)", "requests (>=2.26,<3)", "requests-toolbelt (>=0.9.1,<1)", "urllib3 (>=1.26)", "botocore (>=1.21,<2)", "black (==22.3.0)", "check-manifest (>=0.42,<1)", "flake8 (==3.8.1)", "isort (==4.3.21)", "mypy (==0.910)", "sphinx (>=3.0.0,<4)", "sphinx-rtd-theme (>=0.4,<1)", "sphinx-argparse (==0.2.5)", "types-aiofiles", "types-mock", "types-requests", "parse (==1.15.0)", "pytest (==6.2.5)", "pytest-asyncio (==0.16.0)", "pytest-console-scripts (==1.3.1)", "pytest-cov (==3.0.0)", "mock (==4.0.2)", "vcrpy (==4.0.2)", "aiofiles", "websockets (>=9,<10)", "websockets (>=10,<11)"]
-requests = ["requests (>=2.26,<3)", "requests-toolbelt (>=0.9.1,<1)", "urllib3 (>=1.26)"]
-test = ["aiohttp (>=3.7.1,<3.9.0)", "requests (>=2.26,<3)", "requests-toolbelt (>=0.9.1,<1)", "urllib3 (>=1.26)", "botocore (>=1.21,<2)", "parse (==1.15.0)", "pytest (==6.2.5)", "pytest-asyncio (==0.16.0)", "pytest-console-scripts (==1.3.1)", "pytest-cov (==3.0.0)", "mock (==4.0.2)", "vcrpy (==4.0.2)", "aiofiles", "websockets (>=9,<10)", "websockets (>=10,<11)"]
-test_no_transport = ["parse (==1.15.0)", "pytest (==6.2.5)", "pytest-asyncio (==0.16.0)", "pytest-console-scripts (==1.3.1)", "pytest-cov (==3.0.0)", "mock (==4.0.2)", "vcrpy (==4.0.2)", "aiofiles"]
-websockets = ["websockets (>=9,<10)", "websockets (>=10,<11)"]
+all = ["websockets (>=10,<11)", "websockets (>=9,<10)", "botocore (>=1.21,<2)", "urllib3 (>=1.26)", "requests-toolbelt (>=0.9.1,<1)", "requests (>=2.26,<3)", "aiohttp (>=3.7.1,<3.9.0)"]
+aiohttp = ["aiohttp (>=3.7.1,<3.9.0)"]
 
 [[package]]
 name = "graphql-core"
@@ -805,8 +805,8 @@ optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-issues (>=3.0.1)", "sphinx-removed-in", "sphinxext-opengraph"]
-tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
+tests = ["pytest-timeout", "pytest-cov", "pytest", "pyroma", "packaging", "olefile", "markdown2", "defusedxml", "coverage", "check-manifest"]
+docs = ["sphinxext-opengraph", "sphinx-removed-in", "sphinx-issues (>=3.0.1)", "sphinx-copybutton", "sphinx (>=2.4)", "olefile", "furo"]
 
 [[package]]
 name = "platformdirs"
@@ -973,8 +973,8 @@ python-versions = ">=3.7"
 nodeenv = ">=1.6.0"
 
 [package.extras]
-all = ["twine (>=3.4.1)"]
 dev = ["twine (>=3.4.1)"]
+all = ["twine (>=3.4.1)"]
 
 [[package]]
 name = "pytest"
@@ -1039,9 +1039,9 @@ pytest = ">=6.2.0"
 pytest-forked = "*"
 
 [package.extras]
-psutil = ["psutil (>=3.0)"]
-setproctitle = ["setproctitle"]
 testing = ["filelock"]
+setproctitle = ["setproctitle"]
+psutil = ["psutil (>=3.0)"]
 
 [[package]]
 name = "python-dateutil"
@@ -1102,8 +1102,8 @@ hiredis = {version = ">=1.0.0", optional = true, markers = "extra == \"hiredis\"
 packaging = ">=20.4"
 
 [package.extras]
+ocsp = ["requests (>=2.26.0)", "pyopenssl (==20.0.1)", "cryptography (>=36.0.1)"]
 hiredis = ["hiredis (>=1.0.0)"]
-ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==20.0.1)", "requests (>=2.26.0)"]
 
 [[package]]
 name = "sentry-sdk"
