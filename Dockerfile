@@ -12,7 +12,7 @@ WORKDIR /bot
 RUN apt update && apt install git gcc -y
 
 RUN pip install -U pip wheel setuptools
-RUN pip install poetry==1.1.13
+RUN pip install poetry==1.1.15
 
 # export requirements after copying req files
 COPY pyproject.toml poetry.lock ./
