@@ -20,7 +20,7 @@ disnake = { git = "https://github.com/onerandomusername/disnake.git", rev='enums
 fakeredis = { url = "https://github.com/dsoftwareinc/fakeredis-py/archive/3b22120dc7718eb63418a48bdcf07532f4e3cbdc.zip", optional = true }
 gql = "^3.4.0"
 lxml = "^4.9.1"
-markdownify = "==0.11.2"
+markdownify = "==0.11.4"
 mistune = "^2.0.4"
 redis = { version = "^4.3.1", extras = ['hiredis'] }
 Pillow = "^9.2.0"
