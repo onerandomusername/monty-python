@@ -1,5 +1,7 @@
 import importlib.metadata
 import random
+from datetime import datetime, timedelta
+from typing import Optional
 
 import disnake
 import psutil
@@ -61,6 +63,13 @@ Latency: `{latency}`
 Up since: <t:{uptime}:R>
 """
 
+PRIVACY = """
+Like every piece of software out there, Monty has a privacy policy.
+Unlike most pieces of software, this is a very short privacy policy.
+
+The privacy policy in full can be found here: <{privacy_url}>.
+"""
+
 COLOURS = (Colours.python_blue, Colours.python_yellow)
 
 
@@ -70,6 +79,8 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
     def __init__(self, bot: Monty):
         self.bot = bot
         self.process = psutil.Process()
+
+        self._app_info_last_fetched: Optional[datetime] = None
 
     @commands.slash_command(name="monty", dm_permission=True)
     async def monty(self, inter: disnake.CommandInteraction) -> None:
@@ -215,6 +226,30 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
+
+    async def application_info(self) -> disnake.AppInfo:
+        """Fetch the application info using a local hour-long cache."""
+        if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
+            self._cached_app_info = await self.bot.application_info()
+            self._app_info_last_fetched = datetime.now()
+        return self._cached_app_info
+
+    @monty.sub_command()
+    async def privacy(self, inter: disnake.AppCommandInteraction, ephemeral: bool = True) -> None:
+        """
+        See the privacy policy regarding what information is stored and shared.
+
+        Parameters
+        ----------
+        ephemeral: Whether to send the privacy information as an ephemeral message.
+        """
+        appinfo = await self.application_info()
+        embed = disnake.Embed(title=f"{self.bot.user.name}'s Privacy Information")
+        embed.description = PRIVACY.format(privacy_url=appinfo.privacy_policy_url)
+        embed.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
+
+        components = DeleteButton(inter.author) if not ephemeral else []
+        await inter.response.send_message(embed=embed, ephemeral=ephemeral, components=components)
 
 
 def setup(bot: Monty) -> None:
