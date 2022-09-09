@@ -133,10 +133,14 @@ class Bookmark(
     @staticmethod
     async def send_embed(
         ctx: typing.Union[commands.Context, disnake.Interaction], target_message: disnake.Message
-    ) -> disnake.Message:
+    ) -> Optional[disnake.Message]:
         """Sends an embed, with a button, so users can click to bookmark the message too."""
+        content = f"Sent you a DM, {ctx.author.mention}"
+
         embed = disnake.Embed(
-            description=("Click the button below to be sent your very own bookmark to the linked message!"),
+            description=(
+                f"If you'd also like to receive a bookmark to the linked message, click the {BOOKMARK_EMOJI} below!"
+            ),
             colour=Colours.soft_green,
         )
         components = [
@@ -149,16 +153,32 @@ class Bookmark(
                 disnake.ui.Button(label="Jump to Message", url=target_message.jump_url),
             ),
         ]
-        if isinstance(ctx, commands.Context) and ctx.channel == target_message.channel:
-            if ctx.channel.permissions_for(ctx.me).read_message_history:
+        if isinstance(ctx, commands.Context):
+            if ctx.channel == target_message.channel and ctx.channel.permissions_for(ctx.me).read_message_history:
                 reference = target_message.to_reference(fail_if_not_exists=False)
             else:
                 reference = None
+
+            _ = (
+                await ctx.send(
+                    content=content,
+                    reference=reference,
+                    components=DeleteButton(ctx.author, initial_message=ctx.message),
+                ),
+            )
             message = await ctx.send(
-                embed=embed, allowed_mentions=disnake.AllowedMentions.none(), components=components, reference=reference
+                embed=embed,
+                allowed_mentions=disnake.AllowedMentions.none(),
+                components=components,
+                reference=reference,
             )
         else:
-            message = await ctx.send(embed=embed, components=components)
+            await ctx.send(content=content, components=DeleteButton(ctx.author))
+            message = await ctx.send(
+                embed=embed,
+                components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
 
         return message
 
