@@ -328,7 +328,7 @@ dev = ["PyTest", "PyTest (<5)", "PyTest-Cov", "PyTest-Cov (<2.6)", "bump2version
 
 [[package]]
 name = "disnake"
-version = "2.6.0a4397+g5929b466"
+version = "2.6.0a4403+g313bf252"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -348,7 +348,7 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 type = "git"
 url = "https://github.com/onerandomusername/disnake.git"
 reference = 'enums'
-resolved_reference = "5929b4668e049919ca6147643c12e5d4ec0fb6db"
+resolved_reference = "082497174810c8d309aa01edf283367bde3e02da"
 
 [[package]]
 name = "distlib"
