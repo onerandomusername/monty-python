@@ -10,7 +10,7 @@ python = "~=3.9"
 aiodns = "~=3.0"
 aiohttp = { version = "~=3.8.1", extras = ['speedups'] }
 arrow = "~=1.2.2"
-attrs = "^21.4.0"
+attrs = "^22.1.0"
 base65536 = "^0.1.1"
 beautifulsoup4 = "^4.10.0"
 cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
