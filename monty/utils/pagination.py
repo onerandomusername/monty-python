@@ -55,6 +55,7 @@ class LinePaginator(commands.Paginator):
         self._linecount = 0
         self._count = len(prefix) + 1  # prefix + newline
         self._pages = []
+        self.prefix: str = prefix or ""
 
     def add_line(self, line: str = "", *, empty: bool = False) -> None:
         """
