@@ -159,9 +159,13 @@ class Bookmark(
             else:
                 reference = None
 
+            allowed_mentions = disnake.AllowedMentions.none()
+            allowed_mentions.users = [ctx.author]
+
             _ = (
                 await ctx.send(
                     content=content,
+                    allowed_mentions=allowed_mentions,
                     reference=reference,
                     components=DeleteButton(ctx.author, initial_message=ctx.message),
                 ),
@@ -173,12 +177,12 @@ class Bookmark(
                 reference=reference,
             )
         else:
-            await ctx.send(content=content, components=DeleteButton(ctx.author))
-            message = await ctx.send(
+            message = await ctx.response.send_message(
                 embed=embed,
                 components=components,
                 allowed_mentions=disnake.AllowedMentions.none(),
             )
+            await ctx.followup.send(content=content, ephemeral=True)
 
         return message
 
