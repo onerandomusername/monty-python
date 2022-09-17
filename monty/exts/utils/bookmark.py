@@ -80,6 +80,12 @@ class Bookmark(
         embed.set_author(name=target_message.author, icon_url=target_message.author.display_avatar.url)
         embed.set_thumbnail(url=Icons.bookmark)
 
+        if attachments := target_message.attachments:
+            # set the image as the first attachment if it exists
+            for attachment in attachments:
+                if attachment.content_type in ("image/jpeg", "image/png"):
+                    embed.set_image(attachment.url)
+
         return embed
 
     @staticmethod
