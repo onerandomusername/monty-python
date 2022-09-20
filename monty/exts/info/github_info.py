@@ -298,9 +298,18 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.group(name="github", aliases=("gh", "git"), invoke_without_command=True)
     @commands.cooldown(3, 20, commands.BucketType.user)
-    async def github_group(self, ctx: commands.Context) -> None:
+    async def github_group(self, ctx: commands.Context, user_or_repo: str = "") -> None:
         """Commands for finding information related to GitHub."""
-        await invoke_help_command(ctx)
+        if not user_or_repo:
+            await invoke_help_command(ctx)
+            return
+        # simplified repo or user syntax here
+        if user_or_repo.count("/") > 0:
+            await self.github_repo_info(ctx, user_or_repo)
+            return
+        else:
+            await self.github_user_info(ctx, user_or_repo)
+            return
 
     @github_group.command(name="user", aliases=("userinfo",))
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
