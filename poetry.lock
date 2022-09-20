@@ -729,26 +729,26 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "ormar"
-version = "0.11.2"
+version = "0.11.3"
 description = "A simple async ORM with fastapi in mind and pydantic validation."
 category = "main"
 optional = false
 python-versions = ">=3.7.0,<4.0.0"
 
 [package.dependencies]
-databases = ">=0.3.2,<0.5.0 || >0.5.0,<0.5.1 || >0.5.1,<0.5.2 || >0.5.2,<0.5.3 || >0.5.3,<0.6.1"
+databases = ">=0.3.2,<0.5.0 || >0.5.0,<0.5.1 || >0.5.1,<0.5.2 || >0.5.2,<0.5.3 || >0.5.3,<0.6.2"
 orjson = {version = ">=3.6.4", optional = true, markers = "extra == \"orjson\" or extra == \"all\""}
-pydantic = ">=1.6.1,<1.7 || >1.7,<1.7.1 || >1.7.1,<1.7.2 || >1.7.2,<1.7.3 || >1.7.3,<1.8 || >1.8,<1.8.1 || >1.8.1,<=1.9.1"
-SQLAlchemy = ">=1.3.18,<1.4.39"
+pydantic = ">=1.6.1,<1.7 || >1.7,<1.7.1 || >1.7.1,<1.7.2 || >1.7.2,<1.7.3 || >1.7.3,<1.8 || >1.8,<1.8.1 || >1.8.1,<1.10.3"
+SQLAlchemy = ">=1.3.18,<1.4.42"
 
 [package.extras]
 aiopg = ["aiopg (>=1.3.3,<2.0.0)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
-all = ["PyMySQL (>=0.9,<=0.9.3)", "aiomysql (>=0.0.21,<0.0.23)", "aiopg (>=1.3.3,<2.0.0)", "aiosqlite (>=0.17.0,<0.18.0)", "asyncpg (>=0.24,<0.26)", "cryptography (>=35,<38)", "mysqlclient (>=2.1.0,<3.0.0)", "orjson (>=3.6.4)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
-crypto = ["cryptography (>=35,<38)"]
-mysql = ["PyMySQL (>=0.9,<=0.9.3)", "aiomysql (>=0.0.21,<0.0.23)"]
+all = ["PyMySQL (>=0.9)", "aiomysql (>=0.1.0)", "aiopg (>=1.3.3,<2.0.0)", "aiosqlite (>=0.17.0,<0.18.0)", "asyncpg (>=0.24,<0.27)", "cryptography (>=35,<39)", "mysqlclient (>=2.1.0,<3.0.0)", "orjson (>=3.6.4)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
+crypto = ["cryptography (>=35,<39)"]
+mysql = ["PyMySQL (>=0.9)", "aiomysql (>=0.1.0)"]
 orjson = ["orjson (>=3.6.4)"]
-postgres = ["asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
-postgresql = ["asyncpg (>=0.24,<0.26)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
+postgres = ["asyncpg (>=0.24,<0.27)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
+postgresql = ["asyncpg (>=0.24,<0.27)", "psycopg2-binary (>=2.9.1,<3.0.0)"]
 sqlite = ["aiosqlite (>=0.17.0,<0.18.0)"]
 
 [[package]]
@@ -1295,7 +1295,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "1e89fe68225fecd277d7403d0b3ed3e9f04c161db77ec0b5db2868b708caf683"
+content-hash = "bf85d7ddfab4b45231385dbe1abd242b147096a90af36df0f98b4a636c419fb2"
 
 [metadata.files]
 aiodns = [
@@ -2258,8 +2258,8 @@ orjson = [
     {file = "orjson-3.7.3.tar.gz", hash = "sha256:6998ff27b9b9aaa4906f6ad40c6c973339c772143f56e8e920f4843fd6c04e75"},
 ]
 ormar = [
-    {file = "ormar-0.11.2-py3-none-any.whl", hash = "sha256:22f8c561bf9991c59eecb3a88d7acde10bfe5380cb36211f2e987fd7fedcd7b0"},
-    {file = "ormar-0.11.2.tar.gz", hash = "sha256:f0fefade9e3650184343de48ef3b90763bb4ba576359a26177ca78e66c529c70"},
+    {file = "ormar-0.11.3-py3-none-any.whl", hash = "sha256:649e922d70d2bda4e079d93c31accd74583f547dcf7e4eb652120d95e39e5308"},
+    {file = "ormar-0.11.3.tar.gz", hash = "sha256:b82994d8db000685a9bbc4ed53bbbef33811f9fcfd3ae1a0318dff6b1a634f86"},
 ]
 ormar-postgres-extensions = [
     {file = "ormar-postgres-extensions-2.1.0.tar.gz", hash = "sha256:fe7f6fc120066ca5ccd6108e67b17aa74d0b6c70456316b8d28ba4119acd3a8e"},
