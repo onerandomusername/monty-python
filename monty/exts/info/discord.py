@@ -8,6 +8,7 @@ from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Endpoints
+from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
@@ -110,7 +111,12 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
             flags += f"{flag}:`{value}`\n"
         embed.add_field(name="Flags", value=flags, inline=False)
 
-        await inter.send(embed=embed, ephemeral=ephemeral)
+        if not ephemeral:
+            components = DeleteButton(inter.author)
+        else:
+            components = []
+
+        await inter.response.send_message(embed=embed, ephemeral=ephemeral, components=components)
 
     @discord.sub_command(name="app-invite")
     async def app_invite(
@@ -192,6 +198,11 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"
             )
 
+        if not ephemeral:
+            components = DeleteButton(inter.author)
+        else:
+            components = []
+
         await inter.response.send_message(
             message,
             allowed_mentions=disnake.AllowedMentions.none(),
@@ -242,7 +253,12 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if invite.guild.icon is not None:
             embed.set_thumbnail(url=invite.guild.icon.url)
 
-        await inter.send(embed=embed, ephemeral=ephemeral)
+        if not ephemeral:
+            components = DeleteButton(inter.author)
+        else:
+            components = []
+
+        await inter.response.send_message(embed=embed, ephemeral=ephemeral, components=components)
 
 
 def setup(bot: Monty) -> None:
