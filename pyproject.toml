@@ -31,7 +31,7 @@ tomli = "^2.0.1"
 # database dependencies
 alembic = "^1.8.1"
 asyncpg = "^0.26.0"
-databases = "^0.6.0"
+databases = "^0.6.1"
 ormar = { version = "^0.11.3", extras = ["orjson"] }
 psycopg2-binary = "^2.9.3"
 pydantic = "^1.9.1"

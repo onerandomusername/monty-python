@@ -284,7 +284,7 @@ toml = ["tomli"]
 
 [[package]]
 name = "databases"
-version = "0.6.0"
+version = "0.6.1"
 description = "Async database support for Python."
 category = "main"
 optional = false
@@ -1295,7 +1295,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "bf85d7ddfab4b45231385dbe1abd242b147096a90af36df0f98b4a636c419fb2"
+content-hash = "69ba4a851f4589d020f733aaa5e9a18c06ec7969bd8856827174374e3ffb3018"
 
 [metadata.files]
 aiodns = [
@@ -1685,8 +1685,8 @@ coverage = [
     {file = "coverage-6.4.4.tar.gz", hash = "sha256:e16c45b726acb780e1e6f88b286d3c10b3914ab03438f32117c4aa52d7f30d58"},
 ]
 databases = [
-    {file = "databases-0.6.0-py3-none-any.whl", hash = "sha256:c36468d9e00f47a825669a73158e6745e0401a169186fdefbb2fb7d43276320a"},
-    {file = "databases-0.6.0.tar.gz", hash = "sha256:abf088900e6665952fede331cb126a1810a097fb3aad54e02a4f58521419dabf"},
+    {file = "databases-0.6.1-py3-none-any.whl", hash = "sha256:47fae85d82d8227049f08b154019913c3ad2f6057ceb0b5ebb36703be6f5666b"},
+    {file = "databases-0.6.1.tar.gz", hash = "sha256:0a69c6983a27e10a5b75ffa094486f1febadd9d5a8db016e69b8c2f6a354dc30"},
 ]
 deprecated = [
     {file = "Deprecated-1.2.13-py2.py3-none-any.whl", hash = "sha256:64756e3e14c8c5eea9795d93c524551432a0be75629f8f29e67ab8caf076c76d"},
