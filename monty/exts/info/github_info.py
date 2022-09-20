@@ -394,11 +394,21 @@ class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         The repository should look like `user/reponame` or `user reponame`.
         """
-        repo: str = "/".join(repo)
-        if repo.count("/") != 1:
+        original_args = repo
+        if repo[0].count("/"):
+            repo: str = repo[0]
+        elif len(repo) >= 2:
+            repo: str = "/".join(repo[:2])
+        else:
+            repo: str = ""
+
+        if not repo or repo.count("/") > 1:
             embed = disnake.Embed(
                 title=random.choice(constants.NEGATIVE_REPLIES),
-                description="The repository should look like `user/reponame` or `user reponame`.",
+                description="The repository should look like `user/reponame` or `user reponame`"
+                + f", not `{' '.join(original_args[:2])}`."
+                if repo
+                else ".",
                 colour=constants.Colours.soft_red,
             )
 
