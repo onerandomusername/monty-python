@@ -163,11 +163,12 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         try:
             user = inter.bot.get_user(client_id) or await inter.bot.fetch_user(client_id)
         except disnake.NotFound:
-            await inter.send("Sorry, that user does not exist.", ephemeral=True)
+            await inter.response.send_message("Sorry, that user does not exist.", ephemeral=True)
             return
 
         if not user.bot:
-            await inter.send("Sorry, that user is not a bot.", ephemeral=True)
+            await inter.response.send_message("Sorry, that user is not a bot.", ephemeral=True)
+            return
 
         scopes = ("bot", "applications.commands") if include_applications_commands else ("bot",)
         url = disnake.utils.oauth_url(
