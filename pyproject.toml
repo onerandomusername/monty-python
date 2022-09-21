@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "~=3.9"
 aiodns = "~=3.0"
-aiohttp = { version = "~=3.8.1", extras = ['speedups'] }
+aiohttp = { version = "~=3.8.2", extras = ['speedups'] }
 arrow = "~=1.2.3"
 attrs = "^22.1.0"
 base65536 = "^0.1.1"
