@@ -26,13 +26,14 @@ if __name__ == "__main__":
     import sys
     import tracemalloc
     import types
+    from typing import Any
 
     # establish the object itself
     object_name = """REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME"""
 
     tracemalloc.start()
     try:
-        src = pkgutil.resolve_name(object_name)
+        src: Any = pkgutil.resolve_name(object_name)
     except ModuleNotFoundError:
         sys.exit(2)
     except AttributeError:
@@ -41,6 +42,16 @@ if __name__ == "__main__":
         sys.exit(4)
     except Exception:
         raise
+
+    try:
+        unwrapped = inspect.unwrap(src)
+        if isinstance(unwrapped, property) and unwrapped.fget:
+            unwrapped = inspect.unwrap(unwrapped.fget)
+    except Exception:
+        # continue with possibly wrapped src object in case of error
+        pass
+    else:
+        src = unwrapped
 
     trace = tracemalloc.get_object_traceback(src)
     tracemalloc.stop()
@@ -80,7 +91,6 @@ if __name__ == "__main__":
         import ast
 
         parsed = ast.parse(sourcecode, filename=filename)
-        node = None
         _endlines: set[tuple[int, int]] = set()
         for node in ast.walk(parsed):
             if not hasattr(node, "lineno"):
