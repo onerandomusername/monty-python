@@ -1098,7 +1098,7 @@ ocsp = ["cryptography (>=36.0.1)", "pyopenssl (==20.0.1)", "requests (>=2.26.0)"
 
 [[package]]
 name = "sentry-sdk"
-version = "1.9.8"
+version = "1.9.10"
 description = "Python client for Sentry (https://sentry.io)"
 category = "main"
 optional = false
@@ -1295,7 +1295,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "ff4a61f06330b294157700bde65e383547b346d72229a6ede34d5721111b0dae"
+content-hash = "efd6268c35b8b44f491af91e83f736c41f90ad5bb2031595e9e89a3b01ffab91"
 
 [metadata.files]
 aiodns = [
@@ -2751,8 +2751,8 @@ redis = [
     {file = "redis-4.3.1.tar.gz", hash = "sha256:94b617b4cd296e94991146f66fc5559756fbefe9493604f0312e4d3298ac63e9"},
 ]
 sentry-sdk = [
-    {file = "sentry-sdk-1.9.8.tar.gz", hash = "sha256:ef4b4d57631662ff81e15c22bf007f7ce07c47321648c8e601fbd22950ed1a79"},
-    {file = "sentry_sdk-1.9.8-py2.py3-none-any.whl", hash = "sha256:7378c08d81da78a4860da7b4900ac51fef38be841d01bc5b7cb249ac51e070c6"},
+    {file = "sentry-sdk-1.9.10.tar.gz", hash = "sha256:4fbace9a763285b608c06f01a807b51acb35f6059da6a01236654e08b0ee81ff"},
+    {file = "sentry_sdk-1.9.10-py2.py3-none-any.whl", hash = "sha256:2469240f6190aaebcb453033519eae69cfe8cc602065b4667e18ee14fc1e35dc"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
