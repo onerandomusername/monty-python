@@ -33,7 +33,7 @@ alembic = "^1.8.1"
 asyncpg = "^0.26.0"
 databases = "^0.6.1"
 ormar = { version = "^0.11.3", extras = ["orjson"] }
-psycopg2-binary = "^2.9.3"
+psycopg2-binary = "^2.9.5"
 pydantic = "^1.10.2"
 SQLAlchemy = "^1.4.41"
 ormar-postgres-extensions = "^2.1.0"
