@@ -756,7 +756,7 @@ sqlite = ["aiosqlite (>=0.17.0,<0.18.0)"]
 
 [[package]]
 name = "ormar-postgres-extensions"
-version = "2.1.0"
+version = "2.3.0"
 description = "PostgreSQL specific extensions to the Ormar ORM"
 category = "main"
 optional = false
@@ -1274,7 +1274,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "715a8ab3a708636ff72482f9dfdc8694d6f05cf500ee406ebb559ea1a6e5f8a5"
+content-hash = "1e98d63504f850b6348da9e35d70fce57a29b30ceeea6f00c89f9b5ccdb3d517"
 
 [metadata.files]
 aiodns = [
@@ -2184,8 +2184,8 @@ ormar = [
     {file = "ormar-0.11.3.tar.gz", hash = "sha256:b82994d8db000685a9bbc4ed53bbbef33811f9fcfd3ae1a0318dff6b1a634f86"},
 ]
 ormar-postgres-extensions = [
-    {file = "ormar-postgres-extensions-2.1.0.tar.gz", hash = "sha256:fe7f6fc120066ca5ccd6108e67b17aa74d0b6c70456316b8d28ba4119acd3a8e"},
-    {file = "ormar_postgres_extensions-2.1.0-py3-none-any.whl", hash = "sha256:86aeaa7e65c5e462dbb9fa793c684c34bb5dc52cc8771e36f2b4d2f14cfba2e6"},
+    {file = "ormar-postgres-extensions-2.3.0.tar.gz", hash = "sha256:b43169732563936b6753e65586269696ce5e06b218d40bf6524afefd09940870"},
+    {file = "ormar_postgres_extensions-2.3.0-py3-none-any.whl", hash = "sha256:ac8783c929242b28853a504fd6bcc3699d8a5010597a5820ad0f4878cf8a1165"},
 ]
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
