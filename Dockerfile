@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set pip to have cleaner logs and no saved cache
 ENV PIP_NO_CACHE_DIR=false
@@ -9,7 +9,8 @@ WORKDIR /bot
 # Install project dependencies
 
 # as we have a git dep, install git
-RUN apt update && apt install git gcc -y
+# we also need g++ and rust to install some other dependencies
+RUN apt update && apt install git g++ rustc -y
 
 RUN pip install -U pip wheel setuptools
 RUN pip install poetry==1.2.2
