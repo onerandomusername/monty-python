@@ -10,6 +10,7 @@ import cachingutils
 import cachingutils.redis
 import disnake
 import redis.asyncio
+from disnake.ext import commands
 
 import monty.alembic
 from monty import constants, monkey_patches
@@ -73,6 +74,14 @@ async def main() -> None:
     # ping redis
     await redis_session.ping()
 
+    command_sync_flags = commands.CommandSyncFlags(
+        allow_command_deletion=False,
+        sync_guild_commands=True,
+        sync_global_commands=True,
+        sync_commands_debug=True,
+        sync_on_cog_actions=True,
+    )
+
     bot = Monty(
         redis_session=redis_session,
         database=database,
@@ -80,6 +89,7 @@ async def main() -> None:
         activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
         allowed_mentions=disnake.AllowedMentions(everyone=False),
         intents=_intents,
+        command_sync_flags=command_sync_flags,
     )
     try:
         bot.load_extensions()
