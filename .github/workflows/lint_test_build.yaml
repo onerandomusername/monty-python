@@ -115,8 +115,8 @@ jobs:
         id: flake8
         if: always() && (steps.pre-commit.outcome == 'success' || steps.pre-commit.outcome == 'failure')
         run: "flake8 \
-        --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
-        [flake8] %(code)s: %(text)s'"
+          --format='::error file=%(path)s,line=%(row)d,col=%(col)d::\
+          [flake8] %(code)s: %(text)s'"
 
   build:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
