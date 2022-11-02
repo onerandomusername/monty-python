@@ -62,7 +62,7 @@ class PEPHeaders:
 class PythonEnhancementProposals(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for displaying information about PEPs."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.peps: Dict[int, str] = {}
         self.autocomplete: dict[str, int] = {}

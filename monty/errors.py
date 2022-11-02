@@ -8,7 +8,7 @@ from disnake.ext import commands
 class APIError(commands.CommandError):
     """Raised when an external API (eg. Wikipedia) returns an error response."""
 
-    def __init__(self, api: str, status_code: int, error_msg: Optional[str] = None):
+    def __init__(self, api: str, status_code: int, error_msg: Optional[str] = None) -> None:
         super().__init__(error_msg)
         self.api = api
         self.status_code = status_code
@@ -18,11 +18,11 @@ class APIError(commands.CommandError):
 class BotAccountRequired(commands.CheckFailure):
     """Raised when the bot needs to be in the guild."""
 
-    def __init__(self, msg: str):
+    def __init__(self, msg: str) -> None:
         self._error_title = "Bot Account Required"
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.msg
 
 
@@ -42,7 +42,7 @@ class LockedResourceError(RuntimeError):
         `id` -- ID of the locked resource
     """
 
-    def __init__(self, resource_type: str, resource_id: Hashable):
+    def __init__(self, resource_type: str, resource_id: Hashable) -> None:
         self.type = resource_type
         self.id = resource_id
 

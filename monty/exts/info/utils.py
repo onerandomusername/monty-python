@@ -19,7 +19,7 @@ log = get_logger(__name__)
 class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """A selection of utilities which don't have a clear category."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.slash_command(name="char-info")

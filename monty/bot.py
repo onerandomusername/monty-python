@@ -50,7 +50,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, database: databases.Database, **kwargs):
+    def __init__(self, redis_session: redis.asyncio.Redis, database: databases.Database, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")

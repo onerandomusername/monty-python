@@ -50,7 +50,7 @@ class HelpQueryNotFound(ValueError):
     query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
-    def __init__(self, arg: str, possible_matches: dict = None):
+    def __init__(self, arg: str, possible_matches: dict = None) -> None:
         super().__init__(arg)
         self.possible_matches = possible_matches
 
@@ -86,7 +86,7 @@ class HelpSession:
         only_can_run: bool = True,
         show_hidden: bool = False,
         max_lines: int = 15,
-    ):
+    ) -> None:
         """Creates an instance of the HelpSession class."""
         self._ctx = ctx
         self._bot: Monty = ctx.bot

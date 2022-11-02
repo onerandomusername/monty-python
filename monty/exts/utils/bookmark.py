@@ -26,7 +26,7 @@ DELETE_CUSTOM_ID = "bookmark_delete_bookmark"
 class DeleteBookmarkView(disnake.ui.View):
     """View for deleting bookmarks. Sent as a response to the delete button."""
 
-    def __init__(self, message: disnake.Message, timeout: float = 180):
+    def __init__(self, message: disnake.Message, timeout: float = 180) -> None:
         self.message = message
 
         super().__init__(timeout=timeout)
@@ -70,7 +70,7 @@ class Bookmark(
 ):
     """Creates personal bookmarks by relaying a message link to the user's DMs."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @staticmethod

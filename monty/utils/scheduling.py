@@ -28,7 +28,7 @@ class Scheduler:
     Any exception raised in a scheduled task is logged when the task is done.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
 
         self._log = get_logger(f"{__name__}.{name}")

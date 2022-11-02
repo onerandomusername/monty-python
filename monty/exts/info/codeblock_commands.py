@@ -38,7 +38,7 @@ class CodeButtons(
 ):
     """Adds automatic buttons to codeblocks if they match commands."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.black_endpoint = URLs.black_formatter
 

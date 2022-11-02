@@ -59,7 +59,7 @@ class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
     Matches each message against a regex and prints the contents of all matched snippets.
     """
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         """Initializes the cog's bot."""
         self.bot = bot
 

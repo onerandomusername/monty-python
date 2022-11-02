@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Handle delete buttons being pressed."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     # button schema

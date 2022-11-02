@@ -22,7 +22,7 @@ THUMBNAIL_SIZE = (80, 80)
 class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for the Colour command."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         with open(pathlib.Path("monty/resources/ryanzec_colours.json")) as f:
             self.colour_mapping = json.load(f)

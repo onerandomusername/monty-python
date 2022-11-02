@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Internal logging for debug and abuse handling."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.Cog.listener()

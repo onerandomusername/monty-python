@@ -24,7 +24,7 @@ CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
 class GlobalSource(commands.Cog):
     """Global source for python objects."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         with open(CODE_FILE, "r") as f:
             # this is declared as final as we should *not* be writing to it

@@ -67,7 +67,7 @@ def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Q
 class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Cog for getting information about PyPi packages."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.searches = {}
         self.fetch_lock = asyncio.Lock()

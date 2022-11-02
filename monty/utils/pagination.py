@@ -39,7 +39,7 @@ class LinePaginator(commands.Paginator):
         max_size: int = 2000,
         max_lines: Optional[int] = None,
         linesep: str = "\n",
-    ):
+    ) -> None:
         """
         Overrides the Paginator.__init__ from inside disnake.ext.commands.
 
@@ -317,7 +317,7 @@ class ImagePaginator(commands.Paginator):
     Refer to ImagePaginator.paginate for documentation on how to use.
     """
 
-    def __init__(self, prefix: str = "", suffix: str = ""):
+    def __init__(self, prefix: str = "", suffix: str = "") -> None:
         super().__init__(prefix, suffix)
         self._current_page = [prefix]
         self.images = []

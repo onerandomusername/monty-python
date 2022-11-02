@@ -10,6 +10,6 @@ class ExtMetadata:
     no_unload: bool = False
     "False to allow the cog to be unloaded, True to block."
 
-    def __init__(self, *, core: bool = False, no_unload: bool = False):
+    def __init__(self, *, core: bool = False, no_unload: bool = False) -> None:
         self.core = core
         self.no_unload = no_unload

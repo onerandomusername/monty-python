@@ -14,7 +14,7 @@ WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
 class DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
-    def __init__(self, *, page_url: str, **options):
+    def __init__(self, *, page_url: str, **options) -> None:
         super().__init__(**options)
         self.page_url = page_url
 

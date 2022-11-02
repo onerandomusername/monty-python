@@ -65,7 +65,7 @@ class Configuration(
 ):
     """Configuration management for each guild."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.load_schema()
 

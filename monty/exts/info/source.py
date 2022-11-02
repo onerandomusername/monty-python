@@ -5,7 +5,7 @@ import re
 import reprlib
 import types
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, TypeVar, Union
 from urllib.parse import urldefrag
 
 import disnake
@@ -44,7 +44,7 @@ logger = get_logger(__name__)
 class FrozenChainMap(Mapping[K, V]):
     """Copied from collections.ChainMap but does not inherit from mutable mapping."""
 
-    def __init__(self, *maps: Mapping[K, V]):
+    def __init__(self, *maps: Mapping[K, V]) -> None:
         self.maps = list(maps) or [{}]  # always at least one map
 
     def __missing__(self, key: K):
@@ -62,10 +62,10 @@ class FrozenChainMap(Mapping[K, V]):
         """Get the object at the provided key."""
         return self[key] if key in self else default
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(set().union(*self.maps))  # reuses stored hash values if possible
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         d = {}
         for mapping in reversed(self.maps):
             d.update(dict.fromkeys(mapping))  # reuses stored hash values if possible
@@ -74,11 +74,11 @@ class FrozenChainMap(Mapping[K, V]):
     def __contains__(self, key: K) -> bool:
         return any(key in m for m in self.maps)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return any(self.maps)
 
     @reprlib.recursive_repr()
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{self.__class__.__name__}({", ".join(map(repr, self.maps))})'
 
     @classmethod

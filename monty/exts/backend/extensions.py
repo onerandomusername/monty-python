@@ -37,7 +37,7 @@ class Action(Enum):
 class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Extension management commands."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.group(

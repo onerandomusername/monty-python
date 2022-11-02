@@ -65,7 +65,7 @@ print(choice(("single quotes", 'double quotes')))
 class EvalModal(disnake.ui.Modal):
     """Modal for evaluation."""
 
-    def __init__(self, snekbox: "Snekbox", *, title: str = "Eval Code"):
+    def __init__(self, snekbox: "Snekbox", *, title: str = "Eval Code") -> None:
         super().__init__(title=title, components=[])
         self.snekbox = snekbox
         self.custom_id = "snekbox_eval"
@@ -92,7 +92,7 @@ def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: disnake.React
 class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Safe evaluation of Python code using Snekbox."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.url = yarl.URL(URLs.snekbox_api)
         self.jobs = {}

@@ -36,7 +36,7 @@ INVITE_USER = """
 class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Useful discord api commands."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.slash_command()

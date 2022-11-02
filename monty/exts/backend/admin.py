@@ -87,7 +87,7 @@ class Admin(
 ):
     """Admin-only eval command and repr."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         log.debug("loading cog Admin")
         self.bot = bot
         self._last_result = None

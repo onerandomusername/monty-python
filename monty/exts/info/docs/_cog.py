@@ -92,7 +92,7 @@ class DocView(DeleteView):
 
     def __init__(
         self, inter: Union[disnake.Interaction, commands.Context], bot: Monty, docitem: DocItem, og_embed: disnake.Embed
-    ):
+    ) -> None:
         super().__init__(user=inter.author, timeout=300)
         self.user_ids = [inter.author.id]
         self.bot = bot
@@ -177,7 +177,7 @@ class DocView(DeleteView):
 class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """A set of commands for querying & displaying documentation."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         # Contains URLs to documentation home pages.
         # Used to calculate inventory diffs on refreshes and to display all currently stored inventories.
         self.base_urls = {}

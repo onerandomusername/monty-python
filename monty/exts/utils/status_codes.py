@@ -18,7 +18,7 @@ class HTTPStatusCodes(commands.Cog, slash_command_attrs={"dm_permission": False}
     If neither animal is selected a cat or dog is chosen randomly for the given status code.
     """
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.group(

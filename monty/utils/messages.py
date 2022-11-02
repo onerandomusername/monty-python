@@ -42,7 +42,7 @@ class DeleteButton(disnake.ui.Button):
         initial_message: Optional[Union[int, disnake.Message]] = None,
         style: Optional[disnake.ButtonStyle] = None,
         emoji: Optional[Union[disnake.Emoji, disnake.PartialEmoji, str]] = None,
-    ):
+    ) -> None:
         if isinstance(user, (disnake.User, disnake.Member)):
             user_id = user.id
         else:
@@ -98,7 +98,7 @@ class DeleteView(disnake.ui.View):
         timeout: float = 1,
         allow_manage_messages: bool = True,
         initial_message: Optional[Union[int, disnake.Message]] = None,
-    ):
+    ) -> None:
         self.delete_button = DeleteButton(
             user=user, allow_manage_messages=allow_manage_messages, initial_message=initial_message
         )

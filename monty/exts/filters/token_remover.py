@@ -67,17 +67,17 @@ class Token:
     timestamp: str
     hmac: str
 
-    def __attrs_post_init__(self, *args, **kwargs):
+    def __attrs_post_init__(self, *args, **kwargs) -> None:
         self.application_id: t.Optional[int] = TokenRemover.extract_user_id(self.user_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user_id}.{self.timestamp}.{self.hmac}"
 
 
 class TokenRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Scans messages for potential discord client tokens and removes them."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         user_agent = "DiscordBot (https://github.com/DisnakeDev/disnake {0}) Python/{1[0]}.{1[1]} aiohttp/{2}"
         DISCORD_REQUEST_HEADERS["User-Agent"] = user_agent.format(

@@ -34,7 +34,7 @@ WIKI_SEARCH_RESULT = "**[{name}]({url})**\n" "{description}\n"
 class WikipediaSearch(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Get info from wikipedia."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> List[str]:

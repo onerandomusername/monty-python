@@ -28,7 +28,7 @@ _SEARCH_END_TAG_ATTRS = (
 class Strainer(SoupStrainer):
     """Subclass of SoupStrainer to allow matching of both `Tag`s and `NavigableString`s."""
 
-    def __init__(self, *, include_strings: bool, **kwargs):
+    def __init__(self, *, include_strings: bool, **kwargs) -> None:
         self.include_strings = include_strings
         passed_text = kwargs.pop("text", None)
         if passed_text is not None:

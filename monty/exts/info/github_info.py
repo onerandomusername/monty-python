@@ -122,7 +122,7 @@ class IssueState:
 class GithubCache:
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # todo: possibly store all of this in redis
         self._memcache: cachingutils.MemoryCache[str, tuple[Optional[str], Any]] = cachingutils.MemoryCache(
             timeout=timedelta(hours=3)
@@ -165,7 +165,7 @@ class GithubCache:
 class GithubInfo(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Fetches info from GitHub."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
         transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS)

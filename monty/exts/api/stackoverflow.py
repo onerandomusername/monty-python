@@ -27,7 +27,7 @@ ERR_EMBED = disnake.Embed(
 class Stackoverflow(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Contains command to interact with stackoverflow from disnake."""
 
-    def __init__(self, bot: bot.Monty):
+    def __init__(self, bot: bot.Monty) -> None:
         self.bot = bot
 
     @commands.command(aliases=["so"])

@@ -19,7 +19,7 @@ class Command(commands.Command):
     also named `root_aliases`.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.root_aliases = kwargs.get("root_aliases", [])
 
@@ -36,7 +36,7 @@ class Group(commands.Group):
     also named `root_aliases`.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.root_aliases = kwargs.get("root_aliases", [])
 

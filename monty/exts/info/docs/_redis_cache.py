@@ -22,7 +22,7 @@ def item_key(item: DocItem) -> str:
 class DocRedisCache(cachingutils.redis.AsyncRedisCache):
     """Interface for redis functionality needed by the Doc cog."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._set_expires = set()
         self.namespace = self._prefix

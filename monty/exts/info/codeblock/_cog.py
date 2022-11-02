@@ -65,7 +65,7 @@ class CodeBlockCog(
     For configurable parameters, see the `code_block` section in config-default.py.
     """
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.

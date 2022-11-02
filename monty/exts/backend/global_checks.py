@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Global checks for monty."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self._bot_invite_link: str = ""
 

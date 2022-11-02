@@ -34,7 +34,7 @@ class StaleInventoryNotifier:
 
     symbol_counter = StaleItemCounter(session=_redis)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._init_task = scheduling.create_task(
             self._init_channel(),
             name="StaleInventoryNotifier channel init",
@@ -82,7 +82,7 @@ class ParseResultFuture(asyncio.Future):
     allowing the futures to only be waited for when clearing if they were user requested.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.user_requested = False
 
@@ -96,7 +96,7 @@ class BatchParser:
     all of the symbols are queued to be parsed to avoid multiple web requests to the same page.
     """
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self._bot: Monty = bot
         self._queue: Deque[QueueItem] = collections.deque()
         self._page_doc_items: DefaultDict[str, List[_cog.DocItem]] = defaultdict(list)

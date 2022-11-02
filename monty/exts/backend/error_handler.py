@@ -34,7 +34,7 @@ class ErrorHandler(
 ):
     """Handles all errors across the bot."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @staticmethod

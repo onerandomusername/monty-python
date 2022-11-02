@@ -26,7 +26,7 @@ log = get_logger(__name__)
 class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
     """Scan messages to detect Discord webhooks links."""
 
-    def __init__(self, bot: Monty):
+    def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     async def maybe_delete(self, msg: disnake.Message) -> bool:
