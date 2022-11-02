@@ -660,8 +660,8 @@ class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     await msg.edit(view=view)
                 else:
                     await inter.edit_original_message(view=view)
-            except disnake.NotFound:
-                return
+            except disnake.HTTPException:
+                pass
 
     @slash_docs.sub_command("view")
     async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: Optional[str]) -> None:
