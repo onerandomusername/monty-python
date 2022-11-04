@@ -68,8 +68,8 @@ jobs:
         with:
           path: ${{ env.PYTHONUSERBASE }}
           key: "python-0-${{ runner.os }}-${{ env.PYTHONUSERBASE }}-\
-          ${{ steps.python.outputs.python-version }}-\
-          ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
+            ${{ steps.python.outputs.python-version }}-\
+            ${{ hashFiles('./pyproject.toml', './poetry.lock') }}"
 
       # Install our dependencies if we did not restore a dependency cache
       - name: Install dependencies using poetry
@@ -86,8 +86,8 @@ jobs:
         with:
           path: ${{ env.PRE_COMMIT_HOME }}
           key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
-          ${{ steps.python.outputs.python-version }}-\
-          ${{ hashFiles('./.pre-commit-config.yaml') }}"
+            ${{ steps.python.outputs.python-version }}-\
+            ${{ hashFiles('./.pre-commit-config.yaml') }}"
 
       # We will not run `black` or `flake8` here, as we will use a separate
       # black and flake8 action. As pre-commit does not support user installs,
