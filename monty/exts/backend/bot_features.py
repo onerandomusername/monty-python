@@ -20,7 +20,7 @@ else:
 logger = get_logger(__name__)
 
 
-class FeatureManagement(commands.Cog):
+class FeatureManagement(commands.Cog, name="Feature Management"):
     """Management commands for bot features."""
 
     def __init__(self, bot: Monty) -> None:

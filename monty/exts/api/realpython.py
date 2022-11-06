@@ -24,7 +24,7 @@ ERROR_EMBED = disnake.Embed(
 )
 
 
-class RealPython(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class RealPython(commands.Cog, name="Real Python", slash_command_attrs={"dm_permission": False}):
     """User initiated command to search for a Real Python article."""
 
     def __init__(self, bot: bot.Monty) -> None:

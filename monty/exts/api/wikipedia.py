@@ -31,7 +31,7 @@ WIKI_SNIPPET_REGEX = r"(<!--.*?-->|<[^>]*>)"
 WIKI_SEARCH_RESULT = "**[{name}]({url})**\n" "{description}\n"
 
 
-class WikipediaSearch(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class WikipediaSearch(commands.Cog, name="Wikipedia Search", slash_command_attrs={"dm_permission": False}):
     """Get info from wikipedia."""
 
     def __init__(self, bot: Monty) -> None:

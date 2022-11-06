@@ -11,7 +11,7 @@ HTTP_DOG_URL = "https://httpstatusdogs.com/img/{code}.jpg"
 HTTP_CAT_URL = "https://http.cat/{code}.jpg"
 
 
-class HTTPStatusCodes(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class HTTPStatusCodes(commands.Cog, name="HTTP Status Codes", slash_command_attrs={"dm_permission": False}):
     """
     Fetch an image depicting HTTP status codes as a dog or a cat.
 

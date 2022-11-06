@@ -23,7 +23,7 @@ WEBHOOK_REMOVER_FEATURE_NAME = "DISCORD_WEBHOOK_FILTER"
 log = get_logger(__name__)
 
 
-class WebhookRemover(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class WebhookRemover(commands.Cog, name="Webhook Remover", slash_command_attrs={"dm_permission": False}):
     """Scan messages to detect Discord webhooks links."""
 
     def __init__(self, bot: Monty) -> None:
