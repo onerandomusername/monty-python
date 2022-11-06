@@ -31,8 +31,9 @@ PASTE_REGEX = re.compile(
 MAX_LEN = 30_000
 
 
-class CodeButtons(
+class CodeBlockActions(
     commands.Cog,
+    name="Code Block Actions",
     slash_command_attrs={"dm_permission": False},
     message_command_attrs={"dm_permission": False},
 ):
@@ -389,8 +390,8 @@ class CodeButtons(
 
 
 def setup(bot: Monty) -> None:
-    """Add the CodeButtons cog to the bot."""
+    """Add the CodeBlockActions cog to the bot."""
     if not URLs.black_formatter:
         logger.warning("Not loading codeblock buttons as black_formatter is not set.")
         return
-    bot.add_cog(CodeButtons(bot))
+    bot.add_cog(CodeBlockActions(bot))

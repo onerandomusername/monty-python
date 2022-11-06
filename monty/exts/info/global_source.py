@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
 
 
-class GlobalSource(commands.Cog):
+class GlobalSource(commands.Cog, name="Global Source"):
     """Global source for python objects."""
 
     def __init__(self, bot: Monty) -> None:

@@ -174,7 +174,7 @@ class DocView(DeleteView):
                 c.disabled = True
 
 
-class DocCog(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permission": False}):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Monty) -> None:

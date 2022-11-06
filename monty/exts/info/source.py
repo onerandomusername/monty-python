@@ -97,7 +97,7 @@ class FrozenChainMap(Mapping[K, V]):
         return self.__class__(m, *self.maps)
 
 
-class MetaSource(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_permission": False}):
     """Display information about my own source code."""
 
     def __init__(self, bot: Monty) -> None:

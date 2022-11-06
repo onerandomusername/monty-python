@@ -35,7 +35,7 @@ else:
 logger = get_logger(__name__)
 
 
-class RolloutCog(commands.Cog):
+class RolloutCog(commands.Cog, name="Rollouts"):
     """Management commands for bot rollouts."""
 
     def __init__(self, bot: Monty) -> None:

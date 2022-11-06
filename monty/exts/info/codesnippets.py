@@ -52,7 +52,7 @@ BITBUCKET_RE = re.compile(
 BLACKLIST = []
 
 
-class CodeSnippets(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
     """
     commands.Cog that parses and sends code snippets to disnake.
 
