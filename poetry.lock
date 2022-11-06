@@ -741,7 +741,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "ormar"
-version = "0.11.3"
+version = "0.12.0"
 description = "A simple async ORM with fastapi in mind and pydantic validation."
 category = "main"
 optional = false
@@ -1295,7 +1295,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "a10723d4dc6a4af226a73454c2a89dbcfbba7edc76af1866d0a5832439f78050"
+content-hash = "f1ac375589ccb85486ee8f3581130c4e42c7deb248f7879d39f06672aa588be7"
 
 [metadata.files]
 aiodns = [
@@ -2283,8 +2283,8 @@ orjson = [
     {file = "orjson-3.8.1.tar.gz", hash = "sha256:07c42de52dfef56cdcaf2278f58e837b26f5b5af5f1fd133a68c4af203851fc7"},
 ]
 ormar = [
-    {file = "ormar-0.11.3-py3-none-any.whl", hash = "sha256:649e922d70d2bda4e079d93c31accd74583f547dcf7e4eb652120d95e39e5308"},
-    {file = "ormar-0.11.3.tar.gz", hash = "sha256:b82994d8db000685a9bbc4ed53bbbef33811f9fcfd3ae1a0318dff6b1a634f86"},
+    {file = "ormar-0.12.0-py3-none-any.whl", hash = "sha256:bb71e5a9ea6477de1c5ed5acf5692067152ef7452ef9625e5eeb13f165068722"},
+    {file = "ormar-0.12.0.tar.gz", hash = "sha256:fc76a3a1ef602c8c65c6b956bd57ecc4961d3ba750f1deb498cda822a7162288"},
 ]
 ormar-postgres-extensions = [
     {file = "ormar-postgres-extensions-2.3.0.tar.gz", hash = "sha256:b43169732563936b6753e65586269696ce5e06b218d40bf6524afefd09940870"},
@@ -2299,6 +2299,8 @@ pathspec = [
     {file = "pathspec-0.10.1.tar.gz", hash = "sha256:7ace6161b621d31e7902eb6b5ae148d12cfd23f4a249b9ffb6b9fee12084323d"},
 ]
 pillow = [
+    {file = "Pillow-9.3.0-1-cp37-cp37m-win32.whl", hash = "sha256:e6ea6b856a74d560d9326c0f5895ef8050126acfdc7ca08ad703eb0081e82b74"},
+    {file = "Pillow-9.3.0-1-cp37-cp37m-win_amd64.whl", hash = "sha256:32a44128c4bdca7f31de5be641187367fe2a450ad83b833ef78910397db491aa"},
     {file = "Pillow-9.3.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:0b7257127d646ff8676ec8a15520013a698d1fdc48bc2a79ba4e53df792526f2"},
     {file = "Pillow-9.3.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:b90f7616ea170e92820775ed47e136208e04c967271c9ef615b6fbd08d9af0e3"},
     {file = "Pillow-9.3.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:68943d632f1f9e3dce98908e873b3a090f6cba1cbb1b892a9e8d97c938871fbe"},
