@@ -150,7 +150,7 @@ class DocView(DeleteView):
         """Allow selecting an attribute of the initial view."""
         if not await self.doc_check(inter):
             return
-        new_embed: disnake.Embed = (await self.bot.get_cog("DocCog").create_symbol_embed(select.values[0]))[0]
+        new_embed: disnake.Embed = (await self.bot.get_cog("Documentation").create_symbol_embed(select.values[0]))[0]
         self.set_link_button(new_embed.url)
         self.sync_attribute_dropdown(select.values[0])
         if inter.response.is_done():
