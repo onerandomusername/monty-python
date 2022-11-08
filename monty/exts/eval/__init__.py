@@ -22,7 +22,7 @@ from monty.utils.services import send_to_paste_service
 
 log = get_logger(__name__)
 
-# copied from pypi cog for snek management
+# copied from PyPI cog for snek management
 
 INLINE_EVAL_REGEX = re.compile(r"\$(?P<fence>`+)(.+)(?P=fence)")
 

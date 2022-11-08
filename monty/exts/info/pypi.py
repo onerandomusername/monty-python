@@ -64,8 +64,8 @@ def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Q
     results_queue.put(result)
 
 
-class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
-    """Cog for getting information about PyPi packages."""
+class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
+    """Cog for getting information about PyPI packages."""
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
@@ -105,11 +105,11 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         timeout=datetime.timedelta(hours=36),
     )
     async def _fetch_package_list(self, *, use_cache: bool = True) -> tuple[set[str], list[str]]:
-        """Fetch all packages from pypi and cache them."""
+        """Fetch all packages from PyPI and cache them."""
         all_packages: set[str] = set()
         top_packages: list[str] = []
 
-        log.debug("Started fetching package list from pypi.")
+        log.debug("Started fetching package list from PyPI.")
         async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True, headers=PYPI_API_HEADERS) as resp:
             json = await resp.json()
 
@@ -133,8 +133,8 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     # run this once a day
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
     async def fetch_package_list(self, *, use_cache: bool = True) -> None:
-        """Fetch all packages from pypi and cache them."""
-        log.debug("Might fetch packages from pypi or use cache.")
+        """Fetch all packages from PyPI and cache them."""
+        log.debug("Might fetch packages from PyPI or use cache.")
         all_packages, top_packages = await self._fetch_package_list(use_cache=use_cache)
         self.all_packages.clear()
         self.all_packages.update(all_packages)
@@ -145,7 +145,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
-        """Fetch a package from pypi."""
+        """Fetch a package from PyPI."""
         async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:
             if response.status == 200 and response.content_type == "application/json":
                 return await response.json()
@@ -153,7 +153,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
-        """Fetch a description parsed into markdown from pypi."""
+        """Fetch a description parsed into markdown from PyPI."""
         url = HTML_URL.format(package=package)
         async with self.bot.http_session.get(url, headers=PYPI_API_HEADERS) as response:
             if response.status != 200:
@@ -219,7 +219,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Useful commands for info about packages on pypi."""
+        """Useful commands for info about packages on PyPI."""
         pass
 
     @pypi.sub_command(name="package")
@@ -231,7 +231,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         Parameters
         ----------
-        package: The package on pypi to get information about.
+        package: The package on PyPI to get information about.
         with_description: Whether or not to show the full description.
         """
         embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
@@ -266,7 +266,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
             defer_task.cancel()
 
     async def parse_pypi_search(self, content: str) -> list[Package]:
-        """Parse pypi search results."""
+        """Parse PyPI search results."""
         results = []
         log.debug("Beginning to parse with bs4")
         # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
@@ -301,7 +301,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         allow_unset=True,
     )
     async def fetch_pypi_search(self, query: str) -> tuple[list[Package], yarl.URL]:
-        """Cache results of searching pypi."""
+        """Cache results of searching PyPI."""
         async with self.fetch_lock:
 
             params = {"q": query}
@@ -332,7 +332,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
         ),
     ) -> None:
         """
-        Search pypi for a package.
+        Search PyPI for a package.
 
         Parameters
         ----------
@@ -373,7 +373,7 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def package_autocomplete(
         self, inter: disnake.CommandInteraction, query: str, *, include_query: bool = False
     ) -> list[str]:
-        """Autocomplete package names based on the pypi index."""
+        """Autocomplete package names based on the PyPI index."""
         # the packages aren't yet or failed to be loaded
         if not self.all_packages or not await self.bot.guild_has_feature(
             inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
@@ -417,5 +417,5 @@ class PyPi(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
 
 def setup(bot: Monty) -> None:
-    """Load the PyPi cog."""
-    bot.add_cog(PyPi(bot))
+    """Load the PyPI cog."""
+    bot.add_cog(PyPI(bot))

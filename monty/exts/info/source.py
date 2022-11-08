@@ -184,7 +184,7 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
                 {name: name for name, obj in self.all_objects.items() if not isinstance(obj, commands.Cog)}
             )
             self.object_display_names.update(
-                {COG_NAME_REGEX.sub(r" \1", name): name for name in self.all_cogs if name != "PyPi"}
+                {COG_NAME_REGEX.sub(r" \1", name): name for name in self.all_cogs if name != "PyPI"}
             )
 
             unsorted = self.object_display_names.copy()

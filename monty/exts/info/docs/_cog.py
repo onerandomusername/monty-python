@@ -560,8 +560,8 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         pass
 
     async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, Optional[str]]:
-        """Find the documentation url on pypi for a given package."""
-        if (pypi := self.bot.get_cog("PyPi")) is None:
+        """Find the documentation url on PyPI for a given package."""
+        if (pypi := self.bot.get_cog("PyPI")) is None:
             return False, None
         if pypi.check_characters(package):
             return False, None
@@ -799,13 +799,13 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         package: str,
     ) -> None:
         """
-        Find a package's documentation from the existing inventories or pypi.
+        Find a package's documentation from the existing inventories or PyPI.
 
         Parameters
         ----------
-        package: Uses the internal information, checks pypi otherwise.
+        package: Uses the internal information, checks PyPI otherwise.
         """
-        if not (pypi := self.bot.get_cog("PyPi")):
+        if not (pypi := self.bot.get_cog("PyPI")):
             await inter.send("Sorry, I'm unable to process this at the moment!", ephemeral=True)
             return
 
@@ -818,7 +818,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
         link = self._get_link_from_inventories(package)
         if not link:
-            # check pypi
+            # check PyPI
             res = await self.maybe_pypi_docs(package, strip=False)
             if res[0]:
                 link = res[1]
