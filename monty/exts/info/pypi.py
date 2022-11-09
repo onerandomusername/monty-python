@@ -386,7 +386,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if self.top_packages:
                 the_sample = self.top_packages
             else:
-                the_sample = self.all_packages
+                the_sample = ["Type to begin searching..."]
 
             # we need to shortcircuit and skip the fuzzing results
             return [name for name in random.sample(the_sample, k=min(25, len(the_sample)))]
