@@ -457,7 +457,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             log.debug("Repository is not a fork.")
 
-        embed.description = description
         repo_owner = repo_data["owner"]
 
         embed.set_author(
@@ -477,6 +476,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 f"• Last Commit {last_pushed}"
             )
         )
+
+        # mirrors have a mirror_url key. See google/skia as an example.
+        if "mirror_url" in repo_data:
+            mirror_url = repo_data["mirror_url"]
+            description += f"\n\nMirrored from <{mirror_url}>."
+
+        embed.description = description
 
         components = [
             DeleteButton(ctx.author, initial_message=ctx.message),
