@@ -478,7 +478,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         )
 
         # mirrors have a mirror_url key. See google/skia as an example.
-        if "mirror_url" in repo_data:
+        if repo_data.get("mirror_url"):
             mirror_url = repo_data["mirror_url"]
             description += f"\n\nMirrored from <{mirror_url}>."
 
