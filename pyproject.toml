@@ -91,7 +91,7 @@ select = [
     # "RUF", # ruff specific exceptions
     "ANN", # flake8-annotations
     "B", # flake8-bugbear
-    # "C", # flake8-comprehensions
+    "C", # flake8-comprehensions
     "D", # flake-docstrings
     "Q", # flake8-quotes
     # "T", # flake8-print
@@ -108,6 +108,7 @@ ignore = [
 
     # temporarily disabled
     "S101", # Use of `assert` detected
+    "C901", # mccabe
 ]
 
 [tool.ruff.per-file-ignores]

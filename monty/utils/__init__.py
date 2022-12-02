@@ -122,7 +122,7 @@ def replace_many(
         assert var == "That WAS a sentence"
     """
     if ignore_case:
-        replacements = dict((word.lower(), replacement) for word, replacement in replacements.items())
+        replacements = {word.lower(): replacement for word, replacement in replacements.items()}
 
     words_to_replace = sorted(replacements, key=lambda s: (-len(s), s))
 

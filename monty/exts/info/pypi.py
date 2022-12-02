@@ -389,7 +389,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 the_sample = ["Type to begin searching..."]
 
             # we need to shortcircuit and skip the fuzzing results
-            return [name for name in random.sample(the_sample, k=min(25, len(the_sample)))]
+            return list(random.sample(the_sample, k=min(25, len(the_sample))))
 
         scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
         fuzz_results = rapidfuzz.process.extract(

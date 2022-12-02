@@ -735,7 +735,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
             tweak.append((name, score))
 
-        tweak = list(sorted(tweak, key=lambda v: v[1], reverse=True))
+        tweak = sorted(tweak, key=lambda v: v[1], reverse=True)
 
         res = []
         if include_query:
@@ -1061,9 +1061,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         if not await self.bot.guild_has_feature(message.guild, INLINE_DOCS_FEATURE_NAME):
             return
 
-        matches: list[str] = list(
-            dict.fromkeys([match for match in DOCS_LINK_REGEX.findall(message.content)][:10], None)
-        )
+        matches: list[str] = list(dict.fromkeys(list(DOCS_LINK_REGEX.findall(message.content))[:10], None))
         if not matches:
             return
 

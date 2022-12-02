@@ -276,7 +276,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
                     )
 
         # Sorts the list of snippets by their match index and joins them into a single message
-        return "\n".join(map(lambda x: x[1], sorted(all_snippets)))
+        return "\n".join(m[1] for m in sorted(all_snippets))
 
     @commands.Cog.listener()
     async def on_message(self, message: disnake.Message) -> None:
