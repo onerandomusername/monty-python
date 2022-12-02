@@ -1,4 +1,3 @@
-import sys
 import traceback
 from typing import Any
 
@@ -44,8 +43,7 @@ class InternalLogger(commands.Cog, slash_command_attrs={"dm_permission": False})
     @commands.Cog.listener()
     async def on_error(self, event_method: Any, *args, **kwargs) -> None:
         """Log all errors without other listeners."""
-        print(f"Ignoring exception in {event_method}", file=sys.stderr)
-        traceback.print_exc()
+        logger.error(f"Ignoring exception in {event_method}:\n{traceback.format_exc()}")
 
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:

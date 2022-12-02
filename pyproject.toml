@@ -94,7 +94,7 @@ select = [
     "C", # flake8-comprehensions
     "D", # flake-docstrings
     "Q", # flake8-quotes
-    # "T", # flake8-print
+    "T201", "T203" # flake8-print
 ]
 ignore = [
     # Missing Docstrings

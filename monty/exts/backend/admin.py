@@ -265,7 +265,7 @@ class Admin(
             pass
         log.trace(f"result: {result}")
         if result is not None:
-            pprint(result, stream=stdout)
+            pprint(result, stream=stdout)  # noqa: T203
         result = stdout.getvalue()
         if result.rstrip("\n") == "":
             result = None
