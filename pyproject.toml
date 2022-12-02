@@ -107,7 +107,6 @@ ignore = [
     "ANN002","ANN003","ANN101","ANN102","ANN204","ANN206","ANN401",
 
     # temporarily disabled
-    "B904", # Within an except clause, raise exceptions with raise ... from err or raise ... from None to distinguish them from errors in exception handlin
     "S101", # Use of `assert` detected
 ]
 

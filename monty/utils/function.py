@@ -42,13 +42,13 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
             _, value = arg_values[arg_pos]
             return value
         except IndexError:
-            raise ValueError(f"Argument position {arg_pos} is out of bounds.")
+            raise ValueError(f"Argument position {arg_pos} is out of bounds.") from None
     elif isinstance(name_or_pos, str):
         arg_name = name_or_pos
         try:
             return arguments[arg_name]
         except KeyError:
-            raise ValueError(f"Argument {arg_name!r} doesn't exist.")
+            raise ValueError(f"Argument {arg_name!r} doesn't exist.") from None
     else:
         raise TypeError("'arg' must either be an int (positional index) or a str (keyword).")
 

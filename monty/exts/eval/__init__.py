@@ -113,8 +113,8 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 timeout=10,
             ) as resp:
                 return await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
 
     async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
         """Upload the eval output to a paste service and return a URL to it if successful."""
@@ -457,8 +457,8 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         try:
             async with self.bot.http_session.get(self.url / "packages", headers=HEADERS, raise_for_status=True) as resp:
                 json = await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
 
         embed = disnake.Embed(title="Installed packages")
         embed.description = ""
@@ -482,8 +482,8 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     self.url / "packages", headers=HEADERS, json=json, raise_for_status=True
                 ) as resp:
                     pass
-            except (aiohttp.ClientError, asyncio.TimeoutError):
-                raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
         await ctx.reply(
             f"[{resp.status}] Installed the packages.",
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
@@ -500,8 +500,8 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                         self.url / "packages" / package, headers=HEADERS, raise_for_status=True
                     ) as resp:
                         pass
-                except (aiohttp.ClientError, asyncio.TimeoutError):
-                    raise APIError("snekbox", 0, "Request errored.")
+                except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                    raise APIError("snekbox", 0, "Request errored.") from e
         await ctx.reply(
             f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
@@ -516,8 +516,8 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 self.url / "packages" / package, headers=HEADERS, raise_for_status=True
             ) as resp:
                 data = await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
         embed = disnake.Embed(title=f"{data['version']} -- {data['name']}")
         if url := data.get("home-page"):
             embed.url = url

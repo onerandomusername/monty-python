@@ -155,7 +155,7 @@ class Configuration(
         try:
             setattr(config, field.name, value)
         except pydantic.ValidationError:
-            raise commands.UserInputError(schema.validation_error_message.format(new=value))
+            raise commands.UserInputError(schema.validation_error_message.format(new=value)) from None
         try:
             # special config for github_issues_org
             if option == "github_issues_org":
@@ -165,7 +165,7 @@ class Configuration(
                     ):
                         pass
                 except aiohttp.ClientResponseError:
-                    raise commands.UserInputError("organisation must be a valid github user or organsation.")
+                    raise commands.UserInputError("organisation must be a valid github user or organsation.") from None
 
             await config.update()
         except Exception:
@@ -223,7 +223,7 @@ class Configuration(
         try:
             setattr(config, field.name, None)
         except pydantic.ValidationError:
-            raise commands.UserInputError("this option is not clearable.")
+            raise commands.UserInputError("this option is not clearable.") from None
 
         await config.update()
         await inter.response.send_message(schema.success_clear_message, ephemeral=True)
