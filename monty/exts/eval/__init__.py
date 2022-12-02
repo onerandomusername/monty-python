@@ -254,14 +254,12 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def send_eval(
         self, ctx: commands.Context, code: str, return_result: bool = True, original_source: bool = False
     ) -> tuple[str, Optional[str]]:
-        """Send eval and receive a tuple of the msg and paste link."""
         pass
 
     @overload
     async def send_eval(
         self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
     ) -> disnake.Message:
-        """Return the bot response from an eval invocation."""
         pass
 
     async def send_eval(

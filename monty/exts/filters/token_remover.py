@@ -56,7 +56,7 @@ TOKEN_RE = re.compile(r"([a-z0-9_-]{23,28})\.([a-z0-9_-]{6,7})\.([a-z0-9_-]{27,}
 # because its not possible.
 MFA_TOKEN_RE = re.compile(r"(mfa\.[a-z0-9_-]{20,})", re.IGNORECASE)
 
-TOKEN_REMOVER_FEATURE_NAME = "DISCORD_BOT_TOKEN_FILTER"
+TOKEN_REMOVER_FEATURE_NAME = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
 
 
 @attr.s(kw_only=False, auto_attribs=True)

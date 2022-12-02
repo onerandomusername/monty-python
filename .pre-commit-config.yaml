@@ -2,7 +2,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.4.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -33,17 +33,7 @@ repos:
       - id: black
         language_version: python3
 
-  - repo: local
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.149
     hooks:
-      - id: flake8
-        name: flake8
-        description: '`flake8` is a command-line utility for enforcing style consistency across Python projects.'
-        entry: flake8
-        language: python
-        types: [python]
-        require_serial: true
-
-
-ci:
-  skip:
-    - flake8
+      - id: ruff
