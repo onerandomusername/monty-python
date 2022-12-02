@@ -96,8 +96,8 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
         inventory_header = (await stream.readline()).decode().rstrip()
         try:
             inventory_version = int(inventory_header[-1:])
-        except ValueError:
-            raise InvalidHeaderError("Unable to convert inventory version header.")
+        except ValueError as e:
+            raise InvalidHeaderError("Unable to convert inventory version header.") from e
 
         has_project_header = (await stream.readline()).startswith(b"# Project")
         has_version_header = (await stream.readline()).startswith(b"# Version")

@@ -4,7 +4,7 @@ except ModuleNotFoundError:
     pass
 else:
     if dotenv.find_dotenv():
-        print("Found .env file, loading environment variables from it.")
+        print("Found .env file, loading environment variables from it.")  # noqa: T201
         dotenv.load_dotenv(override=True)
 
 

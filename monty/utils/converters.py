@@ -77,8 +77,8 @@ class ArrowConverter(commands.Converter):
 
         try:
             return arrow.get(argument)
-        except Exception:
-            raise commands.BadArgument(f"{argument} could not be converted into a valid datetime.")
+        except Exception as e:
+            raise commands.BadArgument(f"{argument} could not be converted into a valid datetime.") from e
 
 
 class RolloutConverter(commands.Converter):
@@ -89,7 +89,7 @@ class RolloutConverter(commands.Converter):
         try:
             return await Rollout.objects.get(name=argument)
         except ormar.NoMatch:
-            raise commands.BadArgument(f"`{argument}` is not a valid rollout name.")
+            raise commands.BadArgument(f"`{argument}` is not a valid rollout name.") from None
 
 
 class MaybeFeature(commands.Converter):
@@ -123,7 +123,7 @@ class FeatureConverter(MaybeFeature):
         try:
             return ctx.bot.features[argument]
         except KeyError:
-            raise commands.BadArgument(f"No feature with name `{argument}` exists.")
+            raise commands.BadArgument(f"No feature with name `{argument}` exists.") from None
 
 
 class Extension(commands.Converter):
@@ -200,14 +200,14 @@ class ValidURL(commands.Converter):
             async with ctx.bot.http_session.get(url) as resp:
                 if resp.status != 200:
                     raise commands.BadArgument(f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200")
-        except CertificateError:
+        except CertificateError as e:
             if url.startswith("https"):
-                raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?")
-            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.")
-        except ValueError:
-            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.")
-        except ClientConnectorError:
-            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.")
+                raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?") from e
+            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.") from e
+        except ValueError as e:
+            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.") from e
+        except ClientConnectorError as e:
+            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.") from e
         return url
 
 
@@ -227,8 +227,10 @@ class Inventory(commands.Converter):
         await ctx.trigger_typing()
         try:
             inventory = await inventory_parser.fetch_inventory(ctx.bot, url)
-        except inventory_parser.InvalidHeaderError:
-            raise commands.BadArgument("Unable to parse inventory because of invalid header, check if URL is correct.")
+        except inventory_parser.InvalidHeaderError as e:
+            raise commands.BadArgument(
+                "Unable to parse inventory because of invalid header, check if URL is correct."
+            ) from e
         else:
             if inventory is None:
                 raise commands.BadArgument(
@@ -265,7 +267,7 @@ class Snowflake(commands.IDConverter):
             time = disnake.utils.snowflake_time(snowflake)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
-            raise commands.BadArgument(f"{error}: {e}")
+            raise commands.BadArgument(f"{error}: {e}") from e
 
         if time < DISCORD_EPOCH_DT:
             raise commands.BadArgument(f"{error}: timestamp is before the Discord epoch.")

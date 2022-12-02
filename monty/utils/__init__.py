@@ -83,7 +83,7 @@ async def disambiguate(
         for coro in pending:
             coro.cancel()
     except asyncio.TimeoutError:
-        raise commands.BadArgument("Timed out.")
+        raise commands.BadArgument("Timed out.") from None
 
     # Guaranteed to not error because of isdecimal() in check
     index = int(result.content)
@@ -91,7 +91,7 @@ async def disambiguate(
     try:
         return entries[index - 1]
     except IndexError:
-        raise commands.BadArgument("Invalid choice.")
+        raise commands.BadArgument("Invalid choice.") from None
 
 
 def replace_many(

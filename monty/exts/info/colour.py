@@ -335,7 +335,7 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
         """Convert RGB values to HSL values."""
         rgb_list = [val / 255.0 for val in rgb]
-        h, l, s = colorsys.rgb_to_hls(*rgb_list)
+        h, l, s = colorsys.rgb_to_hls(*rgb_list)  # noqa: E741
         hsl = (round(h * 360), round(s * 100), round(l * 100))
         return hsl
 

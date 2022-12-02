@@ -319,7 +319,7 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                raise commands.BadArgument("Cannot get source for a dynamically-created object.") from None
 
             lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
         else:
