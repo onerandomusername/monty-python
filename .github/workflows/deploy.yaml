@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.REPO_TOKEN }}
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v3.0
+        uses: azure/setup-kubectl@v3.1
         with:
           version: 'latest'
 
