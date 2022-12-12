@@ -43,7 +43,7 @@ sentry-sdk = "^1.11.1"
 fakeredis = ['fakeredis']
 
 [tool.poetry.dev-dependencies]
-black = "^22.8"
+black = "^22.12"
 coverage = "~=6.5"
 ruff = "^0.0.150"
 isort = "^5.10.1"
