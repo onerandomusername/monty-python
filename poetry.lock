@@ -45,7 +45,7 @@ frozenlist = ">=1.1.0"
 
 [[package]]
 name = "alembic"
-version = "1.8.1"
+version = "1.9.1"
 description = "A database migration tool for SQLAlchemy."
 category = "main"
 optional = false
@@ -320,7 +320,7 @@ dev = ["PyTest", "PyTest (<5)", "PyTest-Cov", "PyTest-Cov (<2.6)", "bump2version
 
 [[package]]
 name = "disnake"
-version = "2.8.0a4469+g5fb000ed"
+version = "2.8.0a4476+g42ef38ae"
 description = "A Python wrapper for the Discord API"
 category = "main"
 optional = false
@@ -342,8 +342,8 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 [package.source]
 type = "git"
 url = "https://github.com/onerandomusername/disnake.git"
-reference = 'master'
-resolved_reference = "5fb000eda7229c5be3b083d77e883ce2391f302d"
+reference = "master"
+resolved_reference = "42ef38aefa6120eeea400f30436b634f38a0df1a"
 
 [[package]]
 name = "distlib"
@@ -1158,7 +1158,7 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~=3.9"
-content-hash = "5a7a6adaba77db8fa385617ee7de32502405580e25d60673fbc07128bdd0992c"
+content-hash = "bd297c64b61a5c3d1b6000bb53ac4a96af833423b76938f1ebd383484252521c"
 
 [metadata.files]
 aiodns = [
@@ -1259,8 +1259,8 @@ aiosignal = [
     {file = "aiosignal-1.2.0.tar.gz", hash = "sha256:78ed67db6c7b7ced4f98e495e572106d5c432a93e1ddd1bf475e1dc05f5b7df2"},
 ]
 alembic = [
-    {file = "alembic-1.8.1-py3-none-any.whl", hash = "sha256:0a024d7f2de88d738d7395ff866997314c837be6104e90c5724350313dee4da4"},
-    {file = "alembic-1.8.1.tar.gz", hash = "sha256:cd0b5e45b14b706426b833f06369b9a6d5ee03f826ec3238723ce8caaf6e5ffa"},
+    {file = "alembic-1.9.1-py3-none-any.whl", hash = "sha256:a9781ed0979a20341c2cbb56bd22bd8db4fc1913f955e705444bd3a97c59fa32"},
+    {file = "alembic-1.9.1.tar.gz", hash = "sha256:f9f76e41061f5ebe27d4fe92600df9dd612521a7683f904dab328ba02cffa5a2"},
 ]
 arrow = [
     {file = "arrow-1.2.3-py3-none-any.whl", hash = "sha256:5a49ab92e3b7b71d96cd6bfcc4df14efefc9dfa96ea19045815914a6ab6b1fe2"},
