@@ -267,7 +267,6 @@ class LinePaginator(commands.Paginator):
                 await inter.response.edit_message(embed=embed)
 
             elif PAGINATION_EMOJI.get(event_name) == LEFT_EMOJI:
-
                 if current_page <= 0:
                     log.debug("Got previous page reaction, but we're on the first page - ignoring")
                     await inter.response.defer()
@@ -286,7 +285,6 @@ class LinePaginator(commands.Paginator):
                 await inter.response.edit_message(embed=embed)
 
             elif PAGINATION_EMOJI.get(event_name) == RIGHT_EMOJI:
-
                 if current_page >= len(paginator.pages) - 1:
                     log.debug("Got next page reaction, but we're on the last page - ignoring")
                     await inter.response.defer()

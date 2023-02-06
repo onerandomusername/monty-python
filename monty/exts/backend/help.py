@@ -255,10 +255,8 @@ class HelpSession:
         """
         results = []
         for name, param in cmd.clean_params.items():
-
             # if argument has a default value
             if param.default is not param.empty:
-
                 if isinstance(param.default, str):
                     show_default = param.default
                 else:
@@ -354,7 +352,6 @@ class HelpSession:
         new_page = True
 
         for details in cat_cmds:
-
             # keep details together, paginating early if it won"t fit
             lines_adding = len(details.split("\n")) + print_cat
             if paginator._linecount + lines_adding > self._max_lines:

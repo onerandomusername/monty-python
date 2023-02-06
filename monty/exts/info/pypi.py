@@ -278,7 +278,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         all_results = parsed.find_all("a", class_="package-snippet", limit=MAX_RESULTS)
         log.info(f"all_results len {len(all_results)}")
         for result in all_results:
-
             name = getattr(result.find(class_="package-snippet__name", recursive=True), "text", None)
             version = getattr(result.find(class_="package-snippet__version", recursive=True), "text", None)
 
@@ -303,7 +302,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def fetch_pypi_search(self, query: str) -> tuple[list[Package], yarl.URL]:
         """Cache results of searching PyPI."""
         async with self.fetch_lock:
-
             params = {"q": query}
 
             # todo: cache with redis

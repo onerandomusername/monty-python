@@ -383,7 +383,6 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await self.eval_command(inter, code=code)
             return
         else:
-
             await inter.response.send_modal(EvalModal(self))
 
     @commands.command(name="eval", aliases=("e",))

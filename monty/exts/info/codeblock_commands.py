@@ -321,7 +321,6 @@ class CodeBlockActions(
 
         button = None
         if url:
-
             button = disnake.ui.Button(
                 style=disnake.ButtonStyle.url,
                 label="Click to open in workbin",

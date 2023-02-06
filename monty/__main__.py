@@ -38,7 +38,6 @@ async def main() -> None:
 
     # we make our redis session here and pass it to cachingutils
     if not constants.RedisConfig.use_fakeredis:
-
         pool = redis.asyncio.BlockingConnectionPool.from_url(
             constants.RedisConfig.uri,
             max_connections=20,

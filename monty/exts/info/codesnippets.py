@@ -297,7 +297,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
-
             if my_perms.manage_messages:
                 try:
                     await message.edit(suppress_embeds=True)

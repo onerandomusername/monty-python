@@ -361,7 +361,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             embed.set_footer(text="Account created at")
 
             if user_data["type"] == "User":
-
                 embed.add_field(
                     name="Followers",
                     value=f"[{user_data['followers']}]({user_data['html_url']}?tab=followers)",
@@ -756,7 +755,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         links: list[IssueState] = []
 
         if issues:
-
             log.trace(f"Found {issues = }")
             # Remove duplicates
             issues = list(dict.fromkeys(issues, None))
