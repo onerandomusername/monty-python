@@ -52,7 +52,7 @@ taskipy = "~=1.10.3"
 python-dotenv = "~=0.21.0"
 pytest = "~=7.2.0"
 pytest-cov = "~=4.0.0"
-pytest-xdist = { version = "~=3.0.2", extras = ["psutil"] }
+pytest-xdist = { version = "~=3.1.0", extras = ["psutil"] }
 pyright = "^1.1.278"
 
 [build-system]
