@@ -6,7 +6,7 @@ authors = ["aru <genericusername414@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "~=3.9"
+python = "~=3.10"
 aiodns = "~=3.0"
 aiohttp = { version = "~=3.8.3", extras = ['speedups'] }
 arrow = "~=1.2.3"
@@ -32,9 +32,9 @@ tomli = "^2.0.1"
 alembic = "^1.8.1"
 asyncpg = "^0.27.0"
 databases = "^0.6.1"
-ormar = { version = "^0.12.0", extras = ["orjson"] }
+ormar = { version = "^0.12.1", extras = ["orjson"] }
 psycopg2-binary = "^2.9.5"
-pydantic = "^1.10.2"
+pydantic = "^1.10.4"
 SQLAlchemy = "^1.4.41"
 ormar-postgres-extensions = "^2.3.0"
 sentry-sdk = "^1.11.1"
