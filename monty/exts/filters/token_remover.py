@@ -206,7 +206,6 @@ class TokenRemover(commands.Cog, name="Token Remover", slash_command_attrs={"dm_
         was_valid = False
         match = None
         for match in MFA_TOKEN_RE.finditer(msg.content):
-
             if self.is_maybe_valid_hmac(match.group()):
                 was_valid = True
                 break

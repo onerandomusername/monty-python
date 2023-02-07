@@ -279,7 +279,6 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # only give feature create option if there is only one feature
         ctx_or_inter: Union[disnake.MessageInteraction, commands.Context[Monty]] = ctx
-        features: list[Feature]
         if len(names) == 1:
             name = names[0]
             feature = self.features.get(name)

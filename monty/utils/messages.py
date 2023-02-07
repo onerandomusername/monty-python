@@ -73,7 +73,6 @@ class DeleteButton(disnake.ui.Button):
 
         # set emoji based on the style
         if emoji is None:
-
             # use the cat trashcan in disnake and nextcord
             if isinstance(user, disnake.Member) and user.guild.id in (
                 constants.Guilds.disnake,

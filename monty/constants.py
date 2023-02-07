@@ -25,7 +25,6 @@ log = cast("MontyLogger", logging.getLogger(__name__))
 
 
 class Client:
-
     name = "Monty Python"
     redis_prefix = config_prefix = "monty-python"
     version = environ.get("GIT_SHA", "main")

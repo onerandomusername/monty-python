@@ -285,7 +285,6 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
         for group, items in inventory.items():
             for symbol_name, relative_doc_url, *_ in items:
-
                 # e.g. get 'class' from 'py:class'
                 group_name = group.split(":")[1]
                 symbol_name = self.ensure_unique_symbol_name(
