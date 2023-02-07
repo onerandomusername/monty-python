@@ -13,7 +13,7 @@ WORKDIR /bot
 RUN apt update && apt install git g++ rustc -y
 
 RUN pip install -U pip wheel setuptools
-RUN pip install poetry==1.2.2
+RUN pip install poetry==1.3
 
 # export requirements after copying req files
 COPY pyproject.toml poetry.lock ./
