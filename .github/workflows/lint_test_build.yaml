@@ -25,7 +25,7 @@ env:
   # Configure pip to cache dependencies and do a user install
   PIP_NO_CACHE_DIR: false
   PIP_USER: 1
-  PYTHON_VERSION: 3.10
+  PYTHON_VERSION: '3.10'
 
   # Make sure package manager does not use virtualenv
   POETRY_VIRTUALENVS_CREATE: false
