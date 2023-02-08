@@ -190,18 +190,18 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 "to the specified guild!" if guild else "to your guild!",
             ]
         )
-        if raw_link:
-            message += f"\n{url}"
-            components = disnake.utils.MISSING
-        else:
-            components = disnake.ui.Button(
-                url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!"
-            )
+
+        components = []
 
         if not ephemeral:
-            components = DeleteButton(inter.author)
+            components.append(DeleteButton(inter.author))
+
+        if raw_link:
+            message += f"\n{url}"
         else:
-            components = []
+            components.append(
+                disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=f"Click to invite {user.name}!")
+            )
 
         await inter.response.send_message(
             message,
