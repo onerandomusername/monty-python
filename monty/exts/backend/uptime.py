@@ -16,6 +16,10 @@ class UptimeMonitor(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if UptimeMonitoring.enabled:
             self.uptime_monitor.start()
 
+    def on_cog_unload(self) -> None:
+        """Stop existing tasks on cog unload."""
+        self.uptime_monitor.cancel()
+
     @tasks.loop(seconds=UptimeMonitoring.interval)
     async def uptime_monitor(self) -> None:
         """Send an uptime ack if uptime monitoring is enabled."""
