@@ -31,6 +31,20 @@ services:
     volumes:
       - /docker/host/monty-redis:/data
 
+  snekbox:
+    << : *restart_policy
+    image: ghcr.io/onerandomusername/snekbox:latest
+    hostname: snekbox
+    privileged: true
+    ports:
+     - "8060:8060"
+    init: true
+    ipc: none
+    environment:
+      PYTHONDONTWRITEBYTECODE: 1
+    volumes:
+      - user-base:/snekbox/user_base
+
   monty-python:
     << : *restart_policy
     image: ghcr.io/onerandomusername/monty-python:latest
@@ -46,9 +60,13 @@ services:
       - REDIS_URI=redis://redis:6379
       - DB_BIND=postgresql://monty:monty@postgres:5432/monty
       - USE_FAKEREDIS=false
+      - SNEKBOX_URL=http://snekbox:8060/
 
     env_file:
       - .env
 
     volumes:
       - .:/bot
+
+volumes:
+  user-base:
