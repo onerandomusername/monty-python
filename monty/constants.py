@@ -13,6 +13,7 @@ __all__ = (
     "Emojis",
     "Icons",
     "Stats",
+    "UptimeMonitoring",
     "Tokens",
     "RedisConfig",
     "ERROR_REPLIES",
@@ -58,6 +59,13 @@ class Client:
 
 
 DEBUG_MODE = Client.debug
+
+
+class UptimeMonitoring:
+    private_url: str = environ.get("UPTIME_URL", "")
+    status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
+    interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
+    enabled: bool = bool(private_url)
 
 
 class Database:
