@@ -4,15 +4,30 @@ x-restart-policy: &restart_policy
   restart: unless-stopped
 
 services:
+  postgres:
+    << : *restart_policy
+    image:
+      postgres:
+    image: postgres:13-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: monty
+      POSTGRES_PASSWORD: monty
+      POSTGRES_USER: monty
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monty"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+
   redis:
     << : *restart_policy
     image: redis:latest
     ports:
       - "127.0.0.1:6379:6379"
-
     command:
       --save 60 1
-
     volumes:
       - /docker/host/monty-redis:/data
 
@@ -24,10 +39,16 @@ services:
     tty: true
 
     depends_on:
+      - postgres
       - redis
-
+    
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_URI=redis://redis:6379
+      - DB_BIND=postgresql://monty:monty@postgres:5432/monty
+      - USE_FAKEREDIS=false
+
     env_file:
       - .env
+
+    volumes:
+      - .:/bot
