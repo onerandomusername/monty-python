@@ -45,7 +45,7 @@ services:
     volumes:
       - user-base:/snekbox/user_base
 
-  monty-python:
+  monty:
     << : *restart_policy
     image: ghcr.io/onerandomusername/monty-python:latest
     container_name: monty-python
