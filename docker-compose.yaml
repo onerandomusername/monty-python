@@ -37,7 +37,7 @@ services:
     hostname: snekbox
     privileged: true
     ports:
-     - "8060:8060"
+     - "127.0.0.1:8060:8060"
     init: true
     ipc: none
     environment:
@@ -49,7 +49,6 @@ services:
     << : *restart_policy
     image: ghcr.io/onerandomusername/monty-python:latest
     container_name: monty-python
-    init: true
     tty: true
 
     depends_on:
