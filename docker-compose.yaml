@@ -47,8 +47,11 @@ services:
 
   monty:
     << : *restart_policy
-    image: ghcr.io/onerandomusername/monty-python:latest
     container_name: monty-python
+    image: ghcr.io/onerandomusername/monty-python:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     tty: true
 
     depends_on:
