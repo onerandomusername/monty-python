@@ -54,7 +54,7 @@ services:
     depends_on:
       - postgres
       - redis
-    
+
     environment:
       - REDIS_URI=redis://redis:6379
       - DB_BIND=postgresql://monty:monty@postgres:5432/monty
