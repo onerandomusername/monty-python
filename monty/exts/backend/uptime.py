@@ -11,6 +11,8 @@ logger = get_logger(__name__)
 
 
 class UptimeMonitor(commands.Cog, slash_command_attrs={"dm_permission": False}):
+    """Pong a remote server for uptime monitoring."""
+
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         if UptimeMonitoring.enabled:
