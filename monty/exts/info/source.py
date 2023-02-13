@@ -356,7 +356,7 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
             description = inspect.cleandoc(source_object.callback.__doc__ or "").split("\n", 1)[0]
         else:
             title = f"Cog: {source_object.qualified_name}"
-            description = source_object.description.splitlines()[0]
+            description = (source_object.description or "").split("\n", 1)[0]
 
         embed = disnake.Embed(title=title, description=description)
         embed.set_thumbnail(url=Source.github_avatar_url)
