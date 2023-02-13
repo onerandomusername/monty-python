@@ -19,7 +19,7 @@ Click [here](https://discord.com/oauth2/authorize?client_id=872576125384147005&s
 
 ## Running Locally
 
-Monty uses quite a few services to run. However, these have been consolidated into the [docker-compose.yaml]() file.
+Monty uses quite a few services to run. However, these have been consolidated into the [docker-compose.yaml](./docker-compose.yaml) file.
 
 To deploy, first clone this repo.
 
