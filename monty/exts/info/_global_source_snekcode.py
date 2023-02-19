@@ -172,6 +172,8 @@ if __name__ == "__main__":
         # print(metadata.keys())
         version = metadata["Version"]
         for url in [metadata.get("Home-page"), *metadata.json.get("project_url", [])]:  # type: ignore # runs on py3.10
+            if not url:
+                continue
             url = url.split(",", 1)[-1].strip().rstrip("/")
             # there are 4 `/` in a github link
             if url.startswith(("https://github.com/", "http://github.com/")) and url.count("/") == 4:
