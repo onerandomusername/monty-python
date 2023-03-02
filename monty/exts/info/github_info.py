@@ -48,6 +48,7 @@ LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?p
 
 REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
+    "X-GitHub-Api-Version": "2022-11-28",
 }
 
 if GITHUB_TOKEN := constants.Tokens.github:

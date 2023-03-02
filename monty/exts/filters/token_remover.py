@@ -19,7 +19,10 @@ from monty.log import get_logger
 log = get_logger(__name__)
 
 GITHUB_API_GISTS = "https://api.github.com/gists"
-GITHUB_REQUEST_HEADERS = {"Accept": "application/vnd.github.v3+json"}
+GITHUB_REQUEST_HEADERS = {
+    "Accept": "application/vnd.github.v3+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 if constants.Tokens.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
 

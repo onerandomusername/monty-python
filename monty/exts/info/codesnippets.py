@@ -35,7 +35,10 @@ GITHUB_GIST_RE = re.compile(
     r"(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)"
 )
 
-GITHUB_HEADERS = {"Accept": "application/vnd.github.v3.raw"}
+GITHUB_HEADERS = {
+    "Accept": "application/vnd.github.v3.raw",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
 if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
