@@ -19,14 +19,16 @@ from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
+    from typing import NoReturn
+
     from monty.exts.info.github_info import GithubInfo
 
 log = get_logger(__name__)
 
-
+# start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https://github\.(?:com|dev)/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/(?:blob|tree)/"
-    r"(?P<path>[^#>]+)(\?[^#>]+)?(#L(?P<start_line>\d+)(([-~:]|(\.\.))L(?P<end_line>\d+))?)"
+    r"https:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
+    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
 )
 
 GITHUB_GIST_RE = re.compile(
@@ -118,7 +120,15 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
 
         return ref, file_path
 
-    async def _fetch_github_snippet(self, repo: str, path: str, start_line: str, end_line: str) -> str:
+    async def _fetch_github_snippet(
+        self,
+        *,
+        repo: str,
+        path: str,
+        start_line: str,
+        end_line: str,
+        **kwargs: "NoReturn",
+    ) -> str:
         """Fetches a snippet from a GitHub repo."""
         # Search the GitHub API for the specified branch
         branches = await self._fetch_response(
@@ -143,11 +153,13 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
 
     async def _fetch_github_gist_snippet(
         self,
+        *,
         gist_id: str,
         revision: str,
         file_path: str,
         start_line: str,
         end_line: str,
+        **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
         gist_json = await self._fetch_response(
@@ -166,7 +178,15 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
                 return self._snippet_to_codeblock(file_contents, gist_file, start_line, end_line)
         return ""
 
-    async def _fetch_gitlab_snippet(self, repo: str, path: str, start_line: str, end_line: str) -> str:
+    async def _fetch_gitlab_snippet(
+        self,
+        *,
+        repo: str,
+        path: str,
+        start_line: str,
+        end_line: str,
+        **kwargs: "NoReturn",
+    ) -> str:
         """Fetches a snippet from a GitLab repo."""
         enc_repo = quote_plus(repo)
 
@@ -187,7 +207,14 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
     async def _fetch_bitbucket_snippet(
-        self, repo: str, ref: str, file_path: str, start_line: str, end_line: str
+        self,
+        *,
+        repo: str,
+        ref: str,
+        file_path: str,
+        start_line: str,
+        end_line: str,
+        **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a BitBucket repo."""
         file_contents = await self._fetch_response(
@@ -274,8 +301,10 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
                     error_message = error.message  # noqa: B306
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
-                        f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
-                        f"{error_message} for GET {error.request_info.real_url.human_repr()}",
+                        (
+                            f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
+                            f"{error_message} for GET {error.request_info.real_url.human_repr()}"
+                        ),
                     )
 
         # Sorts the list of snippets by their match index and joins them into a single message
