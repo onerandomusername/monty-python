@@ -118,7 +118,11 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             return
 
         logger.info(f"Attempting to enable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-        await feature.update(["enabled"], enabled=True)
+        async with self.bot.db_session() as session:
+            feature = await session.merge(feature)
+            feature.enabled = True
+            await session.commit()
+
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully **enabled** feature `{name}` globally.", components=button
@@ -144,7 +148,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             return
 
         logger.info(f"Attempting to disable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-        await feature.update(["enabled"], enabled=False)
+        async with self.bot.db_session() as session:
+            feature = await session.merge(feature)
+            feature.enabled = False
+            await session.commit()
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully **disabled** feature `{name}` globally.", components=button
@@ -174,7 +181,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             f"Attempting to globally set feature {name} to guild overrides "
             f"as requested by {ctx.author} ({ctx.author.id})."
         )
-        await feature.update(["enabled"], enabled=None)
+        async with self.bot.db_session() as session:
+            feature = await session.merge(feature)
+            feature.enabled = None
+            await session.commit()
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully changed feature `{name}` to guild overrides.", components=button
@@ -201,9 +211,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 if dis_guild := self.bot.get_guild(g.id):
                     guild_names.append(f"{dis_guild.name} ({g.id})")
                 else:
-                    guild_names.append(g.id)
+                    guild_names.append(str(g.id))
             guild_names.sort()
             embed.add_field(name="Guilds", value="\n".join(guild_names) or "No guilds have overrides.", inline=False)
+            await session.commit()
 
         await ctx.send(embed=embed, components=button)
 
@@ -351,6 +362,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                     except Exception:
                         pass
                     raise e
+            await session.commit()
 
         button = DeleteButton(ctx_or_inter.author, allow_manage_messages=False, initial_message=ctx.message)
         if isinstance(ctx_or_inter, disnake.Interaction):
@@ -388,21 +400,23 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             )
 
         guild_dbs: list[Guild] = []
-        for guild in guilds:
-            guild_db = await self.bot.ensure_guild(guild.id)
-            guild_dbs.append(guild_db)
+        async with self.bot.db_session() as session:
+            for guild in guilds:
+                guild_db = await self.bot.ensure_guild(guild.id)
+                guild_dbs.append(guild_db)
 
-            remove_features = []
-            for name in feature_names:
-                if name not in guild_db.feature_ids:
-                    if len(guilds) == 1:
-                        raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
-                    else:
-                        continue
-                remove_features.append(name)
-            for feature in remove_features:
-                guild_db.feature_ids.remove(feature)
-            await guild_db.update(["features"])
+                remove_features = []
+                for name in feature_names:
+                    if name not in guild_db.feature_ids:
+                        if len(guilds) == 1:
+                            raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
+                        else:
+                            continue
+                    remove_features.append(name)
+                for feature in remove_features:
+                    guild_db.feature_ids.remove(feature)
+                guild_db = await session.merge(guild_db)
+            await session.commit()
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.reply(

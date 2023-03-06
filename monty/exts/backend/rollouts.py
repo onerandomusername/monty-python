@@ -52,8 +52,10 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Update rollout levels every 15 minutes if a rollout is being updated."""
         logger.debug("Starting rollout levels update task.")
         now = datetime.now(tz=timezone.utc)
-        async with self.bot.db.transaction():
-            rollouts_to_update = await Rollout.objects.all(rollout_by__isnull=False)
+        async with self.bot.db_session() as session:
+            stmt = sa.select(Rollout).where(Rollout.rollout_by == None)  # noqa: E711
+            result = await session.scalars(stmt)
+            rollouts_to_update = result.all()
             if not rollouts_to_update:
                 logger.debug("No rollouts to update.")
                 return
@@ -62,7 +64,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
                     continue
                 rollout.rollout_hash_low, rollout.rollout_hash_high = rollouts.update_counts_to_time(rollout, now)
                 rollout.hashes_last_updated = now
-            await Rollout.objects.bulk_update(rollouts_to_update)
+            await session.commit()
 
         await self.bot.refresh_features()
 
@@ -130,11 +132,12 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     @cmd_rollouts.command(name="list")
     async def cmd_rollouts_list(self, ctx: commands.Context) -> None:
         """List all rollouts and their current status."""
-        all_rollouts = await Rollout.objects.all()
-        names = []
-        for rollout in all_rollouts:
-            names.append(rollout.name)
-        names.sort()
+        async with self.bot.db_session() as session:
+            stmt = sa.select(Rollout.name)
+            result = await session.scalars(stmt)
+            all_rollouts = result.all()
+
+        names = sorted(all_rollouts)
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         if not names:
@@ -156,24 +159,26 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     ) -> None:
         """Create a rollout."""
         # check for an existing rollout with the same name
-        existing_rollout = await Rollout.objects.get_or_none(name=name)
-        if existing_rollout:
-            raise commands.BadArgument("A rollout with that name already exists.")
+        async with self.bot.db_session() as session:
+            stmt = sa.select(Rollout).where(Rollout.name == name)
+            result = await session.scalars(stmt)
+            if result.one_or_none():
+                raise commands.BadArgument("A rollout with that name already exists.")
 
-        if percent_goal not in range(0, 100 + 1):
-            raise commands.BadArgument("percent_goal must be within 0 to 100 inclusive.")
+            if percent_goal not in range(0, 100 + 1):
+                raise commands.BadArgument("percent_goal must be within 0 to 100 inclusive.")
 
-        # pick a random starting number divisible by 100
-        # this means the rollout is effectively not enabled, as both limits are the same value
-        hash_low = hash_high = random.choice(range(0, 10_000, 100))
-        rollout = Rollout(
-            name=name,
-            rollout_hash_low=hash_low,
-            rollout_hash_high=hash_high,
-            rollout_to_percent=percent_goal,
-        )
-
-        await rollout.save()
+            # pick a random starting number divisible by 100
+            # this means the rollout is effectively not enabled, as both limits are the same value
+            hash_low = hash_high = random.choice(range(0, 10_000, 100))
+            rollout = Rollout(
+                name=name,
+                rollout_hash_low=hash_low,
+                rollout_hash_high=hash_high,
+                rollout_to_percent=percent_goal,
+            )
+            session.add(rollout)
+            await session.commit()
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.reply(
@@ -202,7 +207,11 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         # calculate the new values
         low, high = rollouts.find_new_hash_levels(rollout, new_percent)
 
-        await rollout.update(rollout_hash_low=low, rollout_hash_high=high)
+        async with self.bot.db_session() as session:
+            rollout = await session.merge(rollout)
+            rollout.rollout_hash_low = low
+            rollout.rollout_hash_high = high
+            await session.commit()
         assert rollouts.compute_current_percent(rollout) * 100 == new_percent
         await ctx.send(f"Succesfully changed the current rollout percent to `{new_percent:6.3f}%`.")
         scheduling.create_task(self.bot.refresh_features())
@@ -230,10 +239,10 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             await asyncio.sleep(1)
             message = inter.message
 
-        async with self.bot.db.transaction():
-            # remove the pk from all objects referencing this row
-            await Feature.objects.filter(rollout=rollout).update(rollout=None)
-            await rollout.delete()
+        async with self.bot.db_session() as session:
+            await session.delete(rollout)
+            await session.commit()
+
         if message:
             try:
                 await message.edit(content=f"Rollout `{rollout.name}` successfully deleted.", components=button)
@@ -255,14 +264,21 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         if rollout.rollout_by is not None:
             raise commands.CommandError("That rollout already has a time set.")
 
-        await rollout.update(hashes_last_updated=now, rollout_by=dt.datetime)
+        async with self.bot.db_session() as session:
+            rollout = await session.merge(rollout)
+            rollout.hashes_last_updated = now
+            rollout.rollout_by = dt.datetime
+            await session.commit()
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(f"Started rolling out `{rollout.name}`", components=button)
 
     @cmd_rollouts.command("stop", aliases=("halt",))
     async def cmd_rollouts_stop(self, ctx: commands.Context, rollout: RolloutConverter) -> None:
         """Stop a rollout. This does not decrease the rollout amount, just stops increasing the rollout."""
-        await rollout.update(rollout_by=None)
+        async with self.bot.db_session() as session:
+            rollout = await session.merge(rollout)
+            rollout.rollout_by = None
+            await session.commit()
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send("Stopped the rollout.", components=button)
