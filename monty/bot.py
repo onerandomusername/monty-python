@@ -8,14 +8,14 @@ from weakref import WeakValueDictionary
 import aiohttp
 import arrow
 import cachingutils.redis
-import databases
 import disnake
+import redis
 import redis.asyncio
 from disnake.ext import commands
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from monty import constants
 from monty.database import Feature, Guild, GuildConfig
-from monty.database.metadata import metadata
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
@@ -50,7 +50,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, database: databases.Database, **kwargs) -> None:
+    def __init__(self, redis_session: redis.asyncio.Redis, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
@@ -62,8 +62,9 @@ class Monty(commands.Bot):
 
         self.create_http_session()
 
-        self.db: databases.Database = database
-        self.db_metadata = metadata
+        self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
+        self.db_session = async_sessionmaker(engine, expire_on_commit=False)
+
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
         self.features: dict[str, Feature] = {}
@@ -247,11 +248,11 @@ class Monty(commands.Bot):
         if self.http_session:
             await self.http_session.close()
 
+        if self.db_engine:
+            await self.db_engine.dispose()
+
         if self.redis_session:
             await self.redis_session.close(close_connection_pool=True)
-
-        if self.db:
-            await self.db.disconnect()
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""

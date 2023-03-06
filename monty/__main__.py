@@ -9,13 +9,14 @@ import alembic.config
 import cachingutils
 import cachingutils.redis
 import disnake
+import redis
 import redis.asyncio
 from disnake.ext import commands
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
 import monty.alembic
 from monty import constants, monkey_patches
 from monty.bot import Monty
-from monty.database.metadata import database
 
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,26 @@ _intents.invites = False
 _intents.typing = False
 _intents.webhooks = False
 _intents.voice_states = False
+
+
+def run_upgrade(connection: AsyncConnection, cfg: alembic.config.Config) -> None:
+    """Run alembic upgrades."""
+    cfg.attributes["connection"] = connection
+    alembic.command.upgrade(cfg, "head")
+
+
+async def run_async_upgrade(engine: AsyncEngine) -> None:
+    """Run alembic upgrades but async."""
+    alembic_cfg = alembic.config.Config()
+    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
+    async with engine.connect() as conn:
+        await conn.run_sync(run_upgrade, alembic_cfg)
+
+
+async def run_alembic() -> None:
+    """Run alembic migrations."""
+    engine = create_async_engine(constants.Database.postgres_bind)
+    await run_async_upgrade(engine)
 
 
 async def main() -> None:
@@ -59,16 +80,9 @@ async def main() -> None:
     # run alembic migrations
     if constants.Database.run_migrations:
         log.info(f"Running database migrations to target {constants.Database.migration_target}")
-        alembic_cfg = alembic.config.Config()
-        alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
-        alembic_cfg.set_main_option("sqlalchemy.url", str(database.url))
-        alembic.command.upgrade(alembic_cfg, constants.Database.migration_target)
-
+        await run_alembic()
     else:
         log.warning("Not running database migrations per environment settings.")
-
-    # connect to the database
-    await database.connect()
 
     # ping redis
     await redis_session.ping()
@@ -83,7 +97,6 @@ async def main() -> None:
 
     bot = Monty(
         redis_session=redis_session,
-        database=database,
         command_prefix=constants.Client.default_command_prefix,
         activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
         allowed_mentions=disnake.AllowedMentions(everyone=False),

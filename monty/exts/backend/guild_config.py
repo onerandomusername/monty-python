@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union
 
 import aiohttp
+import attrs
 import disnake
 import pydantic
 import tomli
@@ -75,9 +76,10 @@ class Configuration(
             config = tomli.load(f)
         meta: dict[str, Any] = config["meta"]  # noqa: F841
         schema: dict[str, ConfigMetadataDict] = config["schema"]
+        valid_fields = attrs.fields_dict(GuildConfig).keys()
         self.schema: dict[str, ConfigMetadata] = {}
         for table, data in schema.items():
-            if table not in GuildConfig.__fields__:
+            if table not in valid_fields:
                 raise RuntimeError("the config_schema.toml is invalid.")
             self.schema[table] = ConfigMetadata(**data)
 
