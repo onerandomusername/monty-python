@@ -1,10 +1,9 @@
 from typing import List
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
-from .feature import Feature
 
 
 class Guild(Base):
@@ -13,6 +12,7 @@ class Guild(Base):
     __tablename__ = "guilds"
 
     id: Mapped[int] = mapped_column(sa.BigInteger(), primary_key=True, autoincrement=False)
+    # todo: this should be a many to many relationship
     feature_ids: Mapped[List[str]] = mapped_column(
         sa.ARRAY(sa.String(length=50)),
         name="features",
@@ -21,4 +21,4 @@ class Guild(Base):
         server_default=r"{}",  # noqa: P103
     )
 
-    features: Mapped[List[Feature]] = relationship(sa.ForeignKey(Feature.name))
+    # features: Mapped[List[Feature]] = relationship(Feature)

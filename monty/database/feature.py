@@ -4,14 +4,14 @@ from typing import Optional
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship, validates
 
-from .base import Base, dataclass_callable
+from .base import Base
 from .rollouts import Rollout
 
 
 NAME_REGEX = re.compile(r"^[A-Z_]+$")
 
 
-class Feature(MappedAsDataclass, Base, dataclass_callable=dataclass_callable):
+class Feature(MappedAsDataclass, Base):
     """Represents a bot feature."""
 
     __tablename__ = "features"

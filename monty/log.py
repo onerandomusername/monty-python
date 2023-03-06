@@ -86,7 +86,8 @@ def setup() -> None:
     logging.getLogger("disnake").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("cachingutils").setLevel(logging.INFO)
-    logging.getLogger("databases").setLevel(logging.INFO)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.INFO)
     logging.getLogger("gql.transport.aiohttp").setLevel(logging.WARNING)
     _set_trace_loggers()
 

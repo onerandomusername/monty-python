@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 import arrow
 import disnake
+import sqlalchemy as sa
 from disnake.ext import commands, tasks
 
 from monty.bot import Monty
@@ -305,24 +306,33 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Link or unlink a feature from the specified rollout."""
         add_or_remove = ctx.invoked_parents[-1] == "link"
         msg = None
-        feature = await feature.load_all()
         if add_or_remove:
             if feature.rollout:
                 raise commands.BadArgument(f"This feature is already linked to a rollout: `{feature.rollout.name}`.")
-            feature.rollout = rollout
+            async with self.bot.db_session() as session:
+                stmt = (
+                    sa.update(Feature)
+                    .where(Feature.name == feature.name)
+                    .returning(Feature)
+                    .values(rollout_id=rollout.id)
+                )
+                result = await session.scalars(stmt)
+                feature = result.one()
+                await session.commit()
+                self.bot.features[feature.name] = feature
             msg = f"Feature `{feature.name}` successfully linked to rollout `{rollout.name}`."
-            await feature.update()
+
         else:
             if not feature.rollout:
                 raise commands.BadArgument("This feature is not linked to any rollout.")
             elif feature.rollout.id != rollout.id:
                 raise commands.BadArgument("This feature is linked to a different rollout.")
             # this is a workaround to https://github.com/collerek/ormar/issues/720
-            async with self.bot.db.transaction():
-                await feature.delete()
-                new_feature = Feature(**feature.dict(exclude={"rollout"}))
-                await new_feature.save()
-                feature = new_feature
+            async with self.bot.db_session() as session:
+                stmt = sa.update(Feature).where(Feature.name == feature.name).values(rollout_id=None).returning(Feature)
+                result = await session.scalars(stmt)
+                feature = result.one()
+                await session.commit()
             msg = f"Feature `{feature.name}` successfully unlinked from rollout `{rollout.name}`."
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
