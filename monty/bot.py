@@ -177,7 +177,7 @@ class Monty(commands.Bot):
         """Refresh the feature cache."""
         async with self._feature_db_lock:
             async with self.db_session() as session:
-                stmt = sa.select(Feature)
+                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
                 result = await session.scalars(stmt)
                 features = result.all()
             self.features.clear()
@@ -209,7 +209,9 @@ class Monty(commands.Bot):
                 feature_instance = self.features.get(feature)
                 if not feature_instance:
                     async with self.db_session.begin() as session:
-                        feature_instance = await session.get(Feature, feature, populate_existing=True)
+                        feature_instance = await session.get(
+                            Feature, feature, populate_existing=True, options=[selectinload(Feature.rollout)]
+                        )
                         if not feature_instance and create_if_not_exists:
                             feature_instance = Feature(feature)
                             session.add(feature_instance)

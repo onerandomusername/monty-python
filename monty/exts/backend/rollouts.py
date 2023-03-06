@@ -310,14 +310,8 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             if feature.rollout:
                 raise commands.BadArgument(f"This feature is already linked to a rollout: `{feature.rollout.name}`.")
             async with self.bot.db_session() as session:
-                stmt = (
-                    sa.update(Feature)
-                    .where(Feature.name == feature.name)
-                    .returning(Feature)
-                    .values(rollout_id=rollout.id)
-                )
-                result = await session.scalars(stmt)
-                feature = result.one()
+                feature.rollout_id = rollout.id
+                feature = await session.merge(feature)
                 await session.commit()
                 self.bot.features[feature.name] = feature
             msg = f"Feature `{feature.name}` successfully linked to rollout `{rollout.name}`."

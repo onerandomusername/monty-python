@@ -121,7 +121,7 @@ class FeatureConverter(MaybeFeature):
     This does not check if the argument is a valid feature.
     """
 
-    async def convert(self, ctx: commands.Context, argument: str) -> Feature:
+    async def convert(self, ctx: commands.Context[Monty], argument: str) -> Feature:
         """Check that the argument is a possible feature name."""
         # convert the name to uppercase for the benefit of the user and normalize `-` characters
         argument = await super().convert(ctx, argument)
