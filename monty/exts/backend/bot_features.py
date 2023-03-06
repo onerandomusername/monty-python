@@ -228,9 +228,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         # add a column for the current guild
         if ctx.guild:
             guild = await self.bot.ensure_guild(ctx.guild.id)
-            if guild.features:
+            if guild.feature_ids:
                 guild_features = []
-                for feature in guild.features:
+                for feature in guild.feature_ids:
                     guild_features.append(feature)
                 guild_features.sort()
                 embed.add_field(f"{ctx.guild.name}'s Features", "`" + "`\n`".join(guild_features) + "`")
@@ -255,9 +255,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             title=f"Features for {name}", description="No features are enabled for this specific guild."
         )
         guild_db = await self.bot.ensure_guild(guild.id)
-        if guild_db.features:
+        if guild_db.feature_ids:
             guild_features = []
-            for feature in guild_db.features:
+            for feature in guild_db.feature_ids:
                 guild_features.append(feature)
             guild_features.sort()
             embed.description = "`" + "`\n`".join(guild_features) + "`"
@@ -328,19 +328,19 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
             more_features = []
             for name in feature_names:
-                if name in guild_db.features:
+                if name in guild_db.feature_ids:
                     if len(guilds) == 1:
                         raise commands.UserInputError(f"That feature is already enabled in guild ID `{guild.id}`.")
                     else:
                         continue
                 more_features.append(name)
-            guild_db.features.extend(more_features)
+            guild_db.feature_ids.extend(more_features)
             try:
                 await guild_db.update(["features"])
             except Exception as e:
                 try:
                     for item in more_features:
-                        guild_db.features.remove(item)
+                        guild_db.feature_ids.remove(item)
                 except Exception:
                     pass
                 raise e
@@ -387,14 +387,14 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
             remove_features = []
             for name in feature_names:
-                if name not in guild_db.features:
+                if name not in guild_db.feature_ids:
                     if len(guilds) == 1:
                         raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
                     else:
                         continue
                 remove_features.append(name)
             for feature in remove_features:
-                guild_db.features.remove(feature)
+                guild_db.feature_ids.remove(feature)
             await guild_db.update(["features"])
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)

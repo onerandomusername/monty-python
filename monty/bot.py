@@ -14,6 +14,7 @@ import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 
 from monty import constants
 from monty.database import Feature, Guild, GuildConfig
@@ -133,7 +134,8 @@ class Monty(commands.Bot):
                 guild = self.guild_db.get(guild_id)
                 if not guild:
                     async with self.db_session() as session:
-                        guild = await session.merge(Guild(id=guild_id))
+                        guild = await session.get(Guild, guild_id) or Guild(id=guild_id)
+                        session.add(guild)
                         await session.commit()
                     self.guild_db[guild_id] = guild
         return guild
@@ -144,8 +146,10 @@ class Monty(commands.Bot):
         if not config:
             guild = await self.ensure_guild(guild_id)
             async with self.db_session() as session:
-                config = GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
-                config = await session.merge(config)
+                config = await session.get(
+                    GuildConfig, guild_id, options=[selectinload(GuildConfig.guild)]
+                ) or GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
+                session.add(config)
                 await session.commit()
             self.guild_configs[guild_id] = config
 
