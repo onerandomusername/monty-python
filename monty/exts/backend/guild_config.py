@@ -92,13 +92,15 @@ class Configuration(
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
-        await GuildConfig.objects.delete(id=guild.id)
-
-        # also remove it from the cache
-        try:
-            del self.bot.guild_configs[guild.id]
-        except KeyError:
-            pass
+        async with self.bot.db_session() as session:
+            config = GuildConfig(id=guild.id, guild_id=guild.id)
+            await session.delete(config)
+            await session.commit()
+            # also remove it from the cache
+            try:
+                del self.bot.guild_configs[guild.id]
+            except KeyError:
+                pass
 
     def require_bot(self, inter: disnake.Interaction) -> Literal[True]:
         """Raise an error if the bot is required."""
@@ -171,11 +173,13 @@ class Configuration(
                 except aiohttp.ClientResponseError:
                     raise commands.UserInputError("organisation must be a valid github user or organsation.") from None
 
-            await config.update()
         except Exception:
             # reset the configuration
             setattr(config, field.name, old)
             raise
+        async with self.bot.db_session() as session:
+            config = await session.merge(config)
+            await session.commit()
 
         await inter.send(schema.success_message.format(new=value), ephemeral=schema.ephemeral)
 
@@ -229,7 +233,10 @@ class Configuration(
         except (TypeError, ValueError):
             raise commands.UserInputError("this option is not clearable.") from None
 
-        await config.update()
+        async with self.bot.db_session() as session:
+            config = await session.merge(config)
+            await session.commit()
+
         await inter.response.send_message(schema.success_clear_message, ephemeral=True)
 
     @set_command.autocomplete("option")
