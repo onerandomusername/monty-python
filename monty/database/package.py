@@ -25,9 +25,9 @@ class PackageInfo(Base):
         sa.String(length=50),
         primary_key=True,
     )
-    inventory_url: Mapped[str] = mapped_column(sa.Text())
-    _base_url: Mapped[Optional[str]] = mapped_column(sa.Text(), nullable=True, default=None, name="base_url")
-    hidden: Mapped[bool] = mapped_column(sa.Boolean(), default=False, server_default="false", nullable=False)
+    inventory_url: Mapped[str] = mapped_column(sa.Text)
+    _base_url: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True, default=None, name="base_url")
+    hidden: Mapped[bool] = mapped_column(sa.Boolean, default=False, server_default="false", nullable=False)
     guilds_whitelist: Mapped[Optional[List[int]]] = mapped_column(
         MutableList.as_mutable(sa.ARRAY(sa.BigInteger)),
         nullable=True,
