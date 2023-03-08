@@ -80,6 +80,11 @@ class Monty(commands.Bot):
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
         self.loop.create_task(self.get_self_invite_perms())
 
+    @property
+    def db(self) -> async_sessionmaker[AsyncSession]:
+        """Alias of `bot.db_session`."""
+        return self.db_session
+
     def create_http_session(self) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
         trace_configs = []
@@ -133,7 +138,7 @@ class Monty(commands.Bot):
                 # once again use the cache just in case
                 guild = self.guild_db.get(guild_id)
                 if not guild:
-                    async with self.db_session() as session:
+                    async with self.db.begin() as session:
                         guild = await session.get(Guild, guild_id) or Guild(id=guild_id)
                         session.add(guild)
                         await session.commit()
@@ -145,7 +150,7 @@ class Monty(commands.Bot):
         config = self.guild_configs.get(guild_id)
         if not config:
             guild = await self.ensure_guild(guild_id)
-            async with self.db_session() as session:
+            async with self.db.begin() as session:
                 config = await session.get(
                     GuildConfig, guild_id, options=[selectinload(GuildConfig.guild)]
                 ) or GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
@@ -155,7 +160,7 @@ class Monty(commands.Bot):
 
         elif not config.guild:
             guild = await self.ensure_guild(guild_id)
-            async with self.db_session() as session:
+            async with self.db.begin() as session:
                 await session.merge(config)
                 config.guild = guild
                 await session.commit()
@@ -176,7 +181,7 @@ class Monty(commands.Bot):
     async def refresh_features(self) -> None:
         """Refresh the feature cache."""
         async with self._feature_db_lock:
-            async with self.db_session() as session:
+            async with self.db.begin() as session:
                 stmt = sa.select(Feature).options(selectinload(Feature.rollout))
                 result = await session.scalars(stmt)
                 features = result.all()
@@ -208,7 +213,7 @@ class Monty(commands.Bot):
                 # get from cached features once within the lock
                 feature_instance = self.features.get(feature)
                 if not feature_instance:
-                    async with self.db_session.begin() as session:
+                    async with self.db.begin() as session:
                         feature_instance = await session.get(
                             Feature, feature, populate_existing=True, options=[selectinload(Feature.rollout)]
                         )
@@ -237,7 +242,7 @@ class Monty(commands.Bot):
 
         # check if this feature has an active rollout
         if feature_instance and feature_instance.rollout_id:
-            async with self.db_session() as session:
+            async with self.db.begin() as session:
                 rollout = await session.get(Rollout, feature_instance.rollout_id)
                 if not rollout:
                     err = (

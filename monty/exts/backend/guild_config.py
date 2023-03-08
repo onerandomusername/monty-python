@@ -92,7 +92,7 @@ class Configuration(
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             config = GuildConfig(id=guild.id, guild_id=guild.id)
             await session.delete(config)
             await session.commit()
@@ -177,7 +177,7 @@ class Configuration(
             # reset the configuration
             setattr(config, field.name, old)
             raise
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             config = await session.merge(config)
             await session.commit()
 
@@ -233,7 +233,7 @@ class Configuration(
         except (TypeError, ValueError):
             raise commands.UserInputError("this option is not clearable.") from None
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             config = await session.merge(config)
             await session.commit()
 

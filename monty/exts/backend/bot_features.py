@@ -122,7 +122,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             return
 
         logger.info(f"Attempting to enable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             feature = await session.merge(feature)
             feature.enabled = True
             await session.commit()
@@ -153,7 +153,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             return
 
         logger.info(f"Attempting to disable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             feature = await session.merge(feature)
             feature.enabled = False
             await session.commit()
@@ -188,7 +188,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             f"Attempting to globally set feature {name} to guild overrides "
             f"as requested by {ctx.author} ({ctx.author.id})."
         )
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             feature = await session.merge(feature)
             feature.enabled = None
             await session.commit()
@@ -211,7 +211,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 
         if with_guilds:
-            async with self.bot.db_session() as session:
+            async with self.bot.db.begin() as session:
                 stmt = sa.select(Guild).where(Guild.feature_ids.any_() == feature.name)
                 result = await session.scalars(stmt)
                 guilds = result.all()
@@ -302,7 +302,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # only give feature create option if there is only one feature
         ctx_or_inter: Union[disnake.MessageInteraction, commands.Context[Monty]] = ctx
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             if len(names) == 1:
                 name = names[0]
                 feature = self.features.get(name)
@@ -408,7 +408,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             )
 
         guild_dbs: list[Guild] = []
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             for guild in guilds:
                 guild_db = await self.bot.ensure_guild(guild.id)
                 guild_dbs.append(guild_db)

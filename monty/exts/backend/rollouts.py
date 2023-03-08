@@ -52,7 +52,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Update rollout levels every 15 minutes if a rollout is being updated."""
         logger.debug("Starting rollout levels update task.")
         now = datetime.now(tz=timezone.utc)
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(Rollout).where(Rollout.rollout_by == None)  # noqa: E711
             result = await session.scalars(stmt)
             rollouts_to_update = result.all()
@@ -132,7 +132,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     @cmd_rollouts.command(name="list")
     async def cmd_rollouts_list(self, ctx: commands.Context) -> None:
         """List all rollouts and their current status."""
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(Rollout.name)
             result = await session.scalars(stmt)
             all_rollouts = result.all()
@@ -159,7 +159,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     ) -> None:
         """Create a rollout."""
         # check for an existing rollout with the same name
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(Rollout).where(Rollout.name == name)
             result = await session.scalars(stmt)
             if result.one_or_none():
@@ -207,7 +207,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         # calculate the new values
         low, high = rollouts.find_new_hash_levels(rollout, new_percent)
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             rollout = await session.merge(rollout)
             rollout.rollout_hash_low = low
             rollout.rollout_hash_high = high
@@ -239,7 +239,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             await asyncio.sleep(1)
             message = inter.message
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             await session.delete(rollout)
             await session.commit()
 
@@ -264,7 +264,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         if rollout.rollout_by is not None:
             raise commands.CommandError("That rollout already has a time set.")
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             rollout = await session.merge(rollout)
             rollout.hashes_last_updated = now
             rollout.rollout_by = dt.datetime
@@ -275,7 +275,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     @cmd_rollouts.command("stop", aliases=("halt",))
     async def cmd_rollouts_stop(self, ctx: commands.Context, rollout: RolloutConverter) -> None:
         """Stop a rollout. This does not decrease the rollout amount, just stops increasing the rollout."""
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             rollout = await session.merge(rollout)
             rollout.rollout_by = None
             await session.commit()
@@ -325,7 +325,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         if add_or_remove:
             if feature.rollout:
                 raise commands.BadArgument(f"This feature is already linked to a rollout: `{feature.rollout.name}`.")
-            async with self.bot.db_session() as session:
+            async with self.bot.db.begin() as session:
                 feature.rollout_id = rollout.id
                 feature = await session.merge(feature)
                 await session.commit()
@@ -338,7 +338,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             elif feature.rollout.id != rollout.id:
                 raise commands.BadArgument("This feature is linked to a different rollout.")
             # this is a workaround to https://github.com/collerek/ormar/issues/720
-            async with self.bot.db_session() as session:
+            async with self.bot.db.begin() as session:
                 stmt = sa.update(Feature).where(Feature.name == feature.name).values(rollout_id=None).returning(Feature)
                 result = await session.scalars(stmt)
                 feature = result.one()

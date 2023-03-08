@@ -416,7 +416,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """Refresh internal whitelist and blacklist."""
         self.whitelist.clear()
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(PackageInfo).where(PackageInfo.guilds_whitelist != None)  # noqa: E711
             result = await session.scalars(stmt)
             guilds_whitelist = result.all()
@@ -450,7 +450,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         except AttributeError:
             pass
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(PackageInfo)
             result = await session.scalars(stmt)
             packages = result.all()
@@ -864,7 +864,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
         inventory_url, inventory_dict = inventory
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             stmt = sa.select(PackageInfo).where(PackageInfo.name == package_name)
             package = await session.scalar(stmt)
 
@@ -979,7 +979,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             package = await session.get(PackageInfo, package_name)
             if not package:
                 await ctx.send(":x: No package found with that name.", components=components)
@@ -1021,7 +1021,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
 
-        async with self.bot.db_session() as session:
+        async with self.bot.db.begin() as session:
             package = await session.get(PackageInfo, package_name)
 
             if not package:

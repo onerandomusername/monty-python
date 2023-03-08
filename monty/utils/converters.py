@@ -88,7 +88,7 @@ class RolloutConverter(commands.Converter):
 
     async def convert(self, ctx: AnyContext, argument: str) -> Rollout:
         """Convert the provided argument into a rollout."""
-        async with ctx.bot.db_session() as session:
+        async with ctx.bot.db.begin() as session:
             stmt = sa.select(Rollout).where(Rollout.name == argument)
             result = await session.scalars(stmt)
             try:
