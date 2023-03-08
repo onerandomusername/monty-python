@@ -360,17 +360,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                             continue
                     more_features.append(name)
                 guild_db.feature_ids.extend(more_features)
-                try:
-                    guild_db = await session.merge(guild_db)
-                    await session.commit()
-                except Exception as e:
-                    try:
-                        for item in more_features:
-                            guild_db.feature_ids.remove(item)
-                    except Exception:
-                        pass
-                    raise e
-            await session.commit()
+                guild_db = await session.merge(guild_db)
+                # refresh the cache after the merge
+                self.bot.guild_db[guild.id] = guild_db
 
         button = DeleteButton(ctx_or_inter.author, allow_manage_messages=False, initial_message=ctx.message)
         if isinstance(ctx_or_inter, disnake.Interaction):
