@@ -252,6 +252,8 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
         # manual conversion (ew) because of injections & autocomplete bug
         try:
             source_item = await SourceConverter.convert(inter, item)
+        except commands.CommandError:
+            raise
         except Exception as e:
             raise commands.ConversionError(SourceConverter, e) from e
         await self.source_command(inter, source_item=source_item)  # type: ignore # inter is invalid for some reason
