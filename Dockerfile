@@ -9,8 +9,7 @@ WORKDIR /bot
 # Install project dependencies
 
 # as we have a git dep, install git
-# we also need g++ and rust to install some other dependencies
-RUN apt update && apt install git g++ rustc -y
+RUN apt update && apt install git -y
 
 RUN pip install -U pip wheel setuptools
 RUN pip install poetry==1.3
