@@ -344,7 +344,7 @@ class CodeBlockActions(
         original_source = False
 
         # only provide a modal if the code is short enough
-        if len(code) <= 4000:
+        if code and len(code) <= 4000:
             modal_components = disnake.ui.TextInput(
                 label="Code",
                 custom_id="code",
@@ -366,7 +366,6 @@ class CodeBlockActions(
                 return
             new_code = inter.text_values["code"]
             if code != new_code:
-                logger.warning("idk")
                 code = new_code
                 original_source = True
 
