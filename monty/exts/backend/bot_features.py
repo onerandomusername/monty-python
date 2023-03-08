@@ -32,6 +32,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         """Shortcut to the underlying bot's feature dict."""
         return self.bot.features
 
+    def refresh_in_cache(self, feature: Feature) -> None:
+        """Replace the item in cache with the same name as the provided feature."""
+        self.features[feature.name] = feature
+
     async def wait_for_confirmation(
         self,
         message: disnake.Message,
@@ -122,6 +126,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             feature = await session.merge(feature)
             feature.enabled = True
             await session.commit()
+            self.refresh_in_cache(feature)
 
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
@@ -152,6 +157,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             feature = await session.merge(feature)
             feature.enabled = False
             await session.commit()
+            self.refresh_in_cache(feature)
+
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully **disabled** feature `{name}` globally.", components=button
@@ -185,6 +192,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             feature = await session.merge(feature)
             feature.enabled = None
             await session.commit()
+            self.refresh_in_cache(feature)
+
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await inter.response.edit_message(
             content=f"Successfully changed feature `{name}` to guild overrides.", components=button
@@ -214,7 +223,6 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                     guild_names.append(str(g.id))
             guild_names.sort()
             embed.add_field(name="Guilds", value="\n".join(guild_names) or "No guilds have overrides.", inline=False)
-            await session.commit()
 
         await ctx.send(embed=embed, components=button)
 
@@ -322,7 +330,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
                     feature = Feature(name)
                     session.add(feature)
-                    self.features[feature.name] = feature
+                    self.refresh_in_cache(feature)
                 feature_names = [feature.name]
             else:
                 # there were more than 1 provided features here
