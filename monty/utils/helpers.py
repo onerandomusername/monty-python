@@ -24,6 +24,8 @@ if TYPE_CHECKING:
     Coro = Coroutine[Any, Any, T]
 UNSET = object()
 
+logger = get_logger(__name__)
+
 
 def suppress_links(message: str) -> str:
     """Accepts a message that may contain links, suppresses them, and returns them."""
@@ -98,7 +100,13 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
 
         if inter.response.is_done():
             return
-        await inter.response.defer(**options)
+        try:
+            await inter.response.defer(**options)
+        except disnake.HTTPException as e:
+            if e.code == 40060:  # interaction has already been acked
+                logger.warning("interaction was already responded to (race condition)")
+                return
+            raise e
 
     start = loop.time()
     return loop.create_task(internal_task())
