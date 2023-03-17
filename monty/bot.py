@@ -66,6 +66,9 @@ class Monty(commands.Bot):
 
         self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
         self.db_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+        self._db_session = (
+            self.db_session()
+        )  # this session is used for owning guild configurations, and no, this is not what you're supposed to do.
 
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
@@ -138,10 +141,10 @@ class Monty(commands.Bot):
                 # once again use the cache just in case
                 guild = self.guild_db.get(guild_id)
                 if not guild:
-                    async with self.db.begin() as session:
-                        guild = await session.get(Guild, guild_id) or Guild(id=guild_id)
-                        session.add(guild)
-                        await session.commit()
+                    async with self._db_session.begin():
+                        guild = await self._db_session.get(Guild, guild_id) or Guild(id=guild_id)
+                        self._db_session.add(guild)
+                        await self._db_session.commit()
                     self.guild_db[guild_id] = guild
         return guild
 
@@ -150,20 +153,20 @@ class Monty(commands.Bot):
         config = self.guild_configs.get(guild_id)
         if not config:
             guild = await self.ensure_guild(guild_id)
-            async with self.db.begin() as session:
-                config = await session.get(
+            async with self._db_session.begin():
+                config = await self._db_session.get(
                     GuildConfig, guild_id, options=[selectinload(GuildConfig.guild)]
                 ) or GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
-                session.add(config)
-                await session.commit()
+                self._db_session.add(config)
+                await self._db_session.commit()
             self.guild_configs[guild_id] = config
 
         elif not config.guild:
             guild = await self.ensure_guild(guild_id)
-            async with self.db.begin() as session:
-                await session.merge(config)
+            async with self._db_session.begin():
+                await self._db_session.merge(config)
                 config.guild = guild
-                await session.commit()
+                await self._db_session.commit()
 
         return config
 
@@ -181,9 +184,9 @@ class Monty(commands.Bot):
     async def refresh_features(self) -> None:
         """Refresh the feature cache."""
         async with self._feature_db_lock:
-            async with self.db.begin() as session:
+            async with self._db_session.begin():
                 stmt = sa.select(Feature).options(selectinload(Feature.rollout))
-                result = await session.scalars(stmt)
+                result = await self._db_session.scalars(stmt)
                 features = result.all()
             self.features.clear()
             self.features.update({feature.name: feature for feature in features})
@@ -213,14 +216,14 @@ class Monty(commands.Bot):
                 # get from cached features once within the lock
                 feature_instance = self.features.get(feature)
                 if not feature_instance:
-                    async with self.db.begin() as session:
-                        feature_instance = await session.get(
+                    async with self._db_session.begin():
+                        feature_instance = await self._db_session.get(
                             Feature, feature, populate_existing=True, options=[selectinload(Feature.rollout)]
                         )
                         if not feature_instance and create_if_not_exists:
                             feature_instance = Feature(feature)
-                            session.add(feature_instance)
-                            await session.commit()  # this will error out if it cannot be made
+                            self._db_session.add(feature_instance)
+                            await self._db_session.commit()  # this will error out if it cannot be made
                         if feature_instance:
                             self.features[feature] = feature_instance
         # we're defaulting to non-existing features as None, rather than False.
@@ -242,8 +245,8 @@ class Monty(commands.Bot):
 
         # check if this feature has an active rollout
         if feature_instance and feature_instance.rollout_id:
-            async with self.db.begin() as session:
-                rollout = await session.get(Rollout, feature_instance.rollout_id)
+            async with self._db_session.begin():
+                rollout = await self._db_session.get(Rollout, feature_instance.rollout_id)
                 if not rollout:
                     err = (
                         f"Database could not find rollout with ID {feature_instance.rollout_id} but feature"
