@@ -218,15 +218,6 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             components=components,
         )
 
-    @monty.sub_command()
-    async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Get the current uptime of the bot."""
-        timestamp = round(float(self.bot.start_time.format("X")))
-        embed = disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)")
-
-        components = DeleteButton(inter.author)
-        await inter.send(embed=embed, components=components)
-
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
         if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
@@ -253,5 +244,5 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
 
 def setup(bot: Monty) -> None:
-    """Load the Ping cog."""
+    """Load the Meta cog."""
     bot.add_cog(Meta(bot))
