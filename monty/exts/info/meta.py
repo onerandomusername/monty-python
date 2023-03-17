@@ -30,9 +30,9 @@ Based off of multiple open source projects, Monty is a development tool for Disc
 - Codeblock detection
 
 **GitHub**: {Client.github_bot_repo}
-**Support**: https://discord.gg/{Client.support_server}
-**Credits**: Run `/monty credits` for a list of original sources.
 **Invite**: Use `/monty invite` to get an invite link to add me to your server.
+**Support**: https://discord.gg/{Client.support_server}
+**Credits**: Click the Credits button below to view who I thank for helping make Monty.
 """
 
 CREDITS = """
@@ -100,12 +100,20 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
 
-        components = DeleteButton(inter.author)
+        app_info = await self.application_info()
+        components = [
+            DeleteButton(inter.author),
+            disnake.ui.Button(custom_id="meta:v1:credits", style=disnake.ButtonStyle.primary, label="View Credits"),
+            disnake.ui.Button(url=app_info.privacy_policy_url, label="Privacy Policy"),
+            disnake.ui.Button(url=Client.github_bot_repo, label="GitHub"),
+        ]
         await inter.send(embed=e, components=components)
 
-    @monty.sub_command(name="credits")
-    async def credits(self, inter: disnake.CommandInteraction) -> None:
+    @commands.Cog.listener("on_message_interaction")
+    async def show_credits(self, inter: disnake.MessageInteraction) -> None:
         """Credits of original sources."""
+        if inter.component.custom_id != "meta:v1:credits":
+            return
         e = disnake.Embed(
             title="Credits",
             description=CREDITS,
@@ -113,7 +121,11 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
-        await inter.send(embed=e, ephemeral=bool(inter.guild_id))
+        ephemeral = bool(inter.guild_id)
+        components = []
+        if not ephemeral:
+            components.append(DeleteButton(inter.author))
+        await inter.send(embed=e, ephemeral=ephemeral, components=components)
 
     @monty.sub_command(name="invite")
     async def invite(
