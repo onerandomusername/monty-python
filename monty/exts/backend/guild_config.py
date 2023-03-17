@@ -99,7 +99,7 @@ class Configuration(
 
     @commands.slash_command()
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
-        """[ALPHA] Manage per-guild configuration for Monty."""
+        """[BETA] Manage per-guild configuration for Monty."""
         pass
 
     @config.sub_command("set")
@@ -110,12 +110,12 @@ class Configuration(
         value: str,
     ) -> None:
         """
-        Set the specified option to the specifed value.
+        [BETA] Set the specified config option to the provided value.
 
         Parameters
         ----------
-        option: the configuration option to set.
-        value: the new value of the configuration option.
+        option: The configuration option to change.
+        value: The new value of the configuration option.
         """
         option_name, metadata = await config_option(inter, option=option)
         config = await self.bot.ensure_guild_config(inter.guild_id)
@@ -155,11 +155,11 @@ class Configuration(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
         """
-        View the current config for a config option.
+        [BETA] View the current config for a config option.
 
         Parameters
         ----------
-        The config option to view the currently set item.
+        The config option see what's currently set.
         """
         config = await self.bot.ensure_guild_config(inter.guild_id)
         option_name, metadata = option
@@ -175,7 +175,7 @@ class Configuration(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
         """
-        Clear/unset the config for a config option.
+        [BETA] Clear/unset the config for a config option.
 
         Parameters
         ----------
