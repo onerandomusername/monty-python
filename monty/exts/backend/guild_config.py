@@ -103,7 +103,7 @@ class Configuration(
         """[BETA] Manage per-guild configuration for Monty."""
         pass
 
-    @config.sub_command("set")
+    @config.sub_command("edit")
     async def set_command(
         self,
         inter: disnake.GuildCommandInteraction,
@@ -111,7 +111,7 @@ class Configuration(
         value: str,
     ) -> None:
         """
-        [BETA] Set the specified config option to the provided value.
+        [BETA] Edit the specified config option to the provided value.
 
         Parameters
         ----------
@@ -151,7 +151,7 @@ class Configuration(
             ephemeral=True,
         )
 
-    @config.sub_command("get")
+    @config.sub_command("view")
     async def view_command(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
@@ -171,12 +171,12 @@ class Configuration(
             ephemeral=True,
         )
 
-    @config.sub_command("unset")
+    @config.sub_command("reset")
     async def clear_command(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
         """
-        [BETA] Clear/unset the config for a config option.
+        [BETA] Reset the config for a config option to the default.
 
         Parameters
         ----------
