@@ -187,7 +187,7 @@ class Configuration(
 
         await inter.send(schema.success_message.format(new=value), ephemeral=schema.ephemeral)
 
-    @config.sub_command("view")
+    @config.sub_command("get")
     async def view_command(self, inter: disnake.GuildCommandInteraction, option: str) -> None:
         """
         View the current config for a config option.
@@ -210,14 +210,14 @@ class Configuration(
         else:
             await inter.response.send_message(schema.null_show_message, ephemeral=True)
 
-    @config.sub_command("clear")
+    @config.sub_command("unset")
     async def clear_command(self, inter: disnake.GuildCommandInteraction, option: str) -> None:
         """
-        Clear the config for a config option.
+        Clear/unset the config for a config option.
 
         Parameters
         ----------
-        The config option to clear.
+        The config option to unset/change to default.
         """
         config = await self.bot.ensure_guild_config(inter.guild_id)
         if option in self.name_to_option:
