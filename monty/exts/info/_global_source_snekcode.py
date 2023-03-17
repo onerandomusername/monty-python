@@ -181,6 +181,7 @@ if __name__ == "__main__":
         else:
             print("This package isn't supported right now.")
             sys.exit(8)
+        # I ideally want to use the database for this and run that locally by sending a pickled result.
         if top_module_name not in ("arrow", "databases", "ormar"):
             version = f"v{version}"
         url += f"/blob/{version}/{filename}{lines_extension}"

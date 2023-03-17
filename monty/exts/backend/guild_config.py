@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, Final, Literal, Optional, TypedDict, Union
 
 import aiohttp
 import disnake
-import pydantic
 import tomli
 from disnake.ext import commands
 
@@ -67,6 +67,9 @@ class Configuration(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        self.valid_fields: Final[Dict[str, dataclasses.Field[Any]]] = {
+            field.name: field for field in dataclasses.fields(GuildConfig)
+        }
         self.load_schema()
 
     def load_schema(self) -> None:
@@ -75,9 +78,10 @@ class Configuration(
             config = tomli.load(f)
         meta: dict[str, Any] = config["meta"]  # noqa: F841
         schema: dict[str, ConfigMetadataDict] = config["schema"]
+
         self.schema: dict[str, ConfigMetadata] = {}
         for table, data in schema.items():
-            if table not in GuildConfig.__fields__:
+            if table not in self.valid_fields:
                 raise RuntimeError("the config_schema.toml is invalid.")
             self.schema[table] = ConfigMetadata(**data)
 
@@ -88,13 +92,15 @@ class Configuration(
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
-        await GuildConfig.objects.delete(id=guild.id)
-
-        # also remove it from the cache
-        try:
-            del self.bot.guild_configs[guild.id]
-        except KeyError:
-            pass
+        async with self.bot.db.begin() as session:
+            config = GuildConfig(id=guild.id, guild_id=guild.id)
+            await session.delete(config)
+            await session.commit()
+            # also remove it from the cache
+            try:
+                del self.bot.guild_configs[guild.id]
+            except KeyError:
+                pass
 
     def require_bot(self, inter: disnake.Interaction) -> Literal[True]:
         """Raise an error if the bot is required."""
@@ -141,10 +147,10 @@ class Configuration(
 
         if option in self.name_to_option:
             option = self.name_to_option[option]
-        if option not in config.__fields__:
+        if option not in self.valid_fields:
             raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
 
-        field: pydantic.fields.ModelField = config.__fields__[option]
+        field = self.valid_fields[option]
 
         old = getattr(config, field.name)
         schema = self.schema[field.name]
@@ -154,7 +160,7 @@ class Configuration(
 
         try:
             setattr(config, field.name, value)
-        except pydantic.ValidationError:
+        except ValueError:
             raise commands.UserInputError(schema.validation_error_message.format(new=value)) from None
         try:
             # special config for github_issues_org
@@ -167,11 +173,13 @@ class Configuration(
                 except aiohttp.ClientResponseError:
                     raise commands.UserInputError("organisation must be a valid github user or organsation.") from None
 
-            await config.update()
         except Exception:
             # reset the configuration
             setattr(config, field.name, old)
             raise
+        async with self.bot.db.begin() as session:
+            config = await session.merge(config)
+            await session.commit()
 
         await inter.send(schema.success_message.format(new=value), ephemeral=schema.ephemeral)
 
@@ -187,9 +195,9 @@ class Configuration(
         config = await self.bot.ensure_guild_config(inter.guild_id)
         if option in self.name_to_option:
             option = self.name_to_option[option]
-        if option not in config.__fields__:
+        if option not in self.valid_fields:
             raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
-        field: pydantic.fields.ModelField = config.__fields__[option]
+        field = self.valid_fields[option]
         current = getattr(config, field.name)
         schema = self.schema[field.name]
 
@@ -210,10 +218,10 @@ class Configuration(
         config = await self.bot.ensure_guild_config(inter.guild_id)
         if option in self.name_to_option:
             option = self.name_to_option[option]
-        if option not in config.__fields__:
+        if option not in self.valid_fields:
             raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
 
-        field: pydantic.fields.ModelField = config.__fields__[option]
+        field = self.valid_fields[option]
         current = getattr(config, field.name)
         schema = self.schema[field.name]
         if current is None:
@@ -222,10 +230,13 @@ class Configuration(
 
         try:
             setattr(config, field.name, None)
-        except pydantic.ValidationError:
+        except (TypeError, ValueError):
             raise commands.UserInputError("this option is not clearable.") from None
 
-        await config.update()
+        async with self.bot.db.begin() as session:
+            config = await session.merge(config)
+            await session.commit()
+
         await inter.response.send_message(schema.success_clear_message, ephemeral=True)
 
     @set_command.autocomplete("option")

@@ -5,7 +5,6 @@ This provides a util for a feature in the database to be created representing a 
 """
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
 import disnake
@@ -15,11 +14,10 @@ from disnake.ext import commands
 if TYPE_CHECKING:
     from monty.bot import Monty
 
-from monty.database.feature import name_regex
+from monty.database.feature import NAME_REGEX
 from monty.errors import FeatureDisabled
 
 
-NAME_REGEX = re.compile(name_regex)
 AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context]
 T = TypeVar("T")
 

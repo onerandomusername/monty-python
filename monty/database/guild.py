@@ -1,22 +1,25 @@
 from typing import List
 
-import ormar
-import ormar_postgres_extensions as ormar_pg_ext
+import sqlalchemy as sa
+from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.orm import Mapped, mapped_column
 
-from .feature import Feature
-from .metadata import BaseMeta
+from .base import Base
 
 
-class Guild(ormar.Model):
+class Guild(Base):
     """Represents a Discord guild's enabled bot features."""
 
-    class Meta(BaseMeta):
-        tablename: str = "guilds"
+    __tablename__ = "guilds"
 
-    id: int = ormar.BigInteger(primary_key=True, autoincrement=False)  # type: ignore
-    features: List[str] = ormar_pg_ext.ARRAY(
-        item_type=ormar.ForeignKey(Feature).column_type,
+    id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=False)
+    # todo: this should be a many to many relationship
+    feature_ids: Mapped[List[str]] = mapped_column(
+        MutableList.as_mutable(sa.ARRAY(sa.String(length=50))),
+        name="features",
         nullable=False,
         default=[],
         server_default=r"{}",  # noqa: P103
-    )  # type: ignore
+    )
+
+    # features: Mapped[List[Feature]] = relationship(Feature)

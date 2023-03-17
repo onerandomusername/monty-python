@@ -15,10 +15,10 @@ from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
 
 import aiohttp
 import disnake
-import ormar
 import rapidfuzz
 import rapidfuzz.fuzz
 import rapidfuzz.process
+import sqlalchemy as sa
 from disnake.ext import commands
 
 from monty import constants
@@ -351,8 +351,6 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
                 self.update_or_reschedule_inventory(package, use_cache=use_cache),
             )
         else:
-            if not package.base_url:
-                package.base_url = self.base_url_from_inventory_url(package.inventory_url)
             # determine blacklist
             blacklist_guilds = []
             for g, packs in BLACKLIST_MAPPING.items():
@@ -418,10 +416,13 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """Refresh internal whitelist and blacklist."""
         self.whitelist.clear()
 
-        guilds_whitelist = await PackageInfo.objects.filter(~(PackageInfo.guilds_whitelist >> None)).all()
+        async with self.bot.db.begin() as session:
+            stmt = sa.select(PackageInfo).where(PackageInfo.guilds_whitelist != None)  # noqa: E711
+            result = await session.scalars(stmt)
+            guilds_whitelist = result.all()
 
         for package in guilds_whitelist:
-            for guild_id in package.guilds_whitelist:
+            for guild_id in package.guilds_whitelist:  # type: ignore # guilds_whitelist will always be iterable here
                 self.whitelist.setdefault(guild_id, set())
                 self.whitelist[guild_id].add(package.name)
 
@@ -449,7 +450,10 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         except AttributeError:
             pass
 
-        packages = await PackageInfo.objects.all()
+        async with self.bot.db.begin() as session:
+            stmt = sa.select(PackageInfo)
+            result = await session.scalars(stmt)
+            packages = result.all()
 
         coros = [self.update_or_reschedule_inventory(package, use_cache=use_cache) for package in packages]
         await asyncio.gather(*coros)
@@ -832,11 +836,6 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
                 msg += f"\nHowever, I did find this homepage while looking: <{res[1]}>."
             await inter.send(msg, components=components)
 
-    @staticmethod
-    def base_url_from_inventory_url(inventory_url: str) -> str:
-        """Get a base url from the url to an objects inventory by removing the last path segment."""
-        return inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
-
     @docs_group.command(name="setdoc", aliases=("s",))
     @lock(NAMESPACE, COMMAND_LOCK_SINGLETON, raise_error=True)
     @commands.is_owner()
@@ -865,18 +864,17 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
         inventory_url, inventory_dict = inventory
 
-        res = await PackageInfo.objects.filter(name=package_name).exists()
+        async with self.bot.db.begin() as session:
+            stmt = sa.select(PackageInfo).where(PackageInfo.name == package_name)
+            package = await session.scalar(stmt)
 
-        if res:
-            await ctx.send(":x: That package is already added!", components=components)
-            return
+            if package:
+                await ctx.send(":x: That package is already added!", components=components)
+                return
 
-        package = await PackageInfo.objects.create(
-            name=package_name, inventory_url=str(inventory_url), base_url=base_url
-        )
-
-        if not package.base_url:
-            package.base_url = self.base_url_from_inventory_url(inventory_url)
+            package = PackageInfo(name=package_name, inventory_url=str(inventory_url), base_url=base_url)
+            session.add(package)
+            await session.commit()
 
         log.info(f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n" + repr(package))
 
@@ -896,15 +894,16 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
             !docs deletedoc aiohttp
         """
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-
-        res = await PackageInfo.objects.filter(name=package_name).get_or_none()
-        if not res:
-            await ctx.send(":x: No package found with that name.", components=components)
-            return
-
         async with ctx.typing():
-            await res.delete()
-            await doc_cache.delete(package_name)
+            async with self.bot.db_engine.begin() as conn:
+                stmt = sa.delete(PackageInfo).where(PackageInfo.name == package_name)
+                result = await conn.execute(stmt)
+                if result.rowcount != 1:
+                    await conn.rollback()
+                    await ctx.send(":x: No package found with that name.", components=components)
+                    return
+
+                await doc_cache.delete(package_name)
             await self.refresh_inventories()
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.", components=components)
 
@@ -967,9 +966,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
     @commands.is_owner()
     @whitelist_command_group.command(name="add", aliases=("a",))
-    async def whitelist_command(
-        self, ctx: commands.Context, package_name: PackageName, *guild_ids: disnake.Guild
-    ) -> None:
+    async def whitelist_command(self, ctx: commands.Context, package_name: PackageName, *guilds: disnake.Guild) -> None:
         """
         Whitelist a package in a guild.
 
@@ -978,26 +975,27 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 
-        if not guild_ids:
+        if not guilds:
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
 
-        try:
-            package = await PackageInfo.objects.get(name=package_name)
-        except ormar.NoMatch:
-            await ctx.send(":x: No package found with that name.", components=components)
-            return
+        async with self.bot.db.begin() as session:
+            package = await session.get(PackageInfo, package_name)
+            if not package:
+                await ctx.send(":x: No package found with that name.", components=components)
+                return
 
-        guild_ids = [g.id for g in guild_ids]
+            guild_ids = [g.id for g in guilds]
 
-        whitelist: List[int] = package.guilds_whitelist or []
-        for guild_id in guild_ids:
-            if guild_id in whitelist:
-                log.debug(f"{package_name} is already whitelisted in {guild_id}")
-                continue
-            whitelist.append(guild_id)
+            whitelist: List[int] = package.guilds_whitelist or []
+            for guild_id in guild_ids:
+                if guild_id in whitelist:
+                    log.debug(f"{package_name} is already whitelisted in {guild_id}")
+                    continue
+                whitelist.append(guild_id)
 
-        await package.update(guilds_whitelist=whitelist)
+            package.guilds_whitelist = whitelist
+            await session.commit()
 
         await self.refresh_whitelist_and_blacklist()
 
@@ -1009,7 +1007,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
     @commands.is_owner()
     @whitelist_command_group.command(name="remove", aliases=("r",))
     async def unwhitelist_command(
-        self, ctx: commands.Context, package_name: PackageName, *guild_ids: disnake.Guild
+        self, ctx: commands.Context, package_name: PackageName, *guilds: disnake.Guild
     ) -> None:
         """
         Unwhitelist a package in a guild.
@@ -1019,28 +1017,31 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 
-        if not guild_ids:
+        if not guilds:
             await ctx.send(":x: You must specify at least one guild.", components=components)
             return
-        try:
-            package = await PackageInfo.objects.get(name=package_name)
-        except ormar.NoMatch:
-            await ctx.send(":x: No package found with that name.", components=components)
-            return
 
-        if not package.guilds_whitelist:
-            await ctx.send("No whitelist configured for that package.", components=components)
-            return
+        async with self.bot.db.begin() as session:
+            package = await session.get(PackageInfo, package_name)
 
-        guild_ids = [g.id for g in guild_ids]
-        whitelist: List[int] = package.guilds_whitelist
-        for guild_id in guild_ids:
-            if guild_id not in whitelist:
-                log.debug(f"{package_name} is not whitelisted in {guild_id}")
-                continue
-            whitelist.remove(guild_id)
+            if not package:
+                await ctx.send(":x: No package found with that name.", components=components)
+                return
 
-        await package.update()
+            if not package.guilds_whitelist:
+                await ctx.send("No whitelist configured for that package.", components=components)
+                return
+
+            guild_ids = [g.id for g in guilds]
+            whitelist: List[int] = package.guilds_whitelist
+            for guild_id in guild_ids:
+                if guild_id not in whitelist:
+                    log.debug(f"{package_name} is not whitelisted in {guild_id}")
+                    continue
+                whitelist.remove(guild_id)
+
+            package.guilds_whitelist = whitelist
+            await session.commit()
 
         await self.refresh_whitelist_and_blacklist()
 
@@ -1082,5 +1083,4 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
     def cog_unload(self) -> None:
         """Clear scheduled inventories, queued symbols and cleanup task on cog unload."""
         self.inventory_scheduler.cancel_all()
-        self.init_refresh_task.cancel()
         scheduling.create_task(self.item_fetcher.clear(), name="DocCog.item_fetcher unload clear")

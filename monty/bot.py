@@ -8,14 +8,16 @@ from weakref import WeakValueDictionary
 import aiohttp
 import arrow
 import cachingutils.redis
-import databases
 import disnake
+import redis
 import redis.asyncio
+import sqlalchemy as sa
 from disnake.ext import commands
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 
 from monty import constants
 from monty.database import Feature, Guild, GuildConfig
-from monty.database.metadata import metadata
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
@@ -50,7 +52,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, database: databases.Database, **kwargs) -> None:
+    def __init__(self, redis_session: redis.asyncio.Redis, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
@@ -62,8 +64,9 @@ class Monty(commands.Bot):
 
         self.create_http_session()
 
-        self.db: databases.Database = database
-        self.db_metadata = metadata
+        self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
+        self.db_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
         self.features: dict[str, Feature] = {}
@@ -76,6 +79,11 @@ class Monty(commands.Bot):
         self.command_prefix: str
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
         self.loop.create_task(self.get_self_invite_perms())
+
+    @property
+    def db(self) -> async_sessionmaker[AsyncSession]:
+        """Alias of `bot.db_session`."""
+        return self.db_session
 
     def create_http_session(self) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
@@ -130,7 +138,10 @@ class Monty(commands.Bot):
                 # once again use the cache just in case
                 guild = self.guild_db.get(guild_id)
                 if not guild:
-                    guild, _ = await Guild.objects.get_or_create(id=guild_id)
+                    async with self.db.begin() as session:
+                        guild = await session.get(Guild, guild_id) or Guild(id=guild_id)
+                        session.add(guild)
+                        await session.commit()
                     self.guild_db[guild_id] = guild
         return guild
 
@@ -138,13 +149,21 @@ class Monty(commands.Bot):
         """Fetch and return a guild config, creating if it does not exist."""
         config = self.guild_configs.get(guild_id)
         if not config:
-            config, _ = await GuildConfig.objects.get_or_create(id=guild_id)
+            guild = await self.ensure_guild(guild_id)
+            async with self.db.begin() as session:
+                config = await session.get(
+                    GuildConfig, guild_id, options=[selectinload(GuildConfig.guild)]
+                ) or GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
+                session.add(config)
+                await session.commit()
             self.guild_configs[guild_id] = config
 
-        if not config.guild:
+        elif not config.guild:
             guild = await self.ensure_guild(guild_id)
-            config.guild = guild
-            await config.update()
+            async with self.db.begin() as session:
+                await session.merge(config)
+                config.guild = guild
+                await session.commit()
 
         return config
 
@@ -162,12 +181,12 @@ class Monty(commands.Bot):
     async def refresh_features(self) -> None:
         """Refresh the feature cache."""
         async with self._feature_db_lock:
-            features = await Feature.objects.all()
-            full_features = []
-            for feature in features:
-                full_features.append(await feature.load_all())
+            async with self.db.begin() as session:
+                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
+                result = await session.scalars(stmt)
+                features = result.all()
             self.features.clear()
-            self.features.update({feature.name: feature for feature in full_features})
+            self.features.update({feature.name: feature for feature in features})
 
     async def guild_has_feature(
         self,
@@ -194,11 +213,16 @@ class Monty(commands.Bot):
                 # get from cached features once within the lock
                 feature_instance = self.features.get(feature)
                 if not feature_instance:
-                    feature_instance = await Feature.objects.get_or_none(name=feature)
-                    if not feature_instance and create_if_not_exists:
-                        feature_instance = self.features[feature] = await Feature.objects.create(name=feature)
-                    elif feature_instance:
-                        feature_instance = self.features[feature] = await feature_instance.load_all()
+                    async with self.db.begin() as session:
+                        feature_instance = await session.get(
+                            Feature, feature, populate_existing=True, options=[selectinload(Feature.rollout)]
+                        )
+                        if not feature_instance and create_if_not_exists:
+                            feature_instance = Feature(feature)
+                            session.add(feature_instance)
+                            await session.commit()  # this will error out if it cannot be made
+                        if feature_instance:
+                            self.features[feature] = feature_instance
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
         if include_feature_status and feature_instance:
@@ -213,15 +237,21 @@ class Monty(commands.Bot):
             guild = guild.id
 
         guild_db = await self.ensure_guild(guild)
-        if feature in guild_db.features:
+        if feature in guild_db.feature_ids:
             return True
 
         # check if this feature has an active rollout
-        if feature_instance and feature_instance.rollout:
-            if not feature_instance.rollout.saved:
-                feature_instance.rollout = await Rollout.objects.get(id=feature_instance.rollout.id)
+        if feature_instance and feature_instance.rollout_id:
+            async with self.db.begin() as session:
+                rollout = await session.get(Rollout, feature_instance.rollout_id)
+                if not rollout:
+                    err = (
+                        f"Database could not find rollout with ID {feature_instance.rollout_id} but feature"
+                        f" {feature_instance.name} is bound to said rollout."
+                    )
+                    raise RuntimeError(err)
 
-            return rollouts.is_rolled_out_to(guild, rollout=feature_instance.rollout)
+            return rollouts.is_rolled_out_to(guild, rollout=rollout)
 
         return False
 
@@ -247,11 +277,11 @@ class Monty(commands.Bot):
         if self.http_session:
             await self.http_session.close()
 
+        if self.db_engine:
+            await self.db_engine.dispose()
+
         if self.redis_session:
             await self.redis_session.close(close_connection_pool=True)
-
-        if self.db:
-            await self.db.disconnect()
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""

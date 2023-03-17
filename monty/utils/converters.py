@@ -7,11 +7,13 @@ from ssl import CertificateError
 
 import arrow
 import disnake
-import ormar
+import sqlalchemy as sa
+import sqlalchemy.exc
 from aiohttp import ClientConnectorError
 from disnake.ext import commands
 
 from monty import exts
+from monty.bot import Monty
 from monty.database import Feature, Rollout
 from monty.log import get_logger
 from monty.utils import inventory_parser
@@ -24,7 +26,7 @@ log = get_logger(__name__)
 DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
-AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context]
+AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context[Monty]]
 
 TIMEDELTA_REGEX = re.compile(
     r"^"
@@ -86,10 +88,13 @@ class RolloutConverter(commands.Converter):
 
     async def convert(self, ctx: AnyContext, argument: str) -> Rollout:
         """Convert the provided argument into a rollout."""
-        try:
-            return await Rollout.objects.get(name=argument)
-        except ormar.NoMatch:
-            raise commands.BadArgument(f"`{argument}` is not a valid rollout name.") from None
+        async with ctx.bot.db.begin() as session:
+            stmt = sa.select(Rollout).where(Rollout.name == argument)
+            result = await session.scalars(stmt)
+            try:
+                return result.one()
+            except sqlalchemy.exc.NoResultFound:
+                raise commands.BadArgument(f"`{argument}` is not a valid rollout name.") from None
 
 
 class MaybeFeature(commands.Converter):
@@ -116,7 +121,7 @@ class FeatureConverter(MaybeFeature):
     This does not check if the argument is a valid feature.
     """
 
-    async def convert(self, ctx: commands.Context, argument: str) -> Feature:
+    async def convert(self, ctx: commands.Context[Monty], argument: str) -> Feature:
         """Check that the argument is a possible feature name."""
         # convert the name to uppercase for the benefit of the user and normalize `-` characters
         argument = await super().convert(ctx, argument)
