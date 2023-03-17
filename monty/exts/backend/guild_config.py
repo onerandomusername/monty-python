@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Dict, Final, Literal, Optional, TypedDict
 
 import aiohttp
 import disnake
+import sqlalchemy as sa
 import tomli
 from disnake.ext import commands
 
@@ -93,8 +94,11 @@ class Configuration(
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
         async with self.bot.db.begin() as session:
-            config = GuildConfig(id=guild.id, guild_id=guild.id)
-            await session.delete(config)
+            stmt = sa.delete(GuildConfig).where(GuildConfig.id == guild.id, GuildConfig.guild_id == guild.id)
+            result = await session.execute(stmt)
+            if result.rowcount != 1:
+                logger.warning(f"guild config doesn't exist for guild_id {guild.id}")
+                return
             await session.commit()
             # also remove it from the cache
             try:
