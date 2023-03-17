@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import dataclasses
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Final, Literal, Optional, TypedDict, Union
+import inspect
+from typing import Literal, Union
 
-import aiohttp
 import disnake
 import sqlalchemy as sa
-import tomli
 from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
+from monty.config_metadata import METADATA, ConfigAttrMetadata
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.log import get_logger
@@ -24,71 +22,43 @@ if GITHUB_TOKEN := constants.Tokens.github:
 
 logger = get_logger(__name__)
 
-if TYPE_CHECKING:
-    from typing_extensions import NotRequired
 
+@commands.register_injection
+async def config_option(inter: disnake.ApplicationCommandInteraction, option: str) -> tuple[str, ConfigAttrMetadata]:
+    """
+    Get a valid configuration option and its metadata.
 
-class ConfigMetadataDict(TypedDict):
-    """The dict of data for ConfigMetadata."""
+    Parameters
+    ----------
+    option: The configuration option to act on.
+    """
+    if option in METADATA:
+        return option, METADATA[option]
+    # attempt to see if the user provided a name directly
+    option = option.lower()
+    for attr, meta in METADATA.items():
+        if isinstance(meta.name, dict):
+            name = meta.name.get(inter.locale) or meta.name.get(inter.guild_locale) or meta.name[disnake.Locale.en_GB]
+        else:
+            name = meta.name
+        if option == name.lower():
+            return attr, meta
 
-    name: str
-    description: str
-    nullable: bool
-    success_message: str
-    success_clear_message: str
-    show_message: str
-    null_show_message: NotRequired[str]
-    validation_error_message: str
-    require_bot: bool
-    ephemeral: NotRequired[bool]
-
-
-@dataclass
-class ConfigMetadata:
-    """Dataclass for configuration metadata."""
-
-    name: str
-    description: str
-    nullable: bool
-    success_message: str
-    success_clear_message: str
-    show_message: str
-    validation_error_message: str
-    require_bot: bool
-    null_show_message: Optional[str] = None
-    ephemeral: bool = True
+    raise commands.UserInputError("Could not find a configuration option with that name.")
 
 
 class Configuration(
     commands.Cog,
     name="Config Manager",
-    slash_command_attrs={"dm_permission": False, "default_member_permissions": disnake.Permissions(manage_guild=True)},
+    slash_command_attrs={
+        "dm_permission": False,
+        "default_member_permissions": disnake.Permissions(manage_guild=True),
+    },
 ):
     """Configuration management for each guild."""
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.valid_fields: Final[Dict[str, dataclasses.Field[Any]]] = {
-            field.name: field for field in dataclasses.fields(GuildConfig)
-        }
-        self.load_schema()
-
-    def load_schema(self) -> None:
-        """Load the configuration strings from the configuration file."""
-        with open("monty/config_schema.toml", "rb") as f:
-            config = tomli.load(f)
-        meta: dict[str, Any] = config["meta"]  # noqa: F841
-        schema: dict[str, ConfigMetadataDict] = config["schema"]
-
-        self.schema: dict[str, ConfigMetadata] = {}
-        for table, data in schema.items():
-            if table not in self.valid_fields:
-                raise RuntimeError("the config_schema.toml is invalid.")
-            self.schema[table] = ConfigMetadata(**data)
-
-        self.name_to_option = {s.name: k for k, s in self.schema.items()}
-
-        logger.info("Loaded the config schema.")
 
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
@@ -122,7 +92,7 @@ class Configuration(
             permissions=self.bot.invite_permissions,
         )
         msg = (
-            "This command cannot be used without the bot, as the bot must be here to listen for prefixed commands.\n"
+            "This command cannot be used without the full bot in this server.\n"
             f"You can invite the full bot by [clicking here](<{invite}>)."
         )
         raise BotAccountRequired(msg)
@@ -147,48 +117,43 @@ class Configuration(
         option: the configuration option to set.
         value: the new value of the configuration option.
         """
+        option_name, metadata = await config_option(inter, option=option)
         config = await self.bot.ensure_guild_config(inter.guild_id)
 
-        if option in self.name_to_option:
-            option = self.name_to_option[option]
-        if option not in self.valid_fields:
-            raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
+        old = getattr(config, option_name)
 
-        field = self.valid_fields[option]
-
-        old = getattr(config, field.name)
-        schema = self.schema[field.name]
-
-        if schema.require_bot:
+        if metadata.requires_bot:
             self.require_bot(inter)
 
         try:
-            setattr(config, field.name, value)
-        except ValueError:
-            raise commands.UserInputError(schema.validation_error_message.format(new=value)) from None
-        try:
-            # special config for github_issues_org
-            if option == "github_issues_org":
-                try:
-                    async with self.bot.http_session.head(
-                        f"https://github.com/{value}", headers=GITHUB_REQUEST_HEADERS, raise_for_status=True
-                    ):
-                        pass
-                except aiohttp.ClientResponseError:
-                    raise commands.UserInputError("organisation must be a valid github user or organsation.") from None
-
-        except Exception:
-            # reset the configuration
-            setattr(config, field.name, old)
-            raise
+            setattr(config, option_name, value)
+        except ValueError as e:
+            raise commands.UserInputError(
+                metadata.status_messages.set_attr_fail.format(name=metadata.name, err=str(e))
+            ) from None
+        if validator := metadata.validator:
+            try:
+                if inspect.iscoroutinefunction(validator):
+                    value = await validator(inter, value)
+                else:
+                    value = validator(inter, value)
+            except Exception:
+                # reset the configuration
+                setattr(config, option_name, old)
+                raise
         async with self.bot.db.begin() as session:
             config = await session.merge(config)
             await session.commit()
 
-        await inter.send(schema.success_message.format(new=value), ephemeral=schema.ephemeral)
+        await inter.send(
+            metadata.status_messages.set_attr_success.format(name=metadata.name, old_setting=old, new_setting=value),
+            ephemeral=True,
+        )
 
     @config.sub_command("get")
-    async def view_command(self, inter: disnake.GuildCommandInteraction, option: str) -> None:
+    async def view_command(
+        self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
+    ) -> None:
         """
         View the current config for a config option.
 
@@ -197,21 +162,18 @@ class Configuration(
         The config option to view the currently set item.
         """
         config = await self.bot.ensure_guild_config(inter.guild_id)
-        if option in self.name_to_option:
-            option = self.name_to_option[option]
-        if option not in self.valid_fields:
-            raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
-        field = self.valid_fields[option]
-        current = getattr(config, field.name)
-        schema = self.schema[field.name]
+        option_name, metadata = option
+        current = getattr(config, option_name)
 
-        if current is not None:
-            await inter.response.send_message(schema.show_message.format(current=current), ephemeral=True)
-        else:
-            await inter.response.send_message(schema.null_show_message, ephemeral=True)
+        await inter.response.send_message(
+            metadata.status_messages.view_attr_success.format(name=metadata.name, current_setting=current),
+            ephemeral=True,
+        )
 
     @config.sub_command("unset")
-    async def clear_command(self, inter: disnake.GuildCommandInteraction, option: str) -> None:
+    async def clear_command(
+        self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
+    ) -> None:
         """
         Clear/unset the config for a config option.
 
@@ -219,21 +181,15 @@ class Configuration(
         ----------
         The config option to unset/change to default.
         """
+        option_name, metadata = option
         config = await self.bot.ensure_guild_config(inter.guild_id)
-        if option in self.name_to_option:
-            option = self.name_to_option[option]
-        if option not in self.valid_fields:
-            raise commands.UserInputError("option must be a valid configuration item (see autocomplete)")
-
-        field = self.valid_fields[option]
-        current = getattr(config, field.name)
-        schema = self.schema[field.name]
+        current = getattr(config, option_name)
         if current is None:
             await inter.response.send_message("This option is already unset.", ephemeral=True)
             return
 
         try:
-            setattr(config, field.name, None)
+            setattr(config, option_name, None)
         except (TypeError, ValueError):
             raise commands.UserInputError("this option is not clearable.") from None
 
@@ -241,7 +197,10 @@ class Configuration(
             config = await session.merge(config)
             await session.commit()
 
-        await inter.response.send_message(schema.success_clear_message, ephemeral=True)
+        await inter.response.send_message(
+            metadata.status_messages.clear_attr_success.format(name=metadata.name),
+            ephemeral=True,
+        )
 
     @set_command.autocomplete("option")
     @clear_command.autocomplete("option")
@@ -256,7 +215,16 @@ class Configuration(
         # todo: support non-nullable names (maybe a second autocomplete)
         # (the above are currently not implemented as there is only two options
         # and all of them are nullable)
-        return self.name_to_option
+        options = {}
+        for attr, meta in METADATA.items():
+            if isinstance(meta.name, str):
+                options[meta.name] = attr
+                continue
+            # get the localised option, fall back to en_GB
+            name = meta.name.get(inter.locale) or meta.name.get(inter.guild_locale) or meta.name[disnake.Locale.en_GB]
+            options[name] = attr
+
+        return dict(sorted(options.items()))
 
     @commands.guild_only()
     @commands.command(name="prefix", hidden=True)
