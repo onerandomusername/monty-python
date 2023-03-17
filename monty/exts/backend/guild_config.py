@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import inspect
 from typing import Literal, Union
 
@@ -188,8 +189,15 @@ class Configuration(
             await inter.response.send_message("This option is already unset.", ephemeral=True)
             return
 
+        fields = dataclasses.fields(config)
+        for field in fields:
+            if field.name == option_name:
+                break
+        else:
+            raise RuntimeError("Could not find the config field for the specified option.")
+
         try:
-            setattr(config, option_name, None)
+            setattr(config, option_name, field.default)
         except (TypeError, ValueError):
             raise commands.UserInputError("this option is not clearable.") from None
 
