@@ -412,12 +412,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             repo: str = ""
 
         if not repo or repo.count("/") > 1:
+            args = " ".join(original_args[:2])
             embed = disnake.Embed(
                 title=random.choice(constants.NEGATIVE_REPLIES),
                 description="The repository should look like `user/reponame` or `user reponame`"
-                + f", not `{' '.join(original_args[:2])}`."
-                if repo
-                else ".",
+                + (f", not `{args}`." if "`" not in args and len(args) < 20 else "."),
                 colour=constants.Colours.soft_red,
             )
 
