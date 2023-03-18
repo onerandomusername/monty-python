@@ -127,7 +127,7 @@ class Monty(commands.Bot):
             self.invite_permissions = constants.Client.invite_permissions
         return self.invite_permissions
 
-    async def ensure_guild(self, guild_id: int) -> Guild:
+    async def ensure_guild(self, guild_id: int, *, session: AsyncSession = None) -> Guild:
         """Fetch and return a guild config, creating if it does not exist."""
         guild = self.guild_db.get(guild_id)
         if not guild:
@@ -138,10 +138,14 @@ class Monty(commands.Bot):
                 # once again use the cache just in case
                 guild = self.guild_db.get(guild_id)
                 if not guild:
-                    async with self.db.begin() as session:
-                        guild = await session.get(Guild, guild_id) or Guild(id=guild_id)
-                        session.add(guild)
-                        await session.commit()
+                    if not session:
+                        session = self.db()
+                    async with (session.begin_nested() if session.in_transaction() else session.begin()) as trans:
+                        guild = await session.get(Guild, guild_id)
+                        if not guild:
+                            guild = Guild(id=guild_id)
+                            session.add(guild)
+                        await trans.commit()
                     self.guild_db[guild_id] = guild
         return guild
 
@@ -149,8 +153,8 @@ class Monty(commands.Bot):
         """Fetch and return a guild config, creating if it does not exist."""
         config = self.guild_configs.get(guild_id)
         if not config:
-            guild = await self.ensure_guild(guild_id)
             async with self.db.begin() as session:
+                guild = await self.ensure_guild(guild_id, session=session)
                 config = await session.get(
                     GuildConfig, guild_id, options=[selectinload(GuildConfig.guild)]
                 ) or GuildConfig(id=guild_id, guild=guild, guild_id=guild_id)
@@ -159,8 +163,8 @@ class Monty(commands.Bot):
             self.guild_configs[guild_id] = config
 
         elif not config.guild:
-            guild = await self.ensure_guild(guild_id)
             async with self.db.begin() as session:
+                guild = await self.ensure_guild(guild_id, session=session)
                 await session.merge(config)
                 config.guild = guild
                 await session.commit()
