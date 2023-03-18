@@ -22,3 +22,4 @@ class GuildConfig(MappedAsDataclass, Base):
         sa.String(length=50), nullable=True, default=constants.Client.default_command_prefix
     )
     github_issues_org: Mapped[Optional[str]] = mapped_column(sa.String(length=39), nullable=True, default=None)
+    git_file_expansions: Mapped[bool] = mapped_column(sa.Boolean, default=True)
