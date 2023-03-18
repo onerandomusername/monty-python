@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
-from typing import Literal, Union
+from typing import Literal, Optional, Union
 
 import disnake
 import sqlalchemy as sa
@@ -22,6 +22,29 @@ if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 logger = get_logger(__name__)
+
+
+def get_locale_from_dict(
+    locales: Union[disnake.Locale, list[disnake.Locale | Literal[None]]],
+    table: dict[disnake.Locale | Literal["_"], str],
+) -> Optional[str]:
+    """Get the first string out of table that matches a locale. Defaults to en_GB if no locale can be found."""
+    if isinstance(locales, disnake.Locale):
+        locales = [locales]
+    for locale in locales:
+        if locale in table:
+            return table[locale]
+    return table[disnake.Locale.en_GB]
+
+
+def get_localised_response(inter: disnake.ApplicationCommandInteraction, text: str, **kwargs) -> str:
+    """For the provided string, add the correct localised option names based on the interaction's locales."""
+    for name, content in kwargs.items():
+        if isinstance(content, dict):
+            content = get_locale_from_dict([inter.locale, inter.guild_locale], content)
+            kwargs[name] = content
+
+    return text.format(**kwargs)
 
 
 @commands.register_injection
@@ -146,8 +169,15 @@ class Configuration(
             config = await session.merge(config)
             await session.commit()
 
-        await inter.send(
-            metadata.status_messages.set_attr_success.format(name=metadata.name, old_setting=old, new_setting=value),
+        response = get_localised_response(
+            inter,
+            metadata.status_messages.set_attr_success,
+            name=metadata.name,
+            old_setting=old,
+            new_setting=value,
+        )
+        await inter.response.send_message(
+            response,
             ephemeral=True,
         )
 
@@ -166,8 +196,14 @@ class Configuration(
         option_name, metadata = option
         current = getattr(config, option_name)
 
+        response = get_localised_response(
+            inter,
+            metadata.status_messages.view_attr_success,
+            name=metadata.name,
+            current_setting=current,
+        )
         await inter.response.send_message(
-            metadata.status_messages.view_attr_success.format(name=metadata.name, current_setting=current),
+            response,
             ephemeral=True,
         )
 
@@ -205,8 +241,13 @@ class Configuration(
             config = await session.merge(config)
             await session.commit()
 
+        response = get_localised_response(
+            inter,
+            metadata.status_messages.clear_attr_success,
+            name=metadata.name,
+        )
         await inter.response.send_message(
-            metadata.status_messages.clear_attr_success.format(name=metadata.name),
+            response,
             ephemeral=True,
         )
 
