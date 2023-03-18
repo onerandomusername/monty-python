@@ -315,7 +315,7 @@ class Configuration(
                 if option not in name.lower():
                     options.pop(name)
 
-        return dict(sorted(options.items()))
+        return dict(sorted(options.items())[:25])
 
     @commands.guild_only()
     @commands.command(name="prefix", hidden=True)
