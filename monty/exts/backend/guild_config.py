@@ -280,7 +280,11 @@ class Configuration(
                 return ["Please fill out the option parameter with a valid option."]
 
         if metadata.type is bool:
-            return {"Enabled": "True", "Disabled": "False"}
+            return {
+                "Enabled": "True",
+                "Disabled": "False",
+                get_localised_response(inter, "{name}", name=metadata.description): "_",
+            }
 
         return [value or get_localised_response(inter, "{name}", name=metadata.description)]
 
