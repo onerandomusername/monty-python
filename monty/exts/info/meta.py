@@ -48,7 +48,7 @@ python-discord's **bot**: ([Repo](https://github.com/python-discord/bot))
 A majority of features were initially implemented on python-discord's **bot**, and modified to work with Monty.
 """
 
-STATS = """
+STATUS = """
 Version: `{version}`
 Disnake version: `{disnake_version}`
 
@@ -89,7 +89,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
-        """About Monty."""
+        """List features, credits, external links."""
         e = disnake.Embed(
             title="About",
             description=ABOUT,
@@ -180,18 +180,18 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
-    @monty.sub_command(name="stats")
+    @monty.sub_command(name="status")
     async def status(self, inter: disnake.CommandInteraction) -> None:
-        """Stats about the current session."""
+        """View the current bot status (uptime, guild count, resource usage, etc)."""
         e = disnake.Embed(
-            title="Stats",
+            title="Status",
             colour=random.choice(COLOURS),
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
         memory_usage = self.process.memory_info()
         memory_usage = memory_usage.rss / 1024**2
 
-        e.description = STATS.format(
+        e.description = STATUS.format(
             disnake_version=importlib.metadata.version("disnake"),
             guilds=len(self.bot.guilds),
             users=sum([guild.member_count for guild in self.bot.guilds]),
