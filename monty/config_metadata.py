@@ -48,10 +48,12 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
     kw_only=True,
 )
 class StatusMessages:
-    set_attr_success: str = "Successfully changed the `{name}` setting from ``{old_setting}`` to ``{new_setting}``."
-    set_attr_fail: str = "Failed to change the `{name}` setting: {err}"
+    set_attr_success: str = (
+        "Successfully set the `{name}`  to ``{new_setting}``."  # this also can take an `old_setting` parameter
+    )
+    set_attr_fail: str = "Could not change the `{name}` setting: {err}"
     view_attr_success: str = "`{name}` is currently set to ``{current_setting}.``"
-    clear_attr_success: str = "The `{name}` setting has successfully been cleared."
+    clear_attr_success: str = "The `{name}` has successfully been cleared."
     clear_attr_success_with_default: str = "The `{name}` setting has been set to the default of ``{default}``."
 
 
