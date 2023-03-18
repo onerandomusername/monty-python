@@ -2432,7 +2432,7 @@ tomli = {version = ">=2.0.1,<3.0.0", markers = "python_version >= \"3.7\" and py
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -2658,4 +2658,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.10"
-content-hash = "37f02b43652302aaaa831c86b852c000a9e0861e0af9363eca39a6f677b9bab0"
+content-hash = "4256efb006510a8a59e4e42e67a468365b0aa28ef43db4adc28e57dd200546b3"
