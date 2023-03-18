@@ -30,9 +30,9 @@ Based off of multiple open source projects, Monty is a development tool for Disc
 - Codeblock detection
 
 **GitHub**: {Client.github_bot_repo}
-**Support**: https://discord.gg/{Client.support_server}
-**Credits**: Run `/monty credits` for a list of original sources.
 **Invite**: Use `/monty invite` to get an invite link to add me to your server.
+**Support**: https://discord.gg/{Client.support_server}
+**Credits**: Click the Credits button below to view who I thank for helping make Monty.
 """
 
 CREDITS = """
@@ -42,13 +42,13 @@ Monty Python would not have been possible without the following open source proj
 **disnake**: [Website](https://disnake.dev) | [Server](https://discord.gg/disnake)
 
 **Initial framework and features**
-python-discord's **sir-lancebot**: ([Repo](https://github.com/python-discord/sir-lancebot))
-python-discord's **bot**: ([Repo](https://github.com/python-discord/bot))
+python-discord's sir-lancebot: ([Repo](https://github.com/python-discord/sir-lancebot))
+python-discord's bot: ([Repo](https://github.com/python-discord/bot))
 
-A majority of features were initially implemented on python-discord's **bot**, and modified to work with Monty.
-"""
+Most initial features (eval, github issues, and similar) were initially forked from python-discord's bot, and modified to work with Monty.
+"""  # noqa: E501
 
-STATS = """
+STATUS = """
 Version: `{version}`
 Disnake version: `{disnake_version}`
 
@@ -89,7 +89,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
-        """About Monty."""
+        """List features, credits, external links."""
         e = disnake.Embed(
             title="About",
             description=ABOUT,
@@ -100,12 +100,20 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         e.set_thumbnail(url=self.bot.user.display_avatar.url)
         e.set_footer(text="Last started", icon_url=self.bot.user.display_avatar.url)
 
-        components = DeleteButton(inter.author)
+        app_info = await self.application_info()
+        components = [
+            DeleteButton(inter.author),
+            disnake.ui.Button(custom_id="meta:v1:credits", style=disnake.ButtonStyle.primary, label="View Credits"),
+            disnake.ui.Button(url=app_info.privacy_policy_url, label="Privacy Policy"),
+            disnake.ui.Button(url=Client.github_bot_repo, label="GitHub"),
+        ]
         await inter.send(embed=e, components=components)
 
-    @monty.sub_command(name="credits")
-    async def credits(self, inter: disnake.CommandInteraction) -> None:
+    @commands.Cog.listener("on_message_interaction")
+    async def show_credits(self, inter: disnake.MessageInteraction) -> None:
         """Credits of original sources."""
+        if inter.component.custom_id != "meta:v1:credits":
+            return
         e = disnake.Embed(
             title="Credits",
             description=CREDITS,
@@ -113,7 +121,11 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
-        await inter.send(embed=e, ephemeral=bool(inter.guild_id))
+        ephemeral = bool(inter.guild_id)
+        components = []
+        if not ephemeral:
+            components.append(DeleteButton(inter.author))
+        await inter.send(embed=e, ephemeral=ephemeral, components=components)
 
     @monty.sub_command(name="invite")
     async def invite(
@@ -168,18 +180,18 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
-    @monty.sub_command(name="stats")
+    @monty.sub_command(name="status")
     async def status(self, inter: disnake.CommandInteraction) -> None:
-        """Stats about the current session."""
+        """View the current bot status (uptime, guild count, resource usage, etc)."""
         e = disnake.Embed(
-            title="Stats",
+            title="Status",
             colour=random.choice(COLOURS),
         )
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
         memory_usage = self.process.memory_info()
         memory_usage = memory_usage.rss / 1024**2
 
-        e.description = STATS.format(
+        e.description = STATUS.format(
             disnake_version=importlib.metadata.version("disnake"),
             guilds=len(self.bot.guilds),
             users=sum([guild.member_count for guild in self.bot.guilds]),
@@ -218,15 +230,6 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             components=components,
         )
 
-    @monty.sub_command()
-    async def uptime(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Get the current uptime of the bot."""
-        timestamp = round(float(self.bot.start_time.format("X")))
-        embed = disnake.Embed(title="Up since:", description=f"<t:{timestamp}:F> (<t:{timestamp}:R>)")
-
-        components = DeleteButton(inter.author)
-        await inter.send(embed=embed, components=components)
-
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
         if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
@@ -253,5 +256,5 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
 
 def setup(bot: Monty) -> None:
-    """Load the Ping cog."""
+    """Load the Meta cog."""
     bot.add_cog(Meta(bot))
