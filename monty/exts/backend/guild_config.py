@@ -259,6 +259,31 @@ class Configuration(
             ephemeral=True,
         )
 
+    @set_command.autocomplete("value")
+    async def set_value_autocomplete(
+        self,
+        inter: disnake.CommandInteraction,
+        value: str,
+        *,
+        option: str = None,
+    ) -> Union[dict[str, str], list[str]]:
+        """Show autocomplete for setting a config option."""
+        if not option:
+            return ["Please fill out the option parameter with a valid option."]
+
+        try:
+            metadata = METADATA[option]
+        except KeyError:
+            try:
+                _, metadata = await config_option(inter, option=option)
+            except commands.UserInputError:
+                return ["Please fill out the option parameter with a valid option."]
+
+        if metadata.type is bool:
+            return {"Enabled": "True", "Disabled": "False"}
+
+        return [value or get_localised_response(inter, "{name}", name=metadata.description)]
+
     @set_command.autocomplete("option")
     @clear_command.autocomplete("option")
     @view_command.autocomplete("option")
@@ -273,13 +298,18 @@ class Configuration(
         # (the above are currently not implemented as there is only two options
         # and all of them are nullable)
         options = {}
-        for attr, meta in METADATA.items():
-            if isinstance(meta.name, str):
-                options[meta.name] = attr
-                continue
-            # get the localised option, fall back to en_GB
-            name = meta.name.get(inter.locale) or meta.name.get(inter.guild_locale) or meta.name[disnake.Locale.en_GB]
+        for attr, metadata in METADATA.items():
+            if isinstance(metadata.name, dict):
+                name = get_localised_response(inter, "{name}", name=metadata.name)
+            else:
+                name = metadata.name
             options[name] = attr
+
+        if option:
+            option = option.lower()
+            for name in options.copy():
+                if option not in name.lower():
+                    options.pop(name)
 
         return dict(sorted(options.items()))
 
