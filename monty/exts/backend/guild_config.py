@@ -153,7 +153,7 @@ class Configuration(
             setattr(config, option_name, value)
         except ValueError as e:
             err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
-            raise commands.UserInputError(err) from None
+            raise commands.BadArgument(err) from None
 
         if validator := metadata.validator:
             try:
@@ -235,7 +235,7 @@ class Configuration(
         try:
             setattr(config, option_name, field.default)
         except (TypeError, ValueError):
-            raise commands.UserInputError("this option is not clearable.") from None
+            raise commands.BadArgument("This option is not clearable.") from None
 
         async with self.bot.db.begin() as session:
             config = await session.merge(config)
