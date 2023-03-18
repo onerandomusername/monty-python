@@ -21,6 +21,7 @@ GITHUB_REQUEST_HEADERS = {}
 if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
+
 logger = get_logger(__name__)
 
 
@@ -150,10 +151,16 @@ class Configuration(
             self.require_bot(inter)
 
         try:
+            # convert the value with the metadata.type
+            param = inspect.Parameter(option_name, kind=inspect.Parameter.KEYWORD_ONLY)
+            value = await commands.run_converters(inter, metadata.type, value, param)  # type: ignore
             setattr(config, option_name, value)
-        except ValueError as e:
+        except (TypeError, ValueError) as e:
             err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
             raise commands.BadArgument(err) from None
+        except commands.UserInputError as e:
+            err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
+            raise e
 
         if validator := metadata.validator:
             try:
