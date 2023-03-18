@@ -166,7 +166,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             ephemeral=ephemeral,
         )
 
-    @commands.slash_command()
+    @monty.sub_command()
     async def ping(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Ping the bot to see its latency and state."""
         embed = disnake.Embed(
