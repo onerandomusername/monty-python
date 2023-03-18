@@ -54,8 +54,6 @@ BITBUCKET_RE = re.compile(
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
-BLACKLIST = []
-
 
 class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
     """
@@ -316,7 +314,11 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         if message.author.bot:
             return
 
-        if not message.guild or message.guild.id in BLACKLIST:
+        if not message.guild:
+            return
+
+        config = await self.bot.ensure_guild_config(message.guild.id)
+        if not config.git_file_expansions:
             return
 
         me = message.guild.me

@@ -720,6 +720,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not message.guild:
             return
 
+        config = await self.bot.ensure_guild_config(message.guild.id)
+        if not config.github_issue_linking:
+            return
+
         perms = message.channel.permissions_for(message.guild.me)
         if isinstance(message.channel, disnake.Thread):
             req_perm = "send_messages_in_threads"
