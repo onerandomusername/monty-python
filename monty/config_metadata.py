@@ -74,7 +74,7 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
     prefix=ConfigAttrMetadata(
         type=str,
         name="Command Prefix",
-        description="The prefix used for getting ",
+        description="The prefix used for text based commands.",
     ),
     github_issues_org=ConfigAttrMetadata(
         type=str,
