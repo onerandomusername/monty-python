@@ -117,13 +117,19 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
-                soup = await self._bot.loop.run_in_executor(
-                    None,
-                    BeautifulSoup,
-                    await response.text(encoding="utf8"),
-                    "lxml",
-                )
+            try:
+                async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
+                    soup = await self._bot.loop.run_in_executor(
+                        None,
+                        BeautifulSoup,
+                        await response.text(encoding="utf8"),
+                        "lxml",
+                    )
+            except Exception:
+                # reset the object to not be user requested, since we cannot parse it.
+                # todo: handle this with the future waiting
+                self._item_futures[doc_item].user_requested = False
+                raise
 
             self._queue.extendleft(QueueItem(item, soup) for item in self._page_doc_items[doc_item.url])
             log.debug(f"Added items from {doc_item.url} to the parse queue.")
@@ -193,6 +199,7 @@ class BatchParser:
 
         Wait for all user-requested symbols to be parsed before clearing the parser.
         """
+        # wait for a maximum of 3 seconds before cancelling the future.
         for future in filter(attrgetter("user_requested"), self._item_futures.values()):
             await future
         if self._parse_task is not None:

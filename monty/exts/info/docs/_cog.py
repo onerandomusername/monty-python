@@ -902,9 +902,11 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
                     await conn.rollback()
                     await ctx.send(":x: No package found with that name.", components=components)
                     return
+                await conn.commit()
 
-                await doc_cache.delete(package_name)
             await self.refresh_inventories()
+            await doc_cache.delete(package_name)
+
         await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.", components=components)
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
