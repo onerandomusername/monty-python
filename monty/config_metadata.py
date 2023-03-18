@@ -94,4 +94,12 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         name="Git file expansions",
         description="Bitbucket, GitLab, and GitHub automatic file expansions.",
     ),
+    github_issue_linking=ConfigAttrMetadata(
+        type=bool,
+        name="Github Automatic Issue Linking",
+        description=(
+            "Automatically link GitHub issues if they match the inline markdown syntax on GitHub. For example,"
+            " `onerandomusername/monty-python#223` will provide a link to issue 223."
+        ),
+    ),
 )
