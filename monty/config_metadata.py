@@ -91,7 +91,7 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
     ),
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
-        name="Git file expansions",
+        name="Git File Expansions",
         description="Bitbucket, GitLab, and GitHub automatic file expansions.",
     ),
     github_issue_linking=ConfigAttrMetadata(
