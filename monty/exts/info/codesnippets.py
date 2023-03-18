@@ -318,7 +318,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
             return
 
         config = await self.bot.ensure_guild_config(message.guild.id)
-
         if not config.git_file_expansions:
             return
 
