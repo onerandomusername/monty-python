@@ -152,9 +152,9 @@ class Configuration(
         try:
             setattr(config, option_name, value)
         except ValueError as e:
-            raise commands.UserInputError(
-                metadata.status_messages.set_attr_fail.format(name=metadata.name, err=str(e))
-            ) from None
+            err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
+            raise commands.UserInputError(err) from None
+
         if validator := metadata.validator:
             try:
                 if inspect.iscoroutinefunction(validator):
@@ -241,11 +241,12 @@ class Configuration(
             config = await session.merge(config)
             await session.commit()
 
-        response = get_localised_response(
-            inter,
-            metadata.status_messages.clear_attr_success,
-            name=metadata.name,
+        text = (
+            metadata.status_messages.clear_attr_success_with_default
+            if field.default is not None
+            else metadata.status_messages.clear_attr_success
         )
+        response = get_localised_response(inter, text, name=metadata.name, default=field.default)
         await inter.response.send_message(
             response,
             ephemeral=True,
