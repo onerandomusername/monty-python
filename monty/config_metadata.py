@@ -46,8 +46,8 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
 
 @dataclass(kw_only=True)
 class StatusMessages:
-    set_attr_success: str = (
-        "Successfully set `{name}`  to ``{new_setting}``."  # this also can take an `old_setting` parameter
+    set_attr_success: str = (  # this also can take an `old_setting` parameter
+        "Successfully set `{name}`  to ``{new_setting}``."
     )
     set_attr_fail: str = "Could not change `{name}`: {err}"
     view_attr_success: str = "`{name}` is currently set to ``{current_setting}.``"
@@ -97,9 +97,10 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
     github_issue_linking=ConfigAttrMetadata(
         type=bool,
         name="Github Automatic Issue Linking",
-        description=(
-            "Automatically link GitHub issues if they match the inline markdown syntax on GitHub. For example,"
-            " `onerandomusername/monty-python#223` will provide a link to issue 223."
+        description="Automatically link GitHub issues if they match the inline markdown syntax on GitHub.",
+        long_description=(
+            "Automatically link GitHub issues if they match the inline markdown syntax on GitHub. "
+            "For example, `onerandomusername/monty-python#223` will provide a link to issue 223."
         ),
     ),
 )
