@@ -205,7 +205,9 @@ class Configuration(
 
         response = get_localised_response(
             inter,
-            metadata.status_messages.view_attr_success,
+            metadata.status_messages.view_attr_success
+            if current is not None
+            else metadata.status_messages.view_attr_success_unset,
             name=metadata.name,
             current_setting=current,
         )

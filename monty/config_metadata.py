@@ -51,6 +51,7 @@ class StatusMessages:
     )
     set_attr_fail: str = "Could not change the `{name}` setting: {err}"
     view_attr_success: str = "`{name}` is currently set to ``{current_setting}.``"
+    view_attr_success_unset: str = "`{name}` is currently unset."  # will take a current_setting parameter if needed
     clear_attr_success: str = "The `{name}` has successfully been cleared."
     clear_attr_success_with_default: str = "The `{name}` setting has been set to the default of ``{default}``."
 
