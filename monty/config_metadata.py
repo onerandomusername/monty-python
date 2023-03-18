@@ -44,9 +44,7 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
     return arg
 
 
-@dataclass(
-    kw_only=True,
-)
+@dataclass(kw_only=True)
 class StatusMessages:
     set_attr_success: str = (
         "Successfully set the `{name}`  to ``{new_setting}``."  # this also can take an `old_setting` parameter
