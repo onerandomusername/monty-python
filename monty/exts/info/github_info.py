@@ -950,15 +950,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         pass
                 await message.edit(suppress_embeds=True)
 
-            scheduling.create_task(remove_embeds())
-            expand_one_issue = True
-        elif await self.bot.guild_has_feature(
-            message.guild,
-            ISSUE_EXPAND_FEATURE_NAME,
-        ):
+            if perms.manage_messages:
+                scheduling.create_task(remove_embeds())
             expand_one_issue = True
         else:
-            expand_one_issue = False
+            expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
 
         embed = self.format_embed(links, expand_one_issue=expand_one_issue)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
