@@ -124,15 +124,10 @@ class GithubCache:
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
     def __init__(self) -> None:
-        # todo: possibly store all of this in redis
-        self._memcache: cachingutils.MemoryCache[str, tuple[Optional[str], Any]] = cachingutils.MemoryCache(
-            timeout=timedelta(hours=3)
-        )
-
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
 
-        self._redis_timeout = timedelta(hours=8).total_seconds()
+        self._redis_timeout = timedelta(days=1).total_seconds()
         self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 
     async def get(
@@ -140,15 +135,11 @@ class GithubCache:
     ) -> Optional[tuple[Optional[str], Any]]:
         """Get the provided key from the internal caches."""
         # only requests for repos go to redis
-        if "/repos?" in key:
-            return await self._rediscache.get(key, default=default)
-        return self._memcache.get(key, default=default)
+        return await self._rediscache.get(key, default=default)
 
     async def set(self, key: str, value: Tuple[Optional[str], Any], *, timeout: Optional[float] = None) -> None:
         """Set the provided key and value into the internal caches."""
-        if "/repos?" in key:
-            return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
-        return self._memcache.set(key, value=value, timeout=timeout)
+        return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
 
     @contextlib.asynccontextmanager
     async def lock(self, key: str) -> AsyncGenerator[None, None]:
@@ -192,7 +183,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
 
-    async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict[str, Any], str, list[Any], Any]:
+    async def fetch_data(
+        self, url: str, *, method: str = "GET", as_text: bool = False, **kw
+    ) -> Union[dict[str, Any], str, list[Any], Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
         if "headers" in kw:
             og = kw["headers"]
@@ -201,8 +194,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             kw["headers"] = REQUEST_HEADERS.copy()
 
-        async with self.request_cache.lock(url):
-            cached = await self.request_cache.get(url)
+        method = method.upper().strip()
+        cache_key = f"{method}:{url}"
+        async with self.request_cache.lock(cache_key):
+            cached = await self.request_cache.get(cache_key)
             if cached:
                 etag, body = cached
                 if not etag:
@@ -213,7 +208,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 etag = None
                 body = None
 
-            async with self.bot.http_session.get(url, **kw) as r:
+            async with self.bot.http_session.request(method.upper(), url, **kw) as r:
                 etag = r.headers.get("ETag")
                 if r.status == 304:
                     return body
@@ -224,9 +219,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
                 # only cache if etag is provided and the request was in the 200
                 if etag and 200 <= r.status < 300:
-                    await self.request_cache.set(url, (etag, body))
+                    await self.request_cache.set(cache_key, (etag, body))
                 elif "/repos?" in url:
-                    await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
+                    await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
 
     @redis_cache(
