@@ -76,8 +76,16 @@ CODE_BLOCK_RE = re.compile(
 # discussions feature name
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
 
-ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 
+ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+# eventually these will replace the above
+EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v1:"
+EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{state}:{org}/{repo}#{num}"
+EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
+    re.escape(EXPAND_ISSUE_CUSTOM_ID_PREFIX)
+    # 1 is expanded, 0 is collapsed
+    + r"(?P<current_state>0|1):(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
+)
 log = get_logger(__name__)
 
 
@@ -112,6 +120,7 @@ class FetchError:
 class IssueState:
     """Dataclass representing the state of an issue."""
 
+    organisation: str
     repository: str
     number: int
     url: str
@@ -579,6 +588,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 emoji = constants.Emojis.issue_closed
 
         return IssueState(
+            user,
             repository,
             number,
             issue_url,
@@ -746,6 +756,71 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         return issues
 
+    def get_current_button_expansion_state(self, custom_id: str) -> bool:
+        """Get whether the issue is currently expanded or collapsed."""
+        match = EXPAND_ISSUE_CUSTOM_ID_REGEX.fullmatch(custom_id)
+        if not match:
+            raise ValueError("Invalid custom_id provided.")
+        return match.group("current_state") == "1"
+
+    def get_expand_button(self, issues: List[IssueState], *, is_expanded: bool = False) -> Optional[disnake.ui.Button]:
+        """Create a new expand button based on the provided issue, if there is only one issue."""
+        if len(issues) != 1:
+            return None
+        issue = issues[0]
+        return disnake.ui.Button(
+            style=disnake.ButtonStyle.primary,
+            label="Show less" if is_expanded else "Show more",
+            custom_id=EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+                state=int(is_expanded),
+                org=issue.organisation,
+                repo=issue.repository,
+                num=issue.number,
+            ),
+        )
+
+    @commands.Cog.listener("on_button_click")
+    async def swap_embed_state(self, inter: disnake.MessageInteraction) -> None:
+        """Swap the embed state for a larger or smaller embed."""
+        # n.b. data integrity is to be managed by any method that edits this message.
+        # ensuring this button has the correct ID and only shows up on messages with one issue is vital.
+        if not inter.data.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+            return
+
+        match = EXPAND_ISSUE_CUSTOM_ID_REGEX.fullmatch(inter.data.custom_id)
+        if not match:
+            await inter.response.send_message("Sorry, something went wrong.", ephemeral=True)
+            err = f"github issue toggle did not match the regex: {inter.data.custom_id}"
+            raise ValueError(err)
+
+        is_expanded = int(match.group("current_state"))
+        issue = FoundIssue(match.group("org"), match.group("repo"), match.group("number"))
+        found_issue = await self.fetch_issues(
+            int(issue.number),
+            issue.repository,
+            issue.organisation,  # type: ignore
+        )
+        embed = self.format_embed([found_issue], expand_one_issue=not is_expanded)
+
+        new_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+            state=int(not is_expanded),
+            org=issue.organisation,
+            repo=issue.repository,
+            num=issue.number,
+        )
+
+        rows = disnake.ui.ActionRow.rows_from_message(inter.message)
+        for row in rows:
+            for comp in row:
+                if comp.custom_id == inter.data.custom_id:
+                    comp.custom_id = new_custom_id
+                    if is_expanded:
+                        comp.label = "Show more"  # type: ignore
+                    else:
+                        comp.label = "Show less"  # type: ignore
+                    break
+        await inter.response.edit_message(embed=embed, components=rows)
+
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
         """
@@ -793,7 +868,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
 
-            components = DeleteButton(message.author)
+            components = [DeleteButton(message.author)]
             response = await message.channel.send(embed=embed, components=components)
             return
 
@@ -814,9 +889,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
-        embed = self.format_embed(links, expand_one_issue=expand_one_issue)
+        embed = self.format_embed(links)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
-        components = [DeleteButton(message.author)]
+        components: List[disnake.ui.Button] = [DeleteButton(message.author)]
+        if expand_one_issue:
+            button = self.get_expand_button(links)
+            if button:
+                components.append(button)
 
         response = await message.channel.send(embed=embed, components=components)
         self.autolink_cache.set(message.id, (response, issues))
@@ -892,10 +971,24 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
         expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
-        embed = self.format_embed(links, expand_one_issue=expand_one_issue)
+        # update the components
+        is_expanded = False
+        # get existing button
+        rows = disnake.ui.ActionRow.rows_from_message(sent_msg)
+        if expand_one_issue:
+            for row in rows:
+                for comp in row:
+                    if comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+                        # get the current state if its already expanded
+                        is_expanded = self.get_current_button_expansion_state(comp.custom_id)
+                        row.remove_item(comp)
+                        button = self.get_expand_button(links, is_expanded=is_expanded)
+                        if button:
+                            row.append_item(button)
 
+        embed = self.format_embed(links, expand_one_issue=is_expanded)
         try:
-            await sent_msg.edit(embed=embed)
+            await sent_msg.edit(embed=embed, components=rows)
         except disnake.HTTPException:
             del self.autolink_cache[after.id]
             return
