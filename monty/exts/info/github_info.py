@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import itertools
 import random
 import re
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from monty import constants
 from monty.bot import Monty
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
+from monty.utils import scheduling
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
 from monty.utils.markdown import DiscordRenderer
@@ -67,6 +69,11 @@ AUTOMATIC_REGEX = re.compile(
     r"((?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/)?(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
+GITHUB_ISSUE_LINK_REGEX = re.compile(
+    r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
+    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)"
+)
+
 
 CODE_BLOCK_RE = re.compile(
     r"^`([^`\n]+)`" r"|```(.+?)```",  # Inline codeblock  # Multiline codeblock
@@ -104,6 +111,7 @@ class FoundIssue:
     organisation: Optional[str]
     repository: str
     number: str
+    should_be_expanded: bool = False
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -745,7 +753,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Extract issues in a message into FoundIssues."""
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
-        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
+        stripped_content = self.remove_codeblocks(message.content)
+        matches = itertools.chain(
+            zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.cycle([False])),
+            zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.cycle([True])),
+        )
+        for match, should_be_expanded in matches:
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if default_user == "":
@@ -758,7 +771,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     continue
                 repo = repos[repo]
 
-            issues.append(FoundIssue(org, repo, match.group("number")))
+            issues.append(FoundIssue(org, repo, match.group("number"), should_be_expanded=should_be_expanded))
 
         return issues
 
@@ -920,7 +933,22 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not links:
             return
 
-        expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+        if len(links) == 1 and issues[0].should_be_expanded:
+
+            async def remove_embeds() -> None:
+                await asyncio.sleep(1.5)
+                await message.edit(suppress_embeds=True)
+
+            scheduling.create_task(remove_embeds())
+            expand_one_issue = True
+        elif await self.bot.guild_has_feature(
+            message.guild,
+            ISSUE_EXPAND_FEATURE_NAME,
+        ):
+            expand_one_issue = True
+        else:
+            expand_one_issue = False
+
         embed = self.format_embed(links)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
