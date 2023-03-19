@@ -80,11 +80,12 @@ DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
 ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 # eventually these will replace the above
 EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v1:"
-EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{state}:{org}/{repo}#{num}"
+EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{user_id}:{state}:{org}/{repo}#{num}"
 EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     re.escape(EXPAND_ISSUE_CUSTOM_ID_PREFIX)
     # 1 is expanded, 0 is collapsed
-    + r"(?P<current_state>0|1):(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
+    + r"(?P<user_id>[0-9]+):(?P<current_state>0|1):"
+    r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 log = get_logger(__name__)
 
@@ -763,7 +764,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raise ValueError("Invalid custom_id provided.")
         return match.group("current_state") == "1"
 
-    def get_expand_button(self, issues: List[IssueState], *, is_expanded: bool = False) -> Optional[disnake.ui.Button]:
+    def get_expand_button(
+        self,
+        issues: List[IssueState],
+        *,
+        is_expanded: bool = False,
+        user_id: int,
+    ) -> Optional[disnake.ui.Button]:
         """Create a new expand button based on the provided issue, if there is only one issue."""
         if len(issues) != 1:
             return None
@@ -772,6 +779,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             style=disnake.ButtonStyle.primary,
             label="Show less" if is_expanded else "Show more",
             custom_id=EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+                user_id=user_id,
                 state=int(is_expanded),
                 org=issue.organisation,
                 repo=issue.repository,
@@ -793,6 +801,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             err = f"github issue toggle did not match the regex: {inter.data.custom_id}"
             raise ValueError(err)
 
+        # check the user
+        if int(match.group("user_id")) != inter.author.id:
+            return
+
         is_expanded = int(match.group("current_state"))
         issue = FoundIssue(match.group("org"), match.group("repo"), match.group("number"))
         found_issue = await self.fetch_issues(
@@ -803,6 +815,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         embed = self.format_embed([found_issue], expand_one_issue=not is_expanded)
 
         new_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+            user_id=inter.author.id,
             state=int(not is_expanded),
             org=issue.organisation,
             repo=issue.repository,
@@ -893,7 +906,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
         if expand_one_issue:
-            button = self.get_expand_button(links)
+            button = self.get_expand_button(links, user_id=message.author.id)
             if button:
                 components.append(button)
 
@@ -982,7 +995,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         # get the current state if its already expanded
                         is_expanded = self.get_current_button_expansion_state(comp.custom_id)
                         row.remove_item(comp)
-                        button = self.get_expand_button(links, is_expanded=is_expanded)
+                        button = self.get_expand_button(links, is_expanded=is_expanded, user_id=after.author.id)
                         if button:
                             row.append_item(button)
 
