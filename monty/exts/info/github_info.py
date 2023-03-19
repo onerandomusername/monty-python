@@ -803,6 +803,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         # check the user
         if int(match.group("user_id")) != inter.author.id:
+            await inter.response.send_message(
+                "Sorry, but this embed was sent as a response to someone else!", ephemeral=True
+            )
             return
 
         is_expanded = int(match.group("current_state"))
