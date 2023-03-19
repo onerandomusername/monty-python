@@ -957,7 +957,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
         if expand_one_issue:
-            button = self.get_expand_button(links, user_id=message.author.id, is_expanded=expand_one_issue)
+            button = self.get_expand_button(links, user_id=message.author.id)
             if button:
                 components.append(button)
 
