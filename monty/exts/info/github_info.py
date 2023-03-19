@@ -80,9 +80,8 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-# discussions feature name
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
-
+GITHUB_ISSUE_LINKS_FEATURES = "GITHUB_EXPAND_ISSUE_LINKS"
 
 ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 # eventually these will replace the above
@@ -754,10 +753,18 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
         stripped_content = self.remove_codeblocks(message.content)
-        matches = itertools.chain(
-            zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.cycle([False])),
-            zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.cycle([True])),
-        )
+
+        respond_to_issue_links = await self.bot.guild_has_feature(message.guild, GITHUB_ISSUE_LINKS_FEATURES)
+        if respond_to_issue_links:
+            matches = itertools.chain(
+                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
+                zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.repeat(True)),
+            )
+        else:
+            matches = itertools.chain(
+                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
+            )
+
         for match, should_be_expanded in matches:
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
