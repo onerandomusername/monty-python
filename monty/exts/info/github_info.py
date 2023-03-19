@@ -748,14 +748,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def extract_issues_from_message(
         self,
         message: disnake.Message,
+        *,
+        extract_full_links: bool = False,
     ) -> List[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
         stripped_content = self.remove_codeblocks(message.content)
 
-        respond_to_issue_links = await self.bot.guild_has_feature(message.guild, GITHUB_ISSUE_LINKS_FEATURES)
-        if respond_to_issue_links:
+        if extract_full_links:
             matches = itertools.chain(
                 zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
                 zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.repeat(True)),
@@ -901,7 +902,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not getattr(perms, req_perm):
             return
 
-        issues = await self.extract_issues_from_message(message)
+        issues = await self.extract_issues_from_message(
+            message,
+            extract_full_links=await self.bot.guild_has_feature(message.guild, GITHUB_ISSUE_LINKS_FEATURES),
+        )
 
         # no issues found, return early
         if not issues:
@@ -924,6 +928,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             self.autolink_cache.set(message.id, (response, issues))
             return
 
+        total_pre_expanded = 0
         for repo_issue in issues:
             if repo_issue.organisation is None:
                 continue
@@ -936,6 +941,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
+                if repo_issue.should_be_expanded:
+                    total_pre_expanded += 1
+
+        # for now, we do not expand when there is more than 1 pre-expanded image link
+        if total_pre_expanded > 1:
+            return
 
         if not links:
             return
@@ -955,6 +966,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             expand_one_issue = True
         else:
             expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+
+        # check that all of the issues are
 
         embed = self.format_embed(links, expand_one_issue=expand_one_issue)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
@@ -981,25 +994,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             return
 
-        default_user: Optional[str] = ""
-
-        after_issues: List[FoundIssue] = []
-        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(after.content)):
-            repo = match.group("repo").lower()
-            if not (org := match.group("org")):
-                if not default_user:
-                    if default_user == "":
-                        default_user, _ = await self.fetch_user_and_repo(after)
-                        default_user = default_user or None
-                    if default_user is None:
-                        continue
-                org = default_user
-                repos = await self.fetch_repos(org)
-                if repo not in repos:
-                    continue
-                repo = repos[repo]
-
-            after_issues.append(FoundIssue(org, repo, match.group("number")))
+        after_issues = await self.extract_issues_from_message(
+            after,
+            extract_full_links=await self.bot.guild_has_feature(after.guild, GITHUB_ISSUE_LINKS_FEATURES),
+        )
 
         # if a user provides too many issues here, just forgo it
         after_issues = after_issues[:MAXIMUM_ISSUES]
@@ -1020,6 +1018,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         links: List[IssueState] = []
+        total_pre_expanded = 0
         for repo_issue in after_issues:
             if repo_issue.organisation is None:
                 continue
@@ -1032,10 +1031,17 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
+                if repo_issue.should_be_expanded:
+                    total_pre_expanded += 1
 
         if not links:
             # see above comments
             return
+
+        # for now, we do not expand when there is more than 1 pre-expanded image link
+        if total_pre_expanded > 1:
+            return
+
         expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
         # update the components
