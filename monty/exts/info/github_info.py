@@ -76,8 +76,17 @@ CODE_BLOCK_RE = re.compile(
 # discussions feature name
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
 
-ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 
+ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+# eventually these will replace the above
+EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v1:"
+EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{user_id}:{state}:{org}/{repo}#{num}"
+EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
+    re.escape(EXPAND_ISSUE_CUSTOM_ID_PREFIX)
+    # 1 is expanded, 0 is collapsed
+    + r"(?P<user_id>[0-9]+):(?P<current_state>0|1):"
+    r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
+)
 log = get_logger(__name__)
 
 
@@ -112,6 +121,7 @@ class FetchError:
 class IssueState:
     """Dataclass representing the state of an issue."""
 
+    organisation: str
     repository: str
     number: int
     url: str
@@ -124,15 +134,10 @@ class GithubCache:
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
     def __init__(self) -> None:
-        # todo: possibly store all of this in redis
-        self._memcache: cachingutils.MemoryCache[str, tuple[Optional[str], Any]] = cachingutils.MemoryCache(
-            timeout=timedelta(hours=3)
-        )
-
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
 
-        self._redis_timeout = timedelta(hours=8).total_seconds()
+        self._redis_timeout = timedelta(days=1).total_seconds()
         self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 
     async def get(
@@ -140,15 +145,11 @@ class GithubCache:
     ) -> Optional[tuple[Optional[str], Any]]:
         """Get the provided key from the internal caches."""
         # only requests for repos go to redis
-        if "/repos?" in key:
-            return await self._rediscache.get(key, default=default)
-        return self._memcache.get(key, default=default)
+        return await self._rediscache.get(key, default=default)
 
     async def set(self, key: str, value: Tuple[Optional[str], Any], *, timeout: Optional[float] = None) -> None:
         """Set the provided key and value into the internal caches."""
-        if "/repos?" in key:
-            return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
-        return self._memcache.set(key, value=value, timeout=timeout)
+        return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
 
     @contextlib.asynccontextmanager
     async def lock(self, key: str) -> AsyncGenerator[None, None]:
@@ -192,7 +193,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
 
-    async def fetch_data(self, url: str, *, as_text: bool = False, **kw) -> Union[dict[str, Any], str, list[Any], Any]:
+    async def fetch_data(
+        self, url: str, *, method: str = "GET", as_text: bool = False, **kw
+    ) -> Union[dict[str, Any], str, list[Any], Any]:
         """Retrieve data as a dictionary and cache it, using the provided etag."""
         if "headers" in kw:
             og = kw["headers"]
@@ -201,8 +204,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             kw["headers"] = REQUEST_HEADERS.copy()
 
-        async with self.request_cache.lock(url):
-            cached = await self.request_cache.get(url)
+        method = method.upper().strip()
+        cache_key = f"{method}:{url}"
+        async with self.request_cache.lock(cache_key):
+            cached = await self.request_cache.get(cache_key)
             if cached:
                 etag, body = cached
                 if not etag:
@@ -213,7 +218,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 etag = None
                 body = None
 
-            async with self.bot.http_session.get(url, **kw) as r:
+            async with self.bot.http_session.request(method.upper(), url, **kw) as r:
                 etag = r.headers.get("ETag")
                 if r.status == 304:
                     return body
@@ -224,9 +229,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
                 # only cache if etag is provided and the request was in the 200
                 if etag and 200 <= r.status < 300:
-                    await self.request_cache.set(url, (etag, body))
+                    await self.request_cache.set(cache_key, (etag, body))
                 elif "/repos?" in url:
-                    await self.request_cache.set(url, (None, body), timeout=timedelta(minutes=30).total_seconds())
+                    await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
 
     @redis_cache(
@@ -584,6 +589,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 emoji = constants.Emojis.issue_closed
 
         return IssueState(
+            user,
             repository,
             number,
             issue_url,
@@ -593,51 +599,65 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         )
 
     @staticmethod
+    def format_embed_expanded_issue(
+        issue: IssueState,
+    ) -> disnake.Embed:
+        """Given one issue, format an expanded embed with considerably more detail than usual."""
+        if not isinstance(issue, IssueState):
+            err = f"issue must be an instance of IssueState, not {type(issue)}"
+            raise TypeError(err)
+        if not issue.raw_json:
+            raise ValueError("the provided issue does not have its raw json payload")
+
+        json_data = issue.raw_json
+        embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
+        embed.set_author(
+            name=json_data["user"]["login"],
+            url=json_data["user"]["html_url"],
+            icon_url=json_data["user"]["avatar_url"],
+        )
+        embed.title = issue.emoji + " " + issue.title
+
+        if json_data["labels"]:
+            labels = ", ".join(sorted([label["name"] for label in json_data["labels"]]))
+            if len(labels) > 1024:
+                labels = labels[:1020] + "..."
+            embed.add_field("Labels", labels)
+
+        embed.url = issue.url
+        embed.timestamp = datetime.strptime(json_data["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+        embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
+
+        body: Optional[str] = json_data["body"]
+        if body and not body.isspace():
+            # escape wack stuff from the markdown
+            markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
+            body = markdown(body) or ""
+            if len(body) > 700:
+                embed.description = body[:697] + "..."
+            else:
+                embed.description = body
+        if not body or body.isspace():
+            embed.description = "*No description provided.*"
+        return embed
+
+    @classmethod
     def format_embed(
+        cls,
         results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
         *,
-        can_expand_one_issue: bool = False,
+        expand_one_issue: bool = False,
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
         if (
-            can_expand_one_issue
+            expand_one_issue
             and len(results) == 1
             and isinstance(issue := results[0], IssueState)
             and issue.raw_json is not None
         ):
             # show considerably more information about the issue if there is a single provided issue
-            json_data = issue.raw_json
-            embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
-            embed.set_author(
-                name=json_data["user"]["login"],
-                url=json_data["user"]["html_url"],
-                icon_url=json_data["user"]["avatar_url"],
-            )
-            embed.title = issue.emoji + " " + issue.title
-
-            if json_data["labels"]:
-                labels = ", ".join(sorted([label["name"] for label in json_data["labels"]]))
-                if len(labels) > 1024:
-                    labels = labels[:1020] + "..."
-                embed.add_field("Labels", labels)
-
-            embed.url = issue.url
-            embed.timestamp = datetime.strptime(json_data["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-            embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
-
-            body: Optional[str] = json_data["body"]
-            if body and not body.isspace():
-                # escape wack stuff from the markdown
-                markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
-                body = markdown(body) or ""
-                if len(body) > 700:
-                    embed.description = body[:697] + "..."
-                else:
-                    embed.description = body
-            if not body or body.isspace():
-                embed.description = "*No description provided.*"
-            return embed
+            return cls.format_embed_expanded_issue(issue)
 
         for result in results:
             if isinstance(result, IssueState):
@@ -698,10 +718,124 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
-        can_expand_one_issue = await self.bot.guild_has_feature(ctx.guild, ISSUE_EXPAND_FEATURE_NAME)
-        await ctx.send(
-            embed=self.format_embed(results, can_expand_one_issue=can_expand_one_issue), components=components
+        expand_one_issue = await self.bot.guild_has_feature(ctx.guild, ISSUE_EXPAND_FEATURE_NAME)
+        await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue), components=components)
+
+    async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
+        """
+        Get the default GitHub user in the context of the provided Message.
+
+        Right now this only returns the default user for the message's guild.
+        """
+        try:
+            default_user, _ = await self.fetch_user_and_repo(message)
+        except commands.UserInputError:
+            return None
+        return default_user
+
+    async def extract_issues_from_message(
+        self,
+        message: disnake.Message,
+    ) -> List[FoundIssue]:
+        """Extract issues in a message into FoundIssues."""
+        issues: List[FoundIssue] = []
+        default_user: Optional[str] = ""
+        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
+            repo = match.group("repo").lower()
+            if not (org := match.group("org")):
+                if default_user == "":
+                    default_user = await self.fetch_default_user(message)
+                if default_user is None:
+                    continue
+                org = default_user
+                repos = await self.fetch_repos(org)
+                if repo not in repos:
+                    continue
+                repo = repos[repo]
+
+            issues.append(FoundIssue(org, repo, match.group("number")))
+
+        return issues
+
+    def get_current_button_expansion_state(self, custom_id: str) -> bool:
+        """Get whether the issue is currently expanded or collapsed."""
+        match = EXPAND_ISSUE_CUSTOM_ID_REGEX.fullmatch(custom_id)
+        if not match:
+            raise ValueError("Invalid custom_id provided.")
+        return match.group("current_state") == "1"
+
+    def get_expand_button(
+        self,
+        issues: List[IssueState],
+        *,
+        is_expanded: bool = False,
+        user_id: int,
+    ) -> Optional[disnake.ui.Button]:
+        """Create a new expand button based on the provided issue, if there is only one issue."""
+        if len(issues) != 1:
+            return None
+        issue = issues[0]
+        return disnake.ui.Button(
+            style=disnake.ButtonStyle.primary,
+            label="Show less" if is_expanded else "Show more",
+            custom_id=EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+                user_id=user_id,
+                state=int(is_expanded),
+                org=issue.organisation,
+                repo=issue.repository,
+                num=issue.number,
+            ),
         )
+
+    @commands.Cog.listener("on_button_click")
+    async def swap_embed_state(self, inter: disnake.MessageInteraction) -> None:
+        """Swap the embed state for a larger or smaller embed."""
+        # n.b. data integrity is to be managed by any method that edits this message.
+        # ensuring this button has the correct ID and only shows up on messages with one issue is vital.
+        if not inter.data.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+            return
+
+        match = EXPAND_ISSUE_CUSTOM_ID_REGEX.fullmatch(inter.data.custom_id)
+        if not match:
+            await inter.response.send_message("Sorry, something went wrong.", ephemeral=True)
+            err = f"github issue toggle did not match the regex: {inter.data.custom_id}"
+            raise ValueError(err)
+
+        # check the user
+        if int(match.group("user_id")) != inter.author.id:
+            await inter.response.send_message(
+                "Sorry, but this embed was sent as a response to someone else!", ephemeral=True
+            )
+            return
+
+        is_expanded = int(match.group("current_state"))
+        issue = FoundIssue(match.group("org"), match.group("repo"), match.group("number"))
+        found_issue = await self.fetch_issues(
+            int(issue.number),
+            issue.repository,
+            issue.organisation,  # type: ignore
+        )
+        embed = self.format_embed([found_issue], expand_one_issue=not is_expanded)
+
+        new_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+            user_id=inter.author.id,
+            state=int(not is_expanded),
+            org=issue.organisation,
+            repo=issue.repository,
+            num=issue.number,
+        )
+
+        rows = disnake.ui.ActionRow.rows_from_message(inter.message)
+        for row in rows:
+            for comp in row:
+                if comp.custom_id == inter.data.custom_id:
+                    comp.custom_id = new_custom_id
+                    if is_expanded:
+                        comp.label = "Show more"  # type: ignore
+                    else:
+                        comp.label = "Show less"  # type: ignore
+                    break
+        await inter.response.edit_message(embed=embed, components=rows)
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
@@ -732,68 +866,53 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not getattr(perms, req_perm):
             return
 
-        default_user: Optional[str] = ""
+        issues = await self.extract_issues_from_message(message)
 
-        issues: List[FoundIssue] = []
-        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
-            repo = match.group("repo").lower()
-            if not (org := match.group("org")):
-                if not default_user:
-                    if default_user == "":
-                        try:
-                            default_user, _ = await self.fetch_user_and_repo(message)
-                        except commands.UserInputError:
-                            continue
-                        else:
-                            default_user = default_user or None
-                    if default_user is None:
-                        continue
-                org = default_user
-                repos = await self.fetch_repos(org)
-                if repo not in repos:
-                    continue
-                repo = repos[repo]
-
-            issues.append(FoundIssue(org, repo, match.group("number")))
+        # no issues found, return early
+        if not issues:
+            return
 
         links: list[IssueState] = []
+        log.trace(f"Found {issues = }")
+        # Remove duplicates
+        issues = list(dict.fromkeys(issues, None))
 
-        if issues:
-            log.trace(f"Found {issues = }")
-            # Remove duplicates
-            issues = list(dict.fromkeys(issues, None))
+        if len(issues) > MAXIMUM_ISSUES:
+            embed = disnake.Embed(
+                title=random.choice(constants.ERROR_REPLIES),
+                color=constants.Colours.soft_red,
+                description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
+            )
 
-            if len(issues) > MAXIMUM_ISSUES:
-                embed = disnake.Embed(
-                    title=random.choice(constants.ERROR_REPLIES),
-                    color=constants.Colours.soft_red,
-                    description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
-                )
+            components = [DeleteButton(message.author)]
+            response = await message.channel.send(embed=embed, components=components)
+            return
 
-                components = DeleteButton(message.author)
-                await message.channel.send(embed=embed, components=components)
-                return
+        for repo_issue in issues:
+            if repo_issue.organisation is None:
+                continue
 
-            for repo_issue in issues:
-                if repo_issue.organisation is None:
-                    continue
-
-                result = await self.fetch_issues(
-                    int(repo_issue.number),
-                    repo_issue.repository,
-                    repo_issue.organisation,
-                    allow_discussions=await self.bot.guild_has_feature(message.guild.id, DISCUSSIONS_FEATURE_NAME),
-                )
-                if isinstance(result, IssueState):
-                    links.append(result)
+            result = await self.fetch_issues(
+                int(repo_issue.number),
+                repo_issue.repository,
+                repo_issue.organisation,
+                allow_discussions=await self.bot.guild_has_feature(message.guild.id, DISCUSSIONS_FEATURE_NAME),
+            )
+            if isinstance(result, IssueState):
+                links.append(result)
 
         if not links:
             return
 
-        can_expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
-        embed = self.format_embed(links, can_expand_one_issue=can_expand_one_issue)
-        log.debug(f"Sending github issues to {message.channel} in guild {message.guild}.")
-        components = DeleteButton(message.author)
+        expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+        embed = self.format_embed(links)
+        log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
+        components: List[disnake.ui.Button] = [DeleteButton(message.author)]
+        if expand_one_issue:
+            button = self.get_expand_button(links, user_id=message.author.id)
+            if button:
+                components.append(button)
+
         response = await message.channel.send(embed=embed, components=components)
         self.autolink_cache.set(message.id, (response, issues))
 
@@ -866,12 +985,26 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not links:
             # see above comments
             return
-        can_expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
+        expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
-        embed = self.format_embed(links, can_expand_one_issue=can_expand_one_issue)
+        # update the components
+        is_expanded = False
+        # get existing button
+        rows = disnake.ui.ActionRow.rows_from_message(sent_msg)
+        if expand_one_issue:
+            for row in rows:
+                for comp in row:
+                    if comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+                        # get the current state if its already expanded
+                        is_expanded = self.get_current_button_expansion_state(comp.custom_id)
+                        row.remove_item(comp)
+                        button = self.get_expand_button(links, is_expanded=is_expanded, user_id=after.author.id)
+                        if button:
+                            row.append_item(button)
 
+        embed = self.format_embed(links, expand_one_issue=is_expanded)
         try:
-            await sent_msg.edit(embed=embed)
+            await sent_msg.edit(embed=embed, components=rows)
         except disnake.HTTPException:
             del self.autolink_cache[after.id]
             return
