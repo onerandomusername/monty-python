@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import itertools
 import random
 import re
 from dataclasses import dataclass
@@ -22,6 +23,7 @@ from monty import constants
 from monty.bot import Monty
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
+from monty.utils import scheduling
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
 from monty.utils.markdown import DiscordRenderer
@@ -67,15 +69,19 @@ AUTOMATIC_REGEX = re.compile(
     r"((?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/)?(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
+GITHUB_ISSUE_LINK_REGEX = re.compile(
+    r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
+    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)"
+)
+
 
 CODE_BLOCK_RE = re.compile(
     r"^`([^`\n]+)`" r"|```(.+?)```",  # Inline codeblock  # Multiline codeblock
     re.DOTALL | re.MULTILINE,
 )
 
-# discussions feature name
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
-
+GITHUB_ISSUE_LINKS_FEATURES = "GITHUB_EXPAND_ISSUE_LINKS"
 
 ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 # eventually these will replace the above
@@ -104,6 +110,7 @@ class FoundIssue:
     organisation: Optional[str]
     repository: str
     number: str
+    should_be_expanded: bool = False
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -741,11 +748,25 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def extract_issues_from_message(
         self,
         message: disnake.Message,
+        *,
+        extract_full_links: bool = False,
     ) -> List[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
-        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(message.content)):
+        stripped_content = self.remove_codeblocks(message.content)
+
+        if extract_full_links:
+            matches = itertools.chain(
+                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
+                zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.repeat(True)),
+            )
+        else:
+            matches = itertools.chain(
+                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
+            )
+
+        for match, should_be_expanded in matches:
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if default_user == "":
@@ -758,7 +779,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     continue
                 repo = repos[repo]
 
-            issues.append(FoundIssue(org, repo, match.group("number")))
+            issues.append(FoundIssue(org, repo, match.group("number"), should_be_expanded=should_be_expanded))
 
         return issues
 
@@ -881,7 +902,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not getattr(perms, req_perm):
             return
 
-        issues = await self.extract_issues_from_message(message)
+        issues = await self.extract_issues_from_message(
+            message,
+            extract_full_links=await self.bot.guild_has_feature(message.guild, GITHUB_ISSUE_LINKS_FEATURES),
+        )
 
         # no issues found, return early
         if not issues:
@@ -904,6 +928,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             self.autolink_cache.set(message.id, (response, issues))
             return
 
+        total_pre_expanded = 0
         for repo_issue in issues:
             if repo_issue.organisation is None:
                 continue
@@ -916,12 +941,35 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
+                if repo_issue.should_be_expanded:
+                    total_pre_expanded += 1
+
+        # for now, we do not expand when there is more than 1 pre-expanded image link
+        if total_pre_expanded > 1:
+            return
 
         if not links:
             return
 
-        expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
-        embed = self.format_embed(links)
+        if len(links) == 1 and issues[0].should_be_expanded:
+
+            async def remove_embeds() -> None:
+                if not message.embeds:
+                    try:
+                        await self.bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=3)
+                    except asyncio.TimeoutError:
+                        pass
+                await message.edit(suppress_embeds=True)
+
+            if perms.manage_messages:
+                scheduling.create_task(remove_embeds())
+            expand_one_issue = True
+        else:
+            expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+
+        # check that all of the issues are
+
+        embed = self.format_embed(links, expand_one_issue=expand_one_issue)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
         if expand_one_issue:
@@ -946,25 +994,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             return
 
-        default_user: Optional[str] = ""
-
-        after_issues: List[FoundIssue] = []
-        for match in AUTOMATIC_REGEX.finditer(self.remove_codeblocks(after.content)):
-            repo = match.group("repo").lower()
-            if not (org := match.group("org")):
-                if not default_user:
-                    if default_user == "":
-                        default_user, _ = await self.fetch_user_and_repo(after)
-                        default_user = default_user or None
-                    if default_user is None:
-                        continue
-                org = default_user
-                repos = await self.fetch_repos(org)
-                if repo not in repos:
-                    continue
-                repo = repos[repo]
-
-            after_issues.append(FoundIssue(org, repo, match.group("number")))
+        after_issues = await self.extract_issues_from_message(
+            after,
+            extract_full_links=await self.bot.guild_has_feature(after.guild, GITHUB_ISSUE_LINKS_FEATURES),
+        )
 
         # if a user provides too many issues here, just forgo it
         after_issues = after_issues[:MAXIMUM_ISSUES]
@@ -985,6 +1018,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         links: List[IssueState] = []
+        total_pre_expanded = 0
         for repo_issue in after_issues:
             if repo_issue.organisation is None:
                 continue
@@ -997,10 +1031,17 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
+                if repo_issue.should_be_expanded:
+                    total_pre_expanded += 1
 
         if not links:
             # see above comments
             return
+
+        # for now, we do not expand when there is more than 1 pre-expanded image link
+        if total_pre_expanded > 1:
+            return
+
         expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
         # update the components
