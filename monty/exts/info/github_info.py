@@ -522,7 +522,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # fetch with gql
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
-                return FetchError(-1, "Issue not found.")
+                return FetchError(404, "Issue not found.")
             query = gql.gql(
                 """
                 query getDiscussion($user: String!, $repository: String!, $number: Int!) {
@@ -647,6 +647,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
         *,
         expand_one_issue: bool = False,
+        show_errors_inline: bool = True,
     ) -> disnake.Embed:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
@@ -662,10 +663,14 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         for result in results:
             if isinstance(result, IssueState):
                 description_list.append(f"{result.emoji} [\\(#{result.number}\\) {result.title}]({result.url})")
-            elif isinstance(result, FetchError):
-                description_list.append(f":x: [{result.return_code}] {result.message}")
-            else:
-                description_list.append("Something internal went wrong.")
+            elif show_errors_inline:
+                if isinstance(result, FetchError):
+                    description_list.append(f":x: [{result.return_code}] {result.message}")
+                else:
+                    description_list.append("Something internal went wrong.")
+
+        if not description_list:
+            raise ValueError("must have at least one IssueState if show_errors_inline is enabled")
 
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
@@ -802,20 +807,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raise ValueError(err)
 
         # check the user
-        if int(match.group("user_id")) != inter.author.id:
-            await inter.response.send_message(
-                "Sorry, but this embed was sent as a response to someone else!", ephemeral=True
-            )
-            return
-
         is_expanded = int(match.group("current_state"))
+        # if the issue is already expanded and not OP, ignore the interaction
+        if int(match.group("user_id")) != inter.author.id:
+            if is_expanded:
+                await inter.response.send_message("Sorry, but you cannot collapse this issue!", ephemeral=True)
+                return
+            is_different_author = True
+        else:
+            is_different_author = False
+
         issue = FoundIssue(match.group("org"), match.group("repo"), match.group("number"))
         found_issue = await self.fetch_issues(
             int(issue.number),
             issue.repository,
             issue.organisation,  # type: ignore
+            allow_discussions=True,  # if we have a discussion linked it was enabled at some point
         )
         embed = self.format_embed([found_issue], expand_one_issue=not is_expanded)
+
+        # send the embed in a new message
+        if is_different_author:
+            await inter.response.send_message(embed=embed, ephemeral=True)
+            return
 
         new_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
             user_id=inter.author.id,
@@ -835,6 +849,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     else:
                         comp.label = "Show less"  # type: ignore
                     break
+
         await inter.response.edit_message(embed=embed, components=rows)
 
     @commands.Cog.listener("on_message")
