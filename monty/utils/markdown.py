@@ -149,6 +149,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         if info:
             lang = info.split(None, 1)[0]
             md += lang
+        md += "\n"
         return md + code.replace("`" * 3, "`\u200b" * 3) + "\n```"
 
     def block_quote(self, text: str) -> str:
