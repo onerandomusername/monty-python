@@ -886,6 +886,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             components = [DeleteButton(message.author)]
             response = await message.channel.send(embed=embed, components=components)
+            self.autolink_cache.set(message.id, (response, issues))
             return
 
         for repo_issue in issues:
