@@ -936,7 +936,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if len(links) == 1 and issues[0].should_be_expanded:
 
             async def remove_embeds() -> None:
-                await asyncio.sleep(1.5)
+                if not message.embeds:
+                    try:
+                        await self.bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=3)
+                    except asyncio.TimeoutError:
+                        pass
                 await message.edit(suppress_embeds=True)
 
             scheduling.create_task(remove_embeds())
