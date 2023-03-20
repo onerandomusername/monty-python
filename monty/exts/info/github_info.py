@@ -783,7 +783,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             issues.append(FoundIssue(org, repo, match.group("number"), should_be_expanded=should_be_expanded))
 
-        return issues
+        # return a de-duped list
+        return list(dict.fromkeys(issues, None))
 
     def get_current_button_expansion_state(self, custom_id: str) -> bool:
         """Get whether the issue is currently expanded or collapsed."""
@@ -915,8 +916,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         links: list[IssueState] = []
         log.trace(f"Found {issues = }")
-        # Remove duplicates
-        issues = list(dict.fromkeys(issues, None))
 
         if len(issues) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
