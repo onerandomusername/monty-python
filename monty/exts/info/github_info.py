@@ -655,7 +655,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         *,
         expand_one_issue: bool = False,
         show_errors_inline: bool = True,
-    ) -> disnake.Embed:
+    ) -> tuple[disnake.Embed, int]:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
         if (
@@ -665,11 +665,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             and issue.raw_json is not None
         ):
             # show considerably more information about the issue if there is a single provided issue
-            return cls.format_embed_expanded_issue(issue)
+            return (cls.format_embed_expanded_issue(issue), 1)
 
+        issue_count = 0
         for result in results:
             if isinstance(result, IssueState):
                 description_list.append(f"{result.emoji} [\\(#{result.number}\\) {result.title}]({result.url})")
+                issue_count += 1
             elif show_errors_inline:
                 if isinstance(result, FetchError):
                     description_list.append(f":x: [{result.return_code}] {result.message}")
@@ -682,7 +684,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
         resp.set_author(name="GitHub")
-        return resp
+        return resp, issue_count
 
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
@@ -731,7 +733,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
         expand_one_issue = await self.bot.guild_has_feature(ctx.guild, ISSUE_EXPAND_FEATURE_NAME)
-        await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue), components=components)
+        await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
 
     async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
         """
@@ -845,7 +847,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             issue.organisation,  # type: ignore
             allow_discussions=True,  # if we have a discussion linked it was enabled at some point
         )
-        embed = self.format_embed([found_issue], expand_one_issue=not is_expanded)
+        embed, _ = self.format_embed([found_issue], expand_one_issue=not is_expanded)
 
         # send the embed in a new message
         if is_different_author:
@@ -964,18 +966,18 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if perms.manage_messages:
                 scheduling.create_task(remove_embeds())
             expand_one_issue = True
-            is_expanded = True
         else:
             expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
-            is_expanded = False
 
-        # check that all of the issues are
-
-        embed = self.format_embed(links, expand_one_issue=expand_one_issue)
+        embed, issue_count = self.format_embed(links, expand_one_issue=expand_one_issue)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
         if expand_one_issue:
-            button = self.get_expand_button(links, user_id=message.author.id, is_expanded=is_expanded)
+            button = self.get_expand_button(
+                links,
+                user_id=message.author.id,
+                is_expanded=expand_one_issue and issue_count == 1,
+            )
             if button:
                 components.append(button)
 
@@ -1061,7 +1063,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         if button:
                             row.append_item(button)
 
-        embed = self.format_embed(links, expand_one_issue=is_expanded)
+        embed, _ = self.format_embed(links, expand_one_issue=is_expanded)
         try:
             await sent_msg.edit(embed=embed, components=rows)
         except disnake.HTTPException:
