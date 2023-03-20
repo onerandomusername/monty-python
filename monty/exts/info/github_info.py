@@ -964,8 +964,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if perms.manage_messages:
                 scheduling.create_task(remove_embeds())
             expand_one_issue = True
+            is_expanded = True
         else:
             expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+            is_expanded = False
 
         # check that all of the issues are
 
@@ -973,7 +975,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
         if expand_one_issue:
-            button = self.get_expand_button(links, user_id=message.author.id)
+            button = self.get_expand_button(links, user_id=message.author.id, is_expanded=is_expanded)
             if button:
                 components.append(button)
 
