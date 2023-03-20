@@ -1042,10 +1042,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # see above comments
             return
 
-        # for now, we do not expand when there is more than 1 pre-expanded image link
-        if total_pre_expanded > 1:
-            return
-
         expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
         # update the components
