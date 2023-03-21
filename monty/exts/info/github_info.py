@@ -104,6 +104,21 @@ class RepoTarget(NamedTuple):
     repo: str
 
 
+class RenderContext(NamedTuple):
+    """Context provided to the rendering method."""
+
+    user: str
+    repo: Optional[str] = None
+
+    @property
+    def html_url(self) -> str:
+        """Provide the html_url to whatever this ends up targetting."""
+        url = f"https://github.com/{self.user}/"
+        if self.repo:
+            url += f"{self.repo}/"
+        return url
+
+
 @dataclass
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
@@ -241,6 +256,16 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 elif "/repos?" in url:
                     await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
+
+    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 700) -> str:
+        """Render GitHub Flavored Markdown to Discord flavoured markdown."""
+        markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
+        body = markdown(body) or ""
+
+        if len(body) > limit:
+            return body[: limit - 3] + "..."
+
+        return body
 
     @redis_cache(
         "github-user-repos",
@@ -606,8 +631,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raw_json=None if is_discussion else json_data,
         )
 
-    @staticmethod
     def format_embed_expanded_issue(
+        self,
         issue: IssueState,
     ) -> disnake.Embed:
         """Given one issue, format an expanded embed with considerably more detail than usual."""
@@ -639,19 +664,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         body: Optional[str] = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
-            markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
-            body = markdown(body) or ""
-            if len(body) > 700:
-                embed.description = body[:697] + "..."
-            else:
-                embed.description = body
+            embed.description = self.render_github_markdown(body, context=None)
         if not body or body.isspace():
             embed.description = "*No description provided.*"
         return embed
 
-    @classmethod
     def format_embed(
-        cls,
+        self,
         results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
         *,
         expand_one_issue: bool = False,
@@ -666,7 +685,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             and issue.raw_json is not None
         ):
             # show considerably more information about the issue if there is a single provided issue
-            return (cls.format_embed_expanded_issue(issue), 1)
+            return (self.format_embed_expanded_issue(issue), 1)
 
         issue_count = 0
         for result in results:
