@@ -918,6 +918,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not comments:
             return
 
+        if message.channel.permissions_for(message.guild.me).manage_messages:
+            scheduling.create_task(suppress_embeds(self.bot, message))
+
         components = [DeleteButton(message.author)]
         await message.reply(
             embeds=comments,
