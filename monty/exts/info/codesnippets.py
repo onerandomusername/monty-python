@@ -16,6 +16,7 @@ from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
+from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 
@@ -290,6 +291,8 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
     async def _parse_snippets(self, content: str) -> str:
         """Parse message content and return a string with a code block for each URL found."""
         all_snippets = []
+
+        content = remove_codeblocks(content)
 
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):

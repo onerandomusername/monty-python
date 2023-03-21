@@ -27,7 +27,7 @@ from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
-from monty.utils.markdown import DiscordRenderer
+from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 
@@ -75,11 +75,6 @@ GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s<>]*"
 )
 
-
-CODE_BLOCK_RE = re.compile(
-    r"(?P<delim>`{1,2})([^\n]+)(?P=delim)|```(.+?)```",
-    re.DOTALL | re.MULTILINE,
-)
 
 DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
 GITHUB_ISSUE_LINKS_FEATURES = "GITHUB_EXPAND_ISSUE_LINKS"
@@ -528,11 +523,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         await ctx.send(embed=embed, components=components)
 
-    @staticmethod
-    def remove_codeblocks(message: str) -> str:
-        """Remove any codeblock in a message."""
-        return re.sub(CODE_BLOCK_RE, "", message)
-
     async def fetch_issues(
         self,
         number: int,
@@ -776,7 +766,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Extract issues in a message into FoundIssues."""
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
-        stripped_content = self.remove_codeblocks(message.content)
+        stripped_content = remove_codeblocks(message.content)
 
         if extract_full_links:
             matches = itertools.chain(

@@ -11,6 +11,17 @@ from markdownify import MarkdownConverter
 WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
 
 
+CODE_BLOCK_RE = re.compile(
+    r"(?P<delim>`{1,2})([^\n]+)(?P=delim)|```(.+?)```",
+    re.DOTALL | re.MULTILINE,
+)
+
+
+def remove_codeblocks(content: str) -> str:
+    """Remove any codeblock in a message."""
+    return CODE_BLOCK_RE.sub("", content)
+
+
 class DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
