@@ -773,6 +773,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 should_be_expanded = True
                 # handle custom checks here
                 url = yarl.URL(match[0])
+
+                # don't match if we didn't end with the hash
+                if not url.path.rstrip("/").endswith(match.group("number")):
+                    continue
                 if url.fragment or url.query:  # saving fragments for later
                     continue
             else:
