@@ -48,6 +48,9 @@ ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{numbe
 PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
 LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
 LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?per_page=100"
+ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
+PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
+
 
 REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
@@ -122,6 +125,7 @@ class FoundIssue:
     repository: str
     number: str
     should_be_expanded: bool = False
+    url_fragment: str = ""
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -787,6 +791,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
         for match in matches:
+            fragment = ""
             if match.re is AUTOMATIC_REGEX:
                 should_be_expanded = False
             elif match.re is GITHUB_ISSUE_LINK_REGEX:
@@ -797,8 +802,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 # don't match if we didn't end with the hash
                 if not url.path.rstrip("/").endswith(match.group("number")):
                     continue
-                if url.fragment or url.query:  # saving fragments for later
-                    continue
+                if url.fragment or url.query:  # used to match for comments later
+                    fragment = url.fragment
             else:
                 should_be_expanded = False
             repo = match.group("repo").lower()
@@ -813,7 +818,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     continue
                 repo = repos[repo]
 
-            issues.append(FoundIssue(org, repo, match.group("number"), should_be_expanded=should_be_expanded))
+            issues.append(
+                FoundIssue(
+                    org,
+                    repo,
+                    match.group("number"),
+                    should_be_expanded=should_be_expanded,
+                    url_fragment=fragment,
+                )
+            )
 
         # return a de-duped list
         return list(dict.fromkeys(issues, None))
@@ -908,6 +921,60 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         await inter.response.edit_message(embed=embed, components=rows)
 
+    async def handle_issue_comment(self, message: disnake.Message, issues: list[FoundIssue]) -> None:
+        """Expand an issue or pull request comment."""
+        comments = []
+        for issue in issues:
+            assert issue.url_fragment
+
+            # figure out which endpoint we want to use
+            frag = issue.url_fragment
+            if frag.startswith("issuecomment-"):
+                endpoint = ISSUE_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("issuecomment-"),
+                )
+            elif frag.startswith("pullrequestreview-"):
+                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("pullrequestreview-"),
+                )
+            elif frag.startswith("discussion_r"):
+                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("discussion_r"),
+                )
+            else:
+                continue
+
+            comment: dict[str, Any] = await self.fetch_data(endpoint, as_text=False)  # type: ignore
+            if "message" in comment:
+                log.warn("encountered error fetching %s: %s", endpoint, comment)
+                continue
+
+            body = self.render_github_markdown(comment["body"])
+            e = disnake.Embed(url=comment["html_url"], description=body)
+
+            author = comment["user"]
+            e.set_author(name=author["login"], icon_url=author["avatar_url"], url=author["html_url"])
+
+            e.timestamp = datetime.strptime(comment["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+
+            comments.append(e)
+
+        if not comments:
+            return
+
+        components = [DeleteButton(message.author)]
+        await message.reply(
+            embeds=comments,
+            components=components,
+            allowed_mentions=disnake.AllowedMentions(replied_user=False),
+        )
+
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
         """
@@ -944,6 +1011,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         # no issues found, return early
         if not issues:
+            return
+
+        if issue_comments := list(filter(lambda issue: issue.url_fragment, issues)):
+            await self.handle_issue_comment(message, issue_comments)
             return
 
         links: list[IssueState] = []
