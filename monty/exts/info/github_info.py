@@ -15,6 +15,7 @@ import disnake
 import gql
 import gql.client
 import mistune
+import yarl
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportError, TransportQueryError
@@ -71,7 +72,7 @@ AUTOMATIC_REGEX = re.compile(
 
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)"
+    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s<>]*"
 )
 
 
@@ -760,15 +761,22 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         if extract_full_links:
             matches = itertools.chain(
-                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
-                zip(GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content), itertools.repeat(True)),
+                AUTOMATIC_REGEX.finditer(stripped_content),
+                GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content),
             )
         else:
-            matches = itertools.chain(
-                zip(AUTOMATIC_REGEX.finditer(stripped_content), itertools.repeat(False)),
-            )
-
-        for match, should_be_expanded in matches:
+            matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
+        for match in matches:
+            if match.re is AUTOMATIC_REGEX:
+                should_be_expanded = True
+            elif match.re is GITHUB_ISSUE_LINK_REGEX:
+                should_be_expanded = False
+                # handle custom checks here
+                url = yarl.URL(match[0])
+                if url.fragment or url.query:  # saving fragments for later
+                    continue
+            else:
+                should_be_expanded = False
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if default_user == "":

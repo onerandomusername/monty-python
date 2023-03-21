@@ -2440,4 +2440,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.10"
-content-hash = "48644e16545949abc61c2c51c0542e73584a5460eb9c477bf0aeac0ab32c6bee"
+content-hash = "b23153011f17c766d4108f7970d1c84a7e06f09f148316799391722437b8d918"
