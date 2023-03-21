@@ -252,7 +252,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
 
-    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 700) -> str:
+    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
         markdown = mistune.create_markdown(
             escape=False,
