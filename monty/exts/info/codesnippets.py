@@ -14,8 +14,9 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
-from monty.utils.messages import DeleteButton
+from monty.utils.messages import DeleteButton, suppress_embeds
 
 
 if TYPE_CHECKING:
@@ -332,15 +333,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
             if my_perms.manage_messages:
-                try:
-                    await message.edit(suppress_embeds=True)
-                except disnake.NotFound:
-                    # Don't send snippets if the original message was deleted.
-                    return
-                except disnake.Forbidden:
-                    # we're missing permissions to edit the message to remove the embed
-                    # its fine, since this bot is public and shouldn't require that.
-                    pass
+                scheduling.create_task(suppress_embeds(self.bot, message))
 
             components = DeleteButton(message.author)
             await destination.send(

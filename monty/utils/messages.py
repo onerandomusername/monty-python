@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import Optional, Union
 
@@ -5,6 +6,7 @@ import disnake
 import disnake.ext.commands
 
 from monty import constants
+from monty.bot import Monty
 from monty.log import get_logger
 
 
@@ -29,6 +31,36 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
         return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
     else:
         return username  # Empty string or None
+
+
+async def suppress_embeds(
+    bot: Monty,
+    message: disnake.Message,
+    *,
+    wait: Optional[float] = 3,
+    force_wait: bool = False,
+) -> bool:
+    """Suppress the embeds on the provided message, after waiting for an edit to add embeds if none exist."""
+    if not message.embeds or force_wait:
+        if wait is not None:
+            try:
+                _, message = await bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=wait)
+            except asyncio.TimeoutError:
+                pass
+            if not message.embeds:
+                return False
+            await asyncio.sleep(0.2)
+    try:
+        await message.edit(suppress_embeds=True)
+    except disnake.NotFound:
+        # Don't send snippets if the original message was deleted.
+        return False
+    except disnake.Forbidden as e:
+        # we're missing permissions to edit the message to remove the embed
+        # its fine, since this bot is public and shouldn't require that.
+        logger.warning("suppress_embeds should be called after checking for manage message permissions", exc_info=e)
+        return False
+    return True
 
 
 class DeleteButton(disnake.ui.Button):
