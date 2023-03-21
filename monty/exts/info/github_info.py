@@ -77,7 +77,7 @@ GITHUB_ISSUE_LINK_REGEX = re.compile(
 
 
 CODE_BLOCK_RE = re.compile(
-    r"^`([^`\n]+)`" r"|```(.+?)```",  # Inline codeblock  # Multiline codeblock
+    r"(?P<delim>`{1,2})([^\n]+)(?P=delim)|```(.+?)```",
     re.DOTALL | re.MULTILINE,
 )
 
