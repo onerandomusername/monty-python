@@ -768,9 +768,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
         for match in matches:
             if match.re is AUTOMATIC_REGEX:
-                should_be_expanded = True
-            elif match.re is GITHUB_ISSUE_LINK_REGEX:
                 should_be_expanded = False
+            elif match.re is GITHUB_ISSUE_LINK_REGEX:
+                should_be_expanded = True
                 # handle custom checks here
                 url = yarl.URL(match[0])
                 if url.fragment or url.query:  # saving fragments for later
