@@ -115,9 +115,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         else:
             return link
 
-    def image(self, src: str, alt: str = "", title: str = None) -> str:
+    def image(self, src: str, alt: str = None, title: str = None) -> str:
         """Return a link to the provided image."""
-        return self.link(src, text="image", title=title)
+        return self.link(src, text="!image", title=alt)
 
     def emphasis(self, text: str) -> str:
         """Return italiced text."""
@@ -140,7 +140,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def linebreak(self) -> str:
         """Return two new lines."""
-        return "\n"
+        return "\n\n"
 
     def blank_line(self) -> str:
         """Return a blank line."""
