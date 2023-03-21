@@ -254,9 +254,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
     def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
+        url_prefix = context and context.html_url
         markdown = mistune.create_markdown(
             escape=False,
-            renderer=DiscordRenderer(),
+            renderer=DiscordRenderer(repo=url_prefix),
             plugins=[
                 "strikethrough",
                 "task_lists",
@@ -662,7 +663,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         body: Optional[str] = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
-            embed.description = self.render_github_markdown(body, context=None)
+            embed.description = self.render_github_markdown(
+                body, context=RenderContext(user=issue.organisation, repo=issue.repository)
+            )
         if not body or body.isspace():
             embed.description = "*No description provided.*"
         return embed

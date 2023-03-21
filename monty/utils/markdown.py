@@ -98,8 +98,18 @@ class DocMarkdownConverter(MarkdownConverter):
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
+    def __init__(self, repo: str = None):
+        self._repo = (repo or "").rstrip("/")
+
     def text(self, text: str) -> str:
-        """No op."""
+        """Replace GitHub links with their expanded versions."""
+        if self._repo:
+            # todo: expand this to all different varieties of automatic links
+            # if a repository is provided we replace all snippets with the correct thing
+            def replacement(match: re.Match[str]) -> str:
+                return self.link(self._repo + "/issues/" + match[1], text=match[0])
+
+            return re.sub(r"(?:GH-|#)(\d+)", replacement, text)
         return text
 
     def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
