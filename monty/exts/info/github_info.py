@@ -254,7 +254,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
     def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
-        markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
+        markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer(), plugins=["task_lists"])
         body = markdown(body) or ""
 
         if len(body) > limit:

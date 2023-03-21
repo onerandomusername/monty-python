@@ -6,6 +6,8 @@ import mistune.renderers
 from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
 
+from monty import constants
+
 
 # taken from version 0.6.1 of markdownify
 WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
@@ -187,12 +189,17 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return text + "\n"
 
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
-        """Do nothing when encountering a list."""
-        return ""
+        """Return the unedited list."""
+        return text
 
     def list_item(self, text: Any, level: int) -> str:
-        """Do nothing when encountering a list."""
-        return ""
+        """Show the list, indented to its proper level."""
+        return "\u200b   " * (level - 1) * 8 + f"- {text}\n"
+
+    def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
+        """Convert task list options to emoji."""
+        emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
+        return self.list_item(emoji + " " + text, level=level)
 
     def finalize(self, data: Any) -> str:
         """Finalize the data."""
