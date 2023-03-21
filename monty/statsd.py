@@ -4,6 +4,8 @@ from typing import cast
 
 from statsd.client.base import StatsClientBase
 
+from monty.utils import scheduling
+
 
 class AsyncStatsClient(StatsClientBase):
     """An async transport method for statsd communication."""
@@ -14,7 +16,7 @@ class AsyncStatsClient(StatsClientBase):
         self._prefix = prefix
         self._transport = None
         self._loop = asyncio.get_running_loop()
-        self._loop.create_task(self.create_socket())
+        scheduling.create_task(self.create_socket())
 
     async def create_socket(self) -> None:
         """Use the loop.create_datagram_endpoint method to create a socket."""
@@ -25,7 +27,7 @@ class AsyncStatsClient(StatsClientBase):
 
     def _send(self, data: str) -> None:
         """Start an async task to send data to statsd."""
-        self._loop.create_task(self._async_send(data))
+        scheduling.create_task(self._async_send(data))
 
     async def _async_send(self, data: str) -> None:
         """Send data to the statsd server using the async transport."""
