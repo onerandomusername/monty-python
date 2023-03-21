@@ -28,7 +28,7 @@ from monty.utils import scheduling
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import redis_cache
 from monty.utils.markdown import DiscordRenderer
-from monty.utils.messages import DeleteButton
+from monty.utils.messages import DeleteButton, suppress_embeds
 
 
 KT = TypeVar("KT")
@@ -965,17 +965,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         if len(links) == 1 and issues[0].should_be_expanded:
+            scheduling.create_task(suppress_embeds(self.bot, message))
 
-            async def remove_embeds() -> None:
-                if not message.embeds:
-                    try:
-                        await self.bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=3)
-                    except asyncio.TimeoutError:
-                        pass
-                await message.edit(suppress_embeds=True)
-
-            if perms.manage_messages:
-                scheduling.create_task(remove_embeds())
             expand_one_issue = True
         else:
             expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
