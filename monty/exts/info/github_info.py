@@ -984,7 +984,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         if len(links) == 1 and issues[0].should_be_expanded:
-            scheduling.create_task(suppress_embeds(self.bot, message))
+            if perms.manage_messages:
+                scheduling.create_task(suppress_embeds(self.bot, message))
 
             expand_one_issue = True
         else:
