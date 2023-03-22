@@ -140,6 +140,7 @@ class Emojis:
 
     confirmation = "\u2705"
     decline = "\u274c"
+    no_choice_light = "\u25fb\ufe0f"
 
     x = "\U0001f1fd"
     o = "\U0001f1f4"

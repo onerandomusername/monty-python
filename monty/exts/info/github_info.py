@@ -252,9 +252,18 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
                 return body
 
-    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 700) -> str:
+    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
-        markdown = mistune.create_markdown(escape=False, renderer=DiscordRenderer())
+        url_prefix = context and context.html_url
+        markdown = mistune.create_markdown(
+            escape=False,
+            renderer=DiscordRenderer(repo=url_prefix),
+            plugins=[
+                "strikethrough",
+                "task_lists",
+                "url",
+            ],
+        )
         body = markdown(body) or ""
 
         if len(body) > limit:
@@ -654,7 +663,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         body: Optional[str] = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
-            embed.description = self.render_github_markdown(body, context=None)
+            embed.description = self.render_github_markdown(
+                body, context=RenderContext(user=issue.organisation, repo=issue.repository)
+            )
         if not body or body.isspace():
             embed.description = "*No description provided.*"
         return embed
