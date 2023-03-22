@@ -27,7 +27,7 @@ services:
     command:
       --save 60 1
     volumes:
-      - /docker/host/monty-redis:/data
+      - redis:/data
 
   snekbox:
     << : *restart_policy
@@ -70,3 +70,4 @@ services:
 
 volumes:
   user-base:
+  redis:
