@@ -178,7 +178,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def block_quote(self, text: str) -> str:
         """Quote the provided text."""
         if text:
-            return "> " + "> ".join(text.splitlines(keepends=True)) + "\n"
+            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n"
         return ""
 
     def block_html(self, html: str) -> str:
