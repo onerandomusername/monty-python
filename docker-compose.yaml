@@ -6,8 +6,6 @@ x-restart-policy: &restart_policy
 services:
   postgres:
     << : *restart_policy
-    image:
-      postgres:
     image: postgres:13-alpine
     ports:
       - "127.0.0.1:5432:5432"
