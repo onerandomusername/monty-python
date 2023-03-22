@@ -152,14 +152,6 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """Return two new lines."""
         return "\n\n"
 
-    def blank_line(self) -> str:
-        """Return a blank line."""
-        return "\n\n"
-
-    def softbreak(self) -> str:
-        """Return a softbreak."""
-        return "\n"
-
     def inline_html(self, html: str) -> str:
         """No op."""
         return ""
@@ -204,14 +196,14 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def paragraph(self, text: str) -> str:
         """Return a paragraph with a newline postceeding."""
-        return f"{text}\n"
+        return f"{text}\n\n"
 
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
         """Return the unedited list."""
         # todo: figure out how this should actually work
         if level != 1:
             return text
-        return text.lstrip("\n") + "\n"
+        return text.lstrip("\n") + "\n\n"
 
     def list_item(self, text: Any, level: int) -> str:
         """Show the list, indented to its proper level."""
