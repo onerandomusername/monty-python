@@ -9,6 +9,11 @@ from markdownify import MarkdownConverter
 from monty import constants
 
 
+__all__ = (
+    "remove_codeblocks",
+    "DocMarkdownConverter",
+    "DiscordRenderer",
+)
 # taken from version 0.6.1 of markdownify
 WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
 
@@ -17,6 +22,8 @@ CODE_BLOCK_RE = re.compile(
     r"(?P<delim>`{1,2})([^\n]+)(?P=delim)|```(.+?)```",
     re.DOTALL | re.MULTILINE,
 )
+
+GH_ISSUE_RE = re.compile(r"(?:GH-|#)(\d+)")
 
 
 def remove_codeblocks(content: str) -> str:
@@ -109,7 +116,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
             def replacement(match: re.Match[str]) -> str:
                 return self.link(self._repo + "/issues/" + match[1], text=match[0])
 
-            return re.sub(r"(?:GH-|#)(\d+)", replacement, text)
+            return GH_ISSUE_RE.sub(replacement, text)
         return text
 
     def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
