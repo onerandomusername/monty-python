@@ -116,7 +116,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
             def replacement(match: re.Match[str]) -> str:
                 return self.link(self._repo + "/issues/" + match[1], text=match[0])
 
-            return GH_ISSUE_RE.sub(replacement, text)
+            text = GH_ISSUE_RE.sub(replacement, text)
         return text
 
     def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
@@ -168,8 +168,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return ""
 
     def block_text(self, text: str) -> str:
-        """No op."""
-        return text
+        """Handle text in lists like normal text."""
+        return self.text(text)
 
     def block_code(self, code: str, info: str = None) -> str:
         """Put the code in a codeblock."""
