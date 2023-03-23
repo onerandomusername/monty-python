@@ -184,7 +184,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def block_quote(self, text: str) -> str:
         """Quote the provided text."""
         if text:
-            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n"
+            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n\n"
         return ""
 
     def block_html(self, html: str) -> str:
@@ -209,11 +209,11 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         # todo: figure out how this should actually work
         if level != 1:
             return text
-        return text.lstrip("\n") + "\n\n"
+        return text.lstrip("\n") + "\n"
 
     def list_item(self, text: Any, level: int) -> str:
         """Show the list, indented to its proper level."""
-        return "\n" + "\u200b " * (level - 1) * 8 + f"- {text}"
+        return "\u200b " * (level - 1) * 8 + f"- {text.rstrip()}\n"
 
     def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
         """Convert task list options to emoji."""
