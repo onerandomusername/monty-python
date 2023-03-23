@@ -151,12 +151,12 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return f"__{text}__\n"
 
     def newline(self) -> str:
-        """Return a new line."""
-        return "\n"
+        """No op."""
+        return ""
 
     def linebreak(self) -> str:
-        """Return two new lines."""
-        return "\n\n"
+        """Return a new line."""
+        return "\n"
 
     def inline_html(self, html: str) -> str:
         """No op."""
