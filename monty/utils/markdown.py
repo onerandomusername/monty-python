@@ -213,7 +213,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def list_item(self, text: Any, level: int) -> str:
         """Show the list, indented to its proper level."""
-        return "\u200b " * (level - 1) * 8 + f"- {text.rstrip()}\n"
+        return "\u2001" * (level - 1) + f"- {text.rstrip()}\n"
 
     def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
         """Convert task list options to emoji."""
