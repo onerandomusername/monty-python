@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Type, TypeVar, Union
 
 import aiohttp
@@ -64,7 +64,7 @@ class ConfigAttrMetadata:
     requires_bot: bool = True
     long_description: Optional[str] = None
     validator: Optional[Union[Callable, Callable[Any, Coroutine]]] = None
-    status_messages: StatusMessages = StatusMessages()
+    status_messages: StatusMessages = field(default_factory=StatusMessages)
 
     def __post_init__(self):
         if self.type not in (str, int, float, bool):
