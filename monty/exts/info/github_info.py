@@ -648,7 +648,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             url=json_data["user"]["html_url"],
             icon_url=json_data["user"]["avatar_url"],
         )
-        embed.title = issue.emoji + " " + issue.title
+        embed.title = f"{issue.emoji} [{issue.organisation}/{issue.repository}] {issue.title}"
 
         if json_data["labels"]:
             labels = ", ".join(sorted([label["name"] for label in json_data["labels"]]))
