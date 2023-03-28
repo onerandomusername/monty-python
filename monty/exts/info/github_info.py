@@ -188,7 +188,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS)
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS, ssl=True)
 
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
@@ -648,7 +648,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             url=json_data["user"]["html_url"],
             icon_url=json_data["user"]["avatar_url"],
         )
-        embed.title = issue.emoji + " " + issue.title
+        embed.title = f"{issue.emoji} [{issue.organisation}/{issue.repository}] {issue.title}"
 
         if json_data["labels"]:
             labels = ", ".join(sorted([label["name"] for label in json_data["labels"]]))

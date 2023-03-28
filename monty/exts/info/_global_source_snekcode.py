@@ -148,6 +148,7 @@ if __name__ == "__main__":
         if file is None:
             raise ValueError
         filename = str(pathlib.Path(filename).relative_to(pathlib.Path(file).parent.parent))
+        filename = filename.removeprefix("site-packages/")
     except ValueError:
         sys.exit(5)
 
@@ -182,8 +183,10 @@ if __name__ == "__main__":
             print("This package isn't supported right now.")
             sys.exit(8)
         # I ideally want to use the database for this and run that locally by sending a pickled result.
-        if top_module_name not in ("arrow", "databases", "ormar"):
+        if top_module_name not in ("arrow", "databases", "ormar", "typing_extensions"):
             version = f"v{version}"
+        if top_module_name in ("typing_extensions",):
+            filename = f"src/{filename}"
         url += f"/blob/{version}/{filename}{lines_extension}"
     # used to be able to slice code to ignore import side-effects
     print("#" * 80)

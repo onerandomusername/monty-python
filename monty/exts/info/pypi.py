@@ -372,14 +372,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self, inter: disnake.CommandInteraction, query: str, *, include_query: bool = False
     ) -> list[str]:
         """Autocomplete package names based on the PyPI index."""
-        # the packages aren't yet or failed to be loaded
-        if not self.all_packages or not await self.bot.guild_has_feature(
-            inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
-        ):
-            return [query] if query else []
-
-        # otherwise fuzzy-match the package name
-
         if not query:
             if self.top_packages:
                 the_sample = self.top_packages
@@ -389,10 +381,18 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             # we need to shortcircuit and skip the fuzzing results
             return list(random.sample(the_sample, k=min(25, len(the_sample))))
 
-        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
+        if await self.bot.guild_has_feature(inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME):
+            package_list = self.all_packages
+        else:
+            package_list = self.top_packages
+
+        if not package_list:
+            return [query] if query else ["Type to begin searching..."]
+
+        scorer = rapidfuzz.distance.JaroWinkler.similarity
         fuzz_results = rapidfuzz.process.extract(
             query,
-            self.all_packages,
+            package_list,
             scorer=scorer,  # type: ignore
             limit=25,
             score_cutoff=0.4,
