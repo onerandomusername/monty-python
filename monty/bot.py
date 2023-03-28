@@ -21,7 +21,7 @@ from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
-from monty.utils import rollouts
+from monty.utils import rollouts, scheduling
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -78,7 +78,7 @@ class Monty(commands.Bot):
         self.stats: AsyncStatsClient
         self.command_prefix: str
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
-        self.loop.create_task(self.get_self_invite_perms())
+        scheduling.create_task(self.get_self_invite_perms())
 
     @property
     def db(self) -> async_sessionmaker[AsyncSession]:

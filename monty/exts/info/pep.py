@@ -13,6 +13,7 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.utils import scheduling
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.inventory_parser import fetch_inventory
 from monty.utils.markdown import DocMarkdownConverter
@@ -68,7 +69,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
         self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = datetime.now()
-        self.bot.loop.create_task(self.refresh_peps_urls())
+        scheduling.create_task(self.refresh_peps_urls())
 
     async def refresh_peps_urls(self) -> None:
         """Refresh PEP URLs listing in every 3 hours."""

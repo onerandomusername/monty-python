@@ -14,6 +14,7 @@ import disnake
 
 from monty import constants
 from monty.log import get_logger
+from monty.utils import scheduling
 
 
 if TYPE_CHECKING:
@@ -92,7 +93,7 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
     """Defer an interaction if it has not been responded to after ``delay`` seconds."""
     loop = inter.bot.loop
     if delay <= 0:
-        return loop.create_task(inter.response.defer(**options))
+        return scheduling.create_task(inter.response.defer(**options))
 
     async def internal_task() -> None:
         now = loop.time()
@@ -109,7 +110,7 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
             raise e
 
     start = loop.time()
-    return loop.create_task(internal_task())
+    return scheduling.create_task(internal_task())
 
 
 # vendored from cachingutils, but as they're internal, they're put here in case they change
