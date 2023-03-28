@@ -6,6 +6,7 @@ from disnake.ext import commands
 
 from monty.constants import Emojis
 from monty.log import get_logger
+from monty.utils import scheduling
 
 
 FIRST_EMOJI = "\u23EE"  # [:track_previous:]
@@ -157,7 +158,7 @@ class LinePaginator(commands.Paginator):
                 )
             )
             if not check and inter.message.id == message.id:
-                ctx.bot.loop.create_task(
+                scheduling.create_task(
                     inter.response.send_message("Hey! This isn't yours to interact with!", ephemeral=True)
                 )
             return check and inter.message.id == message.id
