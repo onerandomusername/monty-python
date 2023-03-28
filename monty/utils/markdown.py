@@ -116,7 +116,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
             def replacement(match: re.Match[str]) -> str:
                 return self.link(self._repo + "/issues/" + match[1], text=match[0])
 
-            return GH_ISSUE_RE.sub(replacement, text)
+            text = GH_ISSUE_RE.sub(replacement, text)
         return text
 
     def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
@@ -145,19 +145,19 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return f"**{text}**"
 
     def heading(self, text: str, level: int) -> str:
-        """Format the heading to be bold if its large enough. Otherwise underline it."""
+        """Format the heading to be bold if its large enough, and underline it."""
         if level in (1, 2, 3):
-            return "\n" f"**{text}**\n"
+            return f"**__{text}__**\n"
         else:
-            return "\n" f"__{text}__\n"
+            return f"__{text}__\n"
 
     def newline(self) -> str:
-        """Return a new line."""
-        return "\n"
+        """No op."""
+        return ""
 
     def linebreak(self) -> str:
-        """Return two new lines."""
-        return "\n\n"
+        """Return a new line."""
+        return "\n"
 
     def inline_html(self, html: str) -> str:
         """No op."""
@@ -168,8 +168,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return ""
 
     def block_text(self, text: str) -> str:
-        """No op."""
-        return text
+        """Handle text in lists like normal text."""
+        return self.text(text)
 
     def block_code(self, code: str, info: str = None) -> str:
         """Put the code in a codeblock."""
@@ -185,7 +185,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def block_quote(self, text: str) -> str:
         """Quote the provided text."""
         if text:
-            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n"
+            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n\n"
         return ""
 
     def block_html(self, html: str) -> str:
@@ -208,13 +208,40 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
         """Return the unedited list."""
         # todo: figure out how this should actually work
-        if level != 1:
-            return text
-        return text.lstrip("\n") + "\n\n"
+        if level == 1:
+            return text.lstrip("\n") + "\n"
+        return text
 
-    def list_item(self, text: Any, level: int) -> str:
+    def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
-        return "\n" + "\u200b " * (level - 1) * 8 + f"- {text}"
+        lines = text.rstrip().splitlines()
+        indent = "\u2001" * (level - 1)
+
+        result: list[str] = [f"{indent}- {lines[0]}"]
+        in_codeblock = False
+        for line in lines[1:]:
+            if "`" * 3 in line:  # very very very rudimentary codeblock detection
+                if in_codeblock:
+                    in_codeblock = False
+                    if line.endswith("\n"):
+                        line = line[:-1]
+                    result.append(line)
+                    continue
+                else:
+                    in_codeblock = True
+                line = line.lstrip()
+            if not line.strip():
+                if in_codeblock:
+                    continue
+                result.append("")
+            elif in_codeblock:
+                result.append(line)
+                continue
+            else:
+                # the space here should be about the same width as `- `
+                result.append(f"{indent}\u2007{line}")
+
+        return "\n".join(result) + "\n"
 
     def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
         """Convert task list options to emoji."""
