@@ -92,7 +92,7 @@ class Configuration(
             stmt = sa.delete(GuildConfig).where(GuildConfig.id == guild.id, GuildConfig.guild_id == guild.id)
             result = await session.execute(stmt)
             if result.rowcount != 1:
-                logger.warning(f"guild config doesn't exist for guild_id {guild.id}")
+                logger.info(f"guild config doesn't exist for guild_id {guild.id}")
                 return
             await session.commit()
             # also remove it from the cache
