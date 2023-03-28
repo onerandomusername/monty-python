@@ -208,9 +208,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
         """Return the unedited list."""
         # todo: figure out how this should actually work
-        if level != 1:
-            return text
-        return text.lstrip("\n") + "\n"
+        if level == 1:
+            return text.lstrip("\n") + "\n"
+        return text
 
     def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
