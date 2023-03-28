@@ -147,8 +147,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def heading(self, text: str, level: int) -> str:
         """Format the heading to be bold if its large enough, and underline it."""
         if level in (1, 2, 3):
-            text = f"**{text}**"
-        return f"__{text}__\n"
+            return f"**__{text}__**\n"
+        else:
+            return f"__{text}__\n"
 
     def newline(self) -> str:
         """No op."""
