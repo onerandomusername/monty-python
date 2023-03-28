@@ -212,9 +212,20 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
             return text
         return text.lstrip("\n") + "\n"
 
-    def list_item(self, text: Any, level: int) -> str:
+    def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
-        return "\u2001" * (level - 1) + f"- {text.rstrip()}\n"
+        lines = text.rstrip().splitlines()
+        indent = "\u2001" * (level - 1)
+
+        result: list[str] = [f"{indent}- {lines[0]}"]
+        for line in lines[1:]:
+            if not line.strip():
+                result.append("")
+            else:
+                # the space here should be about the same width as `- `
+                result.append(f"{indent}\u2007{line}")
+
+        return "\n".join(result) + "\n"
 
     def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
         """Convert task list options to emoji."""
