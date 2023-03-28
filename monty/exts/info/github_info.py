@@ -126,6 +126,7 @@ class FoundIssue:
     number: str
     should_be_expanded: bool = False
     url_fragment: str = ""
+    user_url: Optional[str] = None
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -336,7 +337,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             user = user or await self.fetch_guild_to_org(guild_id)
 
         if not user:
-            raise commands.UserInputError("user must be provided" " or configured for this guild." if guild_id else ".")
+            raise commands.UserInputError("user must be provided or configured for this guild." if guild_id else ".")
 
         return RepoTarget(user, repo)  # type: ignore
 
@@ -792,9 +793,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
         for match in matches:
             fragment = ""
-            if match.re is AUTOMATIC_REGEX:
-                should_be_expanded = False
-            elif match.re is GITHUB_ISSUE_LINK_REGEX:
+            if match.re is GITHUB_ISSUE_LINK_REGEX:
                 should_be_expanded = True
                 # handle custom checks here
                 url = yarl.URL(match[0])
@@ -805,7 +804,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 if url.fragment or url.query:  # used to match for comments later
                     fragment = url.fragment
             else:
+                # match.re is AUTOMATIC_REGEX, which doesn't require special handling right now
                 should_be_expanded = False
+                url = False
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if default_user == "":
@@ -825,6 +826,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     match.group("number"),
                     should_be_expanded=should_be_expanded,
                     url_fragment=fragment,
+                    user_url=str(url) if url is not None else None,
                 )
             )
 
@@ -924,6 +926,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def handle_issue_comment(self, message: disnake.Message, issues: list[FoundIssue]) -> None:
         """Expand an issue or pull request comment."""
         comments = []
+        components = []
+
         for issue in issues:
             assert issue.url_fragment
 
@@ -955,23 +959,63 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 log.warn("encountered error fetching %s: %s", endpoint, comment)
                 continue
 
+            # assert the url was not tampered with
+            if issue.user_url != (html_url := comment["html_url"]):
+                # this is a warning as its the best way I currently have to track how often the wrong url is used
+                log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
+                continue
+
             body = self.render_github_markdown(comment["body"])
-            e = disnake.Embed(url=comment["html_url"], description=body)
+            e = disnake.Embed(
+                url=html_url,
+                description=body,
+            )
 
             author = comment["user"]
-            e.set_author(name=author["login"], icon_url=author["avatar_url"], url=author["html_url"])
+            e.set_author(
+                name=author["login"],
+                icon_url=author["avatar_url"],
+                url=author["html_url"],
+            )
+
+            e.set_footer(text=f"Comment on {issue.organisation}/{issue.repository}#{issue.number}")
 
             e.timestamp = datetime.strptime(comment["created_at"], "%Y-%m-%dT%H:%M:%SZ")
 
             comments.append(e)
+            components.append(disnake.ui.Button(url=comment["html_url"], label="View comment"))
 
         if not comments:
+            return
+
+        if len(comments) > 4:
+            await message.reply(
+                (
+                    "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
+                    " them to be expanded!"
+                ),
+                components=DeleteButton(message.author),
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
+            )
             return
 
         if message.channel.permissions_for(message.guild.me).manage_messages:
             scheduling.create_task(suppress_embeds(self.bot, message))
 
-        components = [DeleteButton(message.author)]
+        if len(comments) > 1:
+            for num, component in enumerate(components, 1):
+                if num == 1:
+                    suffix = "st"
+                elif num == 2:
+                    suffix = "nd"
+                elif num == 3:
+                    suffix = "rd"
+                else:
+                    suffix = "th"
+
+                component.label = f"View {num}{suffix} comment"
+
+        components.insert(0, DeleteButton(message.author))
         await message.reply(
             embeds=comments,
             components=components,
