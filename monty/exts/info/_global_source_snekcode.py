@@ -148,6 +148,7 @@ if __name__ == "__main__":
         if file is None:
             raise ValueError
         filename = str(pathlib.Path(filename).relative_to(pathlib.Path(file).parent.parent))
+        filename = filename.removeprefix("site-packages/")
     except ValueError:
         sys.exit(5)
 
