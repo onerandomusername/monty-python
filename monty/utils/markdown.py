@@ -23,7 +23,7 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-GH_ISSUE_RE = re.compile(r"(?:GH-|#)(\d+)")
+GH_ISSUE_RE = re.compile(r"\s(?:GH-|#)(\d+)")
 
 
 def remove_codeblocks(content: str) -> str:
