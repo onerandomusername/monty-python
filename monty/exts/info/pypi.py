@@ -385,6 +385,8 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             package_list = self.all_packages
         else:
             package_list = self.top_packages
+            # include the query as top_packages is not a complete list of packages
+            include_query = True
 
         if not package_list:
             return [query] if query else ["Type to begin searching..."]
