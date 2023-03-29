@@ -72,7 +72,7 @@ AUTOMATIC_REGEX = re.compile(
 
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s<>]*"
+    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s<>)]?"
 )
 
 
