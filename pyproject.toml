@@ -22,7 +22,7 @@ orjson = "^3.8.5"
 fakeredis = "^2.10.1"
 gql = "^3.4.0"
 lxml = "^4.9.1"
-markdownify = "==0.11.2"
+markdownify = "==0.11.6"
 mistune = "^2.0.4"
 redis = { version = "^4.5.3", extras = ['hiredis'] }
 Pillow = "^9.2.0"
