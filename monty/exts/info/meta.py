@@ -232,9 +232,9 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
-        if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
+        if not self._app_info_last_fetched or disnake.utils.utcnow() - self._app_info_last_fetched > timedelta(hours=1):
             self._cached_app_info = await self.bot.application_info()
-            self._app_info_last_fetched = datetime.now()
+            self._app_info_last_fetched = disnake.utils.utcnow()
         return self._cached_app_info
 
     @monty.sub_command()

@@ -339,8 +339,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         defer_task = maybe_defer(inter, delay=2)
 
-        current_time = datetime.datetime.now()
-
         # todo: fix typing for async_cached
         result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)
         packages, query_url = result
@@ -354,7 +352,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
-        embed.timestamp = current_time
+        embed.timestamp = disnake.utils.utcnow()
         embed.set_footer(text="Requested at:")
         if len(packages) >= max_results:
             description += f"*Only showing the top {max_results} results.*"

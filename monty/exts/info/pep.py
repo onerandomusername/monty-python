@@ -68,7 +68,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
         self.peps: Dict[int, str] = {}
         self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
-        self.last_refreshed_peps: datetime = datetime.now()
+        self.last_refreshed_peps: datetime = disnake.utils.utcnow()
         scheduling.create_task(self.refresh_peps_urls())
 
     async def refresh_peps_urls(self) -> None:
@@ -76,7 +76,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
         # Wait until HTTP client is available
         await self.bot.wait_until_ready()
         log.trace("Started refreshing PEP URLs.")
-        self.last_refreshed_peps = datetime.now()
+        self.last_refreshed_peps = disnake.utils.utcnow()
         self.peps.clear()
         self.autocomplete.clear()
 
@@ -97,7 +97,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
         """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
         if (
             pep_nr not in self.peps
-            and (self.last_refreshed_peps + timedelta(minutes=30)) <= datetime.now()
+            and (self.last_refreshed_peps + timedelta(minutes=30)) <= disnake.utils.utcnow()
             and len(str(pep_nr)) < 5
         ):
             await self.refresh_peps_urls()

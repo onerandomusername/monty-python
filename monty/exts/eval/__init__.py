@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import re
 import textwrap
 from functools import partial
@@ -409,7 +408,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
-            self.jobs[ctx.author.id] = datetime.datetime.now()
+            self.jobs[ctx.author.id] = disnake.utils.utcnow()
             code = self.prepare_input(code)
             try:
                 response = await self.send_eval(ctx, code)
