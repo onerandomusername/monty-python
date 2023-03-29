@@ -25,8 +25,8 @@ from monty.bot import Monty
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
-from monty.utils.helpers import redis_cache
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
 
@@ -148,12 +148,12 @@ class IssueState:
     raw_json: Optional[dict[str, Any]] = None
 
 
-class GithubCache:
+class GitHubCache:
     """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
 
     def __init__(self) -> None:
         session = cachingutils.redis.async_session(constants.Client.redis_prefix)
-        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="github-api:", session=session._redis)
+        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="pypi:", session=session._redis)
 
         self._redis_timeout = timedelta(days=1).total_seconds()
         self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
@@ -193,7 +193,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.request_cache: GithubCache = GithubCache()
+        self.request_cache: GitHubCache = GitHubCache()
         self.autolink_cache: cachingutils.MemoryCache[
             int, Tuple[disnake.Message, List[FoundIssue]]
         ] = cachingutils.MemoryCache(timeout=600)

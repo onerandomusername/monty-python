@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tu
 import aiohttp
 
 from monty.log import get_logger
-from monty.utils.helpers import redis_cache
+from monty.utils.caching import redis_cache
 
 
 if TYPE_CHECKING:

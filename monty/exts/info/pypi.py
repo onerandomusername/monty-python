@@ -20,7 +20,8 @@ from disnake.ext import commands, tasks
 from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints
 from monty.log import get_logger
-from monty.utils.helpers import maybe_defer, redis_cache
+from monty.utils.caching import redis_cache
+from monty.utils.helpers import maybe_defer
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
