@@ -407,7 +407,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if include_query:
             if query in res:
                 res.remove(query)
-                res.insert(0, query)
             elif len(res) > 24:
                 res.pop()
             res.insert(0, query)
