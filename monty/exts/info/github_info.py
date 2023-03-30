@@ -221,10 +221,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def fetch_repos(self, user: str) -> dict[str, str]:
         """Returns the first 100 repos for a user, a dict format."""
         url = ORG_REPOS_ENDPOINT.format(org=user)
-        resp: list[Any] = await self.fetch_data(url, enable_cache=False)  # type: ignore
+        resp: list[Any] = await self.fetch_data(url, use_cache=False)  # type: ignore
         if isinstance(resp, dict) and resp.get("message"):
             url = USER_REPOS_ENDPOINT.format(user=user)
-            resp: list[Any] = await self.fetch_data(url, enable_cache=False)  # type: ignore
+            resp: list[Any] = await self.fetch_data(url, use_cache=False)  # type: ignore
 
         repos = {}
         for repo in resp:

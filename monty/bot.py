@@ -5,6 +5,7 @@ import socket
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, Optional, Union
+from unittest.mock import Mock
 from weakref import WeakValueDictionary
 
 import aiohttp
@@ -128,7 +129,7 @@ class Monty(commands.Bot):
             self: aiohttp.ClientSession,
             method: str,
             str_or_url: Any,
-            enable_cache: bool = True,
+            use_cache: bool = True,
             **kwargs,
         ) -> aiohttp.ClientResponse:
             """Do the same thing as aiohttp does, but always cache the response."""
@@ -136,7 +137,7 @@ class Monty(commands.Bot):
             cache_key = f"{method}:{str(str_or_url)}"
             async with cache.lock(cache_key):
                 cached = await cache.get(cache_key)
-                if cached and enable_cache:
+                if cached and use_cache:
                     etag, body, resp_headers = cached
                     if etag:
                         kwargs.setdefault("headers", {})["If-None-Match"] = etag
@@ -146,7 +147,7 @@ class Monty(commands.Bot):
                     resp_headers = None
 
                 r = await _og_request(self, method, str_or_url, **kwargs)
-                if not enable_cache:
+                if not use_cache:
                     return r
                 if r.status == 304:
                     cache_logger.debug("HTTP Cache hit on %s", cache_key)
@@ -156,6 +157,12 @@ class Monty(commands.Bot):
                     for key, value in resp_headers:
                         headers[key.decode()] = value.decode()
                     r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
+                    r.content = reader = aiohttp.StreamReader(
+                        protocol=Mock(_reading_paused=False),
+                        limit=r.content_length,  # type: ignore
+                    )
+                    reader.feed_data(r._body)
+                    reader.feed_eof()
                     r.status = 200
                     return r
 
