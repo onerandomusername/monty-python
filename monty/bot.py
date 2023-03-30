@@ -1,8 +1,10 @@
 import asyncio
 import collections
+import functools
 import socket
+from datetime import timedelta
 from types import SimpleNamespace
-from typing import Optional, Union
+from typing import Any, Optional, Union
 from weakref import WeakValueDictionary
 
 import aiohttp
@@ -13,6 +15,7 @@ import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
+from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
@@ -22,6 +25,7 @@ from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
+from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -112,10 +116,61 @@ class Monty(commands.Bot):
             trace_config.on_request_end.append(on_request_end)
             trace_configs.append(trace_config)
 
+        # dead simple ETag caching
+        cache = RedisCache(
+            "aiohttp_requests",
+            timeout=timedelta(days=5),
+        )
+        _og_request = aiohttp.ClientSession._request
+        cache_logger = get_logger("monty.utils.caching.http")
+
+        async def _request(
+            self: aiohttp.ClientSession,
+            method: str,
+            str_or_url: Any,
+            enable_cache: bool = True,
+            **kwargs,
+        ) -> aiohttp.ClientResponse:
+            """Do the same thing as aiohttp does, but always cache the response."""
+            method = method.upper().strip()
+            cache_key = f"{method}:{str(str_or_url)}"
+            async with cache.lock(cache_key):
+                cached = await cache.get(cache_key)
+                if cached and enable_cache:
+                    etag, body, resp_headers = cached
+                    if etag:
+                        kwargs.setdefault("headers", {})["If-None-Match"] = etag
+                else:
+                    etag = None
+                    body = None
+                    resp_headers = None
+
+                r = await _og_request(self, method, str_or_url, **kwargs)
+                if not enable_cache:
+                    return r
+                if r.status == 304:
+                    cache_logger.debug("HTTP Cache hit on %s", cache_key)
+                    r._body = body
+                    # decode the original headers
+                    headers: CIMultiDict[str] = CIMultiDict()
+                    for key, value in resp_headers:
+                        headers[key.decode()] = value.decode()
+                    r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
+                    r.status = 200
+                    return r
+
+                etag = r.headers.get("ETag")
+                # only cache if etag is provided and the request was in the 200
+                if etag and 200 <= r.status < 300:
+                    body = await r.read()
+                    await cache.set(cache_key, (etag, body, r.raw_headers))
+                return r
+
         self.http_session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.AsyncResolver(), family=socket.AF_INET),
             trace_configs=trace_configs,
         )
+        self.http_session._request = functools.partial(_request, self.http_session)  # type: ignore
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""

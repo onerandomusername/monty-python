@@ -144,7 +144,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.top_packages.extend(top_packages)
         log.info("Loaded list of all PyPI packages.")
 
-    @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
         """Fetch a package from PyPI."""
         async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:

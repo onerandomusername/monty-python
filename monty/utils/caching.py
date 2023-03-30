@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import datetime
 import functools
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Callable, Coroutine, Optional, Tuple, Type, TypeVar, Union
+from weakref import WeakValueDictionary
 
 import cachingutils
 import cachingutils.redis
@@ -149,3 +152,40 @@ def redis_cache(
         return wrapper
 
     return decorator
+
+
+class RedisCache:
+    def __init__(
+        self,
+        prefix: str,
+        *,
+        timeout: datetime.timedelta = datetime.timedelta(days=1),  # noqa: B008
+    ) -> None:
+        session = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix=prefix.rstrip(":") + ":", session=session._redis)
+        self._redis_timeout = timeout.total_seconds()
+        self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
+
+    async def get(self, key: str, default: Optional[tuple[Optional[str], Any]] = None) -> Any:
+        """
+        Get the provided key from the internal caches.
+
+        First position in the response is the ETag, if set, the second item is the contents.
+        """
+        return await self._rediscache.get(key, default=default)
+
+    async def set(self, key: str, value: Any, *, timeout: Optional[float] = None) -> None:
+        """Set the provided key and value into the internal caches."""
+        return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
+
+    @contextlib.asynccontextmanager
+    async def lock(self, key: str) -> AsyncGenerator[None, None]:
+        """Runs a lock with the provided key."""
+        if key not in self._locks:
+            lock = asyncio.Lock()
+            self._locks[key] = lock
+        else:
+            lock = self._locks[key]
+
+        async with lock:
+            yield

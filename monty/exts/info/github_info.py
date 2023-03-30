@@ -1,13 +1,10 @@
-import asyncio
-import contextlib
 import itertools
 import random
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, AsyncGenerator, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
-from weakref import WeakValueDictionary
 
 import cachingutils
 import cachingutils.redis
@@ -148,40 +145,6 @@ class IssueState:
     raw_json: Optional[dict[str, Any]] = None
 
 
-class GitHubCache:
-    """Manages the cache of github requests and uses the ETag header to ensure data is always up to date."""
-
-    def __init__(self) -> None:
-        session = cachingutils.redis.async_session(constants.Client.redis_prefix)
-        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix="pypi:", session=session._redis)
-
-        self._redis_timeout = timedelta(days=1).total_seconds()
-        self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
-
-    async def get(
-        self, key: str, default: Optional[tuple[Optional[str], Any]] = None
-    ) -> Optional[tuple[Optional[str], Any]]:
-        """Get the provided key from the internal caches."""
-        # only requests for repos go to redis
-        return await self._rediscache.get(key, default=default)
-
-    async def set(self, key: str, value: Tuple[Optional[str], Any], *, timeout: Optional[float] = None) -> None:
-        """Set the provided key and value into the internal caches."""
-        return await self._rediscache.set(key, value=value, timeout=timeout or self._redis_timeout)
-
-    @contextlib.asynccontextmanager
-    async def lock(self, key: str) -> AsyncGenerator[None, None]:
-        """Runs a lock with the provided key."""
-        if key not in self._locks:
-            lock = asyncio.Lock()
-            self._locks[key] = lock
-        else:
-            lock = self._locks[key]
-
-        async with lock:
-            yield
-
-
 class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"dm_permission": False}):
     """Fetches info from GitHub."""
 
@@ -193,7 +156,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.request_cache: GitHubCache = GitHubCache()
         self.autolink_cache: cachingutils.MemoryCache[
             int, Tuple[disnake.Message, List[FoundIssue]]
         ] = cachingutils.MemoryCache(timeout=600)
@@ -214,7 +176,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def fetch_data(
         self, url: str, *, method: str = "GET", as_text: bool = False, **kw
     ) -> Union[dict[str, Any], str, list[Any], Any]:
-        """Retrieve data as a dictionary and cache it, using the provided etag."""
+        """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
         if "headers" in kw:
             og = kw["headers"]
             kw["headers"] = REQUEST_HEADERS.copy()
@@ -223,34 +185,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             kw["headers"] = REQUEST_HEADERS.copy()
 
         method = method.upper().strip()
-        cache_key = f"{method}:{url}"
-        async with self.request_cache.lock(cache_key):
-            cached = await self.request_cache.get(cache_key)
-            if cached:
-                etag, body = cached
-                if not etag:
-                    # shortcut the return
-                    return body
-                kw["headers"]["If-None-Match"] = etag
+        async with self.bot.http_session.request(method, url, **kw) as r:
+            if as_text:
+                return await r.text()
             else:
-                etag = None
-                body = None
-
-            async with self.bot.http_session.request(method.upper(), url, **kw) as r:
-                etag = r.headers.get("ETag")
-                if r.status == 304:
-                    return body
-                if as_text:
-                    body = await r.text()
-                else:
-                    body = await r.json()
-
-                # only cache if etag is provided and the request was in the 200
-                if etag and 200 <= r.status < 300:
-                    await self.request_cache.set(cache_key, (etag, body))
-                elif "/repos?" in url:
-                    await self.request_cache.set(cache_key, (None, body), timeout=timedelta(minutes=30).total_seconds())
-                return body
+                return await r.json()
 
     def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
@@ -282,10 +221,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     async def fetch_repos(self, user: str) -> dict[str, str]:
         """Returns the first 100 repos for a user, a dict format."""
         url = ORG_REPOS_ENDPOINT.format(org=user)
-        resp: list[Any] = await self.fetch_data(url)  # type: ignore
+        resp: list[Any] = await self.fetch_data(url, enable_cache=False)  # type: ignore
         if isinstance(resp, dict) and resp.get("message"):
             url = USER_REPOS_ENDPOINT.format(user=user)
-            resp: list[Any] = await self.fetch_data(url)  # type: ignore
+            resp: list[Any] = await self.fetch_data(url, enable_cache=False)  # type: ignore
 
         repos = {}
         for repo in resp:
