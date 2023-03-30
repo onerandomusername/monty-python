@@ -151,7 +151,6 @@ class Monty(commands.Bot):
                     return r
                 if r.status == 304:
                     cache_logger.debug("HTTP Cache hit on %s", cache_key)
-                    r._body = body
                     # decode the original headers
                     headers: CIMultiDict[str] = CIMultiDict()
                     for key, value in resp_headers:
@@ -159,9 +158,9 @@ class Monty(commands.Bot):
                     r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
                     r.content = reader = aiohttp.StreamReader(
                         protocol=Mock(_reading_paused=False),
-                        limit=r.content_length,  # type: ignore
+                        limit=len(body),
                     )
-                    reader.feed_data(r._body)
+                    reader.feed_data(body)
                     reader.feed_eof()
                     r.status = 200
                     return r
