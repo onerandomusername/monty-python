@@ -151,6 +151,7 @@ class PythonDiscourse(commands.Cog):
 
         embeds = []
         components: list[disnake.ui.Button] = []
+        chars = 0
         for post in posts:
             try:
                 data = await self.fetch_post(post)
@@ -158,6 +159,9 @@ class PythonDiscourse(commands.Cog):
                 continue
 
             embed = self.make_post_embed(*data)
+            chars += len(embed)
+            if chars > 6000:
+                break
 
             embeds.append(embed)
             components.append(disnake.ui.Button(url=embed.url, label="View comment"))
