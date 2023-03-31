@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 from urllib.parse import urljoin
 
+import aiohttp
 import disnake
 from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
@@ -151,13 +152,17 @@ class PythonDiscourse(commands.Cog):
         embeds = []
         components: list[disnake.ui.Button] = []
         for post in posts:
-            data = await self.fetch_post(post)
+            try:
+                data = await self.fetch_post(post)
+            except aiohttp.ClientResponseError:
+                continue
+
             embed = self.make_post_embed(*data)
 
             embeds.append(embed)
             components.append(disnake.ui.Button(url=embed.url, label="View comment"))
 
-        if len(posts) > 1:
+        if len(components) > 1:
             for num, component in enumerate(components, 1):
                 if num == 1:
                     suffix = "st"
