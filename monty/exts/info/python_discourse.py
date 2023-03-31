@@ -68,12 +68,16 @@ class PythonDiscourse(commands.Cog):
 
     async def fetch_post(self, topic: DiscussionTopic) -> tuple[dict[str, Any], TopicInfo]:
         """Fetch a python discourse post knowing the topic and reply id."""
-        data = await self.fetch_data(TOPIC_API_URL.format(id=topic.id))  # type: ignore
-        posts = data["post_stream"]["posts"]
         if topic.reply_id is not None:
-            post_id = next(filter(lambda p: p["post_number"] == topic.reply_id, posts))["id"]
+            index = topic.reply_id
+            url = TOPIC_API_URL.format(id=f"{topic.id}/{index}")
+            data = await self.fetch_data(url)  # type: ignore
         else:
-            post_id = posts[0]["id"]
+            url = TOPIC_API_URL.format(id=topic.id)
+            data = await self.fetch_data(url)  # type: ignore
+            index = 1
+        posts = data["post_stream"]["posts"]
+        post_id = next(filter(lambda p: p["post_number"] == index, posts))["id"]
 
         topic_info = TopicInfo(title=data["title"], url=f"{DOMAIN}/t/{data['slug']}/{data['id']}")
 
