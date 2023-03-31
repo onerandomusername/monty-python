@@ -87,7 +87,12 @@ class PythonDiscourse(commands.Cog):
     def make_post_embed(self, data: dict[str, Any], topic_info: TopicInfo = None) -> disnake.Embed:
         """Return an embed representing the provided post and topic information."""
         # consider parsing this into markdown
-        e = disnake.Embed(description=data["raw"])
+        limit = 2700
+        body: str = data["raw"]
+
+        if len(body) > limit:
+            body = body[: limit - 3] + "..."
+        e = disnake.Embed(description=body)
 
         is_reply = data["post_number"] > 1
         if topic_info and topic_info.title:
