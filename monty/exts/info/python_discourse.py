@@ -18,6 +18,8 @@ from monty.utils import scheduling
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 
+PYTHON_DISCOURSE_AUTOLINK_FEATURE = "PYTHON_DISCOURSE_AUTOLINK"
+
 DOMAIN = "https://discuss.python.org"
 TOPIC_REGEX = re.compile(
     r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s<>)]*"
@@ -26,6 +28,7 @@ TOPIC_REGEX = re.compile(
 TOPIC_API_URL = f"{DOMAIN}/t/{{id}}.json"
 # https://docs.discourse.org/#tag/Topics
 POST_API_URL = f"{DOMAIN}/posts/{{id}}.json"
+
 
 logger = get_logger(__name__)
 
@@ -128,6 +131,9 @@ class PythonDiscourse(commands.Cog):
             return
 
         if not message.content:
+            return
+
+        if not await self.bot.guild_has_feature(message.guild, PYTHON_DISCOURSE_AUTOLINK_FEATURE):
             return
 
         posts = self.extract_topic_urls(message.content)
