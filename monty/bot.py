@@ -2,6 +2,7 @@ import asyncio
 import collections
 import functools
 import socket
+import sys
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, Optional, Union
@@ -12,6 +13,7 @@ import aiohttp
 import arrow
 import cachingutils.redis
 import disnake
+import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
@@ -172,9 +174,13 @@ class Monty(commands.Bot):
                     await cache.set(cache_key, (etag, body, r.raw_headers))
                 return r
 
+        user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
+            sys.version_info, constants.Client.version, constants.Source.github
+        )
         self.http_session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(resolver=aiohttp.AsyncResolver(), family=socket.AF_INET),
             trace_configs=trace_configs,
+            headers=multidict.CIMultiDict({"User-agent": user_agent}),
         )
         self.http_session._request = functools.partial(_request, self.http_session)  # type: ignore
 
