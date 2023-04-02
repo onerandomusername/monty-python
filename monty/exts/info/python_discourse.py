@@ -111,7 +111,7 @@ class PythonDiscourse(commands.Cog):
             url=f"{DOMAIN}/u/{data['username']}",
         )
 
-        e.timestamp = datetime.strptime(data["created_at"], r"%Y-%m-%dT%H:%M:%S.%fZ")
+        e.timestamp = datetime.fromisoformat(data["created_at"])
         e.set_footer(text="Posted at", icon_url=Icons.python_discourse)
         return e
 
