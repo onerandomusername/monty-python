@@ -21,7 +21,7 @@ from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints
 from monty.log import get_logger
 from monty.utils.caching import redis_cache
-from monty.utils.helpers import maybe_defer
+from monty.utils.helpers import maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
@@ -352,7 +352,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
-        embed.timestamp = disnake.utils.utcnow()
+        embed.timestamp = utcnow()
         embed.set_footer(text="Requested at:")
         if len(packages) >= max_results:
             description += f"*Only showing the top {max_results} results.*"

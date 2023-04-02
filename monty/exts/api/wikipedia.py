@@ -9,6 +9,7 @@ from monty.bot import Monty
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils import LinePaginator
+from monty.utils.helpers import utcnow
 
 
 log = get_logger(__name__)
@@ -72,7 +73,7 @@ class WikipediaSearch(commands.Cog, name="Wikipedia Search", slash_command_attrs
         if contents:
             embed = disnake.Embed(title="Wikipedia Search Results", colour=disnake.Color.blurple())
             embed.set_thumbnail(url=WIKI_THUMBNAIL)
-            embed.timestamp = disnake.utils.utcnow()
+            embed.timestamp = utcnow()
             await LinePaginator.paginate(contents, ctx, embed)
         else:
             await ctx.send("Sorry, we could not find a wikipedia article using that search term.")

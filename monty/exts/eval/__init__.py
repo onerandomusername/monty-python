@@ -15,6 +15,7 @@ from monty.constants import URLs
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service
 
@@ -408,7 +409,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
-            self.jobs[ctx.author.id] = disnake.utils.utcnow()
+            self.jobs[ctx.author.id] = utcnow()
             code = self.prepare_input(code)
             try:
                 response = await self.send_eval(ctx, code)
@@ -463,7 +464,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         for item in sorted(json["packages"], key=lambda x: x["name"]):
             # iterable of dicts
             embed.description += f"**{item['name']}**: {item['version']}\n"
-        embed.timestamp = disnake.utils.utcnow()
+        embed.timestamp = utcnow()
         await ctx.reply(
             embed=embed,
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
