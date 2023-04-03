@@ -1,3 +1,4 @@
+import yarl
 from disnake.ext import commands, tasks
 
 from monty.bot import Monty
@@ -15,17 +16,29 @@ class UptimeMonitor(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        self._url = yarl.URL(UptimeMonitoring.private_url)
         if UptimeMonitoring.enabled:
             self.uptime_monitor.start()
 
-    def on_cog_unload(self) -> None:
+    def cog_unload(self) -> None:
         """Stop existing tasks on cog unload."""
         self.uptime_monitor.cancel()
+
+    def get_url(self) -> str:
+        """Get the uptime URL with proper formatting. The result of this method should not be cached."""
+        queries = {}
+        for param, value in UptimeMonitoring.query_params.items():
+            if callable(value):
+                value = value(self.bot)
+            queries[param] = value
+
+        return str(self._url.update_query(**queries))
 
     @tasks.loop(seconds=UptimeMonitoring.interval)
     async def uptime_monitor(self) -> None:
         """Send an uptime ack if uptime monitoring is enabled."""
-        async with self.bot.http_session.get(UptimeMonitoring.private_url):
+        url = self.get_url()
+        async with self.bot.http_session.get(url, use_cache=False):
             pass
 
     @uptime_monitor.before_loop

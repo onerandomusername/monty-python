@@ -66,6 +66,11 @@ class UptimeMonitoring:
     status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
     interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
     enabled: bool = bool(private_url)
+    query_params = {
+        "status": "up",
+        "msg": "OK",
+        "ping": lambda bot: f"{bot.latency * 1000:.2f}",
+    }
 
 
 class Database:
