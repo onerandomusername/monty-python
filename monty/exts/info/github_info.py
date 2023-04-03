@@ -903,6 +903,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     repository=issue.repository,
                     comment_id=frag.removeprefix("discussion_r"),
                 )
+            elif frag.startswith("issue-"):
+                # in a perfect world we'd show the full issue display, and fetch the issue endpoint
+                # while we don't live in a perfect world we're going to make the necessary convoluted code
+                # to actually loop back anyways
+
+                # why
+                issue.user_url = (issue.user_url or "#").rsplit("#")[0]  # I don't even care right now
+                # github, why is this fragment even a thing?
+                fetched_issue = await self.fetch_issues(
+                    int(issue.number),
+                    issue.repository,
+                    issue.organisation,  # type: ignore
+                )
+                if isinstance(fetched_issue, FetchError):
+                    continue
+                comments.append(self.format_embed_expanded_issue(fetched_issue))
+                components.append(
+                    disnake.ui.Button(
+                        url=fetched_issue.raw_json["html_url"],  # type: ignore
+                        label="View comment",
+                    )
+                )
+                continue
             else:
                 continue
 
@@ -957,6 +980,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if len(comments) > 1:
             for num, component in enumerate(components, 1):
                 suffix = get_num_suffix(num)
+                # current implemenation does allow mixing comments and actual issues
+                # this will be wrong in that case. Oh well.
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))
