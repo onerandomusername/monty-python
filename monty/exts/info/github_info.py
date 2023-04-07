@@ -1,3 +1,4 @@
+import enum
 import itertools
 import random
 import re
@@ -111,6 +112,12 @@ class RenderContext(NamedTuple):
         return url
 
 
+class IssueSourceFormat(enum.IntEnum):
+    github_form_with_repo = enum.auto()  # DisnakeDev/disnake#459
+    direct_github_url = enum.auto()  # https://github.com/DisnakeDev/disnake/issues/459
+    monty_swap_state_button = enum.auto()  # see EXPAND_ISSUE_CUSTOM_ID_PREFIX
+
+
 @dataclass
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
@@ -118,7 +125,7 @@ class FoundIssue:
     organisation: Optional[str]
     repository: str
     number: str
-    should_be_expanded: bool = False
+    source_format: IssueSourceFormat
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -615,7 +622,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         *,
         expand_one_issue: bool = False,
         show_errors_inline: bool = True,
-    ) -> tuple[disnake.Embed, int]:
+    ) -> tuple[disnake.Embed, int, bool]:
         """Take a list of IssueState or FetchError and format a Discord embed for them."""
         description_list = []
         if (
@@ -625,7 +632,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             and issue.raw_json is not None
         ):
             # show considerably more information about the issue if there is a single provided issue
-            return (self.format_embed_expanded_issue(issue), 1)
+            return (self.format_embed_expanded_issue(issue), 1, True)
 
         issue_count = 0
         for result in results:
@@ -644,7 +651,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
         resp.set_author(name="GitHub")
-        return resp, issue_count
+        return resp, issue_count, False
 
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
@@ -726,10 +733,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
         for match in matches:
-            if match.re is AUTOMATIC_REGEX:
-                should_be_expanded = False
-            elif match.re is GITHUB_ISSUE_LINK_REGEX:
-                should_be_expanded = True
+            if match.re is GITHUB_ISSUE_LINK_REGEX:
+                source_format = IssueSourceFormat.direct_github_url
                 # handle custom checks here
                 url = yarl.URL(match[0])
 
@@ -739,7 +744,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 if url.fragment or url.query:  # saving fragments for later
                     continue
             else:
-                should_be_expanded = False
+                # match.re is AUTOMATIC_REGEX, which doesn't require special handling right now
+                source_format = IssueSourceFormat.github_form_with_repo
+
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
                 if default_user == "":
@@ -752,7 +759,14 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     continue
                 repo = repos[repo]
 
-            issues.append(FoundIssue(org, repo, match.group("number"), should_be_expanded=should_be_expanded))
+            issues.append(
+                FoundIssue(
+                    org,
+                    repo,
+                    match.group("number"),
+                    source_format=source_format,
+                )
+            )
 
         # return a de-duped list
         return list(dict.fromkeys(issues, None))
@@ -812,14 +826,19 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             is_different_author = False
 
-        issue = FoundIssue(match.group("org"), match.group("repo"), match.group("number"))
+        issue = FoundIssue(
+            match.group("org"),
+            match.group("repo"),
+            match.group("number"),
+            source_format=IssueSourceFormat.monty_swap_state_button,
+        )
         found_issue = await self.fetch_issues(
             int(issue.number),
             issue.repository,
             issue.organisation,  # type: ignore
             allow_discussions=True,  # if we have a discussion linked it was enabled at some point
         )
-        embed, _ = self.format_embed([found_issue], expand_one_issue=not is_expanded)
+        embed, *_ = self.format_embed([found_issue], expand_one_issue=not is_expanded)
 
         # send the embed in a new message
         if is_different_author:
@@ -913,7 +932,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
-                if repo_issue.should_be_expanded:
+                if repo_issue.source_format is IssueSourceFormat.direct_github_url:
                     total_pre_expanded += 1
 
         # for now, we do not expand when there is more than 1 pre-expanded image link
@@ -923,22 +942,23 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not links:
             return
 
-        if len(links) == 1 and issues[0].should_be_expanded:
+        if len(links) == 1 and issues[0].source_format is IssueSourceFormat.direct_github_url:
             if perms.manage_messages:
                 scheduling.create_task(suppress_embeds(self.bot, message))
-
-            expand_one_issue = True
+            allow_expand = True
+            allow_pre_expanded = True
         else:
-            expand_one_issue = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+            allow_expand = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+            allow_pre_expanded = False
 
-        embed, issue_count = self.format_embed(links, expand_one_issue=expand_one_issue)
+        embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: List[disnake.ui.Button] = [DeleteButton(message.author)]
-        if expand_one_issue:
+        if allow_expand:
             button = self.get_expand_button(
                 links,
                 user_id=message.author.id,
-                is_expanded=expand_one_issue and issue_count == 1,
+                is_expanded=was_expanded,
             )
             if button:
                 components.append(button)
@@ -997,20 +1017,20 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             if isinstance(result, IssueState):
                 links.append(result)
-                if repo_issue.should_be_expanded:
+                if repo_issue.source_format is IssueSourceFormat.direct_github_url:
                     total_pre_expanded += 1
 
         if not links:
             # see above comments
             return
 
-        expand_one_issue = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
+        allow_expand = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
 
         # update the components
         is_expanded = False
         # get existing button
         rows = disnake.ui.ActionRow.rows_from_message(sent_msg)
-        if expand_one_issue:
+        if allow_expand:
             for row in rows:
                 for comp in row:
                     if comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
@@ -1021,7 +1041,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         if button:
                             row.append_item(button)
 
-        embed, _ = self.format_embed(links, expand_one_issue=is_expanded)
+        embed, *_ = self.format_embed(links, expand_one_issue=is_expanded)
         try:
             await sent_msg.edit(embed=embed, components=rows)
         except disnake.HTTPException:
