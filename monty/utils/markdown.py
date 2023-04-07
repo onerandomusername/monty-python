@@ -210,7 +210,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         # todo: figure out how this should actually work
         if level == 1:
             return text.lstrip("\n") + "\n"
-        return text
+        else:
+            # inner lists need a newline prefix to show separately from parent item
+            return "\n" + text
 
     def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
