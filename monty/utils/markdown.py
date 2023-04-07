@@ -218,25 +218,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         indent = "\u2001" * (level - 1)
 
         result: list[str] = [f"{indent}- {lines[0]}"]
-        in_codeblock = False
         for line in lines[1:]:
-            if "`" * 3 in line:  # very very very rudimentary codeblock detection
-                if in_codeblock:
-                    in_codeblock = False
-                    if line.endswith("\n"):
-                        line = line[:-1]
-                    result.append(line)
-                    continue
-                else:
-                    in_codeblock = True
-                line = line.lstrip()
             if not line.strip():
-                if in_codeblock:
-                    continue
                 result.append("")
-            elif in_codeblock:
-                result.append(line)
-                continue
             else:
                 # the space here should be about the same width as `- `
                 result.append(f"{indent}\u2007{line}")
