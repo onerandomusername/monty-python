@@ -56,6 +56,11 @@ BITBUCKET_RE = re.compile(
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
+# map specific file extensions to different syntax-highlighting languages
+LANGUAGE_MAPPING: dict[str, str] = {
+    "pyi": "py",
+}
+
 
 class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
     """
@@ -259,8 +264,11 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         # Extracts the code language and checks whether it's a "valid" language
         language = file_path.split("/")[-1].split(".")[-1]
         trimmed_language = language.replace("-", "").replace("+", "").replace("_", "")
+
         is_valid_language = trimmed_language.isalnum()
-        if not is_valid_language:
+        if is_valid_language:
+            language = LANGUAGE_MAPPING.get(language, language)
+        else:
             language = ""
 
         # escape and fix the file_path
