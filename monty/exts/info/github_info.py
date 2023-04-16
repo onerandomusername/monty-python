@@ -198,12 +198,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             else:
                 return await r.json()
 
-    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
+    def render_github_markdown(
+        self, body: str, *, context: RenderContext = None, limit: int = 2700
+    ) -> tuple[str, list[tuple[str, ...]]]:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
         url_prefix = context and context.html_url
+        renderer = DiscordRenderer(repo=url_prefix)
         markdown = mistune.create_markdown(
             escape=False,
-            renderer=DiscordRenderer(repo=url_prefix),
+            renderer=renderer,
             plugins=[
                 "strikethrough",
                 "task_lists",
@@ -213,9 +216,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         body = markdown(body) or ""
 
         if len(body) > limit:
-            return body[: limit - 3] + "..."
+            body = body[: limit - 3] + "..."
 
-        return body
+        return body, renderer.images
 
     @redis_cache(
         "github-user-repos",
@@ -609,9 +612,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         body: Optional[str] = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
-            embed.description = self.render_github_markdown(
+            text, images = self.render_github_markdown(
                 body, context=RenderContext(user=issue.organisation, repo=issue.repository)
             )
+            embed.description = text
+            if images:
+                embed.set_image(images[0][0])
         if not body or body.isspace():
             embed.description = "*No description provided.*"
         return embed
