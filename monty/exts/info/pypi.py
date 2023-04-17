@@ -21,7 +21,7 @@ from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints
 from monty.log import get_logger
 from monty.utils.caching import redis_cache
-from monty.utils.helpers import maybe_defer, utcnow
+from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
@@ -187,9 +187,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         try:
             release_info = json["releases"][info["version"]]
-            embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
-                tzinfo=datetime.timezone.utc
-            )
+            embed.timestamp = fromisoformat(release_info[0]["upload_time"]).replace(tzinfo=datetime.timezone.utc)
         except (KeyError, IndexError):
             pass
         else:

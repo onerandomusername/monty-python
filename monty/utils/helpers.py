@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
+import dateutil.parser
 import disnake
 
 from monty.log import get_logger
@@ -112,3 +113,8 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
 def utcnow() -> datetime.datetime:
     """Return the current time as an aware datetime in UTC."""
     return datetime.datetime.now(datetime.timezone.utc)
+
+
+def fromisoformat(timestamp: str) -> datetime.datetime:
+    """Parse the given ISO-8601 timestamp to a datetime object."""
+    return dateutil.parser.isoparse(timestamp)

@@ -3,7 +3,7 @@ import itertools
 import random
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 
@@ -25,6 +25,7 @@ from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import fromisoformat
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
@@ -344,7 +345,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
                 colour=disnake.Colour.blurple(),
                 url=html_url,
-                timestamp=datetime.fromisoformat(user_data["created_at"]),
+                timestamp=fromisoformat(user_data["created_at"]),
             )
             embed.set_thumbnail(url=user_data["avatar_url"])
             embed.set_footer(text="Account created at")
@@ -452,10 +453,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             icon_url=repo_owner["avatar_url"],
         )
 
-        repo_created_at = datetime.fromisoformat(repo_data["created_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y")
-        last_pushed = (
-            datetime.fromisoformat(repo_data["pushed_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")
-        )
+        repo_created_at = fromisoformat(repo_data["created_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y")
+        last_pushed = fromisoformat(repo_data["pushed_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")
 
         embed.set_footer(
             text=(
@@ -605,7 +604,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             embed.add_field("Labels", labels)
 
         embed.url = issue.url
-        embed.timestamp = datetime.fromisoformat(json_data["created_at"])
+        embed.timestamp = fromisoformat(json_data["created_at"])
         embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
 
         body: Optional[str] = json_data["body"]
