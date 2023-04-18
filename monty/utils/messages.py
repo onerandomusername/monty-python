@@ -15,14 +15,23 @@ if TYPE_CHECKING:
 
 DELETE_ID_V2 = "message_delete_button_v2:"
 
+# You may be wondering why there's so many regexes, and why we aren't just using a parser.
+# The unfornuate truth is that Discord's *own* markdown implementation uses regex.
+# Because of that sad fact, no parser will have the bugs and nuances that Discord's
+# implementation does, no matter how hard we try.
 # this is taken directly from the client
 # modified to have the `)` removed from the last characters.
 # this is actually included if it matches with a ( within the link
 # also modified to include a < if it starts with one
-DISCORD_CLIENT_URL_REGEX = re.compile(r"<?https?:\/\/[^\s<]+[^<.,:;'\"\]\s]\>?", re.IGNORECASE)
+DISCORD_CLIENT_URL_REGEX = re.compile(r"(?P<url><?https?:\/\/[^\s<]+[^<.,:;'\"\]\s]\>?)", re.IGNORECASE)
+# in order to properly get a url, `<>` should be matched to the above *after* the initial match
+# this isn't intuitive, but its how Discord works.
 DISCORD_CLIENT_URL_WRAPPED_REGEX = re.compile(r"(?<=\<)https?:\/\/[^\s>]+(?=\>)", re.IGNORECASE)
-# in order to properly get a url, `<>` should be matched to the above *after*
-# this isn't intuitive, but its how discord works.
+# I have zero idea how this regex works. I took it from the client and only modified it to add named groups
+DISCORD_CLIENT_NAMED_URL_REGEX = re.compile(
+    r"^\[(?P<title>(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*)\]\(\s*(?P<url><?(?:\([^)]*\)|[^\s\\]|\\.)*?>?)(?:\s+['\"]([\s\S]*?)['\"])?\s*\)",
+    re.IGNORECASE,
+)
 
 logger = get_logger(__name__)
 
@@ -75,59 +84,62 @@ async def suppress_embeds(
     return True
 
 
+def _validate_url(match: re.Match[str], *, group: str | int = "url") -> str:
+    """Given a match, ensure that it is a valid url per Discord rules."""
+    # see top of file for why we check this twice, both with the regex above and this one
+    link = match.group(group)
+    if link.startswith("<"):
+        # starting where this match was, look for the full link
+        new_match = DISCORD_CLIENT_URL_WRAPPED_REGEX.match(match.string, match.pos)
+        # match can be false if user provided a link with no second >, in which case the client ignores the `<`
+        if new_match:
+            link = match.group()
+        else:
+            # remove the `<` from the original link.
+            # The wrapped regex only checks for their existence but does not match them
+            link = link[1:]
+        # this looks wrong, but this is how the Discord client parses links wrapped with `>` as of April 2023
+        # the very first `>` in the url is what is used for embed suppression
+        # however, links NOT wrapped in `<>` can contain `>` so this check happens here and not sooner
+        link = link.split(">", 1)[0]
+
+    # if the link is wrapped, the other rules do not apply and the link is used as is.
+    # in order to know if the link includes the `)` at the end, the client checks if these are part of a group (
+    elif link.endswith(")"):
+        # the client only cares if the link *ever* gets equalised, with the same number of ( and ) starting from the
+        # end of the link. For example, https://example.com/)() will include the final )  because it was equalised
+        # with a ( at some point. On the other hand, https://example.com/()) will NOT include the final `)`  because
+        # the ) were not equalised with the (
+        depth = -1
+        for char in link[-2::-1]:
+            if char == ")":
+                depth -= 1
+            elif char == "(":
+                depth += 1
+            if depth == 0:
+                break
+        else:
+            # not part of the link
+            link = link[:-1]
+
+    return link
+
+
 def extract_urls(content: str) -> Generator[str, None, None]:
-    """
-    Extract all client rendered urls from the provided message content.
-
-    This method deduplicates any urls which are found more than once.
-    """
-    links: set[str] = set()
-    for match in DISCORD_CLIENT_URL_REGEX.finditer(content):
-        link = match.group(0)
-        if link is None:
-            continue
-
-        # see above for why we check this twice, both with the regex above and this one
-        if link.startswith("<"):
-            # starting where this match was, look for the full link
-            match = DISCORD_CLIENT_URL_WRAPPED_REGEX.match(content, match.pos)
-            # match can be false if user provided a link with no second >, in which case the client ignores the `<`
+    """Extract all client rendered urls from the provided message content."""
+    # match the newer [label](url) format FIRST, as its more explicit
+    pos = 0
+    while pos < len(content):
+        for regex in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
+            match: re.Match[str] = regex.match(content, pos)
             if match:
-                link = match.group()
-            else:
-                # remove the `<` from the original link.
-                # The wrapped regex only checks for their existence but does not match them
-                link = link[1:]
-            # this looks wrong, but this is how the Discord client parses links wrapped with `>` as of April 2023
-            # the very first `>` in the url is what is used for embed suppression
-            # however, links NOT wrapped in `<>` can contain `>` so this check happens here and not sooner
-            link = link.split(">", 1)[0]
-
-        # if the link is wrapped, the other rules do not apply and the link is used as is.
-        # in order to know if the link includes the `)` at the end, the client checks if these are part of a group (
-        elif link.endswith(")"):
-            # the client only cares if the link *ever* gets equalised, with the same number of ( and ) starting from the
-            # end of the link. For example, https://example.com/)() will include the final )  because it was equalised
-            # with a ( at some point. On the other hand, https://example.com/()) will NOT include the final `)`  because
-            # the ) were not equalised with the (
-            depth = -1
-            for char in link[-2::-1]:
-                if char == ")":
-                    depth -= 1
-                elif char == "(":
-                    depth += 1
-                if depth == 0:
-                    break
-            else:
-                # not part of the link
-                link = link[:-1]
-
-        # only report each url once
-        if link in links:
+                break
+        else:
+            pos += 1
             continue
-
-        links.add(link)
+        link = _validate_url(match, group="url")
         yield link
+        pos = match.start("url") + len(link)
 
 
 def extract_one_url(content: str) -> str | None:
