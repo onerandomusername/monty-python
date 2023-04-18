@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
 
@@ -10,6 +9,7 @@ import disnake
 
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.messages import extract_urls
 
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 
 def suppress_links(message: str) -> str:
     """Accepts a message that may contain links, suppresses them, and returns them."""
-    for link in set(re.findall(r"https?://[^\s]+", message, re.IGNORECASE)):
+    for link in extract_urls(message):
         message = message.replace(link, f"<{link}>")
     return message
 

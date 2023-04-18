@@ -15,14 +15,14 @@ from monty.bot import Monty
 from monty.constants import Icons
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.messages import DeleteButton, suppress_embeds
+from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
 
 PYTHON_DISCOURSE_AUTOLINK_FEATURE = "PYTHON_DISCOURSE_AUTOLINK"
 
 DOMAIN = "https://discuss.python.org"
 TOPIC_REGEX = re.compile(
-    r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s<>)]*"
+    r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s<]*"
 )
 # https://docs.discourse.org/#tag/Posts
 TOPIC_API_URL = f"{DOMAIN}/t/{{id}}.json"
@@ -120,7 +120,7 @@ class PythonDiscourse(commands.Cog):
     def extract_topic_urls(self, content: str) -> list[DiscussionTopic]:
         """Extract python discourse urls from the provided content."""
         posts = []
-        for match in TOPIC_REGEX.finditer(content):
+        for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content))):
             posts.append(
                 DiscussionTopic(
                     id=match.group("num"),

@@ -1,16 +1,25 @@
 import asyncio
 import re
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Generator, Optional, Union
 
 import disnake
 import disnake.ext.commands
 
 from monty import constants
-from monty.bot import Monty
 from monty.log import get_logger
 
 
+if TYPE_CHECKING:
+    from monty.bot import Monty
+
+
 DELETE_ID_V2 = "message_delete_button_v2:"
+
+# this is taken directly from the client
+# slightly modified to include the preceeding `<` if it exists
+DISCORD_CLIENT_URL_REGEX = re.compile(r"[<]?https?:\/\/[^\s<]+[^<.,:;'\")\]\s]", re.IGNORECASE)
+# in order to properly get a url, `<>` should be matched to the above *after*
+# this isn't intuitive, but its how discord works.
 
 logger = get_logger(__name__)
 
@@ -34,7 +43,7 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
 
 
 async def suppress_embeds(
-    bot: Monty,
+    bot: "Monty",
     message: disnake.Message,
     *,
     wait: Optional[float] = 3,
@@ -61,6 +70,23 @@ async def suppress_embeds(
         logger.warning("suppress_embeds should be called after checking for manage message permissions", exc_info=e)
         return False
     return True
+
+
+def extract_urls(content: str) -> Generator[str, None, None]:
+    """Extract all urls from the provided message content."""
+    for match in DISCORD_CLIENT_URL_REGEX.finditer(content):
+        group = match.group(0)
+        if group is None:
+            continue
+        if group.startswith("<"):
+            # this looks wrong, but this is how the Discord client parses links wrapped with `>` as of April 2023
+            group = group[1:].split(">", 1)[0]
+        yield group
+
+
+def extract_one_url(content: str) -> str | None:
+    """Variation of extract_urls which returns a single url."""
+    return next(extract_urls(content), None)
 
 
 class DeleteButton(disnake.ui.Button):
