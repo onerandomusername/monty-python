@@ -116,5 +116,9 @@ def utcnow() -> datetime.datetime:
 
 
 def fromisoformat(timestamp: str) -> datetime.datetime:
-    """Parse the given ISO-8601 timestamp to a datetime object."""
-    return dateutil.parser.isoparse(timestamp)
+    """Parse the given ISO-8601 timestamp to an aware datetime object, assuming UTC if timestamp contains no timezone."""  # noqa: E501
+    dt = dateutil.parser.isoparse(timestamp)
+    if not dt.tzinfo:
+        # assume UTC if naive datetime
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt

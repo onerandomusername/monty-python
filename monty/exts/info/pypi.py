@@ -187,7 +187,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         try:
             release_info = json["releases"][info["version"]]
-            embed.timestamp = fromisoformat(release_info[0]["upload_time"]).replace(tzinfo=datetime.timezone.utc)
+            embed.timestamp = fromisoformat(release_info[0]["upload_time"])
         except (KeyError, IndexError):
             pass
         else:
