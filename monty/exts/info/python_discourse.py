@@ -21,9 +21,7 @@ from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 PYTHON_DISCOURSE_AUTOLINK_FEATURE = "PYTHON_DISCOURSE_AUTOLINK"
 
 DOMAIN = "https://discuss.python.org"
-TOPIC_REGEX = re.compile(
-    r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s<]*"
-)
+TOPIC_REGEX = re.compile(r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s]*")
 # https://docs.discourse.org/#tag/Posts
 TOPIC_API_URL = f"{DOMAIN}/t/{{id}}.json"
 # https://docs.discourse.org/#tag/Topics
