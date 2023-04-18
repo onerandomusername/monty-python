@@ -26,7 +26,7 @@ from monty.utils import scheduling
 from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
-from monty.utils.messages import DeleteButton, suppress_embeds
+from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
 
 KT = TypeVar("KT")
@@ -70,7 +70,7 @@ AUTOMATIC_REGEX = re.compile(
 
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s<>)]?"
+    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s]*"
 )
 
 
@@ -726,9 +726,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         stripped_content = remove_codeblocks(message.content)
 
         if extract_full_links:
+            # this is hacky, but refactored in #228
+            links = extract_urls(stripped_content)
             matches = itertools.chain(
                 AUTOMATIC_REGEX.finditer(stripped_content),
-                GITHUB_ISSUE_LINK_REGEX.finditer(stripped_content),
+                filter(None, map(GITHUB_ISSUE_LINK_REGEX.fullmatch, links)),
             )
         else:
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))

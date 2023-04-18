@@ -29,12 +29,13 @@ log = get_logger(__name__)
 
 # start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
-    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
+    r"https?:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
+    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]"
+    r"|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
 )
 
 GITHUB_GIST_RE = re.compile(
-    r"https://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*"
+    r"https?://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*"
     r"(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)(\?[^#>]+)?"
     r"(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)"
 )
@@ -47,12 +48,12 @@ if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 GITLAB_RE = re.compile(
-    r"https://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
+    r"https?://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
     r"(\?[^#>]+)?(#L(?P<start_line>\d+)(-(?P<end_line>\d+))?)"
 )
 
 BITBUCKET_RE = re.compile(
-    r"https://bitbucket\.org/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/src/(?P<ref>[0-9a-zA-Z]+)"
+    r"https?://bitbucket\.org/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/src/(?P<ref>[0-9a-zA-Z]+)"
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
 
