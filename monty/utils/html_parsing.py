@@ -154,6 +154,11 @@ def _get_truncated_description(
     tag_end_index = 0
     for element in elements:
         is_tag = isinstance(element, Tag)
+        if is_tag:
+            # remove links in headers
+            # see also https://github.com/sphinx-doc/sphinx/blob/ba7408209e84ee413f240afc20f3c6b484a81f8f/sphinx/themes/basic/static/searchtools.js#L157
+            for link in element.select(".headerlink"):
+                link.decompose()
         element_length = len(element.text) if is_tag else len(element)
 
         if rendered_length + element_length >= max_length:
@@ -270,4 +275,4 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     else:
         signature = get_signatures(symbol_heading)
         description = get_dd_description(symbol_heading)
-    return _create_markdown(signature, description, symbol_data.url).replace("¶", "").strip()
+    return _create_markdown(signature, description, symbol_data.url).strip()
