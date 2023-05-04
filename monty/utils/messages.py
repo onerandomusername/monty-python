@@ -58,7 +58,7 @@ async def suppress_embeds(
     bot: "Monty",
     message: disnake.Message,
     *,
-    wait: Optional[float] = 3,
+    wait: Optional[float] = 6,
     force_wait: bool = False,
 ) -> bool:
     """Suppress the embeds on the provided message, after waiting for an edit to add embeds if none exist."""
