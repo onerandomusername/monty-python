@@ -1,9 +1,9 @@
 import asyncio
-import re
 from typing import TYPE_CHECKING, Generator, Optional, Union
 
 import disnake
 import disnake.ext.commands
+import regex
 
 from monty import constants
 from monty.log import get_logger
@@ -23,14 +23,14 @@ DELETE_ID_V2 = "message_delete_button_v2:"
 # modified to have the `)` removed from the last characters.
 # this is actually included if it matches with a ( within the link
 # also modified to include a < if it starts with one
-DISCORD_CLIENT_URL_REGEX = re.compile(r"(?P<url><?https?:\/\/[^\s<]+[^<.,:;'\"\]\s]\>?)", re.IGNORECASE)
+DISCORD_CLIENT_URL_REGEX = regex.compile(r"(?P<url><?https?:\/\/[^\s<]+[^<.,:;'\"\]\s]\>?)", regex.IGNORECASE)
 # in order to properly get a url, `<>` should be matched to the above *after* the initial match
 # this isn't intuitive, but its how Discord works.
-DISCORD_CLIENT_URL_WRAPPED_REGEX = re.compile(r"(?<=\<)https?:\/\/[^\s>]+(?=\>)", re.IGNORECASE)
+DISCORD_CLIENT_URL_WRAPPED_REGEX = regex.compile(r"(?<=\<)https?:\/\/[^\s>]+(?=\>)", regex.IGNORECASE)
 # I have zero idea how this regex works. I took it from the client and only modified it to add named groups
-DISCORD_CLIENT_NAMED_URL_REGEX = re.compile(
+DISCORD_CLIENT_NAMED_URL_REGEX = regex.compile(
     r"^\[(?P<title>(?:\[[^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*)\]\(\s*(?P<url><?(?:\([^)]*\)|[^\s\\]|\\.)*?>?)(?:\s+['\"]([\s\S]*?)['\"])?\s*\)",
-    re.IGNORECASE,
+    regex.IGNORECASE,
 )
 
 logger = get_logger(__name__)
@@ -44,12 +44,12 @@ def sub_clyde(username: Optional[str]) -> Optional[str]:
     Return None only if `username` is None.
     """
 
-    def replace_e(match: re.Match) -> str:
+    def replace_e(match: regex.Match) -> str:
         char = "е" if match[2] == "e" else "Е"
         return match[1] + char
 
     if username:
-        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
+        return regex.sub(r"(clyd)(e)", replace_e, username, flags=regex.I)
     else:
         return username  # Empty string or None
 
@@ -84,13 +84,13 @@ async def suppress_embeds(
     return True
 
 
-def _validate_url(match: re.Match[str], *, group: str | int = "url") -> str:
+def _validate_url(match: regex.Match[str], *, group: str | int = "url") -> str:
     """Given a match, ensure that it is a valid url per Discord rules."""
     # see top of file for why we check this twice, both with the regex above and this one
     link = match.group(group)
     if link.startswith("<"):
         # starting where this match was, look for the full link
-        new_match = DISCORD_CLIENT_URL_WRAPPED_REGEX.match(match.string, match.pos)
+        new_match = DISCORD_CLIENT_URL_WRAPPED_REGEX.match(match.string, match.pos, timeout=0.2)
         # match can be false if user provided a link with no second >, in which case the client ignores the `<`
         if new_match:
             link = match.group()
@@ -130,14 +130,22 @@ def extract_urls(content: str) -> Generator[str, None, None]:
     # match the newer [label](url) format FIRST, as its more explicit
     pos = 0
     while pos < len(content):
-        for regex in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
-            match: re.Match[str] = regex.match(content, pos)
+        for compiled_re in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
+            try:
+                match: Optional[regex.Match[str]] = compiled_re.match(content, pos, timeout=0.2)
+            except TimeoutError:
+                logger.info("Hit a timeout error on matching Discord's link regexes.")
+                return None
             if match:
                 break
         else:
             pos += 1
             continue
-        link = _validate_url(match, group="url")
+        try:
+            link = _validate_url(match, group="url")
+        except TimeoutError:
+            logger.info("Hit a timeout error on matching regexes.")
+            return None
         yield link
         pos = match.start("url") + len(link)
 
