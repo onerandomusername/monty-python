@@ -637,7 +637,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         issue_count = 0
         for result in results:
             if isinstance(result, IssueState):
-                description_list.append(f"{result.emoji} [\\(#{result.number}\\) {result.title}]({result.url})")
+                description_list.append(f"{result.emoji} [(#{result.number}) {result.title}]({result.url})")
                 issue_count += 1
             elif show_errors_inline:
                 if isinstance(result, FetchError):
