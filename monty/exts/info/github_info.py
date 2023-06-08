@@ -1030,7 +1030,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         if issue_comments := list(filter(lambda issue: issue.url_fragment, issues)):
-            await self.handle_issue_comment(message, issue_comments)
+            # if there are issue comments found, we do not want to expand the entire issue
+            # we also only want to expand the issue if the feature is enabled
+            # AND both options of the guild configuration are enabled
+            if config.github_comment_linking and await self.bot.guild_has_feature(
+                message.guild, Feature.GITHUB_COMMENT_LINKS
+            ):
+                await self.handle_issue_comment(message, issue_comments)
             return
 
         links: list[IssueState] = []
