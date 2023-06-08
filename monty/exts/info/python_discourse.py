@@ -15,6 +15,7 @@ from monty.bot import Monty
 from monty.constants import Feature, Icons
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.helpers import get_num_suffix
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
 
@@ -179,15 +180,7 @@ class PythonDiscourse(commands.Cog):
 
         if len(components) > 1:
             for num, component in enumerate(components, 1):
-                if num == 1:
-                    suffix = "st"
-                elif num == 2:
-                    suffix = "nd"
-                elif num == 3:
-                    suffix = "rd"
-                else:
-                    suffix = "th"
-
+                suffix = get_num_suffix(num)
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))

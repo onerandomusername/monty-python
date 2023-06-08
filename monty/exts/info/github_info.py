@@ -26,6 +26,7 @@ from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
@@ -47,6 +48,9 @@ ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{numbe
 PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
 LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
 LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?per_page=100"
+ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
+PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
+
 
 REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
@@ -123,6 +127,8 @@ class FoundIssue:
     repository: str
     number: str
     source_format: IssueSourceFormat
+    url_fragment: str = ""
+    user_url: Optional[str] = None
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -275,7 +281,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             user = user or await self.fetch_guild_to_org(guild_id)
 
         if not user:
-            raise commands.UserInputError("user must be provided" " or configured for this guild." if guild_id else ".")
+            raise commands.UserInputError("user must be provided or configured for this guild." if guild_id else ".")
 
         return RepoTarget(user, repo)  # type: ignore
 
@@ -732,6 +738,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         else:
             matches = itertools.chain(AUTOMATIC_REGEX.finditer(stripped_content))
         for match in matches:
+            fragment = ""
             if match.re is GITHUB_ISSUE_LINK_REGEX:
                 source_format = IssueSourceFormat.direct_github_url
                 # handle custom checks here
@@ -740,11 +747,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 # don't match if we didn't end with the hash
                 if not url.path.rstrip("/").endswith(match.group("number")):
                     continue
-                if url.fragment or url.query:  # saving fragments for later
-                    continue
+                if url.fragment or url.query:  # used to match for comments later
+                    fragment = url.fragment
             else:
                 # match.re is AUTOMATIC_REGEX, which doesn't require special handling right now
                 source_format = IssueSourceFormat.github_form_with_repo
+                url = None
 
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
@@ -764,6 +772,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     repo,
                     match.group("number"),
                     source_format=source_format,
+                    url_fragment=fragment,
+                    user_url=str(url) if url is not None else None,
                 )
             )
 
@@ -865,6 +875,122 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         await inter.response.edit_message(embed=embed, components=rows)
 
+    async def handle_issue_comment(self, message: disnake.Message, issues: list[FoundIssue]) -> None:
+        """Expand an issue or pull request comment."""
+        comments = []
+        components = []
+
+        for issue in issues:
+            assert issue.url_fragment
+
+            # figure out which endpoint we want to use
+            frag = issue.url_fragment
+            if frag.startswith("issuecomment-"):
+                endpoint = ISSUE_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("issuecomment-"),
+                )
+            elif frag.startswith("pullrequestreview-"):
+                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("pullrequestreview-"),
+                )
+            elif frag.startswith("discussion_r"):
+                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                    user=issue.organisation,
+                    repository=issue.repository,
+                    comment_id=frag.removeprefix("discussion_r"),
+                )
+            elif frag.startswith("issue-"):
+                # in a perfect world we'd show the full issue display, and fetch the issue endpoint
+                # while we don't live in a perfect world we're going to make the necessary convoluted code
+                # to actually loop back anyways
+
+                # why
+                issue.user_url = (issue.user_url or "#").rsplit("#")[0]  # I don't even care right now
+                # github, why is this fragment even a thing?
+                fetched_issue = await self.fetch_issues(
+                    int(issue.number),
+                    issue.repository,
+                    issue.organisation,  # type: ignore
+                )
+                if isinstance(fetched_issue, FetchError):
+                    continue
+                comments.append(self.format_embed_expanded_issue(fetched_issue))
+                components.append(
+                    disnake.ui.Button(
+                        url=fetched_issue.raw_json["html_url"],  # type: ignore
+                        label="View comment",
+                    )
+                )
+                continue
+            else:
+                continue
+
+            comment: dict[str, Any] = await self.fetch_data(endpoint, as_text=False)  # type: ignore
+            if "message" in comment:
+                log.warn("encountered error fetching %s: %s", endpoint, comment)
+                continue
+
+            # assert the url was not tampered with
+            if issue.user_url != (html_url := comment["html_url"]):
+                # this is a warning as its the best way I currently have to track how often the wrong url is used
+                log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
+                continue
+
+            body = self.render_github_markdown(comment["body"])
+            e = disnake.Embed(
+                url=html_url,
+                description=body,
+            )
+
+            author = comment["user"]
+            e.set_author(
+                name=author["login"],
+                icon_url=author["avatar_url"],
+                url=author["html_url"],
+            )
+
+            e.set_footer(text=f"Comment on {issue.organisation}/{issue.repository}#{issue.number}")
+
+            e.timestamp = datetime.strptime(comment["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+
+            comments.append(e)
+            components.append(disnake.ui.Button(url=comment["html_url"], label="View comment"))
+
+        if not comments:
+            return
+
+        if len(comments) > 4:
+            await message.reply(
+                (
+                    "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
+                    " them to be expanded!"
+                ),
+                components=DeleteButton(message.author),
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
+            )
+            return
+
+        if message.channel.permissions_for(message.guild.me).manage_messages:
+            scheduling.create_task(suppress_embeds(self.bot, message))
+
+        if len(comments) > 1:
+            for num, component in enumerate(components, 1):
+                suffix = get_num_suffix(num)
+                # current implemenation does allow mixing comments and actual issues
+                # this will be wrong in that case. Oh well.
+                component.label = f"View {num}{suffix} comment"
+
+        components.insert(0, DeleteButton(message.author))
+        await message.reply(
+            embeds=comments,
+            components=components,
+            allowed_mentions=disnake.AllowedMentions(replied_user=False),
+        )
+
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
         """
@@ -901,6 +1027,16 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         # no issues found, return early
         if not issues:
+            return
+
+        if issue_comments := list(filter(lambda issue: issue.url_fragment, issues)):
+            # if there are issue comments found, we do not want to expand the entire issue
+            # we also only want to expand the issue if the feature is enabled
+            # AND both options of the guild configuration are enabled
+            if config.github_comment_linking and await self.bot.guild_has_feature(
+                message.guild, Feature.GITHUB_COMMENT_LINKS
+            ):
+                await self.handle_issue_comment(message, issue_comments)
             return
 
         links: list[IssueState] = []
