@@ -48,7 +48,11 @@ class GlobalSource(commands.Cog, name="Global Source"):
         """Get the source of a python object."""
         object = object.strip("`")
         async with ctx.typing():
-            result = await self.snekbox.post_eval(self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object))
+            result = await self.snekbox.post_eval(
+                self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object),
+                # for `-X frozen_modules=off`, see https://github.com/python/cpython/issues/89183
+                args=["-X", "frozen_modules=off", "-c"],
+            )
 
         # exit codes:
         # 0: success
