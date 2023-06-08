@@ -27,9 +27,6 @@ env:
   PIP_USER: 1
   PYTHON_VERSION: '3.10'
 
-  # Make sure package manager does not use virtualenv
-  POETRY_VIRTUALENVS_CREATE: false
-
   # Specify explicit paths for python dependencies and the pre-commit
   # environment so we know which directories to cache
   POETRY_CACHE_DIR: ${{ github.workspace }}/.cache/py-user-base
