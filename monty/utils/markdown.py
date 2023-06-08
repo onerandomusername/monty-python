@@ -144,6 +144,10 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """Return bold text."""
         return f"**{text}**"
 
+    def strikethrough(self, text: str) -> str:
+        """Return crossed-out text."""
+        return f"~~{text}~~"
+
     def heading(self, text: str, level: int) -> str:
         """Format the heading to be bold if its large enough, and underline it."""
         if level in (1, 2, 3):
