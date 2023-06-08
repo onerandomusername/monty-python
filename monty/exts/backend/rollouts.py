@@ -13,6 +13,7 @@ from monty.bot import Monty
 from monty.database import Feature, Rollout
 from monty.log import get_logger
 from monty.utils import rollouts, scheduling
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 
 
@@ -257,7 +258,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     @cmd_rollouts.command("start")
     async def cmd_rollouts_start(self, ctx: commands.Context, rollout: RolloutConverter, dt: ArrowConverter) -> None:
         """Start a rollout now to end at the specified time."""
-        now = disnake.utils.utcnow()
+        now = utcnow()
         if now > dt:
             raise commands.BadArgument("A rollout must end in the future.")
 
