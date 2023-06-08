@@ -37,8 +37,6 @@ from monty.utils.scheduling import Scheduler
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 
 
-INLINE_DOCS_FEATURE_NAME = "INLINE_DOCUMENTATION"
-
 log = get_logger(__name__)
 
 # symbols with a group contained here will get the group prefixed on duplicates
@@ -1060,7 +1058,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         if message.author.bot:
             return
 
-        if not await self.bot.guild_has_feature(message.guild, INLINE_DOCS_FEATURE_NAME):
+        if not await self.bot.guild_has_feature(message.guild, constants.Feature.INLINE_DOCS):
             return
 
         matches: list[str] = list(dict.fromkeys(list(DOCS_LINK_REGEX.findall(message.content))[:10], None))

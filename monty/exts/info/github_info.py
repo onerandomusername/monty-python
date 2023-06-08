@@ -20,6 +20,7 @@ from gql.transport.exceptions import TransportError, TransportQueryError
 
 from monty import constants
 from monty.bot import Monty
+from monty.constants import Feature
 from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils import scheduling
@@ -74,10 +75,6 @@ GITHUB_ISSUE_LINK_REGEX = re.compile(
 )
 
 
-DISCUSSIONS_FEATURE_NAME = "GITHUB_AUTOLINK_DISCUSSIONS"
-GITHUB_ISSUE_LINKS_FEATURES = "GITHUB_EXPAND_ISSUE_LINKS"
-
-ISSUE_EXPAND_FEATURE_NAME = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
 # eventually these will replace the above
 EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v1:"
 EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{user_id}:{state}:{org}/{repo}#{num}"
@@ -699,7 +696,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
-        expand_one_issue = await self.bot.guild_has_feature(ctx.guild, ISSUE_EXPAND_FEATURE_NAME)
+        expand_one_issue = await self.bot.guild_has_feature(ctx.guild, constants.Feature.GITHUB_ISSUE_EXPAND)
         await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
 
     async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
@@ -899,7 +896,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         issues = await self.extract_issues_from_message(
             message,
-            extract_full_links=await self.bot.guild_has_feature(message.guild, GITHUB_ISSUE_LINKS_FEATURES),
+            extract_full_links=await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_LINKS),
         )
 
         # no issues found, return early
@@ -930,7 +927,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 int(repo_issue.number),
                 repo_issue.repository,
                 repo_issue.organisation,
-                allow_discussions=await self.bot.guild_has_feature(message.guild.id, DISCUSSIONS_FEATURE_NAME),
+                allow_discussions=await self.bot.guild_has_feature(message.guild.id, Feature.GITHUB_DISCUSSIONS),
             )
             if isinstance(result, IssueState):
                 links.append(result)
@@ -950,7 +947,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             allow_expand = True
             allow_pre_expanded = True
         else:
-            allow_expand = await self.bot.guild_has_feature(message.guild, ISSUE_EXPAND_FEATURE_NAME)
+            allow_expand = await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_EXPAND)
             allow_pre_expanded = False
 
         embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
@@ -984,7 +981,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         after_issues = await self.extract_issues_from_message(
             after,
-            extract_full_links=await self.bot.guild_has_feature(after.guild, GITHUB_ISSUE_LINKS_FEATURES),
+            extract_full_links=await self.bot.guild_has_feature(after.guild, Feature.GITHUB_ISSUE_LINKS),
         )
 
         # if a user provides too many issues here, just forgo it
@@ -1015,7 +1012,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 int(repo_issue.number),
                 repo_issue.repository,
                 repo_issue.organisation,
-                allow_discussions=await self.bot.guild_has_feature(after.guild.id, DISCUSSIONS_FEATURE_NAME),
+                allow_discussions=await self.bot.guild_has_feature(after.guild.id, Feature.GITHUB_DISCUSSIONS),
             )
             if isinstance(result, IssueState):
                 links.append(result)
@@ -1026,7 +1023,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # see above comments
             return
 
-        allow_expand = await self.bot.guild_has_feature(after.guild, ISSUE_EXPAND_FEATURE_NAME)
+        allow_expand = await self.bot.guild_has_feature(after.guild, Feature.GITHUB_ISSUE_EXPAND)
 
         # update the components
         is_expanded = False

@@ -12,13 +12,11 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Icons
+from monty.constants import Feature, Icons
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
-
-PYTHON_DISCOURSE_AUTOLINK_FEATURE = "PYTHON_DISCOURSE_AUTOLINK"
 
 DOMAIN = "https://discuss.python.org"
 TOPIC_REGEX = re.compile(r"https?:\/\/discuss\.python\.org\/t\/(?:[^\s\/]*\/)*?(?P<num>\d+)(?:\/(?P<reply>\d+))?[^\s]*")
@@ -140,7 +138,7 @@ class PythonDiscourse(commands.Cog):
         if not message.content:
             return
 
-        if not await self.bot.guild_has_feature(message.guild, PYTHON_DISCOURSE_AUTOLINK_FEATURE):
+        if not await self.bot.guild_has_feature(message.guild, Feature.PYTHON_DISCOURSE_AUTOLINK):
             return
 
         posts = self.extract_topic_urls(message.content)
