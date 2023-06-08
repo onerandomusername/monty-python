@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 __all__ = (
     "Client",
     "Colours",
+    "DiscordFeatures",
     "Emojis",
     "Icons",
     "Stats",
@@ -102,6 +103,12 @@ class Colours:
     python_yellow = 0xFFD43B
     grass_green = 0x66FF00
     gold = 0xE6C200
+
+
+class DiscordFeatures:
+    """Whether to embrace or ignore new features on Discord, in case they get rolled back."""
+
+    extended_markdown = True
 
 
 class Emojis:
