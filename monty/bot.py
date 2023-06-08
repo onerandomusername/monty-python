@@ -76,7 +76,7 @@ class Monty(commands.Bot):
 
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
-        self.features: dict[str | constants.FeatureName, Feature] = {}
+        self.features: dict[str, Feature] = {}
         self._feature_db_lock = asyncio.Lock()
         self._guild_db_locks: WeakValueDictionary[int, asyncio.Lock] = WeakValueDictionary()
 

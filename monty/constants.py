@@ -185,9 +185,6 @@ class Feature:
     SOURCE_AUTOCOMPLETE = "META_SOURCE_COMMAND_AUTOCOMPLETE"
 
 
-FeatureName = Feature
-
-
 class Guilds:
     disnake = 808030843078836254
     nextcord = 881118111967883295

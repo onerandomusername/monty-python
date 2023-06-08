@@ -63,6 +63,7 @@ class ConfigAttrMetadata:
     type: Union[Type[str], Type[int], Type[float], Type[bool]]
     requires_bot: bool = True
     long_description: Optional[str] = None
+    depends_on_features: Optional[tuple[str]] = None
     validator: Optional[Union[Callable, Callable[Any, Coroutine]]] = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
