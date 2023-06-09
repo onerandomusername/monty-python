@@ -116,3 +116,12 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         description="Automatically expand a GitHub comment link. Requires GitHub Issue Linking to have an effect.",
     ),
 )
+
+
+# check the config metadata is valid
+def _check_config_metadata(metadata: dict[str, ConfigAttrMetadata]) -> None:
+    for m in metadata.values():
+        assert 0 < len(m.description) < 100
+
+
+_check_config_metadata(METADATA)
