@@ -6,7 +6,7 @@ from typing import Optional
 import disnake
 import psutil
 from disnake.ext import commands
-from disnake.ext.commands import Range
+from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Client, Colours
@@ -132,7 +132,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self,
         inter: disnake.CommandInteraction,
         permissions: Range[0, disnake.Permissions.all().value] = None,
-        guild_id: str = None,
+        guild_id: LargeInt = None,
         raw_link: bool = False,
         ephemeral: bool = None,
     ) -> None:
