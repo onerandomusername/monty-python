@@ -33,6 +33,7 @@ class Client:
     default_command_prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
+    debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
     github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
     log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
