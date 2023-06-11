@@ -217,7 +217,9 @@ class ErrorHandler(
                 # generic error
                 if logger.isEnabledFor(logging.ERROR):
                     try:
-                        msg = self.make_error_message(ctx, error)
+                        msg = self.make_error_message(
+                            ctx, error, extended_context=Client.debug_logging or Client.sentry_enabled
+                        )
                     except Exception as e:
                         logger.error("Something went wrong creating the full logging context for an error", exc_info=e)
                         msg = "Error occurred in prefix or interaction."
