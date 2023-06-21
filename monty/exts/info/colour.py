@@ -125,9 +125,9 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_rgb(
         self,
         inter: disnake.CommandInteraction,
-        red: commands.Range[0, 255],
-        green: commands.Range[0, 255],
-        blue: commands.Range[0, 255],
+        red: commands.Range[int, 0, 255],
+        green: commands.Range[int, 0, 255],
+        blue: commands.Range[int, 0, 255],
     ) -> None:
         """
         RGB Format.
@@ -157,9 +157,9 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_hsv(
         self,
         inter: disnake.CommandInteraction,
-        hue: commands.Range[0, 360],
-        sat: commands.Range[0, 360],
-        value: commands.Range[0, 100],
+        hue: commands.Range[int, 0, 360],
+        sat: commands.Range[int, 0, 360],
+        value: commands.Range[int, 0, 100],
     ) -> None:
         """
         HSV Format.
@@ -190,9 +190,9 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_hsl(
         self,
         inter: disnake.CommandInteraction,
-        hue: commands.Range[0, 360],
-        sat: commands.Range[0, 360],
-        lightness: commands.Range[0, 100],
+        hue: commands.Range[int, 0, 360],
+        sat: commands.Range[int, 0, 360],
+        lightness: commands.Range[int, 0, 100],
     ) -> None:
         """
         HSL Format.
@@ -223,10 +223,10 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_cymk(
         self,
         inter: disnake.CommandInteraction,
-        cyan: commands.Range[0, 100],
-        magenta: commands.Range[0, 100],
-        yellow: commands.Range[0, 100],
-        black: commands.Range[0, 100],
+        cyan: commands.Range[int, 0, 100],
+        magenta: commands.Range[int, 0, 100],
+        yellow: commands.Range[int, 0, 100],
+        black: commands.Range[int, 0, 100],
     ) -> None:
         """
         CMYK Format.

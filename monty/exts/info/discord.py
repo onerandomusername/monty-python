@@ -123,7 +123,7 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self,
         inter: disnake.AppCmdInter,
         client_id: LargeInt,
-        permissions: Range[0, disnake.Permissions.all().value] = None,
+        permissions: Range[int, 0, disnake.Permissions.all().value] = None,
         guild_id: LargeInt = None,
         include_applications_commands: bool = True,
         raw_link: bool = False,
