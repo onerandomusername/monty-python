@@ -44,7 +44,7 @@ jobs:
 
       # Checks out the repository in the current folder.
       - name: Checks out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Set up the right version of Python
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -117,7 +117,7 @@ jobs:
           echo "tag=$tag" >> $GITHUB_OUTPUT
       # Check out the current repository in the `monty` subdirectory
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: monty
 
