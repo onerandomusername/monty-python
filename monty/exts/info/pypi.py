@@ -350,7 +350,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # packages = sorted(packages, key=lambda pack: pack.name)
         packages = packages[:max_results]
         for num, pack in enumerate(packages):
-            description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
+            description += f"{num+1}. [**{pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
         embed.timestamp = current_time
