@@ -463,7 +463,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         except AttributeError:
             pass
         # recompute the symbols
-        self.doc_symbols
+        _ = self.doc_symbols
         self.refresh_event.set()
 
     def get_symbol_item(self, symbol_name: str) -> Tuple[str, Optional[DocItem]]:
@@ -781,7 +781,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
             await inter.response.send_message(f"No documentation results found for `{query}`.", ephemeral=True)
             return
         # construct embed
-        results = {key: val for key, val in sorted(results.items(), key=lambda x: x[0])}
+        results = dict(sorted(results.items(), key=lambda x: x[0]))
 
         embed = disnake.Embed(title=f"Results for {query}")
         embed.description = ""

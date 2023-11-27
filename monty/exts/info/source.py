@@ -270,7 +270,7 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
 
         if not query:
             # we need to shortcircuit and skip the fuzzing results
-            return {name: value for name, value in random.sample(list(self.object_display_names.items()), k=25)}
+            return dict(random.sample(list(self.object_display_names.items()), k=25))
 
         fuzz_results = rapidfuzz.process.extract(
             query,

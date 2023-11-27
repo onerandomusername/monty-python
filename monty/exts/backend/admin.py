@@ -406,7 +406,7 @@ class Admin(
             count = self.bot.socket_events.get(event.upper(), 0)
             events_and_count[event] = count
 
-        events_and_count = {k: v for k, v in sorted(events_and_count.items(), key=lambda x: x[1], reverse=True)}
+        events_and_count = dict(sorted(events_and_count.items(), key=lambda x: x[1], reverse=True))
         embed.description += "\n"
         for event, count in events_and_count.items():
             embed.description += f"`{event:<{longest_length+1}}`: `{count:>4,}`\n"
