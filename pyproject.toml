@@ -39,12 +39,12 @@ SQLAlchemy = { version = "~=2.0.6", extras = ['asyncio'] }
 fakeredis = ['fakeredis']
 
 [tool.poetry.dev-dependencies]
-black = "^23.1"
+black = "^23.11.0"
 ruff = "==0.0.257"
 isort = "^5.12.0"
 pre-commit = "^3.0.4"
 taskipy = "~=1.10.3"
-python-dotenv = "~=0.21.0"
+python-dotenv = "^1.0.0"
 pyright = "==1.1.278"
 
 [build-system]
