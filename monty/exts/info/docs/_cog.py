@@ -1000,7 +1000,8 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         await self.refresh_whitelist_and_blacklist()
 
         await ctx.send(
-            f"Successfully whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
+            f"Successfully whitelisted `{package_name}` in the following guilds:"
+            f" {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
             components=components,
         )
 
@@ -1046,7 +1047,8 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         await self.refresh_whitelist_and_blacklist()
 
         await ctx.send(
-            f"Successfully de-whitelisted `{package_name}` in the following guilds: {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
+            f"Successfully de-whitelisted `{package_name}` in the following guilds:"
+            f" {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
             components=components,
         )
 

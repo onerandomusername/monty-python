@@ -146,8 +146,10 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Create an embed from an HSV input."""
         if (hue not in range(361)) or any(c not in range(101) for c in (saturation, value)):
             raise commands.BadArgument(
-                message="Hue can only be from 0 to 360. Saturation and Value can only be from 0 to 100. "
-                f"User input was: `{hue, saturation, value}`."
+                message=(
+                    "Hue can only be from 0 to 360. Saturation and Value can only be from 0 to 100. "
+                    f"User input was: `{hue, saturation, value}`."
+                )
             )
         input_colour = f"hsv({hue}, {saturation}%, {value}%)"
         hsv_tuple = ImageColor.getrgb(input_colour)
@@ -179,8 +181,10 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Create an embed from an HSL input."""
         if (hue not in range(361)) or any(c not in range(101) for c in (saturation, lightness)):
             raise commands.BadArgument(
-                message="Hue can only be from 0 to 360. Saturation and Lightness can only be from 0 to 100. "
-                f"User input was: `{hue, saturation, lightness}`."
+                message=(
+                    "Hue can only be from 0 to 360. Saturation and Lightness can only be from 0 to 100. "
+                    f"User input was: `{hue, saturation, lightness}`."
+                )
             )
         input_colour = f"hsl({hue}, {saturation}%, {lightness}%)"
         hsl_tuple = ImageColor.getrgb(input_colour)
@@ -248,8 +252,10 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         if len(hex_code) not in (4, 5, 7, 9) or any(digit not in string.hexdigits for digit in hex_code[1:]):
             raise commands.BadArgument(
-                message=f"Cannot convert `{hex_code}` to a recognizable Hex format. "
-                "Hex values must be hexadecimal and take the form *#RRGGBB* or *#RGB*."
+                message=(
+                    f"Cannot convert `{hex_code}` to a recognizable Hex format. "
+                    "Hex values must be hexadecimal and take the form *#RRGGBB* or *#RGB*."
+                )
             )
 
         hex_tuple = ImageColor.getrgb(hex_code)

@@ -166,9 +166,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.autolink_cache: cachingutils.MemoryCache[
-            int, Tuple[disnake.Message, List[FoundIssue]]
-        ] = cachingutils.MemoryCache(timeout=600)
+        self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
+            cachingutils.MemoryCache(timeout=600)
+        )
 
         self.guilds: Dict[str, str] = {}
 
@@ -249,8 +249,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         inter: Union[disnake.CommandInteraction, disnake.Message],
         repo: Optional[str] = None,
         user: Optional[str] = None,
-    ) -> tuple[Optional[str], Optional[str]]:
-        ...
+    ) -> tuple[Optional[str], Optional[str]]: ...
 
     @overload
     async def fetch_user_and_repo(  # noqa: D102
@@ -258,8 +257,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         inter: Union[disnake.CommandInteraction, disnake.Message],
         repo: str,
         user: Optional[str] = None,
-    ) -> RepoTarget:
-        ...
+    ) -> RepoTarget: ...
 
     async def fetch_user_and_repo(  # type: ignore
         self,
@@ -504,8 +502,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
-            query = gql.gql(
-                """
+            query = gql.gql("""
                 query getDiscussion($user: String!, $repository: String!, $number: Int!) {
                     repository(followRenames: true, owner: $user, name: $repository) {
                         discussion(number: $number) {
@@ -518,8 +515,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         }
                     }
                 }
-                """
-            )
+                """)
             try:
                 json_data = await self.gql.execute_async(
                     query,
@@ -965,10 +961,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         if len(comments) > 4:
             await message.reply(
-                (
-                    "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
-                    " them to be expanded!"
-                ),
+                "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
+                " them to be expanded!",
                 components=DeleteButton(message.author),
                 allowed_mentions=disnake.AllowedMentions(replied_user=False),
             )

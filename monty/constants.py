@@ -114,16 +114,16 @@ class DiscordFeatures:
 
 
 class Emojis:
-    cross_mark = "\u274C"
-    star = "\u2B50"
-    christmas_tree = "\U0001F384"
+    cross_mark = "\u274c"
+    star = "\u2b50"
+    christmas_tree = "\U0001f384"
     check = "\u2611"
-    envelope = "\U0001F4E8"
+    envelope = "\U0001f4e8"
     trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
     trashcan_on_red = environ.get("TRASHCAN_ON_RED_EMOJI", "<:trashcan:976669056587415592>")
     trashcat_special = environ.get("TRASHCAT_SPECIAL_EMOJI", "<:catborked:976598820651679794>")
     ok_hand = ":ok_hand:"
-    hand_raised = "\U0001F64B"
+    hand_raised = "\U0001f64b"
     black = "<:black_format:928530654143066143>"
     upload = "\U0001f4dd"
     snekbox = "\U0001f40d"

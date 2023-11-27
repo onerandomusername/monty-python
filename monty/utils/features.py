@@ -3,6 +3,7 @@ Utils for managing features.
 
 This provides a util for a feature in the database to be created representing a specific local feature.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
