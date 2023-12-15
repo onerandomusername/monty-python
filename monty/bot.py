@@ -370,13 +370,13 @@ class Monty(commands.Bot):
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
         log.info("Completed loading extensions.")
 
-    def add_cog(self, cog: commands.Cog) -> None:
+    def add_cog(self, cog: commands.Cog, **kwargs: Any) -> None:
         """
         Delegate to super to register `cog`.
 
         This only serves to make the info log, so that extensions don't have to.
         """
-        super().add_cog(cog)
+        super().add_cog(cog, **kwargs)
         log.info(f"Cog loaded: {cog.qualified_name}")
         self.dispatch("cog_load", cog)
 
