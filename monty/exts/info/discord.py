@@ -183,13 +183,11 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
             guild=guild,
             scopes=scopes,
         )
-        message = " ".join(
-            [
-                "Click below to invite" if not raw_link else "Click the following link to invite",
-                "me" if client_id == inter.bot.user.id else user.mention,
-                "to the specified guild!" if guild else "to your guild!",
-            ]
-        )
+        message = " ".join([
+            "Click below to invite" if not raw_link else "Click the following link to invite",
+            "me" if client_id == inter.bot.user.id else user.mention,
+            "to the specified guild!" if guild else "to your guild!",
+        ])
 
         components = []
 

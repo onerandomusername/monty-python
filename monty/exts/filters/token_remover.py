@@ -29,9 +29,7 @@ if constants.Tokens.github:
 DISCORD_API_VALIDATION = "https://discord.com/api/v10/oauth2/applications/@me"
 DISCORD_REQUEST_HEADERS = {}
 
-LOG_MESSAGE = (
-    "Censored a seemingly valid token sent by {author} in {channel}, " "token was `{user_id}.{timestamp}.{hmac}`"
-)
+LOG_MESSAGE = "Censored a seemingly valid token sent by {author} in {channel}, token was `{user_id}.{timestamp}.{hmac}`"
 UNKNOWN_USER_LOG_MESSAGE = "Decoded user ID: `{user_id}` (Not present in server)."
 KNOWN_USER_LOG_MESSAGE = (
     "Decoded user ID: `{user_id}` **(Present in server)**.\n"
@@ -220,8 +218,7 @@ class TokenRemover(commands.Cog, name="Token Remover", slash_command_attrs={"dm_
             await self.maybe_delete(msg)
 
         log_message = (
-            f"Deleted mfa token sent by {msg.author} in {msg.channel}: "
-            f"{token[:4]}{'x' * len(token[3:-3])}{token[-3:]}"
+            f"Deleted mfa token sent by {msg.author} in {msg.channel}: {token[:4]}{'x' * len(token[3:-3])}{token[-3:]}"
         )
 
         log.info(log_message)

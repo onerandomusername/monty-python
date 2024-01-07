@@ -207,7 +207,7 @@ class Monty(commands.Bot):
                 if not guild:
                     if not session:
                         session = self.db()
-                    async with (session.begin_nested() if session.in_transaction() else session.begin()) as trans:
+                    async with session.begin_nested() if session.in_transaction() else session.begin() as trans:
                         guild = await session.get(Guild, guild_id)
                         if not guild:
                             guild = Guild(id=guild_id)
