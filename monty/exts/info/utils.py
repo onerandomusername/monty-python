@@ -83,8 +83,12 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         lines = []
         for snowflake in snowflakes:
-            created_at = int(((snowflake.id >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
-            lines.append(f"**{snowflake.id}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
+            timestamp = int(snowflake.created_at.timestamp())
+            lines.append(
+                f"**{snowflake.id}** ({timestamp})\n"
+                f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
+                f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
+            )
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 
@@ -92,7 +96,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_snowflake(
         self,
         inter: disnake.AppCommandInteraction,
-        snowflake: commands.LargeInt,
+        snowflake: disnake.Object,
     ) -> None:
         """
         [BETA] Get creation date of a snowflake.
@@ -106,8 +110,13 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
             name="Snowflake",
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
-        created_at = int(((snowflake >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
-        embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
+
+        timestamp = int(snowflake.created_at.timestamp())
+        embed.description = (
+            f"**{snowflake.id}** ({timestamp})\n"
+            f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
+            f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
+        )
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
