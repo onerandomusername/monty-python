@@ -969,8 +969,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 # while we don't live in a perfect world we're going to make the necessary convoluted code
                 # to actually loop back anyways
 
-                # why
-                issue.user_url = (issue.user_url or "#").rsplit("#")[0]  # I don't even care right now
                 # github, why is this fragment even a thing?
                 fetched_issue = await self.fetch_issues(
                     int(issue.number),
