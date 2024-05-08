@@ -1,3 +1,4 @@
+import base64
 import enum
 import itertools
 import random
@@ -14,6 +15,7 @@ import disnake
 import gql
 import gql.client
 import mistune
+import msgpack
 import yarl
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -105,6 +107,25 @@ DISCUSSION_GRAPHQL_QUERY = gql.gql(
                 }
                 answer {
                     id
+                }
+            }
+        }
+    }
+"""
+)
+DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
+    """
+    query getDiscussionComment($id: ID!) {
+        node(id: $id) {
+            ... on DiscussionComment {
+                id
+                html_url: url
+                body
+                created_at: createdAt
+                user: author {
+                    login
+                    html_url: url
+                    avatar_url: avatarUrl
                 }
             }
         }
@@ -247,6 +268,21 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 return await r.text()
             else:
                 return await r.json()
+
+    def _format_github_global_id(self, prefix: str, node_id: int) -> str:
+        # This is not documented, but is at least the current format as of writing this comment.
+        # These IDs are supposed to be treated as opaque strings, but fetching specific resources like
+        # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
+        packed = msgpack.packb(
+            [
+                0,  # unknown, always 0
+                0,  # repository ID (e.g. 400763760), doesn't actually seem to be necessary(?)
+                node_id,
+            ]
+        )
+        encoded = base64.urlsafe_b64encode(packed).decode()
+        encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
+        return f"{prefix}_{encoded}"
 
     def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
@@ -970,8 +1006,24 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             comment: dict[str, Any]
             if frag.startswith("discussioncomment-"):
-                # TODO
-                continue
+                global_id = self._format_github_global_id(
+                    "DC",
+                    int(frag.removeprefix("discussioncomment-")),
+                )
+
+                try:
+                    json_data = await self.gql.execute_async(
+                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                        variable_values={
+                            "id": global_id,
+                        },
+                    )
+                except (TransportError, TransportQueryError) as e:
+                    log.warn("encountered error fetching discussion comment: %s", e)
+                    continue
+
+                comment = json_data["node"]
+
             else:
                 if frag.startswith("issuecomment-"):
                     endpoint = ISSUE_COMMENT_ENDPOINT.format(
