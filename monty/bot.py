@@ -115,9 +115,9 @@ class Monty(commands.Bot):
                 )
             )
 
-            trace_config = aiohttp.TraceConfig()
-            trace_config.on_request_end.append(on_request_end)
-            trace_configs.append(trace_config)
+        trace_config = aiohttp.TraceConfig()
+        trace_config.on_request_end.append(on_request_end)
+        trace_configs.append(trace_config)
 
         # dead simple ETag caching
         cache = RedisCache(
