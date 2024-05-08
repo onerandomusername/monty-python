@@ -942,29 +942,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         components = []
 
         for issue in issues:
-            assert issue.url_fragment
+            frag = issue.url_fragment
+            assert frag
 
             # figure out which endpoint we want to use
-            frag = issue.url_fragment
-            if frag.startswith("issuecomment-"):
-                endpoint = ISSUE_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("issuecomment-"),
-                )
-            elif frag.startswith("pullrequestreview-"):
-                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("pullrequestreview-"),
-                )
-            elif frag.startswith("discussion_r"):
-                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("discussion_r"),
-                )
-            elif frag.startswith("issue-"):
+            if frag.startswith("issue-"):
                 # in a perfect world we'd show the full issue display, and fetch the issue endpoint
                 # while we don't live in a perfect world we're going to make the necessary convoluted code
                 # to actually loop back anyways
@@ -985,13 +967,37 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     )
                 )
                 continue
-            else:
-                continue
 
-            comment: dict[str, Any] = await self.fetch_data(endpoint, as_text=False)  # type: ignore
-            if "message" in comment:
-                log.warn("encountered error fetching %s: %s", endpoint, comment)
+            comment: dict[str, Any]
+            if frag.startswith("discussioncomment-"):
+                # TODO
                 continue
+            else:
+                if frag.startswith("issuecomment-"):
+                    endpoint = ISSUE_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("issuecomment-"),
+                    )
+                elif frag.startswith("pullrequestreview-"):
+                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("pullrequestreview-"),
+                    )
+                elif frag.startswith("discussion_r"):
+                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("discussion_r"),
+                    )
+                else:
+                    continue
+
+                comment = await self.fetch_data(endpoint, as_text=False)  # type: ignore
+                if "message" in comment:
+                    log.warn("encountered error fetching %s: %s", endpoint, comment)
+                    continue
 
             # assert the url was not tampered with
             if issue.user_url != (html_url := comment["html_url"]):
