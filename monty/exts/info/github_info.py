@@ -88,6 +88,22 @@ EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     + r"(?P<user_id>[0-9]+):(?P<current_state>0|1):"
     r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
+
+DISCUSSION_GRAPHQL_QUERY = gql.gql("""
+    query getDiscussion($user: String!, $repository: String!, $number: Int!) {
+        repository(followRenames: true, owner: $user, name: $repository) {
+            discussion(number: $number) {
+                id
+                title
+                answer {
+                    id
+                }
+                url
+            }
+        }
+    }
+""")
+
 log = get_logger(__name__)
 
 
@@ -502,23 +518,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
-            query = gql.gql("""
-                query getDiscussion($user: String!, $repository: String!, $number: Int!) {
-                    repository(followRenames: true, owner: $user, name: $repository) {
-                        discussion(number: $number) {
-                            id
-                            title
-                            answer {
-                                id
-                            }
-                            url
-                        }
-                    }
-                }
-                """)
             try:
                 json_data = await self.gql.execute_async(
-                    query,
+                    DISCUSSION_GRAPHQL_QUERY,
                     variable_values={
                         "user": user,
                         "repository": repository,
