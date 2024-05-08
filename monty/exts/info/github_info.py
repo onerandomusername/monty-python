@@ -75,7 +75,7 @@ AUTOMATIC_REGEX = re.compile(
 
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s]*"
+    r"(?P<type>issues|pull|discussions)\/(?P<number>[0-9]+)[^\s]*"
 )
 
 
@@ -145,6 +145,7 @@ class FoundIssue:
     source_format: IssueSourceFormat
     url_fragment: str = ""
     user_url: Optional[str] = None
+    is_discussion: Optional[bool] = None  # `None` means uncertain
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -502,22 +503,26 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         user: str,
         *,
         allow_discussions: bool = False,
+        is_discussion: Optional[bool] = None,
     ) -> Union[IssueState, FetchError]:
         """
         Retrieve an issue from a GitHub repository.
 
         Returns IssueState on success, FetchError on failure.
         """
-        url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
+        if not is_discussion:  # not a discussion, or uncertain
+            url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
+            json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
 
-        json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
+            if "message" in json_data:
+                is_discussion = True  # if we got an error, assume it may be a discussion
 
-        is_discussion: bool = False
-        if "message" in json_data:
+        if is_discussion:
             # fetch with gql
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
+
             try:
                 json_data = await self.gql.execute_async(
                     DISCUSSION_GRAPHQL_QUERY,
@@ -531,7 +536,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 return FetchError(-1, "Issue not found.")
 
             json_data = json_data["repository"]["discussion"]
-            is_discussion = True
+
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
         # of if the pull was merged or not is returned in the json body under pull_request.merged_at
@@ -772,6 +777,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     source_format=source_format,
                     url_fragment=fragment,
                     user_url=str(url) if url is not None else None,
+                    # use groupdict since this group only exists on one of the two regexes
+                    is_discussion=match.groupdict().get("type") == "discussions",
                 )
             )
 
@@ -1060,6 +1067,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 repo_issue.repository,
                 repo_issue.organisation,
                 allow_discussions=await self.bot.guild_has_feature(message.guild.id, Feature.GITHUB_DISCUSSIONS),
+                is_discussion=repo_issue.is_discussion,
             )
             if isinstance(result, IssueState):
                 links.append(result)
@@ -1145,6 +1153,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 repo_issue.repository,
                 repo_issue.organisation,
                 allow_discussions=await self.bot.guild_has_feature(after.guild.id, Feature.GITHUB_DISCUSSIONS),
+                is_discussion=repo_issue.is_discussion,
             )
             if isinstance(result, IssueState):
                 links.append(result)
