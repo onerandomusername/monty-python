@@ -94,11 +94,23 @@ DISCUSSION_GRAPHQL_QUERY = gql.gql("""
         repository(followRenames: true, owner: $user, name: $repository) {
             discussion(number: $number) {
                 id
+                html_url: url
                 title
+                body
+                created_at: createdAt
+                user: author {
+                    login
+                    html_url: url
+                    avatar_url: avatarUrl
+                }
+                labels(first: 20) {
+                    nodes {
+                        name
+                    }
+                }
                 answer {
                     id
                 }
-                url
             }
         }
     }
@@ -537,6 +549,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             json_data = json_data["repository"]["discussion"]
 
+            # shuffle fields around to match issue json structure
+            json_data["labels"] = (json_data.get("labels") or {}).get("nodes") or []
+
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
         # of if the pull was merged or not is returned in the json body under pull_request.merged_at
@@ -555,7 +570,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             else:
                 emoji = constants.Emojis.pull_request_open
         elif is_discussion:
-            issue_url = json_data["url"]
+            issue_url = json_data["html_url"]
             if json_data.get("answer"):
                 emoji = constants.Emojis.discussion_answered
             else:
@@ -579,7 +594,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             issue_url,
             json_data.get("title", ""),
             emoji,
-            raw_json=None if is_discussion else json_data,
+            raw_json=json_data,
         )
 
     def format_embed_expanded_issue(
@@ -592,6 +607,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raise TypeError(err)
         if not issue.raw_json:
             raise ValueError("the provided issue does not have its raw json payload")
+
+        # NOTE: the fields used here should be available in `DISCUSSION_GRAPHQL_QUERY` as well
 
         json_data = issue.raw_json
         embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
