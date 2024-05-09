@@ -275,8 +275,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
         packed = msgpack.packb(
             [
-                0,  # unknown, always 0
-                0,  # repository ID (e.g. 400763760), doesn't actually seem to be necessary(?)
+                # template index; global IDs of a specific type *can* have multiple different templates
+                # (i.e. sets of variables that follow); in almost all cases, this is 0
+                0,
+                # owner ID (e.g. repository ID 400763760 for issues etc.); doesn't actually appear to
+                # be necessary yet, but this may change in the future
+                0,
+                # resource ID
                 node_id,
             ]
         )
