@@ -3,7 +3,7 @@ import itertools
 import random
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 
@@ -951,7 +951,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             e.set_footer(text=f"Comment on {issue.organisation}/{issue.repository}#{issue.number}")
 
-            e.timestamp = datetime.strptime(comment["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            e.timestamp = fromisoformat(comment["created_at"])
 
             comments.append(e)
             components.append(disnake.ui.Button(url=comment["html_url"], label="View comment"))
