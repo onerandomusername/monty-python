@@ -269,7 +269,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             else:
                 return await r.json()
 
-    def _format_github_global_id(self, prefix: str, node_id: int) -> str:
+    def _format_github_global_id(self, prefix: str, *ids: int, template: int = 0) -> str:
         # This is not documented, but is at least the current format as of writing this comment.
         # These IDs are supposed to be treated as opaque strings, but fetching specific resources like
         # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
@@ -277,12 +277,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             [
                 # template index; global IDs of a specific type *can* have multiple different templates
                 # (i.e. sets of variables that follow); in almost all cases, this is 0
-                0,
-                # owner ID (e.g. repository ID 400763760 for issues etc.); doesn't actually appear to
-                # be necessary yet, but this may change in the future
-                0,
-                # resource ID
-                node_id,
+                template,
+                # resource IDs, variable amount depending on global ID type
+                *ids,
             ]
         )
         encoded = base64.urlsafe_b64encode(packed).decode()
@@ -1013,6 +1010,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if frag.startswith("discussioncomment-"):
                 global_id = self._format_github_global_id(
                     "DC",
+                    # repository ID; doesn't actually appear to
+                    # be necessary yet, but this may change in the future
+                    0,
+                    # comment ID
                     int(frag.removeprefix("discussioncomment-")),
                 )
 
