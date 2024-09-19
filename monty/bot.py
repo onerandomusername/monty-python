@@ -279,6 +279,8 @@ class Monty(commands.Bot):
             self.features.clear()
             self.features.update({feature.name: feature for feature in features})
 
+        log.info("Fetched the features from the database.")
+
     async def guild_has_feature(
         self,
         guild: Optional[Union[int, disnake.abc.Snowflake]],
@@ -345,10 +347,6 @@ class Monty(commands.Bot):
             return rollouts.is_rolled_out_to(guild, rollout=rollout)
 
         return False
-
-    async def on_connect(self) -> None:
-        """Fetch the list of features once we create our internal sessions."""
-        log.info("Fetched the features from the database.")
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
