@@ -24,13 +24,14 @@ gql = "^3.4.0"
 lxml = "^4.9.1"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
+msgpack = "^1.1.0"
 redis = { version = "^5.0.8", extras = ['hiredis'] }
 Pillow = "^10.3"
 psutil = "^5.9.8"
 python-dateutil = "^2.9.0"
 rapidfuzz = "^2.13.2"
-statsd = "^3.3.0"
 sentry-sdk = "^2.14.0"
+statsd = "^3.3.0"
 # database dependencies
 alembic = "^1.13.2"
 asyncpg = "^0.29.0"
@@ -47,6 +48,7 @@ pre-commit = "^3.0.4"
 taskipy = "~=1.13.0"
 python-dotenv = "^1.0.0"
 pyright = "==1.1.278"
+msgpack-types = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

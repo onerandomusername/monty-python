@@ -1,3 +1,4 @@
+import base64
 import enum
 import itertools
 import random
@@ -14,6 +15,7 @@ import disnake
 import gql
 import gql.client
 import mistune
+import msgpack
 import yarl
 from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -105,6 +107,25 @@ DISCUSSION_GRAPHQL_QUERY = gql.gql(
                 }
                 answer {
                     id
+                }
+            }
+        }
+    }
+"""
+)
+DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
+    """
+    query getDiscussionComment($id: ID!) {
+        node(id: $id) {
+            ... on DiscussionComment {
+                id
+                html_url: url
+                body
+                created_at: createdAt
+                user: author {
+                    login
+                    html_url: url
+                    avatar_url: avatarUrl
                 }
             }
         }
@@ -247,6 +268,23 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 return await r.text()
             else:
                 return await r.json()
+
+    def _format_github_global_id(self, prefix: str, *ids: int, template: int = 0) -> str:
+        # This is not documented, but is at least the current format as of writing this comment.
+        # These IDs are supposed to be treated as opaque strings, but fetching specific resources like
+        # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
+        packed = msgpack.packb(
+            [
+                # template index; global IDs of a specific type *can* have multiple different templates
+                # (i.e. sets of variables that follow); in almost all cases, this is 0
+                template,
+                # resource IDs, variable amount depending on global ID type
+                *ids,
+            ]
+        )
+        encoded = base64.urlsafe_b64encode(packed).decode()
+        encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
+        return f"{prefix}_{encoded}"
 
     def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
@@ -942,35 +980,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         components = []
 
         for issue in issues:
-            assert issue.url_fragment
+            frag = issue.url_fragment
+            assert frag
 
             # figure out which endpoint we want to use
-            frag = issue.url_fragment
-            if frag.startswith("issuecomment-"):
-                endpoint = ISSUE_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("issuecomment-"),
-                )
-            elif frag.startswith("pullrequestreview-"):
-                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("pullrequestreview-"),
-                )
-            elif frag.startswith("discussion_r"):
-                endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                    user=issue.organisation,
-                    repository=issue.repository,
-                    comment_id=frag.removeprefix("discussion_r"),
-                )
-            elif frag.startswith("issue-"):
+            if frag.startswith("issue-"):
                 # in a perfect world we'd show the full issue display, and fetch the issue endpoint
                 # while we don't live in a perfect world we're going to make the necessary convoluted code
                 # to actually loop back anyways
 
-                # why
-                issue.user_url = (issue.user_url or "#").rsplit("#")[0]  # I don't even care right now
                 # github, why is this fragment even a thing?
                 fetched_issue = await self.fetch_issues(
                     int(issue.number),
@@ -987,13 +1005,57 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     )
                 )
                 continue
-            else:
-                continue
 
-            comment: dict[str, Any] = await self.fetch_data(endpoint, as_text=False)  # type: ignore
-            if "message" in comment:
-                log.warn("encountered error fetching %s: %s", endpoint, comment)
-                continue
+            comment: dict[str, Any]
+            if frag.startswith("discussioncomment-"):
+                global_id = self._format_github_global_id(
+                    "DC",
+                    # repository ID; doesn't actually appear to
+                    # be necessary yet, but this may change in the future
+                    0,
+                    # comment ID
+                    int(frag.removeprefix("discussioncomment-")),
+                )
+
+                try:
+                    json_data = await self.gql.execute_async(
+                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                        variable_values={
+                            "id": global_id,
+                        },
+                    )
+                except (TransportError, TransportQueryError) as e:
+                    log.warn("encountered error fetching discussion comment: %s", e)
+                    continue
+
+                comment = json_data["node"]
+
+            else:
+                if frag.startswith("issuecomment-"):
+                    endpoint = ISSUE_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("issuecomment-"),
+                    )
+                elif frag.startswith("pullrequestreview-"):
+                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("pullrequestreview-"),
+                    )
+                elif frag.startswith("discussion_r"):
+                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("discussion_r"),
+                    )
+                else:
+                    continue
+
+                comment = await self.fetch_data(endpoint, as_text=False)  # type: ignore
+                if "message" in comment:
+                    log.warn("encountered error fetching %s: %s", endpoint, comment)
+                    continue
 
             # assert the url was not tampered with
             if issue.user_url != (html_url := comment["html_url"]):
