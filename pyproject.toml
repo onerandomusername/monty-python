@@ -70,12 +70,15 @@ multi_line_output = 3
 use_parentheses = true
 known_first_party = ["monty"]
 
-[tool.ruff.isort]
-known-first-party = ["monty"]
-
 [tool.ruff]
 line-length = 120
 target-version = "py38"
+
+[tool.ruff.lint.isort]
+known-first-party = ["monty"]
+
+
+[tool.ruff.lint]
 select = [
     "E", # pycodestyle
     "F", # pyflakes
@@ -110,11 +113,11 @@ ignore = [
     "S311", # pseduo-random generators, random is used everywhere for random choices.
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "monty/alembic/*" = ["D"]
 "_global_source_snekcode.py" = ["T201"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 20
 
 [tool.taskipy.tasks]
