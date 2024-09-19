@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import dataclasses
 import functools
 import socket
 import sys
@@ -86,6 +87,7 @@ class Monty(commands.Bot):
         self.command_prefix: str
         self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
         scheduling.create_task(self.get_self_invite_perms())
+        scheduling.create_task(self._create_features())
 
     @property
     def db(self) -> async_sessionmaker[AsyncSession]:
@@ -249,6 +251,24 @@ class Monty(commands.Bot):
                 prefixes.insert(0, self.command_prefix)
         return prefixes
 
+    async def _create_features(self) -> None:
+        """Update the database with all features defined immediately upon launch. No more lazy creation."""
+        await self.wait_until_first_connect()
+
+        async with self._feature_db_lock:
+            async with self.db.begin() as session:
+                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
+                result = await session.scalars(stmt)
+                existing_feature_names = {feature.name for feature in result.all()}
+                for feature_name in dataclasses.asdict(constants.Feature()).values():
+                    if feature_name in existing_feature_names:
+                        continue
+                    feature_instance = Feature(feature_name)
+                    session.add(feature_instance)
+                await session.commit()  # this will error out if it cannot be made
+
+        await self.refresh_features()
+
     async def refresh_features(self) -> None:
         """Refresh the feature cache."""
         async with self._feature_db_lock:
@@ -258,6 +278,8 @@ class Monty(commands.Bot):
                 features = result.all()
             self.features.clear()
             self.features.update({feature.name: feature for feature in features})
+
+        log.info("Fetched the features from the database.")
 
     async def guild_has_feature(
         self,
@@ -325,11 +347,6 @@ class Monty(commands.Bot):
             return rollouts.is_rolled_out_to(guild, rollout=rollout)
 
         return False
-
-    async def on_connect(self) -> None:
-        """Fetch the list of features once we create our internal sessions."""
-        await self.refresh_features()
-        log.info("Fetched the features from the database.")
 
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
