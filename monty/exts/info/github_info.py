@@ -21,7 +21,6 @@ from gql.transport.exceptions import TransportError, TransportQueryError
 from monty import constants
 from monty.bot import Monty
 from monty.constants import Feature
-from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.caching import redis_cache
@@ -29,14 +28,14 @@ from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
+from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 KT = TypeVar("KT")
 VT = TypeVar("VT")
 
 BAD_RESPONSE = {
-    403: "Rate limit has been hit! Please try again later!",
-    404: "Issue/pull request not located! Please enter a valid number!",
+    404: "Object not located! Please enter a valid number!",
 }
 
 
@@ -51,14 +50,6 @@ LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?p
 ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
 PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
 
-
-REQUEST_HEADERS = {
-    "Accept": "application/vnd.github.v3+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
-
-if GITHUB_TOKEN := constants.Tokens.github:
-    REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
@@ -161,7 +152,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS, ssl=True)
+        transport = AIOHTTPTransport(
+            url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS, ssl=True
+        )
 
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
@@ -189,10 +182,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
         if "headers" in kw:
             og = kw["headers"]
-            kw["headers"] = REQUEST_HEADERS.copy()
+            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
             kw["headers"].update(og)
         else:
-            kw["headers"] = REQUEST_HEADERS.copy()
+            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
 
         method = method.upper().strip()
         async with self.bot.http_session.request(method, url, **kw) as r:
@@ -307,7 +300,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         async with ctx.typing():
             user_data: dict[str, Any] = await self.fetch_data(
                 f"{GITHUB_API_URL}/users/{quote_plus(username)}",
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
             # User_data will not have a message key if the user exists
@@ -324,7 +317,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             org_data: list[dict[str, Any]] = await self.fetch_data(
                 user_data["organizations_url"],
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
             orgs = [f"[{org['login']}](https://github.com/{org['login']})" for org in org_data]
             orgs_to_add = " | ".join(orgs)
@@ -416,7 +409,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         async with ctx.typing():
             repo_data: dict[str, Any] = await self.fetch_data(
                 f"{GITHUB_API_URL}/repos/{quote(repo)}",
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
             # There won't be a message key if this repo exists
@@ -494,7 +487,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """
         url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
 
-        json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
+        json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
 
         is_discussion: bool = False
         if "message" in json_data:

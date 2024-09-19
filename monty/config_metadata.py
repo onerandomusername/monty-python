@@ -8,6 +8,7 @@ from disnake import Locale
 from disnake.ext import commands
 
 from monty.constants import Feature
+from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 if TYPE_CHECKING:
@@ -30,7 +31,6 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
     if not GITHUB_ORG_REGEX.fullmatch(arg):
         err = f"The GitHub org '{arg}' is not a valid GitHub organisation name."
         raise ValueError(err)
-    from monty.exts.backend.guild_config import GITHUB_REQUEST_HEADERS
 
     try:
         r = await ctx.bot.http_session.head(

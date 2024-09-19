@@ -2,8 +2,8 @@ from typing import Optional
 
 from aiohttp import ClientConnectorError
 
+from monty import constants
 from monty.bot import Monty
-from monty.constants import URLs
 from monty.errors import APIError
 from monty.log import get_logger
 
@@ -12,7 +12,14 @@ log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
-PASTE_DISABLED = not URLs.paste_service
+PASTE_DISABLED = not constants.URLs.paste_service
+
+GITHUB_REQUEST_HEADERS = {
+    "Accept": "application/vnd.github.v3+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+}
+if constants.Tokens.github:
+    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
 
 
 async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
@@ -27,7 +34,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         return "Sorry, paste isn't configured!"
 
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
-    paste_url = URLs.paste_service.format(key="api/new")
+    paste_url = constants.URLs.paste_service.format(key="api/new")
     json: dict[str, str] = {
         "content": contents,
     }
@@ -63,7 +70,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         elif "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
-            paste_link = URLs.paste_service.format(key=f'?id={response_json["key"]}')
+            paste_link = constants.URLs.paste_service.format(key=f'?id={response_json["key"]}')
             if extension:
                 paste_link += f"&language={extension}"
 

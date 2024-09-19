@@ -11,13 +11,13 @@ import disnake
 from aiohttp import ClientResponseError
 from disnake.ext import commands
 
-from monty import constants
 from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
+from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 if TYPE_CHECKING:
@@ -39,13 +39,6 @@ GITHUB_GIST_RE = re.compile(
     r"(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)(\?[^#>]+)?"
     r"(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)"
 )
-
-GITHUB_HEADERS = {
-    "Accept": "application/vnd.github.v3.raw",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
-if GITHUB_TOKEN := constants.Tokens.github:
-    GITHUB_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 GITLAB_RE = re.compile(
     r"https?://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
@@ -140,16 +133,18 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         branches = await self._fetch_response(
             f"https://api.github.com/repos/{repo}/branches",
             "json",
-            headers=GITHUB_HEADERS,
+            headers=GITHUB_REQUEST_HEADERS,
         )
-        tags = await self._fetch_response(f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_HEADERS)
+        tags = await self._fetch_response(
+            f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_REQUEST_HEADERS
+        )
         refs = branches + tags
         ref, encoded_file_path = self._find_ref(path, refs)
 
         file_contents = await self._fetch_response(
             f"https://api.github.com/repos/{repo}/contents/{encoded_file_path}?ref={ref}",
             "text",
-            headers=GITHUB_HEADERS,
+            headers=GITHUB_REQUEST_HEADERS,
         )
 
         # decode the file_path before calling snippet to codeblock
@@ -171,7 +166,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         gist_json = await self._fetch_response(
             f'https://api.github.com/gists/{gist_id}{f"/{revision}" if len(revision) > 0 else ""}',
             "json",
-            headers=GITHUB_HEADERS,
+            headers=GITHUB_REQUEST_HEADERS,
         )
 
         # Check each file in the gist for the specified file
