@@ -41,7 +41,7 @@ fakeredis = ['fakeredis']
 
 [tool.poetry.dev-dependencies]
 black = "^24.8.0"
-ruff = "==0.1.6"
+ruff = "==0.6.5"
 isort = "^5.13.2"
 pre-commit = "^3.0.4"
 taskipy = "~=1.10.3"
