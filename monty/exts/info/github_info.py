@@ -7,6 +7,7 @@ from datetime import timedelta, timezone
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 
+import attrs
 import cachingutils
 import cachingutils.redis
 import disnake
@@ -18,6 +19,7 @@ from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportError, TransportQueryError
 
+import monty.utils.services
 from monty import constants
 from monty.bot import Monty
 from monty.constants import Feature
@@ -41,6 +43,7 @@ BAD_RESPONSE = {
 
 GITHUB_API_URL = "https://api.github.com"
 
+RATE_LIMIT_ENDPOINT = f"{GITHUB_API_URL}/rate_limit"
 ORG_REPOS_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
 USER_REPOS_ENDPOINT = f"{GITHUB_API_URL}/users/{{user}}/repos?per_page=100&type=public"
 ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
@@ -166,10 +169,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         self.guilds: Dict[str, str] = {}
 
     async def cog_load(self) -> None:
-        """Fetch the gql schema from github."""
+        """
+        Run initial fetch commands upon loading.
+
+        Sync the Ratelimit object, and more.
+        Fetch the graphQL schema from GitHub.
+        """
+        await self._fetch_and_update_ratelimits()
+
         # todo: cache the schema in redis and load from there
         async with self.gql:
             pass
+
+    async def _fetch_and_update_ratelimits(self) -> None:
+        # this is NOT using fetch_data because we need to check the status code.
+        async with self.bot.http_session.get(RATE_LIMIT_ENDPOINT, headers=GITHUB_REQUEST_HEADERS) as r:
+            if r.status != 200:
+                # the Rate_limit endpoint is not ratelimited
+                if r.status == 403:
+                    return
+
+            data = await r.json()
+
+        monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)  # type: ignore
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the org that matches to a specific guild_id."""
@@ -189,6 +211,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         method = method.upper().strip()
         async with self.bot.http_session.request(method, url, **kw) as r:
+            monty.utils.services.update_github_ratelimits_on_request(r)
             if as_text:
                 return await r.text()
             else:
@@ -695,6 +718,27 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
         expand_one_issue = await self.bot.guild_has_feature(ctx.guild, constants.Feature.GITHUB_ISSUE_EXPAND)
         await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
+
+    @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
+    @commands.is_owner()
+    async def ratelimits_command(self, ctx: commands.Context, refresh: bool = False) -> None:
+        """Check the current RateLimits connected to GitHub."""
+        embed = disnake.Embed(title="GitHub Ratelimits")
+        if refresh:
+            await self._fetch_and_update_ratelimits()
+
+        for resource_name, rate_limit in monty.utils.services.GITHUB_RATELIMITS.items():
+            embed_value = ""
+            for name, value in attrs.asdict(rate_limit).items():
+                embed_value += f"**`{name}`**: {value}\n"
+            embed.add_field(name=resource_name, value=embed_value, inline=False)
+
+        if len(embed.fields) == 0 or not (random.randint(0, 7) % 4):
+            embed.set_footer(text="GitHub moment.")
+        await ctx.send(
+            embed=embed,
+            components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
+        )
 
     async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
         """

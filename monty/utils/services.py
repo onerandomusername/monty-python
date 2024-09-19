@@ -103,7 +103,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
 
 
 # https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#checking-the-status-of-your-rate-limit
-def process_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
+def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
     """Given a ClientResponse, update the stored GitHub Ratelimits."""
     resource_name = resp.headers.get("x-ratelimit-resource")
     if not resource_name:
