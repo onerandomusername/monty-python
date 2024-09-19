@@ -7,7 +7,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 50
 
   - package-ecosystem: "pip"
     directory: "/"
@@ -15,4 +15,4 @@ updates:
       interval: "daily"
       time: "00:00"
       timezone: "Etc/GMT+5"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 50
