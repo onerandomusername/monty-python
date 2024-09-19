@@ -10,6 +10,7 @@ from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Client, Colours
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 
 
@@ -232,9 +233,9 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
-        if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
+        if not self._app_info_last_fetched or utcnow() - self._app_info_last_fetched > timedelta(hours=1):
             self._cached_app_info = await self.bot.application_info()
-            self._app_info_last_fetched = datetime.now()
+            self._app_info_last_fetched = utcnow()
         return self._cached_app_info
 
     @monty.sub_command()
