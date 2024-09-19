@@ -27,7 +27,7 @@ mistune = "^2.0.4"
 redis = { version = "^4.5.4", extras = ['hiredis'] }
 Pillow = "^10.3"
 psutil = "^5.9.4"
-python-dateutil = "^2.8.2"
+python-dateutil = "^2.9.0"
 rapidfuzz = "^2.13.2"
 statsd = "^3.3.0"
 sentry-sdk = "^2.14.0"
