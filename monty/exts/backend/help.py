@@ -13,6 +13,7 @@ from monty.bot import Monty
 from monty.constants import Emojis
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
+from monty.utils import scheduling
 from monty.utils.pagination import FIRST_EMOJI, LAST_EMOJI, LEFT_EMOJI, RIGHT_EMOJI, LinePaginator
 
 
@@ -185,7 +186,7 @@ class HelpSession:
                 self._timeout_task.cancel()
 
         # recreate the timeout task
-        self._timeout_task = self._bot.loop.create_task(self.timeout())
+        self._timeout_task = scheduling.create_task(self.timeout())
 
     async def on_message_interaction(self, inter: disnake.MessageInteraction) -> None:
         """Event handler for when reactions are added on the help message."""

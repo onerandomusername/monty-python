@@ -10,7 +10,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 from monty.constants import Paste, URLs
 from monty.log import get_logger
-from monty.utils.messages import DeleteButton
+from monty.utils.messages import DeleteButton, extract_urls
 from monty.utils.services import send_to_paste_service
 
 
@@ -24,8 +24,9 @@ TIMEOUT = 180
 
 AIOHTTP_TIMEOUT = aiohttp.ClientTimeout(total=2.4)
 
+# we use `extract_urls` to match for full urls, and this regex to match the start of the url
 PASTE_REGEX = re.compile(
-    r"(https?:\/\/)(?:workbin\.dev|(?:paste\.(?:(?:disnake|nextcord|vcokltfre)\.dev|vcokltf\.re)))\/\S+"
+    r"^(https?:\/\/)(?:workbin\.dev|(?:paste\.(?:(?:disnake|nextcord|vcokltfre)\.dev|vcokltf\.re)))\/.+"
 )
 
 MAX_LEN = 30_000
@@ -60,11 +61,15 @@ class CodeBlockActions(
 
     async def check_paste_link(self, content: str) -> Optional[str]:
         """Fetch code from a paste link."""
-        match = PASTE_REGEX.search(content)
+        match: re.Match[str] | None = next(filter(None, map(PASTE_REGEX.match, extract_urls(content))), None)
         if not match:
             return None
+
         parsed_url = urllib.parse.urlparse(match.group(), scheme="https")
         query_strings = urllib.parse.parse_qs(parsed_url.query)
+        if not query_strings.get("id"):
+            return None
+
         id = query_strings["id"][0]
         url = Paste.raw_paste_endpoint.format(key=id)
 

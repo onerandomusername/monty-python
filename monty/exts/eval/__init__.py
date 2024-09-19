@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import re
 import textwrap
 from functools import partial
@@ -16,6 +15,7 @@ from monty.constants import URLs
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 from monty.utils.services import send_to_paste_service
 
@@ -26,7 +26,7 @@ log = get_logger(__name__)
 
 INLINE_EVAL_REGEX = re.compile(r"\$(?P<fence>`+)(.+)(?P=fence)")
 
-ESCAPE_REGEX = re.compile("[`\u202E\u200B]{3,}")
+ESCAPE_REGEX = re.compile("[`\u202e\u200b]{3,}")
 FORMATTED_CODE_REGEX = re.compile(
     r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
     r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
@@ -127,13 +127,11 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @overload
     @staticmethod
-    def prepare_input(code: str, *, require_fenced: bool = False) -> str:
-        ...
+    def prepare_input(code: str, *, require_fenced: bool = False) -> str: ...
 
     @overload
     @staticmethod
-    def prepare_input(code: str, *, require_fenced: bool = True) -> Optional[str]:
-        ...
+    def prepare_input(code: str, *, require_fenced: bool = True) -> Optional[str]: ...
 
     @staticmethod
     def prepare_input(code: str, *, require_fenced: bool = False) -> Optional[str]:
@@ -216,10 +214,10 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         paste_link = None
 
         if "<@" in output:
-            output = output.replace("<@", "<@\u200B")  # Zero-width space
+            output = output.replace("<@", "<@\u200b")  # Zero-width space
 
         if "<!@" in output:
-            output = output.replace("<!@", "<!@\u200B")  # Zero-width space
+            output = output.replace("<!@", "<!@\u200b")  # Zero-width space
 
         if ESCAPE_REGEX.findall(output):
             paste_link = await self.upload_output(original_output) or "too long to upload"
@@ -399,7 +397,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         issue with it!
         """
         if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - " "please wait for it to finish!")
+            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
             return
 
         if not code:  # None or empty string
@@ -409,7 +407,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
-            self.jobs[ctx.author.id] = datetime.datetime.now()
+            self.jobs[ctx.author.id] = utcnow()
             code = self.prepare_input(code)
             try:
                 response = await self.send_eval(ctx, code)
@@ -464,7 +462,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         for item in sorted(json["packages"], key=lambda x: x["name"]):
             # iterable of dicts
             embed.description += f"**{item['name']}**: {item['version']}\n"
-        embed.timestamp = disnake.utils.utcnow()
+        embed.timestamp = utcnow()
         await ctx.reply(
             embed=embed,
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),

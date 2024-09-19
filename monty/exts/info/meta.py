@@ -6,10 +6,11 @@ from typing import Optional
 import disnake
 import psutil
 from disnake.ext import commands
-from disnake.ext.commands import Range
+from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Client, Colours
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 
 
@@ -132,7 +133,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self,
         inter: disnake.CommandInteraction,
         permissions: Range[0, disnake.Permissions.all().value] = None,
-        guild: str = None,
+        guild_id: LargeInt = None,
         raw_link: bool = False,
         ephemeral: bool = None,
     ) -> None:
@@ -142,7 +143,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
         Parameters
         ----------
         permissions: The permissions to grant the invite link.
-        guild: The guild to invite the bot to.
+        guild_id: The guild to invite the bot to.
         raw_link: Whether to return the raw invite link.
         ephemeral: Whether to send the invite link as an ephemeral message.
         """
@@ -160,7 +161,7 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             inter,
             client_id=self.bot.user.id,
             permissions=permissions,
-            guild=guild,
+            guild_id=guild_id,
             include_applications_commands=True,
             raw_link=raw_link,
             ephemeral=ephemeral,
@@ -232,9 +233,9 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
-        if not self._app_info_last_fetched or datetime.now() - self._app_info_last_fetched > timedelta(hours=1):
+        if not self._app_info_last_fetched or utcnow() - self._app_info_last_fetched > timedelta(hours=1):
             self._cached_app_info = await self.bot.application_info()
-            self._app_info_last_fetched = datetime.now()
+            self._app_info_last_fetched = utcnow()
         return self._cached_app_info
 
     @monty.sub_command()

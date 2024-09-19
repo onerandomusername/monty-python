@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import inspect
 import typing as t
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import partial
 
 from monty.log import get_logger
@@ -65,15 +65,17 @@ class Scheduler:
         """
         Schedule `coroutine` to be executed at the given `time`.
 
-        If `time` is timezone aware, then use that timezone to calculate now() when subtracting.
-        If `time` is naïve, then use UTC.
+        If `time` is naïve, assume local time.
 
         If `time` is in the past, schedule `coroutine` immediately.
 
         If a task with `task_id` already exists, close `coroutine` instead of scheduling it. This
         prevents unawaited coroutine warnings. Don't pass a coroutine that'll be re-used elsewhere.
         """
-        now_datetime = datetime.now(time.tzinfo) if time.tzinfo else datetime.utcnow()
+        if not time.tzinfo:
+            # convert naive to aware, assuming local timezone
+            time = time.astimezone()
+        now_datetime = datetime.now(timezone.utc)
         delay = (time - now_datetime).total_seconds()
         if delay > 0:
             coroutine = self._await_later(delay, task_id, coroutine)
@@ -149,12 +151,12 @@ class Scheduler:
         elif scheduled_task:
             # A new task was likely rescheduled with the same ID.
             self._log.debug(
-                f"The scheduled task #{task_id} {id(scheduled_task)} " f"and the done task {id(done_task)} differ."
+                f"The scheduled task #{task_id} {id(scheduled_task)} and the done task {id(done_task)} differ."
             )
         elif not done_task.cancelled():
             self._log.warning(
                 f"Task #{task_id} not found while handling task {id(done_task)}! "
-                f"A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
+                "A task somehow got unscheduled improperly (i.e. deleted but not cancelled)."
             )
 
         with contextlib.suppress(asyncio.CancelledError):

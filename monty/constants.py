@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 __all__ = (
     "Client",
     "Colours",
+    "DiscordFeatures",
     "Emojis",
     "Icons",
     "Stats",
@@ -32,6 +33,8 @@ class Client:
     default_command_prefix = environ.get("PREFIX", "-")
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
+    debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
+    sentry_enabled = bool(environ.get("SENTRY_DSN"))
     github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
     log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
@@ -66,6 +69,11 @@ class UptimeMonitoring:
     status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
     interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
     enabled: bool = bool(private_url)
+    query_params = {
+        "status": "up",
+        "msg": "OK",
+        "ping": lambda bot: f"{bot.latency * 1000:.2f}",
+    }
 
 
 class Database:
@@ -99,17 +107,23 @@ class Colours:
     gold = 0xE6C200
 
 
+class DiscordFeatures:
+    """Whether to embrace or ignore new features on Discord, in case they get rolled back."""
+
+    extended_markdown = True
+
+
 class Emojis:
-    cross_mark = "\u274C"
-    star = "\u2B50"
-    christmas_tree = "\U0001F384"
+    cross_mark = "\u274c"
+    star = "\u2b50"
+    christmas_tree = "\U0001f384"
     check = "\u2611"
-    envelope = "\U0001F4E8"
+    envelope = "\U0001f4e8"
     trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
     trashcan_on_red = environ.get("TRASHCAN_ON_RED_EMOJI", "<:trashcan:976669056587415592>")
     trashcat_special = environ.get("TRASHCAT_SPECIAL_EMOJI", "<:catborked:976598820651679794>")
     ok_hand = ":ok_hand:"
-    hand_raised = "\U0001F64B"
+    hand_raised = "\U0001f64b"
     black = "<:black_format:928530654143066143>"
     upload = "\U0001f4dd"
     snekbox = "\U0001f40d"
@@ -140,6 +154,7 @@ class Emojis:
 
     confirmation = "\u2705"
     decline = "\u274c"
+    no_choice_light = "\u25fb\ufe0f"
 
     x = "\U0001f1fd"
     o = "\U0001f1f4"
@@ -157,6 +172,21 @@ class Endpoints:
     top_pypi_packages = environ.get("PYPI_TOP_PACKAGES", "")
 
 
+class Feature:
+    CODEBLOCK_RECOMMENDATIONS = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
+    DISCORD_TOKEN_REMOVER = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
+    DISCORD_WEBHOOK_REMOVER = "DISCORD_WEBHOOK_FILTER"
+    GITHUB_COMMENT_LINKS = "GITHUB_EXPAND_COMMENT_LINKS"
+    GITHUB_DISCUSSIONS = "GITHUB_AUTOLINK_DISCUSSIONS"
+    GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+    GITHUB_ISSUE_LINKS = "GITHUB_EXPAND_ISSUE_LINKS"
+    GLOBAL_SOURCE = "GLOBAL_SOURCE_COMMAND"
+    INLINE_DOCS = "INLINE_DOCUMENTATION"
+    PYPI_AUTOCOMPLETE = "PYPI_PACKAGE_AUTOCOMPLETE"
+    PYTHON_DISCOURSE_AUTOLINK = "PYTHON_DISCOURSE_AUTOLINK"
+    SOURCE_AUTOCOMPLETE = "META_SOURCE_COMMAND_AUTOCOMPLETE"
+
+
 class Guilds:
     disnake = 808030843078836254
     nextcord = 881118111967883295
@@ -169,6 +199,7 @@ class Icons:
         "https://images-ext-2.discordapp.net/external/zl4oDwcmxUILY7sD9ZWE2fU5R7n6QcxEmPYSE5eddbg/"
         "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
     )
+    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"  # noqa: E501
 
 
 class URLs:

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tu
 import aiohttp
 
 from monty.log import get_logger
-from monty.utils.helpers import redis_cache
+from monty.utils.caching import redis_cache
 
 
 if TYPE_CHECKING:
@@ -90,7 +90,7 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
-    async with bot.http_session.get(url, timeout=timeout, raise_for_status=True) as response:
+    async with bot.http_session.get(url, timeout=timeout, raise_for_status=True, use_cache=False) as response:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()
@@ -134,10 +134,10 @@ async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Op
             inventory = await _fetch_inventory(bot, url)
         except aiohttp.ClientConnectorError:
             log.warning(
-                f"Failed to connect to inventory url at {url}; " f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
+                f"Failed to connect to inventory url at {url}; trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
         except aiohttp.ClientError:
-            log.error(f"Failed to get inventory from {url}; " f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS}).")
+            log.error(f"Failed to get inventory from {url}; trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS}).")
         except InvalidHeaderError:
             raise
         except Exception:

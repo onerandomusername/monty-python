@@ -13,6 +13,7 @@ from monty.bot import Monty
 from monty.database import Feature, Rollout
 from monty.log import get_logger
 from monty.utils import rollouts, scheduling
+from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
 
 
@@ -184,7 +185,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         await ctx.reply(
             f"Successfully created rollout **`{name}`**. "
             f"Use **`{ctx.prefix}{' '.join(ctx.invoked_parents)} start {name} <end_time>`** to start the rollout. \n"
-            f"NOTE: The rollout needs to be linked to a target to have an effect. This rollout is currently unlinked.",
+            "NOTE: The rollout needs to be linked to a target to have an effect. This rollout is currently unlinked.",
             components=button,
         )
 
@@ -222,8 +223,10 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         texts = [
             f"Are you sure you want to delete rollout `{rollout.name}`?\n\u200b",
-            "Absolutely certain? There is no going back. "
-            f"Are you completely sure you want to delete rollout `{rollout.name}`?",
+            (
+                "Absolutely certain? There is no going back. "
+                f"Are you completely sure you want to delete rollout `{rollout.name}`?"
+            ),
         ]
 
         message: Optional[disnake.Message] = None
@@ -257,7 +260,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
     @cmd_rollouts.command("start")
     async def cmd_rollouts_start(self, ctx: commands.Context, rollout: RolloutConverter, dt: ArrowConverter) -> None:
         """Start a rollout now to end at the specified time."""
-        now = disnake.utils.utcnow()
+        now = utcnow()
         if now > dt:
             raise commands.BadArgument("A rollout must end in the future.")
 

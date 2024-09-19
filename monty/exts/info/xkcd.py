@@ -8,6 +8,7 @@ from disnake.ext import commands, tasks
 from monty.bot import Monty
 from monty.constants import Colours
 from monty.log import get_logger
+from monty.utils.messages import DeleteButton
 
 
 log = get_logger(__name__)
@@ -73,7 +74,9 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
                     embed.title = f"XKCD comic #{comic}"
                     embed.description = f"{resp.status}: Could not retrieve xkcd comic #{comic}."
                     log.debug(f"Retrieving xkcd comic #{comic} failed with status code {resp.status}.")
-                    await inter.send(embed=embed)
+
+                    components = DeleteButton(inter.author, allow_manage_messages=False)
+                    await inter.send(embed=embed, components=components)
                     return
 
         embed.title = f"XKCD comic #{info['num']}"
@@ -91,7 +94,8 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 f"Comic can be viewed [here](https://xkcd.com/{info['num']})."
             )
 
-        await inter.send(embed=embed)
+        components = DeleteButton(inter.author, allow_manage_messages=False)
+        await inter.send(embed=embed, components=components)
 
 
 def setup(bot: Monty) -> None:

@@ -6,12 +6,13 @@ from disnake.ext import commands
 
 from monty.constants import Emojis
 from monty.log import get_logger
+from monty.utils import scheduling
 
 
-FIRST_EMOJI = "\u23EE"  # [:track_previous:]
-LEFT_EMOJI = "\u2B05"  # [:arrow_left:]
-RIGHT_EMOJI = "\u27A1"  # [:arrow_right:]
-LAST_EMOJI = "\u23ED"  # [:track_next:]
+FIRST_EMOJI = "\u23ee"  # [:track_previous:]
+LEFT_EMOJI = "\u2b05"  # [:arrow_left:]
+RIGHT_EMOJI = "\u27a1"  # [:arrow_right:]
+LAST_EMOJI = "\u23ed"  # [:track_next:]
 DELETE_EMOJI = Emojis.trashcan  # [:trashcan:]
 CUSTOM_ID_PREFIX = "paginator_page_"
 PAGINATION_EMOJI: dict[str, str] = {
@@ -157,7 +158,7 @@ class LinePaginator(commands.Paginator):
                 )
             )
             if not check and inter.message.id == message.id:
-                ctx.bot.loop.create_task(
+                scheduling.create_task(
                     inter.response.send_message("Hey! This isn't yours to interact with!", ephemeral=True)
                 )
             return check and inter.message.id == message.id

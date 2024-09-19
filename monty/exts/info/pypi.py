@@ -18,9 +18,10 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands, tasks
 
 from monty.bot import Monty
-from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints
+from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints, Feature
 from monty.log import get_logger
-from monty.utils.helpers import maybe_defer, redis_cache
+from monty.utils.caching import redis_cache
+from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
@@ -41,7 +42,6 @@ MAX_CACHE = 15
 ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 MAX_RESULTS = 15
 
-PYPI_AUTOCOMPLETE_FEATURE_NAME = "PYPI_PACKAGE_AUTOCOMPLETE"
 log = get_logger(__name__)
 
 PYPI_API_HEADERS = {"Accept": "application/vnd.pypi.simple.v1+json"}
@@ -78,9 +78,9 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def cog_load(self) -> None:
         """Load the package list on cog load."""
         # create the feature if it doesn't exist
-        await self.bot.guild_has_feature(None, PYPI_AUTOCOMPLETE_FEATURE_NAME)
+        await self.bot.guild_has_feature(None, Feature.PYPI_AUTOCOMPLETE)
 
-        if self.bot.features[PYPI_AUTOCOMPLETE_FEATURE_NAME].enabled is not False:
+        if self.bot.features[Feature.PYPI_AUTOCOMPLETE].enabled is not False:
             # start the task
             self.fetch_package_list.start(use_cache=False)
             # pre-fill the autocomplete once
@@ -143,7 +143,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.top_packages.extend(top_packages)
         log.info("Loaded list of all PyPI packages.")
 
-    @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
         """Fetch a package from PyPI."""
         async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:
@@ -187,9 +186,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         try:
             release_info = json["releases"][info["version"]]
-            embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
-                tzinfo=datetime.timezone.utc
-            )
+            embed.timestamp = fromisoformat(release_info[0]["upload_time"])
         except (KeyError, IndexError):
             pass
         else:
@@ -339,8 +336,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         defer_task = maybe_defer(inter, delay=2)
 
-        current_time = datetime.datetime.now()
-
         # todo: fix typing for async_cached
         result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)
         packages, query_url = result
@@ -354,7 +349,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
-        embed.timestamp = current_time
+        embed.timestamp = utcnow()
         embed.set_footer(text="Requested at:")
         if len(packages) >= max_results:
             description += f"*Only showing the top {max_results} results.*"
@@ -372,14 +367,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self, inter: disnake.CommandInteraction, query: str, *, include_query: bool = False
     ) -> list[str]:
         """Autocomplete package names based on the PyPI index."""
-        # the packages aren't yet or failed to be loaded
-        if not self.all_packages or not await self.bot.guild_has_feature(
-            inter.guild_id, PYPI_AUTOCOMPLETE_FEATURE_NAME
-        ):
-            return [query] if query else []
-
-        # otherwise fuzzy-match the package name
-
         if not query:
             if self.top_packages:
                 the_sample = self.top_packages
@@ -389,10 +376,20 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             # we need to shortcircuit and skip the fuzzing results
             return list(random.sample(the_sample, k=min(25, len(the_sample))))
 
-        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
+        if await self.bot.guild_has_feature(inter.guild_id, Feature.PYPI_AUTOCOMPLETE):
+            package_list = self.all_packages
+        else:
+            package_list = self.top_packages
+            # include the query as top_packages is not a complete list of packages
+            include_query = True
+
+        if not package_list:
+            return [query] if query else ["Type to begin searching..."]
+
+        scorer = rapidfuzz.distance.JaroWinkler.similarity
         fuzz_results = rapidfuzz.process.extract(
             query,
-            self.all_packages,
+            package_list,
             scorer=scorer,  # type: ignore
             limit=25,
             score_cutoff=0.4,
@@ -405,7 +402,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if include_query:
             if query in res:
                 res.remove(query)
-                res.insert(0, query)
             elif len(res) > 24:
                 res.pop()
             res.insert(0, query)

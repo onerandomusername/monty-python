@@ -1,5 +1,4 @@
 import re
-from datetime import datetime
 from html import unescape
 from typing import List
 
@@ -10,6 +9,7 @@ from monty.bot import Monty
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils import LinePaginator
+from monty.utils.helpers import utcnow
 
 
 log = get_logger(__name__)
@@ -25,10 +25,10 @@ WIKI_PARAMS = {
     "origin": "*",
 }
 WIKI_THUMBNAIL = (
-    "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg" "/330px-Wikipedia-logo-v2.svg.png"
+    "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/330px-Wikipedia-logo-v2.svg.png"
 )
 WIKI_SNIPPET_REGEX = r"(<!--.*?-->|<[^>]*>)"
-WIKI_SEARCH_RESULT = "**[{name}]({url})**\n" "{description}\n"
+WIKI_SEARCH_RESULT = "**[{name}]({url})**\n{description}\n"
 
 
 class WikipediaSearch(commands.Cog, name="Wikipedia Search", slash_command_attrs={"dm_permission": False}):
@@ -73,7 +73,7 @@ class WikipediaSearch(commands.Cog, name="Wikipedia Search", slash_command_attrs
         if contents:
             embed = disnake.Embed(title="Wikipedia Search Results", colour=disnake.Color.blurple())
             embed.set_thumbnail(url=WIKI_THUMBNAIL)
-            embed.timestamp = datetime.utcnow()
+            embed.timestamp = utcnow()
             await LinePaginator.paginate(contents, ctx, embed)
         else:
             await ctx.send("Sorry, we could not find a wikipedia article using that search term.")

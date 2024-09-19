@@ -14,8 +14,10 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
-from monty.utils.messages import DeleteButton
+from monty.utils.markdown import remove_codeblocks
+from monty.utils.messages import DeleteButton, suppress_embeds
 
 
 if TYPE_CHECKING:
@@ -27,12 +29,13 @@ log = get_logger(__name__)
 
 # start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
-    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
+    r"https?:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
+    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]"
+    r"|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
 )
 
 GITHUB_GIST_RE = re.compile(
-    r"https://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*"
+    r"https?://gist\.github\.com/([a-zA-Z0-9-]+)/(?P<gist_id>[a-zA-Z0-9]+)/*"
     r"(?P<revision>[a-zA-Z0-9]*)/*#file-(?P<file_path>[^#>]+?)(\?[^#>]+)?"
     r"(-L(?P<start_line>\d+)([-~:]L(?P<end_line>\d+))?)"
 )
@@ -45,14 +48,19 @@ if GITHUB_TOKEN := constants.Tokens.github:
     GITHUB_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 GITLAB_RE = re.compile(
-    r"https://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
+    r"https?://gitlab\.com/(?P<repo>[\w.-]+/[\w.-]+)/\-/blob/(?P<path>[^#>]+)"
     r"(\?[^#>]+)?(#L(?P<start_line>\d+)(-(?P<end_line>\d+))?)"
 )
 
 BITBUCKET_RE = re.compile(
-    r"https://bitbucket\.org/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/src/(?P<ref>[0-9a-zA-Z]+)"
+    r"https?://bitbucket\.org/(?P<repo>[a-zA-Z0-9-]+/[\w.-]+)/src/(?P<ref>[0-9a-zA-Z]+)"
     r"/(?P<file_path>[^#>]+)(\?[^#>]+)?(#lines-(?P<start_line>\d+)(:(?P<end_line>\d+))?)"
 )
+
+# map specific file extensions to different syntax-highlighting languages
+LANGUAGE_MAPPING: dict[str, str] = {
+    "pyi": "py",
+}
 
 
 class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
@@ -257,8 +265,11 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         # Extracts the code language and checks whether it's a "valid" language
         language = file_path.split("/")[-1].split(".")[-1]
         trimmed_language = language.replace("-", "").replace("+", "").replace("_", "")
+
         is_valid_language = trimmed_language.isalnum()
-        if not is_valid_language:
+        if is_valid_language:
+            language = LANGUAGE_MAPPING.get(language, language)
+        else:
             language = ""
 
         # escape and fix the file_path
@@ -290,6 +301,8 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
         """Parse message content and return a string with a code block for each URL found."""
         all_snippets = []
 
+        content = remove_codeblocks(content)
+
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
                 try:
@@ -299,10 +312,8 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
                     error_message = error.message  # noqa: B306
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
-                        (
-                            f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
-                            f"{error_message} for GET {error.request_info.real_url.human_repr()}"
-                        ),
+                        f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
+                        f"{error_message} for GET {error.request_info.real_url.human_repr()}",
                     )
 
         # Sorts the list of snippets by their match index and joins them into a single message
@@ -332,15 +343,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
             if my_perms.manage_messages:
-                try:
-                    await message.edit(suppress_embeds=True)
-                except disnake.NotFound:
-                    # Don't send snippets if the original message was deleted.
-                    return
-                except disnake.Forbidden:
-                    # we're missing permissions to edit the message to remove the embed
-                    # its fine, since this bot is public and shouldn't require that.
-                    pass
+                scheduling.create_task(suppress_embeds(self.bot, message))
 
             components = DeleteButton(message.author)
             await destination.send(
