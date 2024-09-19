@@ -502,7 +502,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
-            query = gql.gql("""
+            query = gql.gql(
+                """
                 query getDiscussion($user: String!, $repository: String!, $number: Int!) {
                     repository(followRenames: true, owner: $user, name: $repository) {
                         discussion(number: $number) {
@@ -515,7 +516,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         }
                     }
                 }
-                """)
+                """
+            )
             try:
                 json_data = await self.gql.execute_async(
                     query,

@@ -178,12 +178,12 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
 
             # cache display names to their actual names which can be retrieved from the dict above
             self.object_display_names: dict[str, str] = {}
-            self.object_display_names.update({
-                name: name for name, obj in self.all_objects.items() if not isinstance(obj, commands.Cog)
-            })
-            self.object_display_names.update({
-                COG_NAME_REGEX.sub(r" \1", name): name for name in self.all_cogs if name != "PyPI"
-            })
+            self.object_display_names.update(
+                {name: name for name, obj in self.all_objects.items() if not isinstance(obj, commands.Cog)}
+            )
+            self.object_display_names.update(
+                {COG_NAME_REGEX.sub(r" \1", name): name for name in self.all_cogs if name != "PyPI"}
+            )
 
             unsorted = self.object_display_names.copy()
             self.object_display_names.clear()
