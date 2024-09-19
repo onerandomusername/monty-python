@@ -2100,38 +2100,44 @@ files = [
 
 [[package]]
 name = "sentry-sdk"
-version = "1.37.1"
+version = "2.14.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
-python-versions = "*"
+python-versions = ">=3.6"
 files = [
-    {file = "sentry-sdk-1.37.1.tar.gz", hash = "sha256:7cd324dd2877fdc861f75cba4242bce23a58272a6fea581fcb218bb718bd9cc5"},
-    {file = "sentry_sdk-1.37.1-py2.py3-none-any.whl", hash = "sha256:a249c7364827ee89daaa078bb8b56ece0b3d52d9130961bef2302b79bdf7fe70"},
+    {file = "sentry_sdk-2.14.0-py2.py3-none-any.whl", hash = "sha256:b8bc3dc51d06590df1291b7519b85c75e2ced4f28d9ea655b6d54033503b5bf4"},
+    {file = "sentry_sdk-2.14.0.tar.gz", hash = "sha256:1e0e2eaf6dad918c7d1e0edac868a7bf20017b177f242cefe2a6bcd47955961d"},
 ]
 
 [package.dependencies]
 certifi = "*"
-urllib3 = {version = ">=1.26.11", markers = "python_version >= \"3.6\""}
+urllib3 = ">=1.26.11"
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.5)"]
+anthropic = ["anthropic (>=0.16)"]
 arq = ["arq (>=0.23)"]
 asyncpg = ["asyncpg (>=0.23)"]
 beam = ["apache-beam (>=2.12)"]
 bottle = ["bottle (>=0.12.13)"]
 celery = ["celery (>=3)"]
+celery-redbeat = ["celery-redbeat (>=2)"]
 chalice = ["chalice (>=1.16.0)"]
 clickhouse-driver = ["clickhouse-driver (>=0.2.0)"]
 django = ["django (>=1.8)"]
 falcon = ["falcon (>=1.4)"]
 fastapi = ["fastapi (>=0.79.0)"]
 flask = ["blinker (>=1.1)", "flask (>=0.11)", "markupsafe"]
-grpcio = ["grpcio (>=1.21.1)"]
+grpcio = ["grpcio (>=1.21.1)", "protobuf (>=3.8.0)"]
 httpx = ["httpx (>=0.16.0)"]
 huey = ["huey (>=2)"]
+huggingface-hub = ["huggingface-hub (>=0.22)"]
+langchain = ["langchain (>=0.0.210)"]
+litestar = ["litestar (>=2.0.0)"]
 loguru = ["loguru (>=0.5)"]
+openai = ["openai (>=1.0.0)", "tiktoken (>=0.3.0)"]
 opentelemetry = ["opentelemetry-distro (>=0.35b0)"]
-opentelemetry-experimental = ["opentelemetry-distro (>=0.40b0,<1.0)", "opentelemetry-instrumentation-aiohttp-client (>=0.40b0,<1.0)", "opentelemetry-instrumentation-django (>=0.40b0,<1.0)", "opentelemetry-instrumentation-fastapi (>=0.40b0,<1.0)", "opentelemetry-instrumentation-flask (>=0.40b0,<1.0)", "opentelemetry-instrumentation-requests (>=0.40b0,<1.0)", "opentelemetry-instrumentation-sqlite3 (>=0.40b0,<1.0)", "opentelemetry-instrumentation-urllib (>=0.40b0,<1.0)"]
+opentelemetry-experimental = ["opentelemetry-distro"]
 pure-eval = ["asttokens", "executing", "pure-eval"]
 pymongo = ["pymongo (>=3.1)"]
 pyspark = ["pyspark (>=2.4.4)"]
@@ -2141,7 +2147,7 @@ sanic = ["sanic (>=0.8)"]
 sqlalchemy = ["sqlalchemy (>=1.2)"]
 starlette = ["starlette (>=0.19.1)"]
 starlite = ["starlite (>=1.48)"]
-tornado = ["tornado (>=5)"]
+tornado = ["tornado (>=6)"]
 
 [[package]]
 name = "setuptools"
@@ -2485,4 +2491,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.10"
-content-hash = "591355ea517b097e33ae226ea3819bb4596104d8b65a2cbda7614941184873c5"
+content-hash = "ca0611c9ac5afd788dfb89b579fe0b62cb5cd292f2dbe6c50920502e55ffbc0f"
