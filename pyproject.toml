@@ -34,7 +34,7 @@ sentry-sdk = "^2.14.0"
 # database dependencies
 alembic = "^1.13.2"
 asyncpg = "^0.27.0"
-SQLAlchemy = { version = "~=2.0.6", extras = ['asyncio'] }
+SQLAlchemy = { version = "~=2.0.35", extras = ['asyncio'] }
 
 [tool.poetry.extras]
 fakeredis = ['fakeredis']
