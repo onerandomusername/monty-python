@@ -1,12 +1,17 @@
+import typing
 from typing import Optional
 
 from aiohttp import ClientConnectorError
+from attrs import define
 
 from monty import constants
 from monty.bot import Monty
 from monty.errors import APIError
 from monty.log import get_logger
 
+
+if typing.TYPE_CHECKING:
+    import aiohttp
 
 log = get_logger(__name__)
 
@@ -20,6 +25,19 @@ GITHUB_REQUEST_HEADERS = {
 }
 if constants.Tokens.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
+
+
+@define()
+class GitHubRateLimit:
+    limit: int
+    remaining: int
+    reset: int
+    used: int
+
+    resource: str
+
+
+GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
 async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
@@ -82,3 +100,32 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         )
 
     raise APIError("workbin", response.status if response else 0, "The paste service could not be used at this time.")
+
+
+# https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#checking-the-status-of-your-rate-limit
+def process_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
+    """Given a ClientResponse, update the stored GitHub Ratelimits."""
+    resource_name = resp.headers.get("x-ratelimit-resource")
+    if not resource_name:
+        # there's nothing to update as the resource name does not exist
+        return
+    GITHUB_RATELIMITS[resource_name] = GitHubRateLimit(
+        limit=int(resp.headers["x-ratelimit-limit"]),
+        remaining=int(resp.headers["x-ratelimit-remaining"]),
+        reset=int(resp.headers["x-ratelimit-reset"]),
+        used=int(resp.headers["x-ratelimit-used"]),
+        resource=resource_name,
+    )
+
+
+# https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
+def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
+    """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
+    ratelimits = json["resources"]
+    for resource_name in ratelimits:
+        resource_dict_from_github = ratelimits[resource_name]
+        kwargs = {"resource": resource_name}
+        for attr in ("limit", "remaining", "reset", "used"):
+            kwargs[attr] = resource_dict_from_github[attr]
+
+        GITHUB_RATELIMITS[resource_name] = GitHubRateLimit(**kwargs)
