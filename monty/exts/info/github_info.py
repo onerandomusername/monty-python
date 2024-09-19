@@ -7,6 +7,7 @@ from datetime import timedelta, timezone
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
 from urllib.parse import quote, quote_plus
 
+import attrs
 import cachingutils
 import cachingutils.redis
 import disnake
@@ -18,10 +19,10 @@ from disnake.ext import commands
 from gql.transport.aiohttp import AIOHTTPTransport
 from gql.transport.exceptions import TransportError, TransportQueryError
 
+import monty.utils.services
 from monty import constants
 from monty.bot import Monty
 from monty.constants import Feature
-from monty.exts.info.codesnippets import GITHUB_HEADERS
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.caching import redis_cache
@@ -29,19 +30,20 @@ from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
+from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 KT = TypeVar("KT")
 VT = TypeVar("VT")
 
 BAD_RESPONSE = {
-    403: "Rate limit has been hit! Please try again later!",
-    404: "Issue/pull request not located! Please enter a valid number!",
+    404: "Object not located! Please enter a valid number!",
 }
 
 
 GITHUB_API_URL = "https://api.github.com"
 
+RATE_LIMIT_ENDPOINT = f"{GITHUB_API_URL}/rate_limit"
 ORG_REPOS_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
 USER_REPOS_ENDPOINT = f"{GITHUB_API_URL}/users/{{user}}/repos?per_page=100&type=public"
 ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
@@ -51,14 +53,6 @@ LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?p
 ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
 PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
 
-
-REQUEST_HEADERS = {
-    "Accept": "application/vnd.github.v3+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
-
-if GITHUB_TOKEN := constants.Tokens.github:
-    REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
@@ -89,7 +83,8 @@ EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
-DISCUSSION_GRAPHQL_QUERY = gql.gql("""
+DISCUSSION_GRAPHQL_QUERY = gql.gql(
+    """
     query getDiscussion($user: String!, $repository: String!, $number: Int!) {
         repository(followRenames: true, owner: $user, name: $repository) {
             discussion(number: $number) {
@@ -114,7 +109,8 @@ DISCUSSION_GRAPHQL_QUERY = gql.gql("""
             }
         }
     }
-""")
+"""
+)
 
 log = get_logger(__name__)
 
@@ -190,7 +186,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_HEADERS, ssl=True)
+        transport = AIOHTTPTransport(
+            url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS, ssl=True
+        )
 
         self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
@@ -202,10 +200,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         self.guilds: Dict[str, str] = {}
 
     async def cog_load(self) -> None:
-        """Fetch the gql schema from github."""
+        """
+        Run initial fetch commands upon loading.
+
+        Sync the Ratelimit object, and more.
+        Fetch the graphQL schema from GitHub.
+        """
+        await self._fetch_and_update_ratelimits()
+
         # todo: cache the schema in redis and load from there
         async with self.gql:
             pass
+
+    async def _fetch_and_update_ratelimits(self) -> None:
+        # this is NOT using fetch_data because we need to check the status code.
+        async with self.bot.http_session.get(RATE_LIMIT_ENDPOINT, headers=GITHUB_REQUEST_HEADERS) as r:
+            if r.status != 200:
+                # the Rate_limit endpoint is not ratelimited
+                if r.status == 403:
+                    return
+
+            data = await r.json()
+
+        monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)  # type: ignore
 
     async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
         """Fetch the org that matches to a specific guild_id."""
@@ -218,13 +235,14 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
         if "headers" in kw:
             og = kw["headers"]
-            kw["headers"] = REQUEST_HEADERS.copy()
+            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
             kw["headers"].update(og)
         else:
-            kw["headers"] = REQUEST_HEADERS.copy()
+            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
 
         method = method.upper().strip()
         async with self.bot.http_session.request(method, url, **kw) as r:
+            monty.utils.services.update_github_ratelimits_on_request(r)
             if as_text:
                 return await r.text()
             else:
@@ -336,7 +354,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         async with ctx.typing():
             user_data: dict[str, Any] = await self.fetch_data(
                 f"{GITHUB_API_URL}/users/{quote_plus(username)}",
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
             # User_data will not have a message key if the user exists
@@ -353,7 +371,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             org_data: list[dict[str, Any]] = await self.fetch_data(
                 user_data["organizations_url"],
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
             orgs = [f"[{org['login']}](https://github.com/{org['login']})" for org in org_data]
             orgs_to_add = " | ".join(orgs)
@@ -445,7 +463,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         async with ctx.typing():
             repo_data: dict[str, Any] = await self.fetch_data(
                 f"{GITHUB_API_URL}/repos/{quote(repo)}",
-                headers=REQUEST_HEADERS,
+                headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
             # There won't be a message key if this repo exists
@@ -524,7 +542,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """
         if not is_discussion:  # not a discussion, or uncertain
             url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
-            json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_HEADERS)  # type: ignore
+            json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
 
             if "message" in json_data:
                 is_discussion = True  # if we got an error, assume it may be a discussion
@@ -724,6 +742,27 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         results = [await self.fetch_issues(number, repo, user) for number in numbers]
         expand_one_issue = await self.bot.guild_has_feature(ctx.guild, constants.Feature.GITHUB_ISSUE_EXPAND)
         await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
+
+    @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
+    @commands.is_owner()
+    async def ratelimits_command(self, ctx: commands.Context, refresh: bool = False) -> None:
+        """Check the current RateLimits connected to GitHub."""
+        embed = disnake.Embed(title="GitHub Ratelimits")
+        if refresh:
+            await self._fetch_and_update_ratelimits()
+
+        for resource_name, rate_limit in monty.utils.services.GITHUB_RATELIMITS.items():
+            embed_value = ""
+            for name, value in attrs.asdict(rate_limit).items():
+                embed_value += f"**`{name}`**: {value}\n"
+            embed.add_field(name=resource_name, value=embed_value, inline=False)
+
+        if len(embed.fields) == 0 or not (random.randint(0, 7) % 4):
+            embed.set_footer(text="GitHub moment.")
+        await ctx.send(
+            embed=embed,
+            components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
+        )
 
     async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
         """

@@ -18,14 +18,14 @@ cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", 
 colorama = { version = "~=0.4.5", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=15.0"
 disnake = { version = '~=2.9.0' }
-orjson = "^3.8.5"
+orjson = "^3.9.15"
 fakeredis = "^2.10.1"
 gql = "^3.4.0"
 lxml = "^4.9.1"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
 redis = { version = "^4.5.4", extras = ['hiredis'] }
-Pillow = "^10.0"
+Pillow = "^10.3"
 psutil = "^5.9.4"
 python-dateutil = "^2.8.2"
 rapidfuzz = "^2.13.2"
@@ -40,7 +40,7 @@ SQLAlchemy = { version = "~=2.0.6", extras = ['asyncio'] }
 fakeredis = ['fakeredis']
 
 [tool.poetry.dev-dependencies]
-black = "^23.11.0"
+black = "^24.3.0"
 ruff = "==0.1.6"
 isort = "^5.12.0"
 pre-commit = "^3.0.4"

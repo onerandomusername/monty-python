@@ -49,7 +49,7 @@ jobs:
       # Set up the right version of Python
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         id: python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -60,7 +60,7 @@ jobs:
       #
       # Only when the context is exactly the same, we will restore the cache.
       - name: Python Dependency Caching
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: python_cache
         with:
           path: ${{ env.PYTHONUSERBASE }}
@@ -79,7 +79,7 @@ jobs:
       # do create a new environment when our pre-commit setup changes,
       # we create a cache key based on relevant factors.
       - name: Pre-commit Environment Caching
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env.PRE_COMMIT_HOME }}
           key: "precommit-0-${{ runner.os }}-${{ env.PRE_COMMIT_HOME }}-\
@@ -135,7 +135,7 @@ jobs:
       # Repository. The container will be tagged as "latest"
       # and with the short SHA of the commit.
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: monty/
           file: monty/Dockerfile
@@ -171,7 +171,7 @@ jobs:
       - name: Upload a Build Artifact
         if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pull-request-payload
           path: pull_request_payload.json
