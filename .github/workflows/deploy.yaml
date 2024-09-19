@@ -32,7 +32,7 @@ jobs:
           tag=$(cut -c 1-7 <<< $GITHUB_SHA)
           echo "tag=$tag" >> $GITHUB_OUTPUT
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: onerandomusername/kubernetes
           token: ${{ secrets.REPO_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
           kubeconfig: ${{ secrets.KUBECONFIG }}
 
       - name: Login to Github Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}

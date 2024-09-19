@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Optional, Union
 from urllib.parse import urljoin
 
@@ -15,7 +15,7 @@ from monty.bot import Monty
 from monty.constants import Feature, Icons
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.helpers import get_num_suffix
+from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
 
@@ -110,7 +110,7 @@ class PythonDiscourse(commands.Cog):
             url=f"{DOMAIN}/u/{data['username']}",
         )
 
-        e.timestamp = datetime.strptime(data["created_at"], r"%Y-%m-%dT%H:%M:%S.%fZ")
+        e.timestamp = fromisoformat(data["created_at"])
         e.set_footer(text="Posted at", icon_url=Icons.python_discourse)
         return e
 
