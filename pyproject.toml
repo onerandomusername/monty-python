@@ -19,7 +19,7 @@ colorama = { version = "~=0.4.5", markers = "sys_platform == 'win32'" }
 coloredlogs = "~=15.0"
 disnake = { version = '~=2.9.2' }
 orjson = "^3.9.15"
-fakeredis = "^2.10.1"
+fakeredis = "^2.24.1"
 gql = "^3.4.0"
 lxml = "^4.9.1"
 markdownify = "==0.11.6"
