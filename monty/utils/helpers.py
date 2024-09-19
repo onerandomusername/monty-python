@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
+import dateutil.parser
 import disnake
 
 from monty.log import get_logger
@@ -122,3 +124,17 @@ def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, *
 
     start = loop.time()
     return scheduling.create_task(internal_task())
+
+
+def utcnow() -> datetime.datetime:
+    """Return the current time as an aware datetime in UTC."""
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+def fromisoformat(timestamp: str) -> datetime.datetime:
+    """Parse the given ISO-8601 timestamp to an aware datetime object, assuming UTC if timestamp contains no timezone."""  # noqa: E501
+    dt = dateutil.parser.isoparse(timestamp)
+    if not dt.tzinfo:
+        # assume UTC if naive datetime
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt

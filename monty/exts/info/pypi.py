@@ -21,7 +21,7 @@ from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints, Feature
 from monty.log import get_logger
 from monty.utils.caching import redis_cache
-from monty.utils.helpers import maybe_defer
+from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
 from monty.utils.messages import DeleteButton
@@ -186,9 +186,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         try:
             release_info = json["releases"][info["version"]]
-            embed.timestamp = datetime.datetime.fromisoformat(release_info[0]["upload_time"]).replace(
-                tzinfo=datetime.timezone.utc
-            )
+            embed.timestamp = fromisoformat(release_info[0]["upload_time"])
         except (KeyError, IndexError):
             pass
         else:
@@ -338,8 +336,6 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """
         defer_task = maybe_defer(inter, delay=2)
 
-        current_time = datetime.datetime.now()
-
         # todo: fix typing for async_cached
         result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)
         packages, query_url = result
@@ -353,7 +349,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
-        embed.timestamp = current_time
+        embed.timestamp = utcnow()
         embed.set_footer(text="Requested at:")
         if len(packages) >= max_results:
             description += f"*Only showing the top {max_results} results.*"
