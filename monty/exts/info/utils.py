@@ -27,8 +27,8 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
         timestamp = int(snowflake.created_at.timestamp())
         out = (
             f"**{snowflake.id}** ({timestamp})\n"
+            f"<t:{timestamp}:f> (<t:{timestamp}:R>)."
             f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
-            f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
         )
         return out
 
