@@ -14,17 +14,12 @@ from disnake.ext import commands
 from monty import constants, utils
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 log = get_logger(__name__)
 
 GITHUB_API_GISTS = "https://api.github.com/gists"
-GITHUB_REQUEST_HEADERS = {
-    "Accept": "application/vnd.github.v3+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-}
-if constants.Tokens.github:
-    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
 
 DISCORD_API_VALIDATION = "https://discord.com/api/v10/oauth2/applications/@me"
 DISCORD_REQUEST_HEADERS = {}

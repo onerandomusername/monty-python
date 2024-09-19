@@ -8,18 +8,12 @@ import disnake
 import sqlalchemy as sa
 from disnake.ext import commands
 
-from monty import constants
 from monty.bot import Monty
 from monty.config_metadata import METADATA, ConfigAttrMetadata
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
-
-
-GITHUB_REQUEST_HEADERS = {}
-if GITHUB_TOKEN := constants.Tokens.github:
-    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
 
 
 logger = get_logger(__name__)
