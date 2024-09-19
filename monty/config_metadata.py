@@ -8,7 +8,6 @@ from disnake import Locale
 from disnake.ext import commands
 
 from monty.constants import Feature
-from monty.utils.services import GITHUB_REQUEST_HEADERS
 
 
 if TYPE_CHECKING:
@@ -33,9 +32,7 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
         raise ValueError(err)
 
     try:
-        r = await ctx.bot.http_session.head(
-            f"https://github.com/{arg}", headers=GITHUB_REQUEST_HEADERS, raise_for_status=True
-        )
+        r = await ctx.bot.http_session.head(f"https://github.com/{arg}", raise_for_status=True)
     except aiohttp.ClientResponseError:
         raise commands.UserInputError(
             "Organisation must be a valid GitHub user or Organsation. Please check the provided account exists on"
