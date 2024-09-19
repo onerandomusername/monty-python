@@ -22,6 +22,16 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
+    def _format_snowflake(self, snowflake: disnake.Object) -> str:
+        """Return a formatted Snowflake form."""
+        timestamp = int(snowflake.created_at.timestamp())
+        out = (
+            f"**{snowflake.id}** ({timestamp})\n"
+            f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
+            f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
+        )
+        return out
+
     @commands.slash_command(name="char-info")
     async def charinfo(
         self, ctx: disnake.ApplicationCommandInteraction, characters: commands.String[str, ..., 50]
@@ -83,12 +93,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         lines = []
         for snowflake in snowflakes:
-            timestamp = int(snowflake.created_at.timestamp())
-            lines.append(
-                f"**{snowflake.id}** ({timestamp})\n"
-                f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
-                f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
-            )
+            lines.append(self._format_snowflake(snowflake))
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 
@@ -111,12 +116,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
-        timestamp = int(snowflake.created_at.timestamp())
-        embed.description = (
-            f"**{snowflake.id}** ({timestamp})\n"
-            f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
-            f"Created at <t:{timestamp}:f> (<t:{timestamp}:R>)."
-        )
+        embed.description = self._format_snowflake(snowflake)
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
