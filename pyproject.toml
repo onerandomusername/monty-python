@@ -44,7 +44,7 @@ fakeredis = ['fakeredis']
 black = "^24.8.0"
 ruff = "==0.6.5"
 isort = "^5.13.2"
-pre-commit = "^3.0.4"
+pre-commit = "^3.8.0"
 taskipy = "~=1.13.0"
 python-dotenv = "^1.0.0"
 pyright = "==1.1.278"
