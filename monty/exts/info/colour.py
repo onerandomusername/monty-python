@@ -259,8 +259,8 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
             )
 
         hex_tuple = ImageColor.getrgb(hex_code)
-        if len(hex_tuple) == 4:
-            hex_tuple = hex_tuple[:-1]  # Colour must be RGB. If RGBA, we remove the alpha value
+        if len(hex_tuple) > 3:
+            hex_tuple = hex_tuple[:3]  # Colour must be RGB. If RGBA, we remove the alpha value
         await self.send_colour_response(ctx, hex_tuple, input_colour=hex_code)
 
     @slash_colour.sub_command(name="hex")
@@ -290,6 +290,8 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
             await ctx.send(embed=name_error_embed)
             return
         hex_tuple = ImageColor.getrgb(hex_colour)
+        if len(hex_tuple) > 3:
+            hex_tuple = hex_tuple[:3]
         await self.send_colour_response(ctx, hex_tuple, input_colour=name)
 
     @slash_colour.sub_command(name="name")
@@ -308,6 +310,8 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Create an embed from a randomly chosen colour."""
         hex_colour = random.choice(list(self.colour_mapping.values()))
         hex_tuple = ImageColor.getrgb(f"#{hex_colour}")
+        if len(hex_tuple) > 3:
+            hex_tuple = hex_tuple[:3]
         await self.send_colour_response(ctx, hex_tuple, input_colour=None)
 
     @slash_colour.sub_command(name="random")
