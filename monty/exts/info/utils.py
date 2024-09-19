@@ -22,6 +22,16 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
+    def _format_snowflake(self, snowflake: disnake.Object) -> str:
+        """Return a formatted Snowflake form."""
+        timestamp = int(snowflake.created_at.timestamp())
+        out = (
+            f"**{snowflake.id}** ({timestamp})\n"
+            f"<t:{timestamp}:f> (<t:{timestamp}:R>)."
+            f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
+        )
+        return out
+
     @commands.slash_command(name="char-info")
     async def charinfo(
         self, ctx: disnake.ApplicationCommandInteraction, characters: commands.String[str, ..., 50]
@@ -83,8 +93,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         lines = []
         for snowflake in snowflakes:
-            created_at = int(((snowflake.id >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
-            lines.append(f"**{snowflake.id}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>).")
+            lines.append(self._format_snowflake(snowflake))
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 
@@ -92,7 +101,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
     async def slash_snowflake(
         self,
         inter: disnake.AppCommandInteraction,
-        snowflake: commands.LargeInt,
+        snowflake: disnake.Object,
     ) -> None:
         """
         [BETA] Get creation date of a snowflake.
@@ -106,8 +115,8 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
             name="Snowflake",
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
-        created_at = int(((snowflake >> 22) + disnake.utils.DISCORD_EPOCH) / 1000)
-        embed.description = f"**{snowflake}** ({created_at})\nCreated at <t:{created_at}:f> (<t:{created_at}:R>)."
+
+        embed.description = self._format_snowflake(snowflake)
         components = DeleteButton(inter.author)
         await inter.send(embed=embed, components=components)
 
