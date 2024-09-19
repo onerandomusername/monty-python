@@ -69,7 +69,7 @@ AUTOMATIC_REGEX = re.compile(
 
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull)\/(?P<number>[0-9]+)[^\s]*"
+    r"(?P<type>issues|pull|discussions)\/(?P<number>[0-9]+)[^\s]*"
 )
 
 
@@ -82,6 +82,36 @@ EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     + r"(?P<user_id>[0-9]+):(?P<current_state>0|1):"
     r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
+
+DISCUSSION_GRAPHQL_QUERY = gql.gql(
+    """
+    query getDiscussion($user: String!, $repository: String!, $number: Int!) {
+        repository(followRenames: true, owner: $user, name: $repository) {
+            discussion(number: $number) {
+                id
+                html_url: url
+                title
+                body
+                created_at: createdAt
+                user: author {
+                    login
+                    html_url: url
+                    avatar_url: avatarUrl
+                }
+                labels(first: 20) {
+                    nodes {
+                        name
+                    }
+                }
+                answer {
+                    id
+                }
+            }
+        }
+    }
+"""
+)
+
 log = get_logger(__name__)
 
 
@@ -123,6 +153,7 @@ class FoundIssue:
     source_format: IssueSourceFormat
     url_fragment: str = ""
     user_url: Optional[str] = None
+    is_discussion: Optional[bool] = None  # `None` means uncertain
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -502,41 +533,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         user: str,
         *,
         allow_discussions: bool = False,
+        is_discussion: Optional[bool] = None,
     ) -> Union[IssueState, FetchError]:
         """
         Retrieve an issue from a GitHub repository.
 
         Returns IssueState on success, FetchError on failure.
         """
-        url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
+        if not is_discussion:  # not a discussion, or uncertain
+            url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
+            json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
 
-        json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
+            if "message" in json_data:
+                is_discussion = True  # if we got an error, assume it may be a discussion
 
-        is_discussion: bool = False
-        if "message" in json_data:
+        if is_discussion:
             # fetch with gql
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
-            query = gql.gql(
-                """
-                query getDiscussion($user: String!, $repository: String!, $number: Int!) {
-                    repository(followRenames: true, owner: $user, name: $repository) {
-                        discussion(number: $number) {
-                            id
-                            title
-                            answer {
-                                id
-                            }
-                            url
-                        }
-                    }
-                }
-                """
-            )
+
             try:
                 json_data = await self.gql.execute_async(
-                    query,
+                    DISCUSSION_GRAPHQL_QUERY,
                     variable_values={
                         "user": user,
                         "repository": repository,
@@ -547,7 +566,10 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 return FetchError(-1, "Issue not found.")
 
             json_data = json_data["repository"]["discussion"]
-            is_discussion = True
+
+            # shuffle fields around to match issue json structure
+            json_data["labels"] = (json_data.get("labels") or {}).get("nodes") or []
+
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
         # of if the pull was merged or not is returned in the json body under pull_request.merged_at
@@ -566,7 +588,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             else:
                 emoji = constants.Emojis.pull_request_open
         elif is_discussion:
-            issue_url = json_data["url"]
+            issue_url = json_data["html_url"]
             if json_data.get("answer"):
                 emoji = constants.Emojis.discussion_answered
             else:
@@ -590,7 +612,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             issue_url,
             json_data.get("title", ""),
             emoji,
-            raw_json=None if is_discussion else json_data,
+            raw_json=json_data,
         )
 
     def format_embed_expanded_issue(
@@ -603,6 +625,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raise TypeError(err)
         if not issue.raw_json:
             raise ValueError("the provided issue does not have its raw json payload")
+
+        # NOTE: the fields used here should be available in `DISCUSSION_GRAPHQL_QUERY` as well
 
         json_data = issue.raw_json
         embed = disnake.Embed(colour=disnake.Colour(0xFFFFFF))
@@ -809,6 +833,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     source_format=source_format,
                     url_fragment=fragment,
                     user_url=str(url) if url is not None else None,
+                    # use groupdict since this group only exists on one of the two regexes
+                    is_discussion=match.groupdict().get("type") == "discussions",
                 )
             )
 
@@ -1097,6 +1123,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 repo_issue.repository,
                 repo_issue.organisation,
                 allow_discussions=await self.bot.guild_has_feature(message.guild.id, Feature.GITHUB_DISCUSSIONS),
+                is_discussion=repo_issue.is_discussion,
             )
             if isinstance(result, IssueState):
                 links.append(result)
@@ -1182,6 +1209,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 repo_issue.repository,
                 repo_issue.organisation,
                 allow_discussions=await self.bot.guild_has_feature(after.guild.id, Feature.GITHUB_DISCUSSIONS),
+                is_discussion=repo_issue.is_discussion,
             )
             if isinstance(result, IssueState):
                 links.append(result)
