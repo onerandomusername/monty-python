@@ -12,10 +12,10 @@ services:
       POSTGRES_PASSWORD: monty
       POSTGRES_USER: monty
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U monty"]
-      interval: 2s
+      test: ["CMD-SHELL", "pg_isready -U monty -d monty"]
+      interval: 1s
       timeout: 1s
-      retries: 5
+      retries: 10
 
   redis:
     << : *restart_policy
@@ -26,6 +26,11 @@ services:
       --save 60 1
     volumes:
       - redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(redis-cli ping) = 'PONG' ]"]
+      interval: 1s
+      timeout: 1s
+      retries: 5
 
   snekbox:
     << : *restart_policy
@@ -51,8 +56,11 @@ services:
     tty: true
 
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
 
     environment:
       - REDIS_URI=redis://redis:6379
