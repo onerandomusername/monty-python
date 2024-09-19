@@ -35,7 +35,7 @@ async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
         r = await ctx.bot.http_session.head(f"https://github.com/{arg}", raise_for_status=True)
     except aiohttp.ClientResponseError:
         raise commands.UserInputError(
-            "Organisation must be a valid GitHub user or Organsation. Please check the provided account exists on"
+            "Organisation must be a valid GitHub user or organisation. Please check the provided account exists on"
             " GitHub and try again."
         ) from None
     else:
