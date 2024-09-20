@@ -18,7 +18,10 @@ from disnake.ext import commands
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
-from monty import log, monkey_patches
+####################
+# NOTE: do not import any other modules before the `log.setup()` call
+####################
+from monty import log
 
 
 sentry_logging = LoggingIntegration(
@@ -36,6 +39,10 @@ sentry_sdk.init(
 )
 
 log.setup()
+
+
+from monty import monkey_patches  # noqa: E402  # we need to set up logging before importing anything else
+
 
 # On Windows, the selector event loop is required for aiodns.
 if os.name == "nt":
