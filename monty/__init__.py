@@ -18,6 +18,9 @@ from disnake.ext import commands
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
+####################
+# NOTE: do not import any other modules before the `log.setup()` call
+####################
 from monty import log
 
 
