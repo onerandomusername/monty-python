@@ -227,6 +227,7 @@ class Stats(NamedTuple):
 
 class Tokens(NamedTuple):
     github = environ.get("GITHUB_TOKEN")
+    github_secondary = environ.get("GITHUB_TOKEN_SECONDARY")
 
 
 class RedisConfig(NamedTuple):

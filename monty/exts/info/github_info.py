@@ -33,7 +33,7 @@ from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
-from monty.utils.services import GITHUB_REQUEST_HEADERS
+from monty.utils.services import GITHUB_REQUEST_HEADERS, GITHUB_REQUEST_HEADERS_SECONDARY
 
 
 KT = TypeVar("KT")
@@ -139,6 +139,17 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
     }
 """
 )
+ORG_DISCUSSION_REPO_GRAPHQL_QUERY = gql.gql(
+    """
+    query getOrgDiscussionRepo($org: String!) {
+        organization(login: $org) {
+            organizationDiscussionsRepository {
+                name
+            }
+        }
+    }
+"""
+)
 
 log = get_logger(__name__)
 
@@ -221,11 +232,8 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(
-            url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS, ssl=True
-        )
-
-        self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
+        self.gql = self._create_gql_client(GITHUB_REQUEST_HEADERS)
+        self.gql_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
@@ -246,6 +254,12 @@ class GithubInfo(
         # todo: cache the schema in redis and load from there
         async with self.gql:
             pass
+        async with self.gql_secondary:
+            pass
+
+    def _create_gql_client(self, headers: Dict[str, str]) -> gql.Client:
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers, ssl=True)
+        return gql.Client(transport=transport, fetch_schema_from_transport=True)
 
     async def _fetch_and_update_ratelimits(self) -> None:
         # this is NOT using fetch_data because we need to check the status code.
@@ -560,6 +574,11 @@ class GithubInfo(
 
         Returns IssueState on success, FetchError on failure.
         """
+        # shortcut directly to org-level discussions if special name
+        is_org_level = user == "orgs"
+        if is_org_level:
+            is_discussion = True
+
         if not is_discussion:  # not a discussion, or uncertain
             url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
             json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
@@ -572,6 +591,24 @@ class GithubInfo(
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
+
+            if is_org_level:
+                # in this case, the url is "github.com/orgs/<org>/discussions/..."
+                user = repository
+                try:
+                    json_data = await self.gql_secondary.execute_async(
+                        ORG_DISCUSSION_REPO_GRAPHQL_QUERY,
+                        variable_values={
+                            "org": user,
+                        },
+                    )
+                except (TransportError, TransportQueryError):
+                    return FetchError(-1, "Issue not found.")
+
+                json_repo = json_data["organization"]["organizationDiscussionsRepository"]
+                if not json_repo:
+                    return FetchError(404, "Issue not found.")
+                repository = json_repo["name"]
 
             try:
                 json_data = await self.gql.execute_async(
@@ -1070,7 +1107,7 @@ class GithubInfo(
             if expected_url != (html_url := comment["html_url"]):
                 # this is a warning as its the best way I currently have to track how often the wrong url is used
                 log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
-                continue
+                # continue  # FIXME: disabled for now, since it messes with `github.com/orgs/<org>/discussions`
 
             body = self.render_github_markdown(comment["body"])
             e = disnake.Embed(
