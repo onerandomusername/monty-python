@@ -122,11 +122,10 @@ class ErrorHandler(
     async def handle_bot_missing_perms(self, ctx: AnyContext, error: commands.BotMissingPermissions) -> None:
         """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""  # noqa: E501
         embed = self.error_embed("Permissions Failure", str(error))
-        bot_perms = ctx.channel.permissions_for(ctx.me)
+        bot_perms = ctx.app_permissions if isinstance(ctx, disnake.Interaction) else ctx.channel.permissions_for(ctx.me)
         not_responded = True  # noqa: F841
         if bot_perms >= disnake.Permissions(send_messages=True, embed_links=True):
             await ctx.send_error(embeds=[embed])
-            not_responded = False  # noqa: F841
         elif bot_perms >= disnake.Permissions(send_messages=True):
             # make a message as similar to the embed, using as few permissions as possible
             # this is the only place we send a standard message instead of an embed
@@ -135,11 +134,11 @@ class ErrorHandler(
                 "**Permissions Failure**\n\nI am missing the permissions required to properly execute your command."
             )
             # intentionally not setting responded to True, since we want to attempt to dm the user
-            logger.warning(
+            logger.info(
                 f"Missing partial required permissions for {ctx.channel}. I am able to send messages, but not embeds."
             )
         else:
-            logger.error(f"Unable to send an error message to channel {ctx.channel}")
+            logger.info(f"Unable to send an error message to channel {ctx.channel}")
 
     async def handle_check_failure(
         self, ctx: AnyContext, error: commands.CheckFailure

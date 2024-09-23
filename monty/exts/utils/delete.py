@@ -43,11 +43,7 @@ class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if not permissions.value & user_permissions.value:
                 await inter.response.send_message("Sorry, this delete button is not for you!", ephemeral=True)
                 return
-
-        if (
-            not hasattr(inter.channel, "guild")
-            or not (myperms := inter.channel.permissions_for(inter.me)).read_messages
-        ):
+        if not hasattr(inter.channel, "guild") or not (myperms := inter.app_permissions).read_messages:
             await inter.response.defer()
             await inter.delete_original_message()
             return
