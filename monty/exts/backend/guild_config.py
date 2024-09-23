@@ -89,7 +89,6 @@ class Configuration(
     commands.Cog,
     name="Config Manager",
     slash_command_attrs={
-        "dm_permission": False,
         "default_member_permissions": disnake.Permissions(manage_guild=True),
     },
 ):
@@ -135,7 +134,7 @@ class Configuration(
         )
         raise BotAccountRequired(msg)
 
-    @commands.slash_command()
+    @commands.slash_command(integration_types={disnake.ApplicationIntegrationType.guild})
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
         """[BETA] Manage per-guild configuration for Monty."""
         pass
