@@ -14,8 +14,9 @@ permissions:
 
 jobs:
   status_embed:
-    name:  Send Status Embed to Discord
+    name: Send Status Embed to Discord
     runs-on: ubuntu-latest
+    if: ${{ !endsWith(github.actor, "[bot]") }}
 
     steps:
       # Process the artifact uploaded in the `pull_request`-triggered workflow:
