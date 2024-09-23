@@ -334,7 +334,7 @@ class Monty(commands.Bot):
         # the feature's enabled status is None, so we should check the guild
         # support the guild being None to make it easier to use
         if guild is None:
-            return False
+            return bool(feature_instance and feature_instance.enabled)
         if not isinstance(guild, int):
             guild = guild.id
 
