@@ -35,8 +35,10 @@ MAX_LEN = 30_000
 class CodeBlockActions(
     commands.Cog,
     name="Code Block Actions",
-    slash_command_attrs={"dm_permission": False},
-    message_command_attrs={"dm_permission": False},
+    message_command_attrs={
+        "context": {disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
+        "integration_types": {disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    },
 ):
     """Adds automatic buttons to codeblocks if they match commands."""
 
@@ -205,7 +207,14 @@ class CodeBlockActions(
         components.append(disnake.ui.Button(label="View original message", url=message.jump_url))
         await ctx.send(msg, components=components, reference=reference, allowed_mentions=mentions)
 
-    @commands.slash_command(name="paste", description="Paste a message to the workbin.")
+    @commands.slash_command(
+        name="paste",
+        description="Paste a message to the workbin.",
+        contexts={
+            disnake.InteractionContextType.guild,
+        },
+        integration_types={disnake.ApplicationIntegrationType.guild},
+    )
     async def slash_paste(
         self,
         inter: disnake.ApplicationCommandInteraction,

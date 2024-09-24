@@ -172,7 +172,7 @@ class DocView(DeleteView):
                 c.disabled = True
 
 
-class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permission": False}):
+class DocCog(commands.Cog, name="Documentation"):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Monty) -> None:
@@ -229,13 +229,12 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
 
     def _get_default_completion(
         self,
-        inter: disnake.ApplicationCommandInteraction,
-        guild: disnake.Guild = None,
+        guild_id: int = None,
     ) -> list[str]:
-        if guild:
-            if guild.id == constants.Guilds.disnake:
+        if guild_id:
+            if guild_id == constants.Guilds.disnake:
                 return ["disnake", "disnake.ext.commands", "disnake.ext.tasks"]
-            elif guild.id == constants.Guilds.nextcord:
+            if guild_id == constants.Guilds.nextcord:
                 return ["nextcord", "nextcord.ext.commands", "nextcord.ext.tasks"]
 
         return [
@@ -555,7 +554,15 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """Look up documentation for Python symbols."""
         await self._docs_get_command(ctx, search=search)
 
-    @commands.slash_command(name="docs", dm_permission=False)
+    @commands.slash_command(
+        name="docs",
+        contexts={
+            disnake.InteractionContextType.guild,
+            disnake.InteractionContextType.private_channel,
+            disnake.InteractionContextType.bot_dm,
+        },
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""
         pass
@@ -699,9 +706,9 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
         if not query:
-            return self._get_default_completion(inter, inter.guild)
+            return self._get_default_completion(inter.guild_id)
         # ----------------------------------------------------
-        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        guild_id = inter.guild_id
         blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()
@@ -759,7 +766,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         query: search query
         """
         results = {}
-        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        guild_id = inter.guild_id
         blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()

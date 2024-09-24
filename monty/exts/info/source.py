@@ -238,7 +238,15 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
 
         await send_message(embed, components=components)
 
-    @commands.slash_command(name="source")
+    @commands.slash_command(
+        name="source",
+        contexts={
+            disnake.InteractionContextType.guild,
+            disnake.InteractionContextType.private_channel,
+            disnake.InteractionContextType.bot_dm,
+        },
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str) -> None:
         """
         Get the source of my commands and cogs.

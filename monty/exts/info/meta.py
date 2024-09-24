@@ -83,7 +83,15 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         self._app_info_last_fetched: Optional[datetime] = None
 
-    @commands.slash_command(name="monty", dm_permission=True)
+    @commands.slash_command(
+        name="monty",
+        contexts={
+            disnake.InteractionContextType.guild,
+            disnake.InteractionContextType.private_channel,
+            disnake.InteractionContextType.bot_dm,
+        },
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
         pass

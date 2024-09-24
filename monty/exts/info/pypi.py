@@ -214,7 +214,15 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         return embed
 
-    @commands.slash_command(name="pypi")
+    @commands.slash_command(
+        name="pypi",
+        contexts={
+            disnake.InteractionContextType.guild,
+            disnake.InteractionContextType.private_channel,
+            disnake.InteractionContextType.bot_dm,
+        },
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Useful commands for info about packages on PyPI."""
         pass

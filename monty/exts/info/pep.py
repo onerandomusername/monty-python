@@ -208,7 +208,11 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
         ]
         await inter.send(embed=embed, components=components)
 
-    @commands.slash_command(name="pep")
+    @commands.slash_command(
+        name="pep",
+        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def pep_command(
         self, inter: disnake.ApplicationCommandInteraction, number: int, header: Optional[str] = None
     ) -> None:

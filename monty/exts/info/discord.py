@@ -39,7 +39,14 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-    @commands.slash_command()
+    @commands.slash_command(
+        contexts={
+            disnake.InteractionContextType.guild,
+            disnake.InteractionContextType.private_channel,
+            disnake.InteractionContextType.bot_dm,
+        },
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def discord(self, inter: disnake.CommandInteraction) -> None:
         """Commands that interact with discord."""
         pass

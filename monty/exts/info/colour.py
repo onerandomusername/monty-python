@@ -106,7 +106,11 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         except ValueError:
             await invoke_help_command(ctx)
 
-    @commands.slash_command(name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}))
+    @commands.slash_command(
+        name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}),
+        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def slash_colour(self, inter: disnake.CommandInteraction) -> None:
         """Show information about a colour."""
         pass

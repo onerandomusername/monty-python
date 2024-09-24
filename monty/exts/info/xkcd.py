@@ -38,7 +38,11 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
             else:
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
-    @commands.slash_command(name="xkcd")
+    @commands.slash_command(
+        name="xkcd",
+        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
+        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+    )
     async def fetch_xkcd_comics(
         self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None
     ) -> None:
