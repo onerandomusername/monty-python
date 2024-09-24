@@ -23,7 +23,8 @@ CODE_BLOCK_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
-GH_ISSUE_RE = re.compile(r"\s(?:GH-|#)(\d+)")
+# references should be preceded by a non-word character (or element start)
+GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.I)
 
 
 def remove_codeblocks(content: str) -> str:
