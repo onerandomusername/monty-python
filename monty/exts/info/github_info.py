@@ -789,11 +789,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if refresh:
             await self._fetch_and_update_ratelimits()
 
-        for resource_name, rate_limit in monty.utils.services.GITHUB_RATELIMITS.items():
+        for i, (resource_name, rate_limit) in enumerate(monty.utils.services.GITHUB_RATELIMITS.items()):
             embed_value = ""
             for name, value in attrs.asdict(rate_limit).items():
                 embed_value += f"**`{name}`**: {value}\n"
-            embed.add_field(name=resource_name, value=embed_value, inline=False)
+            embed.add_field(name=resource_name, value=embed_value, inline=True)
+
+            # add a "newline" after every 3 fields
+            if i % 3 == 2:
+                embed.add_field("", "", inline=False)
 
         if len(embed.fields) == 0 or not (random.randint(0, 7) % 4):
             embed.set_footer(text="GitHub moment.")
