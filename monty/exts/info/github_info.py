@@ -799,7 +799,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if i % 3 == 2:
                 embed.add_field("", "", inline=False)
 
-        if len(embed.fields) == 0 or not (random.randint(0, 7) % 4):
+        if len(embed.fields) == 0 or random.randint(0, 3) == 0:
             embed.set_footer(text="GitHub moment.")
         await ctx.send(
             embed=embed,
