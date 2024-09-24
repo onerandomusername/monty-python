@@ -134,7 +134,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def image(self, src: str, alt: str = None, title: str = None) -> str:
         """Return a link to the provided image."""
-        return self.link(src, text="!image", title=alt)
+        return "!" + self.link(src, text="image", title=alt)
 
     def emphasis(self, text: str) -> str:
         """Return italiced text."""
@@ -151,9 +151,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     if constants.DiscordFeatures.extended_markdown:
 
         def heading(self, text: str, level: int) -> str:
-            """Format the heading to be bold if its large enough, and underline it."""
+            """Format the heading normally if it's large enough, or underline it."""
             if level in (1, 2, 3):
-                return "#" * (4 - level) + f" {text.strip()}\n"
+                return "#" * level + f" {text.strip()}\n"
             else:
                 return f"__{text}__\n"
 
@@ -170,6 +170,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """No op."""
         return ""
 
+    # this is for forced breaks like `text  \ntext`; Discord
     def linebreak(self) -> str:
         """Return a new line."""
         return "\n"
@@ -183,8 +184,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return ""
 
     def block_text(self, text: str) -> str:
-        """Handle text in lists like normal text."""
-        return self.text(text)
+        """Return text in lists as-is."""
+        return text + "\n"
 
     def block_code(self, code: str, info: str = None) -> str:
         """Put the code in a codeblock."""
