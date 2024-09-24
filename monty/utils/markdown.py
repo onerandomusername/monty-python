@@ -231,10 +231,12 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
         lines = text.rstrip().splitlines()
-        indent = "\u2001" * (level - 1)
 
-        result: list[str] = [f"{indent}- {lines[0]}"]
+        prefix = "- "
+        result: list[str] = [prefix + lines[0]]
 
+        # just add one level of indentation; any outer lists will indent this again as needed
+        indent = " " * len(prefix)
         in_codeblock = "```" in lines[0]
         for line in lines[1:]:
             if not line.strip():
@@ -246,8 +248,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
                 # don't indent lines inside codeblocks
                 result.append(line)
             else:
-                # the space here should be about the same width as `- `
-                result.append(f"{indent}\u2007{line}")
+                result.append(indent + line)
 
             # check this at the end, since the first codeblock line should generally be indented
             if "```" in line:
