@@ -17,7 +17,7 @@ from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
-from monty.utils.services import GITHUB_REQUEST_HEADERS
+from monty.utils.services import GITHUB_REQUEST_HEADERS as DEFAULT_GITHUB_REQUEST_HEADERS
 
 
 if TYPE_CHECKING:
@@ -55,6 +55,9 @@ LANGUAGE_MAPPING: dict[str, str] = {
     "pyi": "py",
 }
 
+GITHUB_REQUEST_HEADERS = DEFAULT_GITHUB_REQUEST_HEADERS.copy()
+GITHUB_REQUEST_HEADERS["Accept"] = "application/vnd.github.v3.raw"
+
 
 class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
     """
@@ -79,7 +82,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         # make the request with the github_info cog if it is loaded
-        if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GithubInfo")):
+        if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GitHub Information")):
             cog: GithubInfo
             return await cog.fetch_data(
                 url,
@@ -175,6 +178,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
                 file_contents = await self._fetch_response(
                     gist_json["files"][gist_file]["raw_url"],
                     "text",
+                    headers=GITHUB_REQUEST_HEADERS,
                 )
                 return self._snippet_to_codeblock(file_contents, gist_file, start_line, end_line)
         return ""
