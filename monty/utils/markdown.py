@@ -184,8 +184,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return ""
 
     def block_text(self, text: str) -> str:
-        """Return text in lists as-is."""
-        return text
+        """Handle text in lists like normal text."""
+        return self.text(text)
 
     def block_code(self, code: str, info: str = None) -> str:
         """Put the code in a codeblock."""
