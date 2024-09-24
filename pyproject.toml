@@ -9,7 +9,7 @@ license = "MIT"
 python = "~=3.10"
 aiodns = "~=3.2"
 aiohttp = { version = "~=3.10.5", extras = ['speedups'] }
-yarl = "^1.11.1" # transitive dependency of aiohttp
+yarl = "^1.12.1" # transitive dependency of aiohttp
 arrow = "~=1.3.0"
 attrs = "^24.2.0"
 base65536 = "^0.1.1"
@@ -20,7 +20,7 @@ coloredlogs = "~=15.0"
 disnake = { version = '~=2.9.2' }
 orjson = "^3.10.7"
 fakeredis = "^2.24.1"
-gql = "^3.4.0"
+gql = "^3.5.0"
 lxml = "^4.9.1"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
@@ -33,7 +33,7 @@ rapidfuzz = "^2.13.2"
 sentry-sdk = "^2.14.0"
 statsd = "^3.3.0"
 # database dependencies
-alembic = "^1.13.2"
+alembic = "^1.13.3"
 asyncpg = "^0.29.0"
 SQLAlchemy = { version = "~=2.0.35", extras = ['asyncio'] }
 
