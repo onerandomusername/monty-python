@@ -44,7 +44,7 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         However, this does allow slash commands in DMs as those are now controlled via
         the dm_permisions attribute on each app command.
         """
-        if inter.guild or not inter.guild_id:
+        if not (inter.guild and inter.guild.unavailable or not inter.guild.me):
             return True
 
         invite = self._bot_invite_link.format(guild_id=inter.guild_id)
