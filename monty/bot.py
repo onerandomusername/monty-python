@@ -378,7 +378,7 @@ class Monty(commands.Bot):
             await self.db_engine.dispose()
 
         if self.redis_session:
-            await self.redis_session.close(close_connection_pool=True)
+            await self.redis_session.aclose(close_connection_pool=True)
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
