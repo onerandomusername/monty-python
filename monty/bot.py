@@ -212,7 +212,7 @@ class Monty(commands.Bot):
             return aiohttp.ClientRequest  # default
 
         proxy_url = yarl.URL(proxy)
-        verify_ssl = not (proxy and proxy.startswith("http://"))
+        verify_ssl = not proxy.startswith("http://")
 
         class ProxyClientRequest(aiohttp.ClientRequest):
             def __init__(self, *args: Any, **kwargs: Any):
