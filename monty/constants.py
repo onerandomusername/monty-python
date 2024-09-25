@@ -42,6 +42,7 @@ class Client:
     extensions = environ.get("BOT_EXTENSIONS", None) and {
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")  # type: ignore reportOptionalMemberAccess
     }
+    proxy = environ.get("BOT_PROXY_URL", "") or None
     support_server = "mPscM4FjWB"
     invite_permissions = disnake.Permissions(
         view_channel=True,

@@ -60,7 +60,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, **kwargs) -> None:
+    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str = None, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
@@ -70,7 +70,7 @@ class Monty(commands.Bot):
         self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix, session=self.redis_session)
         self.redis_cache_key = constants.Client.redis_prefix
 
-        self.create_http_session()
+        self.create_http_session(proxy=proxy)
 
         self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
         self.db_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -94,7 +94,7 @@ class Monty(commands.Bot):
         """Alias of `bot.db_session`."""
         return self.db_session
 
-    def create_http_session(self) -> None:
+    def create_http_session(self, proxy: str = None) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
         trace_configs = []
 
@@ -179,12 +179,21 @@ class Monty(commands.Bot):
         user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
             sys.version_info, constants.Client.version, constants.Source.github
         )
+
         self.http_session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(resolver=aiohttp.AsyncResolver(), family=socket.AF_INET),
+            connector=aiohttp.TCPConnector(
+                resolver=aiohttp.AsyncResolver(),
+                family=socket.AF_INET,
+                verify_ssl=not bool(proxy and proxy.startswith("http://")),
+            ),
             trace_configs=trace_configs,
             headers=multidict.CIMultiDict({"User-agent": user_agent}),
         )
-        self.http_session._request = functools.partial(_request, self.http_session)  # type: ignore
+        if proxy:
+            partial_request = functools.partial(_request, self.http_session, proxy=proxy)
+        else:
+            partial_request = functools.partial(_request, self.http_session)
+        self.http_session._request = partial_request
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
