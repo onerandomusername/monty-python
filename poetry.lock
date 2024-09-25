@@ -1475,17 +1475,18 @@ files = [
 
 [[package]]
 name = "msgpack-types"
-version = "0.4.0"
+version = "0.5.0"
 description = "Type stubs for msgpack"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "msgpack_types-0.4.0-py3-none-any.whl", hash = "sha256:ee8b4eb14049639d096e570ea3d3a74cf1534d6b82a91dae9c8cbf917d983047"},
-    {file = "msgpack_types-0.4.0.tar.gz", hash = "sha256:01d32665d3c7ccebe2406fd63863287f8645525c4ddd25b915322cffcaf5bcc7"},
+    {file = "msgpack_types-0.5.0-py3-none-any.whl", hash = "sha256:8b633ed75e495a555fa0615843de559a74b1d176828d59bb393d266e51f6bda7"},
+    {file = "msgpack_types-0.5.0.tar.gz", hash = "sha256:aebd1b8da23f8f9966d66ebb1a43bd261b95751c6a267bd21a124d2ccac84201"},
 ]
 
 [package.dependencies]
 msgpack = ">=1.1.0,<1.2.0"
+typing-extensions = ">=4.6.0"
 
 [[package]]
 name = "mslex"
@@ -2618,4 +2619,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.10"
-content-hash = "cbf148a0cfb72be7e07740b96990b9b94eeb6f53a202c3c00f2e7f26c66932f0"
+content-hash = "f6576a1f145bbdf9091c1be90eeabaf27af85118e5279d06f9907a28ae4fece0"
