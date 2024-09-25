@@ -202,7 +202,7 @@ class Monty(commands.Bot):
         return aiohttp.TCPConnector(
             resolver=aiohttp.AsyncResolver(),
             family=socket.AF_INET,
-            verify_ssl=not bool(proxy and proxy.startswith("http://")),
+            ssl=not (proxy and proxy.startswith("http://")),
         )
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
