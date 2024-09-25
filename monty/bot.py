@@ -18,6 +18,7 @@ import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
+import yarl
 from disnake.ext import commands
 from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -186,16 +187,16 @@ class Monty(commands.Bot):
             sys.version_info, constants.Client.version, constants.Source.github
         )
 
+        # this is also used by gql
+        self.http_request_class = self._create_http_request_class(proxy=proxy)
+
         self.http_session = aiohttp.ClientSession(
             connector=self.create_connector(proxy=proxy),
+            request_class=self.http_request_class,
             trace_configs=trace_configs,
             headers=multidict.CIMultiDict({"User-agent": user_agent}),
         )
-        if proxy:
-            partial_request = functools.partial(_request, self.http_session, proxy=proxy)
-        else:
-            partial_request = functools.partial(_request, self.http_session)
-        self.http_session._request = partial_request
+        self.http_session._request = functools.partial(_request, self.http_session)
 
     def create_connector(self, proxy: str = None) -> aiohttp.BaseConnector:
         """Create a TCPConnector, changing the ssl setting based on the proxy value."""
@@ -204,6 +205,22 @@ class Monty(commands.Bot):
             family=socket.AF_INET,
             ssl=not (proxy and proxy.startswith("http://")),
         )
+
+    def _create_http_request_class(self, proxy: str = None) -> type[aiohttp.ClientRequest]:
+        """Create a ClientRequest type, which inserts the proxy into every request's args (if set)."""
+        if not proxy:
+            return aiohttp.ClientRequest  # default
+
+        proxy_url = yarl.URL(proxy)
+        verify_ssl = not (proxy and proxy.startswith("http://"))
+
+        class ProxyClientRequest(aiohttp.ClientRequest):
+            def __init__(self, *args: Any, **kwargs: Any):
+                kwargs["proxy"] = proxy_url
+                kwargs["ssl"] = verify_ssl
+                super().__init__(*args, **kwargs)
+
+        return ProxyClientRequest
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
