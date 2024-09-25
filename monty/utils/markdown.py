@@ -135,7 +135,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def image(self, src: str, alt: str = None, title: str = None) -> str:
         """Return a link to the provided image."""
-        return self.link(src, text="!image", title=alt)
+        return "!" + self.link(src, text="image", title=alt)
 
     def emphasis(self, text: str) -> str:
         """Return italiced text."""
@@ -152,9 +152,9 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     if constants.DiscordFeatures.extended_markdown:
 
         def heading(self, text: str, level: int) -> str:
-            """Format the heading to be bold if its large enough, and underline it."""
+            """Format the heading normally if it's large enough, or underline it."""
             if level in (1, 2, 3):
-                return "#" * (4 - level) + f" {text.strip()}\n"
+                return "#" * level + f" {text.strip()}\n"
             else:
                 return f"__{text}__\n"
 
@@ -171,6 +171,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """No op."""
         return ""
 
+    # this is for forced breaks like `text  \ntext`; Discord
     def linebreak(self) -> str:
         """Return a new line."""
         return "\n"
@@ -184,8 +185,8 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         return ""
 
     def block_text(self, text: str) -> str:
-        """Handle text in lists like normal text."""
-        return self.text(text)
+        """Return text in lists as-is."""
+        return text + "\n"
 
     def block_code(self, code: str, info: str = None) -> str:
         """Put the code in a codeblock."""
@@ -231,31 +232,28 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def list_item(self, text: str, level: int) -> str:
         """Show the list, indented to its proper level."""
         lines = text.rstrip().splitlines()
-        indent = "\u2001" * (level - 1)
 
-        result: list[str] = [f"{indent}- {lines[0]}"]
-        in_codeblock = False
+        prefix = "- "
+        result: list[str] = [prefix + lines[0]]
+
+        # just add one level of indentation; any outer lists will indent this again as needed
+        indent = " " * len(prefix)
+        in_codeblock = "```" in lines[0]
         for line in lines[1:]:
-            if "`" * 3 in line:  # very very very rudimentary codeblock detection
-                if in_codeblock:
-                    in_codeblock = False
-                    if line.endswith("\n"):
-                        line = line[:-1]
-                    result.append(line)
-                    continue
-                else:
-                    in_codeblock = True
-                line = line.lstrip()
             if not line.strip():
-                if in_codeblock:
-                    continue
+                # whitespace-only lines can be rendered as empty
                 result.append("")
-            elif in_codeblock:
-                result.append(line)
                 continue
+
+            if in_codeblock:
+                # don't indent lines inside codeblocks
+                result.append(line)
             else:
-                # the space here should be about the same width as `- `
-                result.append(f"{indent}\u2007{line}")
+                result.append(indent + line)
+
+            # check this at the end, since the first codeblock line should generally be indented
+            if "```" in line:
+                in_codeblock = not in_codeblock
 
         return "\n".join(result) + "\n"
 
