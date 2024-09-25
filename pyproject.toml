@@ -29,7 +29,7 @@ redis = { version = "^5.0.8", extras = ['hiredis'] }
 Pillow = "^10.4"
 psutil = "^5.9.8"
 python-dateutil = "^2.9.0"
-rapidfuzz = "^2.13.2"
+rapidfuzz = "^3.10.0"
 sentry-sdk = "^2.14.0"
 statsd = "^3.3.0"
 # database dependencies
