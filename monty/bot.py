@@ -64,6 +64,12 @@ class Monty(commands.Bot):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warn("registering as test_guilds")
+
+        if proxy:
+            kwargs["proxy"] = proxy  # pass proxy to disnake client
+            if "connector" not in kwargs:
+                kwargs["connector"] = self.create_connector(proxy=proxy)
+
         super().__init__(**kwargs)
 
         self.redis_session = redis_session
@@ -181,11 +187,7 @@ class Monty(commands.Bot):
         )
 
         self.http_session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(
-                resolver=aiohttp.AsyncResolver(),
-                family=socket.AF_INET,
-                verify_ssl=not bool(proxy and proxy.startswith("http://")),
-            ),
+            connector=self.create_connector(proxy=proxy),
             trace_configs=trace_configs,
             headers=multidict.CIMultiDict({"User-agent": user_agent}),
         )
@@ -194,6 +196,14 @@ class Monty(commands.Bot):
         else:
             partial_request = functools.partial(_request, self.http_session)
         self.http_session._request = partial_request
+
+    def create_connector(self, proxy: str = None) -> aiohttp.BaseConnector:
+        """Create a TCPConnector, changing the ssl setting based on the proxy value."""
+        return aiohttp.TCPConnector(
+            resolver=aiohttp.AsyncResolver(),
+            family=socket.AF_INET,
+            verify_ssl=not bool(proxy and proxy.startswith("http://")),
+        )
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
