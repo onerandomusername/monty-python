@@ -63,11 +63,7 @@ def check_user_read_perms(user: disnake.User, target_message: disnake.Message) -
     return permissions.read_messages and permissions.read_message_history
 
 
-class Bookmark(
-    commands.Cog,
-    slash_command_attrs={"dm_permission": False},
-    message_command_attrs={"dm_permission": False},
-):
+class Bookmark(commands.Cog):
     """Creates personal bookmarks by relaying a message link to the user's DMs."""
 
     def __init__(self, bot: Monty) -> None:
@@ -230,7 +226,12 @@ class Bookmark(
             target_message,
         )
 
-    @commands.slash_command(name="bm", description="Bookmark a message.")
+    @commands.slash_command(
+        name="bm",
+        description="Bookmark a message.",
+        contexts={disnake.InteractionContextType.guild},
+        integration_types={disnake.ApplicationIntegrationType.guild},
+    )
     async def bookmark_slash(
         self,
         inter: disnake.ApplicationCommandInteraction,
@@ -245,11 +246,19 @@ class Bookmark(
         message: A message to bookmark. This can be a link or id.
         title: An optional title for your direct message.
         """
-        inter.channel_id = inter.channel.id
+        # this requires the bot user
+        assert inter.guild and not inter.guild.unavailable
         await self.bookmark(inter, message, title=title)
 
-    @commands.message_command(name="Bookmark")
-    async def message_bookmark(self, inter: disnake.MessageCommandInteraction) -> None:
+    @commands.message_command(
+        name="Bookmark",
+        contexts={disnake.InteractionContextType.guild},
+        integration_types={disnake.ApplicationIntegrationType.guild},
+    )
+    async def message_bookmark(
+        self,
+        inter: disnake.MessageCommandInteraction,
+    ) -> None:
         """Bookmark a message with a message command."""
         components = disnake.ui.TextInput(
             style=disnake.TextInputStyle.short,
