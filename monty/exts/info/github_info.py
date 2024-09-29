@@ -5,7 +5,7 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import timedelta, timezone
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union, overload
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union
 from urllib.parse import quote, quote_plus
 
 import attrs
@@ -334,25 +334,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         return repos
 
-    @overload
-    async def fetch_user_and_repo(  # noqa: D102
-        self,
-        inter: Union[disnake.CommandInteraction, disnake.Message],
-        repo: Optional[str] = None,
-        user: Optional[str] = None,
-    ) -> tuple[Optional[str], Optional[str]]: ...
-
-    @overload
-    async def fetch_user_and_repo(  # noqa: D102
-        self,
-        inter: Union[disnake.CommandInteraction, disnake.Message],
-        repo: str,
-        user: Optional[str] = None,
-    ) -> RepoTarget: ...
-
     async def fetch_user_and_repo(  # type: ignore
         self,
-        inter: Union[disnake.CommandInteraction, disnake.Message],
+        guild_id: Optional[int],
         repo: Optional[str] = None,
         user: Optional[str] = None,
     ) -> RepoTarget:
@@ -365,7 +349,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         repo: The repository to fetch.
         """
         # todo: get from the database
-        guild_id = inter.guild_id if isinstance(inter, disnake.Interaction) else (inter.guild and inter.guild.id)
         if guild_id:
             user = user or await self.fetch_guild_to_org(guild_id)
 
@@ -373,9 +356,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             raise commands.UserInputError("user must be provided or configured for this guild." if guild_id else ".")
 
         return RepoTarget(user, repo)  # type: ignore
-
-    # this should be a decorator but the typing is a bit scuffed on it right now
-    commands.register_injection(fetch_user_and_repo)
 
     @commands.group(name="github", aliases=("gh", "git"), invoke_without_command=True)
     @commands.cooldown(3, 20, commands.BucketType.user)
@@ -749,7 +729,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Command to retrieve issue(s) from a GitHub repository."""
         if not user or not repo:
             user, repo = await self.fetch_user_and_repo(
-                ctx.message if isinstance(ctx, commands.Context) else ctx, user, repo
+                ctx.message.guild and ctx.message.guild.id if isinstance(ctx, commands.Context) else ctx.guild_id,
+                user,
+                repo,
             )  # type: ignore
             if not user or not repo:
                 if not user:
@@ -813,28 +795,29 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
-    async def fetch_default_user(self, message: disnake.Message) -> Optional[str]:
+    async def fetch_default_user(self, guild_id: int) -> Optional[str]:
         """
         Get the default GitHub user in the context of the provided Message.
 
         Right now this only returns the default user for the message's guild.
         """
         try:
-            default_user, _ = await self.fetch_user_and_repo(message)
+            default_user, _ = await self.fetch_user_and_repo(guild_id)
         except commands.UserInputError:
             return None
         return default_user
 
-    async def extract_issues_from_message(
+    async def extract_issues_from_content(
         self,
-        message: disnake.Message,
+        content: str,
         *,
+        guild_id: int = None,
         extract_full_links: bool = False,
     ) -> List[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
         issues: List[FoundIssue] = []
         default_user: Optional[str] = ""
-        stripped_content = remove_codeblocks(message.content)
+        stripped_content = remove_codeblocks(content)
 
         if extract_full_links:
             # this is hacky, but refactored in #228
@@ -858,8 +841,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             repo = match.group("repo").lower()
             if not (org := match.group("org")):
-                if default_user == "":
-                    default_user = await self.fetch_default_user(message)
+                if default_user == "" and guild_id:
+                    default_user = await self.fetch_default_user(guild_id)
                 if default_user is None:
                     continue
                 org = default_user
@@ -979,7 +962,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         await inter.response.edit_message(embed=embed, components=rows)
 
-    async def handle_issue_comment(self, message: disnake.Message, issues: list[FoundIssue]) -> None:
+    async def handle_issue_comment(
+        self, message: Union[disnake.Message, disnake.Interaction], issues: list[FoundIssue]
+    ) -> None:
         """Expand an issue or pull request comment."""
         comments = []
         components = []
@@ -1122,8 +1107,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
             return
 
-        if message.channel.permissions_for(message.guild.me).manage_messages:
-            scheduling.create_task(suppress_embeds(self.bot, message))
+        if isinstance(message, disnake.Message):
+            if message.guild.me and message.channel.permissions_for(message.guild.me).manage_messages:
+                scheduling.create_task(suppress_embeds(self.bot, message))
 
         if len(comments) > 1:
             for num, component in enumerate(components, 1):
@@ -1133,14 +1119,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))
-        await message.reply(
+        reply_method = getattr(message, "reply", None) or message.send
+        await reply_method(
             embeds=comments,
             components=components,
             allowed_mentions=disnake.AllowedMentions(replied_user=False),
         )
 
     @commands.Cog.listener("on_message")
-    async def on_message_automatic_issue_link(self, message: disnake.Message) -> None:
+    async def on_message_automatic_issue_link(self, message: Union[disnake.Message, Any], content: str = None) -> None:
         """
         Automatic issue linking.
 
@@ -1153,24 +1140,37 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         ):
             return
 
-        if not message.guild:
-            return
+        if isinstance(message, disnake.Message):
+            if not message.guild:
+                return
 
-        config = await self.bot.ensure_guild_config(message.guild.id)
-        if not config.github_issue_linking:
-            return
+            config = await self.bot.ensure_guild_config(message.guild.id)
+            if not config.github_issue_linking:
+                return
 
-        perms = message.channel.permissions_for(message.guild.me)
-        if isinstance(message.channel, disnake.Thread):
-            req_perm = "send_messages_in_threads"
+            if message.guild.me:
+                perms = message.channel.permissions_for(message.guild.me)
+                if isinstance(message.channel, disnake.Thread):
+                    req_perm = "send_messages_in_threads"
+                else:
+                    req_perm = "send_messages"
+                if not getattr(perms, req_perm):
+                    return
+
+            extract_full_links = await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_LINKS)
+            guild_id = message.guild.id
+            guild_has_github_comment_linking_enabled = config.github_comment_linking
         else:
-            req_perm = "send_messages"
-        if not getattr(perms, req_perm):
-            return
+            # HACK
+            guild_id = message.guild_id  # type: ignore
+            perms = message.app_permissions
+            extract_full_links = True
+            guild_has_github_comment_linking_enabled = True  # we check the feature later
 
-        issues = await self.extract_issues_from_message(
-            message,
-            extract_full_links=await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_LINKS),
+        issues = await self.extract_issues_from_content(
+            content or message.content,
+            guild_id=message.guild and message.guild.id,
+            extract_full_links=extract_full_links,
         )
 
         # no issues found, return early
@@ -1181,8 +1181,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             # if there are issue comments found, we do not want to expand the entire issue
             # we also only want to expand the issue if the feature is enabled
             # AND both options of the guild configuration are enabled
-            if config.github_comment_linking and await self.bot.guild_has_feature(
-                message.guild, Feature.GITHUB_COMMENT_LINKS
+            if guild_has_github_comment_linking_enabled and await self.bot.guild_has_feature(
+                guild_id, Feature.GITHUB_COMMENT_LINKS
             ):
                 await self.handle_issue_comment(message, issue_comments)
             return
@@ -1199,7 +1199,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             components = [DeleteButton(message.author)]
             response = await message.channel.send(embed=embed, components=components)
-            self.autolink_cache.set(message.id, (response, issues))
+            if isinstance(message, disnake.Message):
+                self.autolink_cache.set(message.id, (response, issues))
             return
 
         total_pre_expanded = 0
@@ -1211,7 +1212,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 int(repo_issue.number),
                 repo_issue.repository,
                 repo_issue.organisation,
-                allow_discussions=await self.bot.guild_has_feature(message.guild.id, Feature.GITHUB_DISCUSSIONS),
+                allow_discussions=await self.bot.guild_has_feature(guild_id, Feature.GITHUB_DISCUSSIONS),
                 is_discussion=repo_issue.is_discussion,
             )
             if isinstance(result, IssueState):
@@ -1226,13 +1227,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not links:
             return
 
-        if len(links) == 1 and issues[0].source_format is IssueSourceFormat.direct_github_url:
+        if len(links) == 1 and issues[0].source_format is IssueSourceFormat.direct_github_url and perms.manage_messages:
             if perms.manage_messages:
                 scheduling.create_task(suppress_embeds(self.bot, message))
             allow_expand = True
             allow_pre_expanded = True
         else:
-            allow_expand = await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_EXPAND)
+            allow_expand = await self.bot.guild_has_feature(guild_id, Feature.GITHUB_ISSUE_EXPAND)
             allow_pre_expanded = False
 
         embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
@@ -1247,8 +1248,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if button:
                 components.append(button)
 
-        response = await message.channel.send(embed=embed, components=components)
-        self.autolink_cache.set(message.id, (response, issues))
+        if isinstance(message, disnake.ApplicationCommandInteraction):
+            response = await message.send(embed=embed, components=components)
+        else:
+            response = await message.reply(embed=embed, components=components)
+            self.autolink_cache.set(message.id, (response, issues))
 
     @commands.Cog.listener("on_message_edit")
     async def on_message_edit_automatic_issue_link(self, before: disnake.Message, after: disnake.Message) -> None:
@@ -1264,8 +1268,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             return
 
-        after_issues = await self.extract_issues_from_message(
-            after,
+        after_issues = await self.extract_issues_from_content(
+            after.content,
+            guild_id=after.guild.id,
             extract_full_links=await self.bot.guild_has_feature(after.guild, Feature.GITHUB_ISSUE_LINKS),
         )
 
@@ -1345,42 +1350,18 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             pass
 
-    @commands.slash_command()
-    async def github(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Helpful commands for viewing information about whitelisted guild's github projects."""
-        pass
-
-    @github.sub_command("pull")
-    async def github_pull_slash(
-        self, inter: disnake.ApplicationCommandInteraction, num: int, repository: RepoTarget
-    ) -> None:
+    @commands.slash_command(
+        dm_permission=False,
+    )
+    async def github(self, inter: disnake.ApplicationCommandInteraction, arg: str) -> None:
         """
-        Get information about a provided pull request.
+        View information about an issue, pull, discussion, or comment on GitHub.
 
         Parameters
         ----------
-        num: the number of the pull request
-        repo: the repo to get the pull request from
+        arg: Can be a org/repo#number, a link to an issue or issue comment, and more.
         """
-        user, repo = repository.user, repository.repo
-        repo = repo and repo.rsplit("/", 1)[-1]
-        await self.github_issue(inter, [num], repo=repo, user=user)
-
-    @github.sub_command("issue")
-    async def github_issue_slash(
-        self, inter: disnake.ApplicationCommandInteraction, num: int, repo_user: RepoTarget
-    ) -> None:
-        """
-        Get information about a provided issue.
-
-        Parameters
-        ----------
-        num: the number of the issue
-        repo: the repo to get the issue from
-        """
-        user, repo = repo_user
-        repo = repo and repo.rsplit("/", 1)[-1]
-        await self.github_issue(inter, numbers=[num], repo=repo, user=user)  # type: ignore
+        await self.on_message_automatic_issue_link(inter, content=arg)
 
 
 def setup(bot: Monty) -> None:
