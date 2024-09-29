@@ -684,7 +684,7 @@ class DocCog(commands.Cog, name="Documentation"):
 
     async def _docs_autocomplete(
         self,
-        inter: disnake.Interaction,
+        inter: Union[disnake.Interaction, commands.Context],
         query: str,
         *,
         count: int = 24,
@@ -705,10 +705,14 @@ class DocCog(commands.Cog, name="Documentation"):
         include_query: whether to include the query in the results
         """
         log.info(f"Received autocomplete inter by {inter.author}: {query}")
+        if isinstance(inter, commands.Context):
+            guild_id = inter.guild and inter.guild.id
+        else:
+            guild_id = inter.guild_id
+
         if not query:
-            return self._get_default_completion(inter.guild_id)
+            return self._get_default_completion(guild_id)
         # ----------------------------------------------------
-        guild_id = inter.guild_id
         blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()
