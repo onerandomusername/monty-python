@@ -16,9 +16,13 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         self.bot = bot
         self._bot_invite_link: str = ""
 
-    @commands.Cog.listener("on_ready")
+    async def cog_load(self) -> None:
+        """Run set_invite_link after the bot is ready."""
+        await self.bot.wait_until_ready()
+        await self.set_invite_link()
+
     async def set_invite_link(self) -> None:
-        """Set the invite link when the bot is ready."""
+        """Set the invite link for the bot."""
         if self._bot_invite_link:
             return
 

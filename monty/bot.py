@@ -373,12 +373,13 @@ class Monty(commands.Bot):
 
         if self.http_session:
             await self.http_session.close()
-
         if self.db_engine:
             await self.db_engine.dispose()
 
         if self.redis_session:
-            await self.redis_session.close(close_connection_pool=True)
+            await self.redis_session.aclose(close_connection_pool=True)
+
+        await asyncio.sleep(0.6)
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""

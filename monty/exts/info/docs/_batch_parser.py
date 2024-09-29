@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import ssl
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
@@ -117,8 +118,11 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
+            # workaround for cloudflare issues
+            ssl_context = ssl.create_default_context()
+            ssl_context.post_handshake_auth = True
             try:
-                async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
+                async with self._bot.http_session.get(doc_item.url, raise_for_status=True, ssl=ssl_context) as response:
                     soup = await self._bot.loop.run_in_executor(
                         None,
                         BeautifulSoup,

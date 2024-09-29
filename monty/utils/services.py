@@ -1,5 +1,5 @@
 import typing
-from typing import Optional
+from typing import Dict, Optional
 
 from aiohttp import ClientConnectorError
 from attrs import define
@@ -33,8 +33,6 @@ class GitHubRateLimit:
     remaining: int
     reset: int
     used: int
-
-    resource: str
 
 
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
@@ -114,18 +112,17 @@ def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
         remaining=int(resp.headers["x-ratelimit-remaining"]),
         reset=int(resp.headers["x-ratelimit-reset"]),
         used=int(resp.headers["x-ratelimit-used"]),
-        resource=resource_name,
     )
 
 
 # https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
 def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
     """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
-    ratelimits = json["resources"]
-    for resource_name in ratelimits:
-        resource_dict_from_github = ratelimits[resource_name]
-        kwargs = {"resource": resource_name}
-        for attr in ("limit", "remaining", "reset", "used"):
-            kwargs[attr] = resource_dict_from_github[attr]
-
-        GITHUB_RATELIMITS[resource_name] = GitHubRateLimit(**kwargs)
+    ratelimits: Dict[str, Dict[str, int]] = json["resources"]
+    for name, resource in ratelimits.items():
+        GITHUB_RATELIMITS[name] = GitHubRateLimit(
+            limit=resource["limit"],
+            remaining=resource["remaining"],
+            reset=resource["reset"],
+            used=resource["used"],
+        )
