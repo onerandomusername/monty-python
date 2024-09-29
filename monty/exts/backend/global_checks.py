@@ -39,7 +39,7 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
             permissions=self.bot.invite_permissions,
         )
 
-    def bot_slash_command_check(self, inter: disnake.CommandInteraction) -> bool:
+    def bot_slash_command_check(self, inter: disnake.ApplicationCommandInteraction) -> bool:
         """
         Require all commands in guilds have the bot scope.
 
@@ -48,6 +48,9 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         However, this does allow slash commands in DMs as those are now controlled via
         the dm_permisions attribute on each app command.
         """
+        # we only care if our installation type is guild only
+        if {disnake.ApplicationIntegrationType.guild} != set(inter.authorizing_integration_owners):
+            return True
         if not (inter.guild and inter.guild.unavailable or not inter.guild.me):
             return True
 
