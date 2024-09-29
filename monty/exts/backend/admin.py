@@ -15,6 +15,7 @@ import builtins
 import inspect
 import io
 import os
+import random
 import sys
 import textwrap
 import traceback
@@ -31,6 +32,7 @@ import arrow
 import disnake
 from disnake.ext import commands
 
+from monty import constants
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton
@@ -84,7 +86,6 @@ MESSAGE_LIMIT = 2000
 class Admin(
     commands.Cog,
     command_attrs={"hidden": True},
-    slash_command_attrs={"dm_permission": False},
 ):
     """Admin-only eval command and repr."""
 
@@ -140,27 +141,35 @@ class Admin(
 
     async def _send_stdout(
         self,
-        ctx: commands.Context,
+        ctx: Union[commands.Context, disnake.Interaction],
         resp: str = None,
         error: Exception = None,
     ) -> None:
         """Send a nicely formatted eval response."""
-        if ctx.channel.permissions_for(ctx.me).read_message_history:
+        if isinstance(ctx, commands.Context) and ctx.channel.permissions_for(ctx.me).read_message_history:
             reference = ctx.message.to_reference(fail_if_not_exists=False)
         else:
             reference = None
 
         if resp is None and error is None:
-            components = [
-                DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
-                DeleteButton(ctx.author, allow_manage_messages=False),
-            ]
-            await ctx.send(
-                "No output.",
-                allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                reference=reference,
-                components=components,
-            )
+            if isinstance(ctx, commands.Context):
+                components = [
+                    DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+                    DeleteButton(ctx.author, allow_manage_messages=False),
+                ]
+                await ctx.send(
+                    "No output.",
+                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                    reference=reference,
+                    components=components,
+                )
+            else:
+                if ctx.response.is_done():
+                    await ctx.edit_original_message(
+                        "No output.",
+                    )
+                else:
+                    await ctx.response.send_message("No output.", ephemeral=True)
             return
         resp_file: disnake.File = None
         # for now, we're not gonna handle exceptions as files
@@ -198,22 +207,27 @@ class Admin(
         for f in resp_file, error_file:
             if f is not None:
                 files.append(f)
-        components = [
-            DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
-            DeleteButton(ctx.author, allow_manage_messages=False),
-        ]
-
-        await ctx.send(
-            out,
-            files=files,
-            allowed_mentions=disnake.AllowedMentions(replied_user=False),
-            reference=reference,
-            components=components,
-        )
+        if isinstance(ctx, commands.Context):
+            components = [
+                DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
+                DeleteButton(ctx.author, allow_manage_messages=False),
+            ]
+            await ctx.send(
+                out,
+                files=files,
+                allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                reference=reference,
+                components=components,
+            )
+        else:
+            if ctx.response.is_done():
+                await ctx.edit_original_message(out, files=files)
+            else:
+                await ctx.response.send_message(out, files=files, ephemeral=True)
 
     @commands.command(pass_context=True, hidden=True, name="ieval", aliases=["int_eval"])
     async def _eval(
-        self, ctx: Union[commands.Context, disnake.CommandInter], *, code: str, original_ctx: commands.Context = None
+        self, ctx: Union[commands.Context, disnake.Interaction], *, code: str, original_ctx: commands.Context = None
     ) -> None:
         """Evaluates provided code. Owner only."""
         log.trace("command _eval executed.")
@@ -222,7 +236,6 @@ class Admin(
             "channel": ctx.channel,
             "author": ctx.author,
             "guild": ctx.guild,
-            "message": ctx.message,
             "pprint": pprint,
             "_": self._last_result,
         }
@@ -232,6 +245,7 @@ class Admin(
             env["ctx"] = original_ctx
         else:
             env["ctx"] = ctx
+            env["message"] = ctx.message
 
         env.update(globals_to_import)
         code = self.cleanup_code(code)
@@ -260,10 +274,11 @@ class Admin(
             error = traceback.format_exception(exc_type, exc_value, exc_traceback)
             error.pop(1)
             error = "".join(error).strip()
-        try:
-            await (original_ctx or ctx).message.add_reaction("\u2705")
-        except disnake.HTTPException:
-            pass
+        if isinstance((out_ctx := original_ctx or ctx), commands.Context):
+            try:
+                await out_ctx.message.add_reaction("\u2705")
+            except disnake.HTTPException:
+                pass
         log.trace(f"result: {result}")
         if result is not None:
             pprint(result, stream=stdout)  # noqa: T203
@@ -271,7 +286,88 @@ class Admin(
         if result.rstrip("\n") == "":
             result = None
         self._last_result = result
-        await self._send_stdout(ctx=original_ctx or ctx, resp=result, error=error)
+
+        await self._send_stdout(ctx=out_ctx, resp=result, error=error)
+
+    if constants.Client.debug_slash_commands_do_not_use_in_prod:
+
+        @commands.is_owner()
+        @commands.slash_command(
+            name="inter-eval",
+            description="[DEV ONLY] Evaluate code in the context of the bot.",
+            contexts={
+                disnake.InteractionContextType.guild,
+                disnake.InteractionContextType.private_channel,
+                disnake.InteractionContextType.bot_dm,
+            },
+            integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        )
+        async def slash_eval(
+            self,
+            inter: disnake.ApplicationCommandInteraction,
+        ) -> None:
+            """[DEV ONLY] Slash commands to evaluate code in interaction contexts."""
+            pass
+
+        @commands.is_owner()
+        @slash_eval.sub_command("slash")
+        async def dev_eval(
+            self,
+            inter: disnake.ApplicationCommandInteraction,
+            code: str,
+            ephemeral: bool = True,
+            defer: bool = True,
+        ) -> None:
+            """
+            Evaluates provided code. Owner only.
+
+            Parameters
+            ----------
+            code : str
+                The code to evaluate.
+            ephemeral : bool
+                Whether the response should be ephemeral. Only applicable if defer is True.
+            defer : bool
+                Whether the response should be deferred.
+            """
+            if defer:
+                await inter.response.defer(ephemeral=ephemeral)
+            await self._eval(inter, code=code)
+
+        @commands.is_owner()
+        @slash_eval.sub_command("modal")
+        async def modal_eval(
+            self,
+            inter: disnake.ApplicationCommandInteraction,
+            ephemeral: bool = True,
+            defer: bool = True,
+        ) -> None:
+            """Evaluates provided code. Owner only."""
+            unique_id = (
+                "internal_interaction_eval" + str(arrow.utcnow().int_timestamp) + "--" + str(random.randint(0, 1000))
+            )
+            components = disnake.ui.TextInput(
+                label="Code",
+                custom_id="code",
+                style=disnake.TextInputStyle.long,
+                placeholder="Enter code here",
+            )
+            await inter.response.send_modal(title="Evaluate Code", custom_id=unique_id, components=components)
+            try:
+                modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
+                    "modal_submit",
+                    check=lambda interaction_to_test: interaction_to_test.author == inter.author
+                    and interaction_to_test.custom_id == unique_id,
+                    timeout=360,
+                )
+            except asyncio.TimeoutError:
+                return
+
+            code = modal_inter.text_values["code"]
+            if defer:
+                await modal_inter.response.defer(ephemeral=ephemeral)
+
+            await self._eval(modal_inter, code=code)
 
     @commands.command(name="inter-eval")
     async def interaction_eval(self, ctx: commands.Context, *, code: str) -> None:

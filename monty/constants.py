@@ -35,6 +35,9 @@ class Client:
     token = environ.get("BOT_TOKEN")
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
+    debug_slash_commands_do_not_use_in_prod = (
+        environ.get("ENABLE_DEV_ONLY_APP_COMMANDS_DEV_ONLY_DO_NOT_ENABLE_IN_PROD", "false").lower() == "true"
+    )
     sentry_enabled = bool(environ.get("SENTRY_DSN"))
     github_bot_repo = "https://github.com/onerandomusername/monty-python"
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
