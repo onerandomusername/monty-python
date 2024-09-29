@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import collections
-import ssl
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
@@ -15,7 +14,7 @@ from monty import constants
 
 # from bot.constants import Channels
 from monty.log import get_logger
-from monty.utils import scheduling
+from monty.utils import helpers, scheduling
 from monty.utils.html_parsing import get_symbol_markdown
 
 from . import _cog, doc_cache
@@ -118,11 +117,11 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            # workaround for cloudflare issues
-            ssl_context = ssl.create_default_context()
-            ssl_context.post_handshake_auth = True
+            # providing a context is workaround for cloudflare issues
             try:
-                async with self._bot.http_session.get(doc_item.url, raise_for_status=True, ssl=ssl_context) as response:
+                async with self._bot.http_session.get(
+                    doc_item.url, raise_for_status=True, ssl=helpers.ssl_create_default_context()
+                ) as response:
                     soup = await self._bot.loop.run_in_executor(
                         None,
                         BeautifulSoup,

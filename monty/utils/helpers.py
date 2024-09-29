@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import ssl
 from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
 from urllib.parse import urlsplit, urlunsplit
 
@@ -138,3 +139,10 @@ def fromisoformat(timestamp: str) -> datetime.datetime:
         # assume UTC if naive datetime
         dt = dt.replace(tzinfo=datetime.timezone.utc)
     return dt
+
+
+def ssl_create_default_context() -> ssl.SSLContext:
+    """Return an ssl context that CloudFlare shouldn't flag."""
+    ssl_context = ssl.create_default_context()
+    ssl_context.post_handshake_auth = True
+    return ssl_context
