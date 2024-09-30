@@ -16,7 +16,7 @@ from monty import exts
 from monty.bot import Monty
 from monty.database import Feature, Rollout
 from monty.log import get_logger
-from monty.utils import inventory_parser
+from monty.utils import helpers, inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify
 from monty.utils.features import NAME_REGEX as FEATURE_NAME_REGEX
 
@@ -202,7 +202,7 @@ class ValidURL(commands.Converter):
     async def convert(ctx: commands.Context, url: str) -> str:
         """This converter checks whether the given URL can be reached with a status code of 200."""
         try:
-            async with ctx.bot.http_session.get(url) as resp:
+            async with ctx.bot.http_session.get(url, ssl=helpers.ssl_create_default_context()) as resp:
                 if resp.status != 200:
                     raise commands.BadArgument(f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200")
         except CertificateError as e:
