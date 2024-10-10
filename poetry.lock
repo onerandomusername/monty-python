@@ -1943,21 +1943,23 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.278"
+version = "1.1.384"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.278-py3-none-any.whl", hash = "sha256:9abaf42482ac8d42c54c91b5501943c2700bdf85289466ddb05bae000353209c"},
-    {file = "pyright-1.1.278.tar.gz", hash = "sha256:a9fd0399657ef7dadabb57f0ccb0216c39f4bfbd9e3e1c28232bf55748330880"},
+    {file = "pyright-1.1.384-py3-none-any.whl", hash = "sha256:f0b6f4db2da38f27aeb7035c26192f034587875f751b847e9ad42ed0c704ac9e"},
+    {file = "pyright-1.1.384.tar.gz", hash = "sha256:25e54d61f55cbb45f1195ff89c488832d7a45d59f3e132f178fdf9ef6cafc706"},
 ]
 
 [package.dependencies]
 nodeenv = ">=1.6.0"
+typing-extensions = ">=4.1"
 
 [package.extras]
-all = ["twine (>=3.4.1)"]
+all = ["nodejs-wheel-binaries", "twine (>=3.4.1)"]
 dev = ["twine (>=3.4.1)"]
+nodejs = ["nodejs-wheel-binaries"]
 
 [[package]]
 name = "python-dateutil"
@@ -2619,4 +2621,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~=3.10"
-content-hash = "f6576a1f145bbdf9091c1be90eeabaf27af85118e5279d06f9907a28ae4fece0"
+content-hash = "3b3af5157d5998ba81624396e897beb998de5c1b9b9cd60481f9ca51a8c30007"
