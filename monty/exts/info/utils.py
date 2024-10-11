@@ -16,7 +16,7 @@ from monty.utils.pagination import LinePaginator
 log = get_logger(__name__)
 
 
-class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Utils(commands.Cog):
     """A selection of utilities which don't have a clear category."""
 
     def __init__(self, bot: Monty) -> None:

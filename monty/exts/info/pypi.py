@@ -64,7 +64,7 @@ def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Q
     results_queue.put(result)
 
 
-class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class PyPI(commands.Cog):
     """Cog for getting information about PyPI packages."""
 
     def __init__(self, bot: Monty) -> None:
@@ -216,12 +216,10 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.slash_command(
         name="pypi",
-        contexts={
-            disnake.InteractionContextType.guild,
-            disnake.InteractionContextType.private_channel,
-            disnake.InteractionContextType.bot_dm,
-        },
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild
+        | disnake.InteractionContextTypes.private_channel
+        | disnake.InteractionContextTypes.bot_dm,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Useful commands for info about packages on PyPI."""

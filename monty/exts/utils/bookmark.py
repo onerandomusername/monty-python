@@ -229,8 +229,8 @@ class Bookmark(commands.Cog):
     @commands.slash_command(
         name="bm",
         description="Bookmark a message.",
-        contexts={disnake.InteractionContextType.guild},
-        integration_types={disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes(guild=True),
+        integration_types=disnake.ApplicationIntegrationTypes(guild=True),
     )
     async def bookmark_slash(
         self,
@@ -252,8 +252,8 @@ class Bookmark(commands.Cog):
 
     @commands.message_command(
         name="Bookmark",
-        contexts={disnake.InteractionContextType.guild},
-        integration_types={disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes(guild=True),
+        integration_types=disnake.ApplicationIntegrationTypes(guild=True),
     )
     async def message_bookmark(
         self,

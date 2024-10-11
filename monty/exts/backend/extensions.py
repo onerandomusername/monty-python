@@ -34,7 +34,7 @@ class Action(Enum):
     RELOAD = functools.partial(Monty.reload_extension)
 
 
-class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Extensions(commands.Cog):
     """Extension management commands."""
 
     def __init__(self, bot: Monty) -> None:

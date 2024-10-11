@@ -17,7 +17,7 @@ COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"
 
 
-class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class XKCD(commands.Cog):
     """Retrieving XKCD comics."""
 
     def __init__(self, bot: Monty) -> None:
@@ -40,8 +40,8 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.slash_command(
         name="xkcd",
-        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild | disnake.InteractionContextTypes.private_channel,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def fetch_xkcd_comics(
         self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None

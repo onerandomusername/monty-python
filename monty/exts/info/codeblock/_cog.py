@@ -29,7 +29,6 @@ DELETE_PAUSE = 7
 class CodeBlockCog(
     commands.Cog,
     name="Code Block",
-    slash_command_attrs={"dm_permission": False},
 ):
     """
     Detect improperly formatted Markdown code blocks and suggest proper formatting.

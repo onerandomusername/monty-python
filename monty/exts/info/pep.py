@@ -61,7 +61,7 @@ class PEPHeaders:
         return headers
 
 
-class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs={"dm_permission": False}):
+class PythonEnhancementProposals(commands.Cog, name="PEPs"):
     """Cog for displaying information about PEPs."""
 
     def __init__(self, bot: Monty) -> None:
@@ -210,8 +210,8 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
 
     @commands.slash_command(
         name="pep",
-        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild | disnake.InteractionContextTypes.private_channel,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def pep_command(
         self, inter: disnake.ApplicationCommandInteraction, number: int, header: Optional[str] = None

@@ -59,7 +59,7 @@ GITHUB_REQUEST_HEADERS = DEFAULT_GITHUB_REQUEST_HEADERS.copy()
 GITHUB_REQUEST_HEADERS["Accept"] = "application/vnd.github.v3.raw"
 
 
-class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
+class CodeSnippets(commands.Cog, name="Code Snippets"):
     """
     commands.Cog that parses and sends code snippets to disnake.
 

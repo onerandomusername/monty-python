@@ -74,7 +74,7 @@ The privacy policy in full can be found here: <{privacy_url}>.
 COLOURS = (Colours.python_blue, Colours.python_yellow)
 
 
-class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Meta(commands.Cog):
     """Get meta information about the bot."""
 
     def __init__(self, bot: Monty) -> None:
@@ -85,12 +85,10 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.slash_command(
         name="monty",
-        contexts={
-            disnake.InteractionContextType.guild,
-            disnake.InteractionContextType.private_channel,
-            disnake.InteractionContextType.bot_dm,
-        },
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild
+        | disnake.InteractionContextTypes.private_channel
+        | disnake.InteractionContextTypes.bot_dm,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""

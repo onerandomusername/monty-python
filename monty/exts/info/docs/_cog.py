@@ -556,12 +556,10 @@ class DocCog(commands.Cog, name="Documentation"):
 
     @commands.slash_command(
         name="docs",
-        contexts={
-            disnake.InteractionContextType.guild,
-            disnake.InteractionContextType.private_channel,
-            disnake.InteractionContextType.bot_dm,
-        },
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild
+        | disnake.InteractionContextTypes.private_channel
+        | disnake.InteractionContextTypes.bot_dm,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""

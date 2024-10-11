@@ -95,7 +95,7 @@ class FrozenChainMap(Mapping[K, V]):
         return self.__class__(m, *self.maps)
 
 
-class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_permission": False}):
+class MetaSource(commands.Cog, name="Meta Source"):
     """Display information about my own source code."""
 
     def __init__(self, bot: Monty) -> None:
@@ -240,12 +240,10 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
 
     @commands.slash_command(
         name="source",
-        contexts={
-            disnake.InteractionContextType.guild,
-            disnake.InteractionContextType.private_channel,
-            disnake.InteractionContextType.bot_dm,
-        },
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild
+        | disnake.InteractionContextTypes.private_channel
+        | disnake.InteractionContextTypes.bot_dm,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def source_slash_command(self, inter: disnake.ApplicationCommandInteraction, item: str) -> None:
         """

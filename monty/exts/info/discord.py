@@ -33,19 +33,17 @@ INVITE_USER = """
 """
 
 
-class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Discord(commands.Cog):
     """Useful discord api commands."""
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
     @commands.slash_command(
-        contexts={
-            disnake.InteractionContextType.guild,
-            disnake.InteractionContextType.private_channel,
-            disnake.InteractionContextType.bot_dm,
-        },
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild
+        | disnake.InteractionContextTypes.private_channel
+        | disnake.InteractionContextTypes.bot_dm,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def discord(self, inter: disnake.CommandInteraction) -> None:
         """Commands that interact with discord."""

@@ -201,7 +201,7 @@ class IssueState:
     raw_json: Optional[dict[str, Any]] = None
 
 
-class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"dm_permission": False}):
+class GithubInfo(commands.Cog, name="GitHub Information"):
     """Fetches info from GitHub."""
 
     def __init__(self, bot: Monty) -> None:

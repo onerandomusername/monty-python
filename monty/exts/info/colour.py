@@ -19,7 +19,7 @@ from monty.utils.messages import DeleteButton
 THUMBNAIL_SIZE = (80, 80)
 
 
-class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Colour(commands.Cog):
     """Cog for the Colour command."""
 
     def __init__(self, bot: Monty) -> None:
@@ -108,8 +108,8 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
     @commands.slash_command(
         name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}),
-        contexts={disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
-        integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes.guild | disnake.InteractionContextTypes.private_channel,
+        integration_types=disnake.ApplicationIntegrationTypes.user | disnake.ApplicationIntegrationTypes.guild,
     )
     async def slash_colour(self, inter: disnake.CommandInteraction) -> None:
         """Show information about a colour."""

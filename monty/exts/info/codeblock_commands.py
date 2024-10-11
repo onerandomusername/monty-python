@@ -36,8 +36,8 @@ class CodeBlockActions(
     commands.Cog,
     name="Code Block Actions",
     message_command_attrs={
-        "context": {disnake.InteractionContextType.guild, disnake.InteractionContextType.private_channel},
-        "integration_types": {disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+        "context": disnake.InteractionContextTypes(guild=True, private_channel=True),
+        "integration_types": disnake.ApplicationIntegrationTypes(user=True, guild=True),
     },
 ):
     """Adds automatic buttons to codeblocks if they match commands."""
@@ -210,10 +210,8 @@ class CodeBlockActions(
     @commands.slash_command(
         name="paste",
         description="Paste a message to the workbin.",
-        contexts={
-            disnake.InteractionContextType.guild,
-        },
-        integration_types={disnake.ApplicationIntegrationType.guild},
+        contexts=disnake.InteractionContextTypes(guild=True),
+        integration_types=disnake.ApplicationIntegrationTypes.guild | disnake.ApplicationIntegrationTypes.user,
     )
     async def slash_paste(
         self,

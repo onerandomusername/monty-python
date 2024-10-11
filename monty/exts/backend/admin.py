@@ -295,12 +295,8 @@ class Admin(
         @commands.slash_command(
             name="inter-eval",
             description="[DEV ONLY] Evaluate code in the context of the bot.",
-            contexts={
-                disnake.InteractionContextType.guild,
-                disnake.InteractionContextType.private_channel,
-                disnake.InteractionContextType.bot_dm,
-            },
-            integration_types={disnake.ApplicationIntegrationType.user, disnake.ApplicationIntegrationType.guild},
+            contexts=disnake.InteractionContextTypes.all(),
+            integration_types=disnake.ApplicationIntegrationTypes(user=True),
         )
         async def slash_eval(
             self,

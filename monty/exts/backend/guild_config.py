@@ -135,8 +135,8 @@ class Configuration(
         raise BotAccountRequired(msg)
 
     @commands.slash_command(
-        integration_types={disnake.ApplicationIntegrationType.guild},
-        contexts={disnake.InteractionContextType.guild},
+        integration_types=disnake.ApplicationIntegrationTypes(guild=True),
+        contexts=disnake.InteractionContextTypes(guild=True),
     )
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
         """[BETA] Manage per-guild configuration for Monty."""

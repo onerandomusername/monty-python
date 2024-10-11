@@ -3,7 +3,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 
 
-class DevTools(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class DevTools(commands.Cog):
     """Command for inviting a bot."""
 
     def __init__(self, bot: Monty) -> None:

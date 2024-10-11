@@ -510,7 +510,7 @@ class HelpSession:
             await self.message.delete()
 
 
-class Help(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Help(commands.Cog):
     """Custom disnake.Embed Pagination Help feature."""
 
     @commands.command("help")

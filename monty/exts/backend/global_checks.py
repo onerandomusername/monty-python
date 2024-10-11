@@ -9,7 +9,7 @@ from monty.log import get_logger
 logger = get_logger(__name__)
 
 
-class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class GlobalCheck(commands.Cog):
     """Global checks for monty."""
 
     def __init__(self, bot: Monty) -> None:
@@ -49,7 +49,7 @@ class GlobalCheck(commands.Cog, slash_command_attrs={"dm_permission": False}):
         the dm_permisions attribute on each app command.
         """
         # we only care if our installation type is guild only
-        if {disnake.ApplicationIntegrationType.guild} != set(inter.authorizing_integration_owners):
+        if disnake.ApplicationIntegrationTypes.guild not in inter.authorizing_integration_owners:
             return True
         if not (inter.guild and inter.guild.unavailable or not inter.guild.me):
             return True
