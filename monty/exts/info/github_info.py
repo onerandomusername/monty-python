@@ -729,7 +729,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """Command to retrieve issue(s) from a GitHub repository."""
         if not user or not repo:
             user, repo = await self.fetch_user_and_repo(
-                ctx.message.guild and ctx.message.guild.id if isinstance(ctx, commands.Context) else ctx.guild_id,
+                ctx.guild and ctx.guild.id if isinstance(ctx, commands.Context) else ctx.guild_id,
                 user,
                 repo,
             )  # type: ignore
@@ -1099,7 +1099,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             return
 
         if len(comments) > 4:
-            await message.reply(
+            if isinstance(message, disnake.Message):
+                method = message.reply
+            else:
+                method = message.send
+
+            await method(
                 "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
                 " them to be expanded!",
                 components=DeleteButton(message.author),
@@ -1119,7 +1124,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))
-        reply_method = getattr(message, "reply", None) or message.send
+        reply_method = message.reply if isinstance(message, disnake.Message) else message.send
         await reply_method(
             embeds=comments,
             components=components,
@@ -1127,7 +1132,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         )
 
     @commands.Cog.listener("on_message")
-    async def on_message_automatic_issue_link(self, message: Union[disnake.Message, Any], content: str = None) -> None:
+    async def on_message_automatic_issue_link(
+        self, message: Union[disnake.Message, disnake.ApplicationCommandInteraction], content: str = None
+    ) -> None:
         """
         Automatic issue linking.
 
@@ -1135,6 +1142,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         """
         # Ignore bots but NOT webhooks owned by crosschat which also aren't the application id
         # this allows webhooks that are owned by crosschat but aren't application responses
+        # interaction commands cannot be sent by bots so the typing here doesn't matter
         if message.author.bot and not (
             message.webhook_id and message.application_id == CROSSCHAT_BOT and message.webhook_id != CROSSCHAT_BOT
         ):
@@ -1151,15 +1159,20 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             if message.guild.me:
                 perms = message.channel.permissions_for(message.guild.me)
                 if isinstance(message.channel, disnake.Thread):
-                    req_perm = "send_messages_in_threads"
+                    has_perm = perms.send_messages_in_threads
                 else:
-                    req_perm = "send_messages"
-                if not getattr(perms, req_perm):
+                    has_perm = perms.send_messages
+                if not has_perm:
                     return
 
             extract_full_links = await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_LINKS)
             guild_id = message.guild.id
             guild_has_github_comment_linking_enabled = config.github_comment_linking
+            issues = await self.extract_issues_from_content(
+                message.content,
+                guild_id=guild_id,
+                extract_full_links=extract_full_links,
+            )
         else:
             # HACK
             guild_id = message.guild_id  # type: ignore
@@ -1167,11 +1180,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             extract_full_links = True
             guild_has_github_comment_linking_enabled = True  # we check the feature later
 
-        issues = await self.extract_issues_from_content(
-            content or message.content,
-            guild_id=message.guild and message.guild.id,
-            extract_full_links=extract_full_links,
-        )
+            issues = await self.extract_issues_from_content(
+                content or "",
+                guild_id=guild_id,
+                extract_full_links=extract_full_links,
+            )
 
         # no issues found, return early
         if not issues:
@@ -1198,9 +1211,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             )
 
             components = [DeleteButton(message.author)]
-            response = await message.channel.send(embed=embed, components=components)
             if isinstance(message, disnake.Message):
+                response = await message.channel.send(embed=embed, components=components)
                 self.autolink_cache.set(message.id, (response, issues))
+            else:
+                await message.send(embed=embed, ephemeral=True)
             return
 
         total_pre_expanded = 0
@@ -1249,7 +1264,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 components.append(button)
 
         if isinstance(message, disnake.ApplicationCommandInteraction):
-            response = await message.send(embed=embed, components=components)
+            await message.send(embed=embed, components=components)
         else:
             response = await message.reply(embed=embed, components=components)
             self.autolink_cache.set(message.id, (response, issues))
