@@ -1164,6 +1164,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     has_perm = perms.send_messages
                 if not has_perm:
                     return
+            else:
+                perms = disnake.Permissions.private_channel()
 
             extract_full_links = await self.bot.guild_has_feature(message.guild, Feature.GITHUB_ISSUE_LINKS)
             guild_id = message.guild.id
@@ -1242,8 +1244,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not links:
             return
 
-        if len(links) == 1 and issues[0].source_format is IssueSourceFormat.direct_github_url and perms.manage_messages:
-            if perms.manage_messages:
+        if len(links) == 1 and issues[0].source_format is IssueSourceFormat.direct_github_url:
+            if perms.manage_messages and isinstance(message, disnake.Message):
                 scheduling.create_task(suppress_embeds(self.bot, message))
             allow_expand = True
             allow_pre_expanded = True
