@@ -9,7 +9,7 @@ license = "MIT"
 python = "~=3.10"
 aiodns = "~=3.2"
 aiohttp = { version = "~=3.10.5", extras = ['speedups'] }
-yarl = "^1.12.1" # transitive dependency of aiohttp
+yarl = "^1.15.4" # transitive dependency of aiohttp
 arrow = "~=1.3.0"
 attrs = "^24.2.0"
 base65536 = "^0.1.1"
