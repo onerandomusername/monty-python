@@ -30,7 +30,7 @@ Pillow = "^10.4"
 psutil = "^5.9.8"
 python-dateutil = "^2.9.0"
 rapidfuzz = "^2.13.2"
-sentry-sdk = "^2.14.0"
+sentry-sdk = "^2.17.0"
 statsd = "^3.3.0"
 # database dependencies
 alembic = "^1.13.3"
