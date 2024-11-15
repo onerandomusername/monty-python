@@ -70,13 +70,14 @@ AUTOMATIC_REGEX = re.compile(
     r"((?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/)?(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
+# note, this should only be used with re.fullmatch
 GITHUB_ISSUE_LINK_REGEX = re.compile(
     # match repo owner and repo name
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
     # match `issues`/`pull`/`discussion`, the ID, and allow a `/files` suffix if there was a `pull`
     r"(?P<type>issues|(?P<ispull>pull)|discussions)\/(?P<number>[0-9]+)(?(ispull)\/files)?"
     # ensure the url path ends at this point and that only a query/fragment follows, if any
-    r"\/?($|(\?|#)\S*)"
+    r"\/?([\?#]\S*)?"
 )
 
 
