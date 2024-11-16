@@ -63,7 +63,7 @@ class Monty(commands.Bot):
     def __init__(self, redis_session: redis.asyncio.Redis, proxy: str = None, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
-            log.warn("registering as test_guilds")
+            log.warning("registering as test_guilds")
         super().__init__(**kwargs)
 
         self.redis_session = redis_session

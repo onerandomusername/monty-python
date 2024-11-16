@@ -1030,7 +1030,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         },
                     )
                 except (TransportError, TransportQueryError) as e:
-                    log.warn("encountered error fetching discussion comment: %s", e)
+                    log.warning("encountered error fetching discussion comment: %s", e)
                     continue
 
                 comment = json_data["node"]
@@ -1059,7 +1059,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
                 comment = await self.fetch_data(endpoint, as_text=False)  # type: ignore
                 if "message" in comment:
-                    log.warn("encountered error fetching %s: %s", endpoint, comment)
+                    log.warning("encountered error fetching %s: %s", endpoint, comment)
                     continue
 
             # assert the url was not tampered with
