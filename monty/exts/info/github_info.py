@@ -53,6 +53,7 @@ PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
 LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
 LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?per_page=100"
 ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
+PULL_REVIEW_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}/reviews/{{review_id}}"
 PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
 
 
@@ -1012,6 +1013,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 continue
 
             comment: dict[str, Any]
+            created_at_key = "created_at"
             if frag.startswith("discussioncomment-"):
                 global_id = self._format_github_global_id(
                     "DC",
@@ -1043,11 +1045,13 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         comment_id=frag.removeprefix("issuecomment-"),
                     )
                 elif frag.startswith("pullrequestreview-"):
-                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                    endpoint = PULL_REVIEW_ENDPOINT.format(
                         user=issue.organisation,
                         repository=issue.repository,
-                        comment_id=frag.removeprefix("pullrequestreview-"),
+                        number=issue.number,
+                        review_id=frag.removeprefix("pullrequestreview-"),
                     )
+                    created_at_key = "submitted_at"  # thank you github, very cool
                 elif frag.startswith("discussion_r"):
                     endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
                         user=issue.organisation,
@@ -1083,7 +1087,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             e.set_footer(text=f"Comment on {issue.organisation}/{issue.repository}#{issue.number}")
 
-            e.timestamp = fromisoformat(comment["created_at"])
+            e.timestamp = fromisoformat(comment[created_at_key])
 
             comments.append(e)
             components.append(disnake.ui.Button(url=comment["html_url"], label="View comment"))
