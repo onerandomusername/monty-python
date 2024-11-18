@@ -92,6 +92,7 @@ select = [
     "C", # flake8-comprehensions
     "D", # flake-docstrings
     "DTZ", # flake8-datetimez
+    "G", # flake8-logging-format
     "Q", # flake8-quotes
     "T201", "T203" # flake8-print
 ]
@@ -110,6 +111,7 @@ ignore = [
 
     # temporarily disabled
     "C901", # mccabe
+    "G004", # Logging statement uses f-string
     "S101", # Use of `assert` detected
     "S110", # try-except-pass
     "S311", # pseduo-random generators, random is used everywhere for random choices.
