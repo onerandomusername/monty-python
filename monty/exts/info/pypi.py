@@ -126,7 +126,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 try:
                     top_packages.extend([pack["project"] for pack in json["rows"][:300]])
                 except Exception:
-                    log.error("Encountered an error with setting the top packages", exc_info=True)
+                    log.exception("Encountered an error with setting the top packages")
 
         return all_packages, top_packages
 

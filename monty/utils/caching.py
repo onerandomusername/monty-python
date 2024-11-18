@@ -140,7 +140,7 @@ def redis_cache(
 
                 if value is not UNSET:
                     if constants.Client.debug:
-                        cache_logger.info("Cache hit on {key}".format(key=key))
+                        cache_logger.info("Cache hit on %s", key)
 
                     return value
 

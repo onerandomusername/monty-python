@@ -874,7 +874,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
             session.add(package)
             await session.commit()
 
-        log.info(f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n" + repr(package))
+        log.info(f"User @{ctx.author} ({ctx.author.id}) added a new documentation package:\n{package!r}")
 
         self.update_single(package, inventory_dict)
         await ctx.send(
