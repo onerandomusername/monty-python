@@ -70,9 +70,14 @@ AUTOMATIC_REGEX = re.compile(
     r"((?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/)?(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
+# note, this should only be used with re.fullmatch
 GITHUB_ISSUE_LINK_REGEX = re.compile(
+    # match repo owner and repo name
     r"https?:\/\/github.com\/(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})\/"
-    r"(?P<type>issues|pull|discussions)\/(?P<number>[0-9]+)[^\s]*"
+    # match `issues`/`pull`/`discussion`, the ID, and allow a `/files` suffix if there was a `pull`
+    r"(?P<type>issues|(?P<ispull>pull)|discussions)\/(?P<number>[0-9]+)(?(ispull)\/files)?"
+    # ensure the url path ends at this point and that only a query/fragment follows, if any
+    r"\/?([\?#]\S*)?"
 )
 
 
@@ -844,14 +849,8 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
             fragment = ""
             if match.re is GITHUB_ISSUE_LINK_REGEX:
                 source_format = IssueSourceFormat.direct_github_url
-                # handle custom checks here
                 url = yarl.URL(match[0])
-
-                # don't match if we didn't end with the hash
-                if not url.path.rstrip("/").endswith(match.group("number")):
-                    continue
-                if url.fragment or url.query:  # used to match for comments later
-                    fragment = url.fragment
+                fragment = url.fragment  # used to match for comments later
             else:
                 # match.re is AUTOMATIC_REGEX, which doesn't require special handling right now
                 source_format = IssueSourceFormat.github_form_with_repo
@@ -1012,6 +1011,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 )
                 continue
 
+            expected_url = issue.user_url
+            assert expected_url
+
             comment: dict[str, Any]
             created_at_key = "created_at"
             if frag.startswith("discussioncomment-"):
@@ -1058,6 +1060,22 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                         repository=issue.repository,
                         comment_id=frag.removeprefix("discussion_r"),
                     )
+                elif re.fullmatch(r"r\d+", frag):
+                    # same as the one above
+                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
+                        user=issue.organisation,
+                        repository=issue.repository,
+                        comment_id=frag.removeprefix("r"),
+                    )
+                    # Linking comments from the "Files" tab of PRs gets you a link like
+                    # `pull/1234/files#r12345678`; this is equivalent to the link from the
+                    # main "Conversation" tab, which looks like `pull/1234#discussion_r12345678`.
+                    # The API always returns links in the latter format, so adjust the user-provided
+                    # url here accordingly for the check below.
+                    expected_url = yarl.URL(expected_url)
+                    expected_url = expected_url.with_path(expected_url.path.rstrip("/files"))
+                    expected_url = expected_url.with_fragment(f"discussion_{frag}")
+                    expected_url = str(expected_url)
                 else:
                     continue
 
@@ -1067,7 +1085,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                     continue
 
             # assert the url was not tampered with
-            if issue.user_url != (html_url := comment["html_url"]):
+            if expected_url != (html_url := comment["html_url"]):
                 # this is a warning as its the best way I currently have to track how often the wrong url is used
                 log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
                 continue
