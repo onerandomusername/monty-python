@@ -1379,6 +1379,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         arg: Can be a org/repo#number, a link to an issue or issue comment, and more.
         """
         await self.on_message_automatic_issue_link(inter, content=arg)
+        if not inter.response.is_done():
+            raise commands.BadArgument(
+                f"{arg} could not be converted to a user, repo, combination, or link to a comment, pull, issue, or"
+                " other type"
+            )
 
 
 def setup(bot: Monty) -> None:
