@@ -260,8 +260,7 @@ class Extensions(commands.Cog, slash_command_attrs={"dm_permission": False}):
         async for changes in watchfiles.awatch(*ext_paths):
             modified_extensions = set()
             for change in changes:
-                if change[0] != 2 or change[1] not in ext_paths:
-                    # file was either deleted, created?!?! or something else
+                if change[1] not in ext_paths:
                     continue
                 modified_extensions.add(ext_paths[change[1]])
 
