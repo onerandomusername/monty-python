@@ -210,7 +210,7 @@ class ErrorHandler(
 
         elif isinstance(error, (commands.CommandInvokeError, commands.ConversionError)):
             if isinstance(error.original, disnake.Forbidden):
-                logger.warn(f"Permissions error occurred in {ctx.command}.")
+                logger.warning(f"Permissions error occurred in {ctx.command}.")
                 await self.handle_bot_missing_perms(ctx, error.original)
                 should_respond = False
             else:
