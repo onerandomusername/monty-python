@@ -913,14 +913,15 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         # check the user
         is_expanded = int(match.group("current_state"))
-        # if the issue is already expanded and not OP, ignore the interaction
-        if int(match.group("user_id")) != inter.author.id:
-            if is_expanded:
-                await inter.response.send_message("Sorry, but you cannot collapse this issue!", ephemeral=True)
-                return
-            is_different_author = True
-        else:
-            is_different_author = False
+        original_user_id = int(match.group("user_id"))
+
+        is_different_author = original_user_id != inter.author.id
+        can_swap_embed = not is_different_author or inter.permissions.manage_messages
+
+        # if the issue is already expanded and not OP (or mod), ignore the interaction
+        if is_expanded and not can_swap_embed:
+            await inter.response.send_message("Sorry, but you cannot collapse this issue!", ephemeral=True)
+            return
 
         issue = FoundIssue(
             match.group("org"),
@@ -937,12 +938,12 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         embed, *_ = self.format_embed([found_issue], expand_one_issue=not is_expanded)
 
         # send the embed in a new message
-        if is_different_author:
+        if not is_expanded and is_different_author:
             await inter.response.send_message(embed=embed, ephemeral=True)
             return
 
         new_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
-            user_id=inter.author.id,
+            user_id=original_user_id,
             state=int(not is_expanded),
             org=issue.organisation,
             repo=issue.repository,
