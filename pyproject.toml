@@ -21,7 +21,7 @@ disnake = { version = '~=2.9.3' }
 orjson = "^3.10.11"
 fakeredis = "^2.26.1"
 gql = "^3.5.0"
-lxml = "^4.9.1"
+lxml = "^5.3.0"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
 msgpack = "^1.1.0"
