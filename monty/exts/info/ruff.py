@@ -112,7 +112,7 @@ class Ruff(commands.Cog):
         """
         rule = rule.upper().strip()
         if rule not in self.rules:
-            raise commands.BadArgument("'rule' must be a valid ruff rule. That rule does not exist.")
+            raise commands.BadArgument(f"'rule' must be a valid ruff rule. The rule {rule} does not exist.")
 
         ruleObj = self.rules[rule]
         embed = disnake.Embed(colour=disnake.Colour(next(RUFF_COLOUR_CYCLE)))
@@ -127,13 +127,14 @@ class Ruff(commands.Cog):
         embed.title = ""
         if ruleObj.preview:
             embed.title = "🧪 "
-        # else:
-        # embed.title = "✔️ "
         embed.title += ruleObj.title
-        embed.description = ruleObj.summary
+
+        try:
+            embed.description = ruleObj.explanation.split("## What it does\n", 1)[-1].split("## Why is this bad?")[0]
+        except Exception as err:
+            logger.error("Something went wrong trying to get the summary from the description", exc_info=err)
 
         url = f"{RUFF_RULES_BASE_URL}/{ruleObj.name}/"
-        # embed.description += f"\n\n*[View More]({url})*"
         embed.url = url
 
         if ruleObj.fix in {"Fix is sometimes available.", "Fix is always available."}:
@@ -144,6 +145,9 @@ class Ruff(commands.Cog):
             embed.add_field(
                 "WARNING", "This rule may have been deprecated. Please check the docs for more information."
             )
+
+        if ruleObj.preview:
+            embed.add_field("Preview", "This rule is still in preview, and may be subject to change.", inline=False)
 
         await inter.response.send_message(
             embed=embed,
@@ -165,7 +169,16 @@ class Ruff(commands.Cog):
         class Fake:
             title = option
 
+        # score twice, once on name, and once on the full name with the code
         results = rapidfuzz.process.extract(
+            (option, Fake),  # must be a nested sequence because of the preprocessor
+            self.rules.items(),
+            scorer=rapidfuzz.fuzz.WRatio,
+            limit=20,
+            processor=lambda x: x[0],
+            score_cutoff=0.6,
+        )
+        results2 = rapidfuzz.process.extract(
             (option, Fake),  # must be a nested sequence because of the preprocessor
             self.rules.items(),
             scorer=rapidfuzz.fuzz.WRatio,
@@ -173,7 +186,17 @@ class Ruff(commands.Cog):
             processor=lambda x: x[1].title,
             score_cutoff=0.6,
         )
-        return {code[0][1].title: code[0][0] for code in results}
+
+        # get the best matches from both
+        matches: dict[str, str] = {}
+        for _ in range(20):
+            if results[0][1] > results2[0][1]:
+                code, rule = results.pop(0)[0]
+            else:
+                code, rule = results2.pop(0)[0]
+            matches[rule.title] = code
+
+        return matches
 
 
 def setup(bot: Monty) -> None:
