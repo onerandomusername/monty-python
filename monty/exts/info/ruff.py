@@ -110,20 +110,23 @@ class Ruff(commands.Cog):
         ----------
         rule: The rule to get information about
         """
-        rule = rule.upper().strip()
-        if rule not in self.rules:
+        ruleCheck = rule.upper().strip()
+        if ruleCheck not in self.rules:
             raise commands.BadArgument(f"'rule' must be a valid ruff rule. The rule {rule} does not exist.")
+        rule = ruleCheck
+        del ruleCheck
 
         ruleObj = self.rules[rule]
         embed = disnake.Embed(colour=disnake.Colour(next(RUFF_COLOUR_CYCLE)))
 
         embed.set_footer(
-            text="ruleset last cached", icon_url="https://avatars.githubusercontent.com/u/115962839?s=200&v=4"
+            text=f"original linter: {ruleObj.linter}",
+            icon_url="https://avatars.githubusercontent.com/u/115962839?s=200&v=4",
         )
         embed.set_author(
             name="ruff rules", icon_url="https://cdn.discordapp.com/emojis/1122704477334548560.webp?size=256"
         )
-        embed.timestamp = self.last_fetched
+        # embed.timestamp = self.last_fetched
         embed.title = ""
         if ruleObj.preview:
             embed.title = "🧪 "
@@ -138,16 +141,26 @@ class Ruff(commands.Cog):
         embed.url = url
 
         if ruleObj.fix in {"Fix is sometimes available.", "Fix is always available."}:
-            embed.add_field("Fixable status", ruleObj.fix)
+            embed.add_field(
+                "Fixable status",
+                ruleObj.fix,
+                inline=False,
+            )
 
         # check if rule has been deprecated
         if "deprecated" in ruleObj.explanation.split("/n")[0].lower():
             embed.add_field(
-                "WARNING", "This rule may have been deprecated. Please check the docs for more information."
+                "WARNING",
+                "This rule may have been deprecated. Please check the docs for more information.",
+                inline=False,
             )
 
         if ruleObj.preview:
-            embed.add_field("Preview", "This rule is still in preview, and may be subject to change.", inline=False)
+            embed.add_field(
+                "Preview",
+                "This rule is still in preview, and may be subject to change.",
+                inline=False,
+            )
 
         await inter.response.send_message(
             embed=embed,
