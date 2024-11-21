@@ -7,6 +7,7 @@ from disnake.ext import commands, tasks
 
 from monty.bot import Monty
 from monty.constants import Colours
+from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 
@@ -68,14 +69,19 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
             async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
                 if resp.status == 200:
                     info = await resp.json()
-                else:
+                elif resp.status == 404:
+                    # 404 was avoided as an easter egg. We should show an embed for it
+                    if comic != "404":
+                        raise commands.BadArgument("That comic doesn't exist.")
                     embed.title = f"XKCD comic #{comic}"
                     embed.description = f"{resp.status}: Could not retrieve xkcd comic #{comic}."
-                    log.debug(f"Retrieving xkcd comic #{comic} failed with status code {resp.status}.")
-
-                    components = DeleteButton(inter.author, allow_manage_messages=False)
-                    await inter.send(embed=embed, components=components)
+                    await inter.send(embed=embed, components=DeleteButton(inter.user))
                     return
+
+                else:
+                    log.error(f"XKCD comic could not be fetched. Something went wrong fetching {comic}")
+
+                    raise APIError("xkcd", resp.status, "Could not fetch that comic from XKCD. Please try again later.")
 
         embed.title = f"XKCD comic #{info['num']}"
         embed.description = info["alt"]
