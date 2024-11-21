@@ -9,6 +9,7 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.constants import Paste, URLs
+from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton, extract_urls
 from monty.utils.services import send_to_paste_service
@@ -156,8 +157,7 @@ class CodeBlockActions(
         """Upload the message to the paste service."""
         success, msg, url = await self._upload_to_workbin(inter.target)
         if not success:
-            await inter.send(msg, ephemeral=True)
-            return
+            raise MontyCommandError(msg)
 
         components: list[disnake.ui.Button] = [
             DeleteButton(inter.author),
@@ -222,8 +222,7 @@ class CodeBlockActions(
 
         success, msg, url = await self._upload_to_workbin(message)
         if not success:
-            await inter.send(msg, ephemeral=True)
-            return
+            raise MontyCommandError(msg)
 
         components: list[disnake.ui.Button] = [
             DeleteButton(inter.author),
@@ -286,8 +285,7 @@ class CodeBlockActions(
         """Format the provided message with black."""
         success, msg, url = await self._format_black(inter.target)
         if not success:
-            await inter.send(msg, ephemeral=True)
-            return
+            raise MontyCommandError(msg)
 
         components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if url:
@@ -342,8 +340,7 @@ class CodeBlockActions(
             check_is_python=False,
         )
         if not success:
-            await inter.send("This message does not have any code to extract.", ephemeral=True)
-            return
+            raise MontyCommandError("This message does not have any code to extract.")
 
         target = inter.target
         original_source = False

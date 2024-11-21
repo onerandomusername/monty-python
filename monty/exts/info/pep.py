@@ -12,6 +12,7 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
 from monty.bot import Monty
+from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import utcnow
@@ -94,7 +95,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
 
         log.trace("Got PEP URLs listing from Pep sphinx inventory")
 
-    async def validate_pep_number(self, pep_nr: int) -> Optional[disnake.Embed]:
+    async def validate_pep_number(self, pep_nr: int) -> None:
         """Validate is PEP number valid. When it isn't, return error embed, otherwise None."""
         if (
             pep_nr not in self.peps
@@ -105,10 +106,9 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
 
         if pep_nr not in self.peps:
             log.trace(f"PEP {pep_nr} was not found")
-            return disnake.Embed(
+            raise MontyCommandError(
                 title="PEP not found",
-                description=f"PEP {pep_nr} does not exist.",
-                colour=disnake.Colour.red(),
+                message=f"PEP {pep_nr} does not exist.",
             )
 
         return None
@@ -150,7 +150,7 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
 
         return pep_header, soup
 
-    async def get_pep_embed(self, pep_nr: int) -> Tuple[disnake.Embed, bool]:
+    async def get_pep_embed(self, pep_nr: int) -> disnake.Embed:
         """Fetch, generate and return PEP embed. Second item of return tuple show does getting success."""
         url = self.peps[pep_nr]
 
@@ -158,37 +158,29 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
             pep_header, *_ = await self.fetch_pep_info(url, pep_nr)
         except aiohttp.ClientResponseError as e:
             log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {e.status}.")
-            return (
-                disnake.Embed(
-                    title="Unexpected error",
-                    description="Unexpected HTTP error during PEP search. Please let us know.",
-                    colour=disnake.Colour.red(),
-                ),
-                False,
-            )
-        else:
-            return self.generate_pep_embed(pep_header, pep_nr), True
+            raise MontyCommandError(
+                title="Unexpected error",
+                message="Unexpected HTTP error during PEP search. Please let us know.",
+            ) from e
+
+        return self.generate_pep_embed(pep_header, pep_nr)
 
     async def get_pep_section_header(self, inter: disnake.CommandInteraction, number: int, header: str) -> None:
         """Get the contents of the provided header in the pep body."""
-        error_embed = await self.validate_pep_number(number)
-        if error_embed:
-            await inter.send(embed=error_embed, ephemeral=True)
-            return
+        await self.validate_pep_number(number)
+
         url = self.peps[number]
         tags, soup = await self.fetch_pep_info(url, number)
 
         tag = soup.find(PEPHeaders.header_tags, text=header)
 
         if tag is None:
-            await inter.send("Could not find the requested header in the PEP.", ephemeral=True)
-            return
+            raise MontyCommandError("Could not find the requested header in the PEP.")
 
         text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=14)
         text = (text.lstrip() + "\n").split("\n", 1)[-1].strip()
         if not text:
-            await inter.send("No text found for that header.", ephemeral=True)
-            return
+            raise MontyCommandError("No text found for that header.")
 
         embed = disnake.Embed(
             title=header,
@@ -224,21 +216,14 @@ class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs=
             await self.get_pep_section_header(inter, number, header)
             return
 
-        success = False
-        if not (pep_embed := await self.validate_pep_number(number)):
-            pep_embed, success = await self.get_pep_embed(number)
+        await self.validate_pep_number(number)
+        pep_embed = await self.get_pep_embed(number)
 
-        if success:
-            components = [DeleteButton(inter.author)]
-            if pep_embed.url:
-                components.append(
-                    disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=pep_embed.url)
-                )
-            await inter.send(embed=pep_embed, components=components)
-            log.trace(f"PEP {number} getting and sending finished successfully")
-        else:
-            await inter.send(embed=pep_embed, ephemeral=True)
-            log.trace(f"Getting PEP {number} failed. Error embed sent.")
+        components = [DeleteButton(inter.author)]
+        if pep_embed.url:
+            components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=pep_embed.url))
+        await inter.send(embed=pep_embed, components=components)
+        log.trace(f"PEP {number} getting and sending finished successfully")
 
     @pep_command.autocomplete("number")
     async def pep_number_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, int]:

@@ -12,6 +12,7 @@ from disnake.ext import commands
 from PIL import Image, ImageColor
 
 from monty.bot import Monty
+from monty.errors import MontyCommandError
 from monty.utils.extensions import invoke_help_command
 from monty.utils.messages import DeleteButton
 
@@ -282,13 +283,7 @@ class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
         """Create an embed from a name input."""
         hex_colour = self.match_colour_name(ctx, name)
         if hex_colour is None:
-            name_error_embed = disnake.Embed(
-                title="No colour match found.",
-                description=f"No colour found for: `{name}`",
-                colour=disnake.Color.dark_red(),
-            )
-            await ctx.send(embed=name_error_embed)
-            return
+            raise MontyCommandError(f"No colour found for: `{name}`", title="No colour match found.")
         hex_tuple = ImageColor.getrgb(hex_colour)
         if len(hex_tuple) > 3:
             hex_tuple = hex_tuple[:3]

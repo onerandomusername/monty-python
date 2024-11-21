@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import random
 from typing import Hashable, Optional
 
 from disnake.ext import commands
+
+from monty.constants import NEGATIVE_REPLIES
 
 
 class APIError(commands.CommandError):
@@ -13,6 +16,11 @@ class APIError(commands.CommandError):
         self.api = api
         self.status_code = status_code
         self.error_msg = error_msg
+
+    @property
+    def title(self) -> str:
+        """Return a title embed."""
+        return f"Something went wrong with {self.api}"
 
 
 class BotAccountRequired(commands.CheckFailure):
@@ -50,3 +58,20 @@ class LockedResourceError(RuntimeError):
             f"Cannot operate on {self.type.lower()} `{self.id}`; "
             "it is currently locked and in use by another operation."
         )
+
+
+class MontyCommandError(commands.CommandError):
+    def __init__(self, message: str, *, title: str = None):
+        if not title:
+            title = random.choice(NEGATIVE_REPLIES)
+        self.title = title
+        super().__init__(message)
+
+
+class OpenDMsRequired(commands.UserInputError):
+
+    def __init__(self, message: str = None, *args):
+        self.title = "Open DMs Required"
+        if message is None:
+            message = "I must be able to DM you to run this command. Please open your DMs"
+        super().__init__(message, *args)

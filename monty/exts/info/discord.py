@@ -8,6 +8,7 @@ from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Endpoints
+from monty.errors import MontyCommandError
 from monty.utils.messages import DeleteButton
 
 
@@ -67,16 +68,16 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
             except disnake.NotFound:
                 raise commands.UserNotFound(client_id) from None
         if not user.bot:
-            await inter.send("You can only run this command on bots or applications.", ephemeral=True)
-            return
+            raise commands.BadArgument("You can only run this command on bots or applications.")
 
         async with self.bot.http_session.get(Endpoints.app_info.format(application_id=client_id)) as resp:
             if resp.status != 200:
-                content = "Could not get application info."
-                if not user:
-                    content += "\nThis may be a result of the application not existing, or not being a valid user."
-                await inter.send(content, ephemeral=True)
-                return
+                content = (
+                    "Could not get application info."
+                    "\nThis may be a result of the application not existing, or not being a valid user."
+                )
+                raise MontyCommandError(content)
+
             data: AppInfo = await resp.json()
 
         # add some missing attributes that we don't use but the library needs
@@ -168,13 +169,11 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # validated all of the input, now see if client_id exists
         try:
             user = inter.bot.get_user(client_id) or await inter.bot.fetch_user(client_id)
-        except disnake.NotFound:
-            await inter.response.send_message("Sorry, that user does not exist.", ephemeral=True)
-            return
+        except disnake.NotFound as exc:
+            raise commands.BadArgument("Sorry, that user does not exist.") from exc
 
         if not user.bot:
-            await inter.response.send_message("Sorry, that user is not a bot.", ephemeral=True)
-            return
+            raise MontyCommandError("Sorry, that user is not a bot.")
 
         scopes = ("bot", "applications.commands") if include_applications_commands else ("bot",)
         url = disnake.utils.oauth_url(
@@ -228,10 +227,9 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         with_features: Whether or not to include the features of the guild.
         """
         if not invite.guild:
-            await inter.send("Group dm invites are not supported.", ephemeral=True)
-            return
+            raise commands.BadArgument("Group dm invites are not supported.")
         if invite.guild.nsfw_level not in (disnake.NSFWLevel.default, disnake.NSFWLevel.safe):
-            await inter.send(f"Refusing to process invite for the nsfw guild, {invite.guild.name}.", ephemeral=True)
+            raise commands.BadArgument(f"Refusing to process invite for the nsfw guild, {invite.guild.name}.")
             return
 
         embed = disnake.Embed(title=f"Invite for {invite.guild.name}")

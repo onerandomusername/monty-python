@@ -58,9 +58,7 @@ class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed.colour = Colours.soft_red
 
         if comic and (comic := re.match(COMIC_FORMAT, comic)) is None:
-            embed.description = "Comic parameter should either be an integer or 'latest'."
-            await inter.send(embed=embed, ephemeral=True)
-            return
+            raise commands.BadArgument("Comic parameter should either be an integer or 'latest'.")
 
         comic = randint(1, self.latest_comic_info["num"]) if comic is None else comic.group(0)
 

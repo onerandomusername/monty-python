@@ -25,6 +25,7 @@ import monty.utils.services
 from monty import constants
 from monty.bot import Monty
 from monty.constants import Feature
+from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.caching import redis_cache
@@ -383,15 +384,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
             # User_data will not have a message key if the user exists
             if "message" in user_data:
-                embed = disnake.Embed(
-                    title=random.choice(constants.NEGATIVE_REPLIES),
-                    description=f"The profile for `{username}` was not found.",
-                    colour=constants.Colours.soft_red,
-                )
-
-                components = DeleteButton(ctx.author, initial_message=ctx.message)
-                await ctx.send(embed=embed, components=components)
-                return
+                raise MontyCommandError(f"The profile for `{username}` was not found.")
 
             org_data: list[dict[str, Any]] = await self.fetch_data(
                 user_data["organizations_url"],
@@ -473,15 +466,11 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         if not repo or repo.count("/") > 1:
             args = " ".join(original_args[:2])
-            embed = disnake.Embed(
-                title=random.choice(constants.NEGATIVE_REPLIES),
-                description="The repository should look like `user/reponame` or `user reponame`"
-                + (f", not `{args}`." if "`" not in args and len(args) < 20 else "."),
-                colour=constants.Colours.soft_red,
-            )
 
-            components = DeleteButton(ctx.author, initial_message=ctx.message)
-            await ctx.send(embed=embed, components=components)
+            raise commands.BadArgument(
+                "The repository should look like `user/reponame` or `user reponame`"
+                + (f", not `{args}`." if "`" not in args and len(args) < 20 else ".")
+            )
             return
 
         async with ctx.typing():
@@ -756,7 +745,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
 
         if len(numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
-                title=random.choice(constants.ERROR_REPLIES),
+                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
                 color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
@@ -1207,8 +1196,9 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         log.trace(f"Found {issues = }")
 
         if len(issues) > MAXIMUM_ISSUES:
+            # must be handled here due to local side-effect, for now
             embed = disnake.Embed(
-                title=random.choice(constants.ERROR_REPLIES),
+                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
                 color=constants.Colours.soft_red,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )

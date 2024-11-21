@@ -6,6 +6,7 @@ from disnake.ext import commands
 
 from monty import bot
 from monty.constants import Colours, Emojis
+from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
 
 
@@ -14,14 +15,6 @@ logger = get_logger(__name__)
 BASE_URL = "https://api.stackexchange.com/2.2/search/advanced"
 SO_PARAMS = {"order": "desc", "sort": "activity", "site": "stackoverflow"}
 SEARCH_URL = "https://stackoverflow.com/search?q={query}"
-ERR_EMBED = disnake.Embed(
-    title="Error in fetching results from Stackoverflow",
-    description=(
-        "Sorry, there was en error while trying to fetch data from the Stackoverflow website. Please try again in some "
-        "time. If this issue persists, please contact aru"
-    ),
-    color=Colours.soft_red,
-)
 
 
 class Stackoverflow(commands.Cog, name="Stack Overflow", slash_command_attrs={"dm_permission": False}):
@@ -41,15 +34,19 @@ class Stackoverflow(commands.Cog, name="Stack Overflow", slash_command_attrs={"d
                     data = await response.json()
                 else:
                     logger.error(f"Status code is not 200, it is {response.status}")
-                    await ctx.send(embed=ERR_EMBED)
-                    return
+                    raise APIError(
+                        "Stack Overflow",
+                        response.status,
+                        "Sorry, there was an error while trying to fetch data from the StackOverflow website. "
+                        "Please try again in some time. "
+                        "If this issue persists, please report this issue in our support server, see link below.",
+                    )
             if not data["items"]:
-                no_search_result = disnake.Embed(
-                    title=f"No search results found for {search_query}",
-                    color=Colours.soft_red,
+                raise MontyCommandError(
+                    title="No results found",
+                    message=f"No search results found for `{search_query}`. "
+                    "Try adjusting your search or searching for fewer terms.",
                 )
-                await ctx.send(embed=no_search_result)
-                return
 
             top5 = data["items"][:5]
             encoded_search_query = quote_plus(search_query)
@@ -59,6 +56,8 @@ class Stackoverflow(commands.Cog, name="Stack Overflow", slash_command_attrs={"d
                 description=f"Here are the top {len(top5)} results:",
                 color=Colours.orange,
             )
+            embed.check_limits()
+
             for item in top5:
                 embed.add_field(
                     name=unescape(item["title"]),
@@ -71,16 +70,15 @@ class Stackoverflow(commands.Cog, name="Stack Overflow", slash_command_attrs={"d
                     ),
                     inline=False,
                 )
+                try:
+                    embed.check_limits()
+                except ValueError:
+                    embed.remove_field(-1)
+                    break
+
             embed.set_footer(text="View the original link for more results.")
 
-        try:
-            await ctx.send(embed=embed)
-        except disnake.HTTPException:
-            search_query_too_long = disnake.Embed(
-                title="Your search query is too long, please try shortening your search query",
-                color=Colours.soft_red,
-            )
-            await ctx.send(embed=search_query_too_long)
+        await ctx.send(embed=embed)
 
 
 def setup(bot: bot.Monty) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import random
 import re
 import traceback
 import types
@@ -11,7 +12,8 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Client
+from monty.constants import USER_INPUT_ERROR_REPLIES, Client, Colours
+from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import responses
@@ -41,9 +43,11 @@ class ErrorHandler(
         self.bot = bot
 
     @staticmethod
-    def error_embed(title: str, message: str) -> disnake.Embed:
+    def error_embed(title: str, message: str, *, colour: disnake.Colour | int | None = None) -> disnake.Embed:
         """Create an error embed with an error colour and reason and return it."""
-        return disnake.Embed(title=title, description=message, colour=ERROR_COLOUR)
+        if colour is None:
+            colour = ERROR_COLOUR
+        return disnake.Embed(title=title, description=message, colour=colour)
 
     @staticmethod
     def get_title_from_name(error: typing.Union[Exception, str]) -> str:
@@ -52,8 +56,13 @@ class ErrorHandler(
 
         Eg NSFWChannelRequired returns NSFW Channel Required
         """
+        if isinstance(error, Exception) and getattr(error, "title", None) is not None:
+            return getattr(error, "title")  # noqa: B009
+
         if not isinstance(error, str):
             error = error.__class__.__name__
+            if error == "BadArgument":
+                return random.choice(USER_INPUT_ERROR_REPLIES)
         return re.sub(ERROR_TITLE_REGEX, r" \1", error)
 
     @staticmethod
@@ -199,22 +208,35 @@ class ErrorHandler(
                 if reason := ctx.command.extras.get("disabled_reason", None):
                     msg += f"\nReason: {reason}"
                 embed = self.error_embed("Command Disabled", msg)
+        elif isinstance(error, MontyCommandError):
+            embed = self.error_embed(self.get_title_from_name(error), str(error), colour=Colours.soft_red)
         elif isinstance(error, commands.CommandOnCooldown):
             if await ctx.bot.is_owner(ctx.author):
                 if isinstance(ctx, commands.Context):
                     ctx.command.reset_cooldown(ctx)
-                    await ctx.reinvoke()
+                    try:
+                        await ctx.reinvoke()
+                    except Exception as exc:
+                        # two times is not the charm.
+                        self.bot.dispatch("command_error", ctx, exc)
                     should_respond = False
                 elif isinstance(ctx, disnake.CommandInteraction):
                     ctx.application_command.reset_cooldown(ctx)
-                    await self.bot.process_application_commands(ctx)
+                    try:
+                        await self.bot.process_application_commands(ctx)
+                    except Exception as exc:
+                        # two times is not the charm.
+                        self.bot.dispatch("slash_command_error", ctx, exc)
                     should_respond = False
+            pass
 
         elif isinstance(error, (commands.CommandInvokeError, commands.ConversionError)):
             if isinstance(error.original, disnake.Forbidden):
                 logger.warning(f"Permissions error occurred in {ctx.command}.")
                 await self.handle_bot_missing_perms(ctx, error.original)
                 should_respond = False
+            if isinstance(error.original, APIError):
+                error = error.original
             else:
                 # generic error
                 if logger.isEnabledFor(logging.ERROR):
@@ -258,6 +280,9 @@ class ErrorHandler(
 
         if embed is None:
             embed = self.error_embed(self.get_title_from_name(error), str(error))
+
+        if embed.colour and embed.colour.value in (Colours.python_yellow, Colours.python_blue):
+            embed.colour = Colours.soft_red
 
         await ctx.send_error(embeds=[embed])
 

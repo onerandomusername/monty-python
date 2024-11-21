@@ -19,6 +19,7 @@ from disnake.ext import commands, tasks
 
 from monty.bot import Monty
 from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints, Feature
+from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils.caching import redis_cache
 from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
@@ -234,26 +235,19 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
         embed.set_thumbnail(url=PYPI_ICON)
 
-        error = True
         defer_task = None
         if characters := self.check_characters(package):
-            embed.description = (
+            raise MontyCommandError(
                 f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
             )
 
-        else:
-            response_json = await self.fetch_package(package)
-            if response_json:
-                if with_description:
-                    defer_task = maybe_defer(inter)
-                embed = await self.make_pypi_embed(package, response_json, with_description=with_description)
-                error = False
-            else:
-                embed.description = "Package could not be found."
-
-        if error:
-            await inter.send(embed=embed, ephemeral=True)
-            return
+        response_json = await self.fetch_package(package)
+        if not response_json:
+            raise MontyCommandError("Package could not be found.")
+            # error
+        if with_description:
+            defer_task = maybe_defer(inter)
+        embed = await self.make_pypi_embed(package, response_json, with_description=with_description)
 
         components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if embed.url:

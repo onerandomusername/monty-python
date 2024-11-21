@@ -24,6 +24,7 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.database import PackageInfo
+from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.converters import Inventory, PackageName, ValidURL
@@ -778,8 +779,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
                 break
         # if no results
         if not results:
-            await inter.response.send_message(f"No documentation results found for `{query}`.", ephemeral=True)
-            return
+            raise MontyCommandError(f"No documentation results found for `{query}`.")
         # construct embed
         results = dict(sorted(results.items(), key=lambda x: x[0]))
 

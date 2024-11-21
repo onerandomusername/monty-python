@@ -6,6 +6,7 @@ from disnake.ext import commands
 
 from monty import bot
 from monty.constants import Colours
+from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
 
 
@@ -38,17 +39,23 @@ class RealPython(commands.Cog, name="Real Python", slash_command_attrs={"dm_perm
         async with self.bot.http_session.get(url=API_ROOT, params=params) as response:
             if response.status != 200:
                 logger.error(f"Unexpected status code {response.status} from Real Python")
-                await ctx.send(embed=ERROR_EMBED)
-                return
+                raise APIError(
+                    "Real Python",
+                    response.status,
+                    "Sorry, there was en error while trying to fetch data from the Stackoverflow website. "
+                    "Please try again in some time. "
+                    "If this issue persists, please report this issue in our support server, see link below.",
+                )
 
             data = await response.json()
 
         articles = data["results"]
 
         if len(articles) == 0:
-            no_articles = disnake.Embed(title=f"No articles found for '{user_search}'", color=Colours.soft_red)
-            await ctx.send(embed=no_articles)
-            return
+            raise MontyCommandError(
+                title=f"No articles found for '{user_search}'",
+                message="Try broadening your search to show more results.",
+            )
 
         article_embed = disnake.Embed(
             title="Search results - Real Python",

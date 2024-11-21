@@ -18,7 +18,7 @@ __all__ = (
     "UptimeMonitoring",
     "Tokens",
     "RedisConfig",
-    "ERROR_REPLIES",
+    "USER_INPUT_ERROR_REPLIES",
     "NEGATIVE_REPLIES",
     "POSITIVE_REPLIES",
 )
@@ -239,37 +239,29 @@ class Source:
 
 
 # Bot replies
-ERROR_REPLIES = [
-    "Please don't do that.",
-    "You have to stop.",
-    "Do you mind?",
-    "In the future, don't do that.",
-    "That was a mistake.",
-    "You blew it.",
-    "You're bad at computers.",
-    "Are you trying to kill me?",
-    "Noooooo!!",
-    "I can't believe you've done this",
+USER_INPUT_ERROR_REPLIES = [
+    "That input was invaild.",
+    "Proper input not received.",
+    "Please check your arguments.",
+    "Your input was invalid.",
+    "User input invalid. Requesting backup.",
+    "arguments not found, 404",
+    "Bad Argument",
 ]
 
 NEGATIVE_REPLIES = [
-    "Noooooo!!",
-    "Nope.",
-    "I'm sorry Dave, I'm afraid I can't do that.",
-    "I don't think so.",
-    "Not gonna happen.",
-    "Out of the question.",
-    "Huh? No.",
-    "Nah.",
-    "Naw.",
-    "Not likely.",
-    "No way, José.",
-    "Not in a million years.",
-    "Fat chance.",
-    "Certainly not.",
-    "NEGATORY.",
-    "Nuh-uh.",
-    "Not in my house!",
+    "I'm afraid that's not doable",
+    "That is not possible.",
+    "No can do.",
+    "Sorry, I can't",
+    "Ow",
+    "Try again?",
+    "That's not something I was programmed to do.",
+    "Error: ",
+    "Error? Error.",
+    "Oof.",
+    "-_-",
+    "I may have made a mistake.",
 ]
 
 POSITIVE_REPLIES = [
