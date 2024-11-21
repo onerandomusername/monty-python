@@ -3,6 +3,7 @@ import datetime
 import itertools
 import json
 import pathlib
+import random
 from typing import Any, Optional
 
 import attrs
@@ -157,12 +158,19 @@ class Ruff(commands.Cog):
         """Provide autocomplete for ruff rules."""
         # return dict(sorted([[code, code] for code, rule in self.rules.items()])[:25])
         option = option.upper().strip()
+
+        if not option:
+            return {rule.title: rule.code for rule in random.choices(list(self.rules.values()), k=12)}
+
+        class Fake:
+            title = option
+
         results = rapidfuzz.process.extract(
-            (option,),  # must be a nested sequence because of the preprocessor
+            (option, Fake),  # must be a nested sequence because of the preprocessor
             self.rules.items(),
             scorer=rapidfuzz.fuzz.WRatio,
             limit=20,
-            processor=lambda x: x[0],
+            processor=lambda x: x[1].title,
             score_cutoff=0.6,
         )
         return {code[0][1].title: code[0][0] for code in results}
