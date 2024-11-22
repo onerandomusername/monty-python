@@ -966,30 +966,6 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         for issue in issues:
             frag = issue.url_fragment
             assert frag
-
-            # figure out which endpoint we want to use
-            if frag.startswith("issue-"):
-                # in a perfect world we'd show the full issue display, and fetch the issue endpoint
-                # while we don't live in a perfect world we're going to make the necessary convoluted code
-                # to actually loop back anyways
-
-                # github, why is this fragment even a thing?
-                fetched_issue = await self.fetch_issues(
-                    int(issue.number),
-                    issue.repository,
-                    issue.organisation,  # type: ignore
-                )
-                if isinstance(fetched_issue, FetchError):
-                    continue
-                comments.append(self.format_embed_expanded_issue(fetched_issue))
-                components.append(
-                    disnake.ui.Button(
-                        url=fetched_issue.raw_json["html_url"],  # type: ignore
-                        label="View comment",
-                    )
-                )
-                continue
-
             expected_url = issue.user_url
             assert expected_url
 
