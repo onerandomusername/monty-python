@@ -186,6 +186,10 @@ class FoundIssue:
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
 
+    def has_comment_fragment(self) -> bool:
+        """Returns true if `url_fragment` is set and doesn't point to a top-level resource."""
+        return bool(self.url_fragment and not self.url_fragment.startswith(("issue-", "discussion-")))
+
 
 @dataclass
 class FetchError:
@@ -1182,7 +1186,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         if not issues:
             return
 
-        if issue_comments := list(filter(lambda issue: issue.url_fragment, issues)):
+        if issue_comments := list(filter(lambda issue: issue.has_comment_fragment(), issues)):
             # if there are issue comments found, we do not want to expand the entire issue
             # we also only want to expand the issue if the feature is enabled
             # AND both options of the guild configuration are enabled
