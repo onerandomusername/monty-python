@@ -2,14 +2,14 @@
 
 [[package]]
 name = "aiodns"
-version = "3.2.0"
+version = "3.4.0"
 description = "Simple DNS resolver for asyncio"
 optional = false
-python-versions = "*"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "aiodns-3.2.0-py3-none-any.whl", hash = "sha256:e443c0c27b07da3174a109fd9e736d69058d808f144d3c9d56dbd1776964c5f5"},
-    {file = "aiodns-3.2.0.tar.gz", hash = "sha256:62869b23409349c21b072883ec8998316b234c9a9e36675756e8e317e8768f72"},
+    {file = "aiodns-3.4.0-py3-none-any.whl", hash = "sha256:4da2b25f7475343f3afbb363a2bfe46afa544f2b318acb9a945065e622f4ed24"},
+    {file = "aiodns-3.4.0.tar.gz", hash = "sha256:24b0ae58410530367f21234d0c848e4de52c1f16fbddc111726a4ab536ec1b2f"},
 ]
 
 [package.dependencies]
@@ -2989,4 +2989,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~=3.10"
-content-hash = "42a42ae4df51c50b8cd8feb79cf056dd951f43db044a5435ae610a7b0f828908"
+content-hash = "3a395f5af1601e1edf84aa6797aea0d37a41ff219634aefe59963fb6b20afab9"
