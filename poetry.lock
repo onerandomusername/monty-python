@@ -1443,14 +1443,14 @@ testing = ["pytest"]
 
 [[package]]
 name = "markdownify"
-version = "0.11.6"
+version = "1.1.0"
 description = "Convert HTML to markdown."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "markdownify-0.11.6-py3-none-any.whl", hash = "sha256:ba35fe289d5e9073bcd7d2cad629278fe25f1a93741fcdc0bfb4f009076d8324"},
-    {file = "markdownify-0.11.6.tar.gz", hash = "sha256:009b240e0c9f4c8eaf1d085625dcd4011e12f0f8cec55dedf9ea6f7655e49bfe"},
+    {file = "markdownify-1.1.0-py3-none-any.whl", hash = "sha256:32a5a08e9af02c8a6528942224c91b933b4bd2c7d078f9012943776fc313eeef"},
+    {file = "markdownify-1.1.0.tar.gz", hash = "sha256:449c0bbbf1401c5112379619524f33b63490a8fa479456d41de9dc9e37560ebd"},
 ]
 
 [package.dependencies]
@@ -3002,4 +3002,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~=3.10"
-content-hash = "c6c57c4af42bdf2b54f4cc1b3bfe89720ab4863dd631003aa66addc15bc6a66f"
+content-hash = "3a4677f09c16d4dc5060ac32cf041b7b78ac3635eecd024fbf1ab802436bd828"
