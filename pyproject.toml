@@ -20,7 +20,7 @@ coloredlogs = "~=15.0"
 disnake = { version = '~=2.9.3' }
 orjson = "^3.10.18"
 fakeredis = "^2.29.0"
-gql = "^3.5.2"
+gql = "^3.5.3"
 lxml = "^5.4.0"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
