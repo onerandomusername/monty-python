@@ -24,7 +24,7 @@ gql = "^3.5.2"
 lxml = "^5.4.0"
 markdownify = "==0.11.6"
 mistune = "^2.0.4"
-msgpack = "^1.1.0"
+msgpack = "^1.1.1"
 redis = { version = "^5.2.0", extras = ['hiredis'] }
 Pillow = "^11.2"
 psutil = "^5.9.8"
