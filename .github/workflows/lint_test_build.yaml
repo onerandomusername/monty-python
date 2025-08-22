@@ -72,7 +72,7 @@ jobs:
       - name: Install dependencies using poetry
         # if: steps.python_cache.outputs.cache-hit != 'true'
         run: |
-          pip install poetry==1.7.1 poetry-plugin-export==1.6.0
+          pip install poetry==2.1.4 poetry-plugin-export==1.9.0
           poetry install --no-interaction --no-ansi
 
       # This step caches our pre-commit environment. To make sure we
