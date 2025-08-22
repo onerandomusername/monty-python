@@ -22,7 +22,7 @@ orjson = "^3.10.18"
 fakeredis = "^2.29.0"
 gql = "^3.5.2"
 lxml = "^5.4.0"
-markdownify = "==0.11.6"
+markdownify = "==1.2.0"
 mistune = "^2.0.4"
 msgpack = "^1.1.0"
 redis = { version = "^5.2.0", extras = ['hiredis'] }
