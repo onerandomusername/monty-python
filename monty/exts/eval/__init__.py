@@ -279,7 +279,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
             output, paste_link = await self.format_output(results["stdout"])
 
         icon = self.get_status_emoji(results)
-        msg = f"{ctx.author.mention} {icon} {msg}.\n\n```\n{output}\n```"
+        msg = f"{ctx.author.mention} {icon} {msg}.\n\n```ansi\n{output}\n```"
 
         log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
