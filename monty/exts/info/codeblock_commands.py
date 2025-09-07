@@ -337,7 +337,11 @@ class CodeBlockActions(
             )
         await ctx.send(msg, components=button, reference=reference, allowed_mentions=mentions)
 
-    @commands.message_command(name="Run in Snekbox")
+    @commands.message_command(
+        name="Run in Snekbox",
+        install_types=disnake.ApplicationInstallTypes.all(),
+        contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
+    )
     async def run_in_snekbox(self, inter: disnake.MessageCommandInteraction) -> None:
         """Run the specified message in snekbox."""
         success, code, _ = await self.parse_code(
@@ -353,12 +357,15 @@ class CodeBlockActions(
 
         # only provide a modal if the code is short enough
         if code and len(code) <= 4000:
-            modal_components = disnake.ui.TextInput(
-                label="Code",
-                custom_id="code",
-                style=disnake.TextInputStyle.long,
-                value=code,
-                required=True,
+            modal_components = disnake.ui.Label(
+                text="Code",
+                description="Modify the code before running it.",
+                component=disnake.ui.TextInput(
+                    custom_id="code",
+                    style=disnake.TextInputStyle.long,
+                    value=code,
+                    required=True,
+                ),
             )
             await inter.response.send_modal(
                 title="Run in Snekbox", custom_id=f"snekbox-eval-{inter.id}", components=modal_components

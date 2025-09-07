@@ -66,12 +66,23 @@ class EvalModal(disnake.ui.Modal):
     """Modal for evaluation."""
 
     def __init__(self, snekbox: "Snekbox", *, title: str = "Eval Code") -> None:
-        super().__init__(title=title, components=[])
+        components = [
+            disnake.ui.Label(
+                "Enter the code to evaluate:",
+                component=disnake.ui.TextInput(
+                    style=disnake.TextInputStyle.paragraph,
+                    custom_id="code",
+                    placeholder=PLACEHOLDER_CODE,
+                    required=True,
+                    max_length=4000,
+                    min_length=1,
+                ),
+                description="Code must be wrapped in a code block or inline code.",
+            ),
+        ]
+        super().__init__(title=title, components=components)
         self.snekbox = snekbox
         self.custom_id = "snekbox_eval"
-        self.add_text_input(
-            label="Code", custom_id="code", style=disnake.TextInputStyle.long, placeholder=PLACEHOLDER_CODE
-        )
 
     async def callback(self, inter: disnake.ModalInteraction) -> None:
         """Evaluate the provided code."""
@@ -373,7 +384,11 @@ class Snekbox(
 
         return code
 
-    @commands.slash_command(name="eval")
+    @commands.slash_command(
+        name="eval",
+        contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
+        install_types=disnake.ApplicationInstallTypes.all(),
+    )
     async def slash_eval(self, inter: disnake.CommandInteraction, code: Optional[str] = None) -> None:
         """
         Evaluate python code.
