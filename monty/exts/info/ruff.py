@@ -107,7 +107,13 @@ class Rule:
         return sections
 
 
-class Ruff(commands.Cog):
+class Ruff(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Cog for getting information about Ruff and other rules."""
 
     def __init__(self, bot: Monty) -> None:

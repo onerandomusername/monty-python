@@ -29,7 +29,10 @@ DELETE_PAUSE = 7
 class CodeBlockCog(
     commands.Cog,
     name="Code Block",
-    slash_command_attrs={"dm_permission": False},
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
 ):
     """
     Detect improperly formatted Markdown code blocks and suggest proper formatting.

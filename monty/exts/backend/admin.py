@@ -84,7 +84,6 @@ MESSAGE_LIMIT = 2000
 class Admin(
     commands.Cog,
     command_attrs={"hidden": True},
-    slash_command_attrs={"dm_permission": False},
 ):
     """Admin-only eval command and repr."""
 
@@ -122,7 +121,7 @@ class Admin(
         """If there's a syntax error in the exception, get some text from it."""
         if e.text is None:
             return f"```py\n{e.__class__.__name__}: {e}\n```"
-        return f'```py\n{e.text}{"^":>{e.offset}}\n{e.__class__.__name__}: {e}```'
+        return f"```py\n{e.text}{'^':>{e.offset}}\n{e.__class__.__name__}: {e}```"
 
     @staticmethod
     def _runwith(code: str) -> Executor:
@@ -409,7 +408,7 @@ class Admin(
         events_and_count = dict(sorted(events_and_count.items(), key=lambda x: x[1], reverse=True))
         embed.description += "\n"
         for event, count in events_and_count.items():
-            embed.description += f"`{event:<{longest_length+1}}`: `{count:>4,}`\n"
+            embed.description += f"`{event:<{longest_length + 1}}`: `{count:>4,}`\n"
 
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
         await ctx.send(embed=embed, components=components)

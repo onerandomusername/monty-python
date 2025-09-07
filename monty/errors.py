@@ -69,7 +69,6 @@ class MontyCommandError(commands.CommandError):
 
 
 class OpenDMsRequired(commands.UserInputError):
-
     def __init__(self, message: str = None, *args):
         self.title = "Open DMs Required"
         if message is None:

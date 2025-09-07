@@ -17,7 +17,7 @@ SO_PARAMS = {"order": "desc", "sort": "activity", "site": "stackoverflow"}
 SEARCH_URL = "https://stackoverflow.com/search?q={query}"
 
 
-class Stackoverflow(commands.Cog, name="Stack Overflow", slash_command_attrs={"dm_permission": False}):
+class Stackoverflow(commands.Cog, name="Stack Overflow"):
     """Contains command to interact with stackoverflow from disnake."""
 
     def __init__(self, bot: bot.Monty) -> None:

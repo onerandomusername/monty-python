@@ -36,8 +36,14 @@ MAX_LEN = 30_000
 class CodeBlockActions(
     commands.Cog,
     name="Code Block Actions",
-    slash_command_attrs={"dm_permission": False},
-    message_command_attrs={"dm_permission": False},
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
+    message_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
 ):
     """Adds automatic buttons to codeblocks if they match commands."""
 

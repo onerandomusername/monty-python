@@ -11,7 +11,7 @@ VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 logger = get_logger(__name__)
 
 
-class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class DeleteManager(commands.Cog):
     """Handle delete buttons being pressed."""
 
     def __init__(self, bot: Monty) -> None:
@@ -38,22 +38,19 @@ class DeleteManager(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         # check if the user id is the allowed user OR check if the user has any of the permissions allowed
         if not (is_orig_author := inter.author.id == user_id):
-            permissions = disnake.Permissions(perms)
+            needed_permissions = disnake.Permissions(perms)
             user_permissions = inter.permissions
-            if not permissions.value & user_permissions.value:
+            if not needed_permissions.value & user_permissions.value:
                 await inter.response.send_message("Sorry, this delete button is not for you!", ephemeral=True)
                 return
 
-        if (
-            not hasattr(inter.channel, "guild")
-            or not (myperms := inter.channel.permissions_for(inter.me)).read_messages
-        ):
+        if not hasattr(inter.channel, "guild") or not inter.app_permissions.read_messages:
             await inter.response.defer()
             await inter.delete_original_message()
             return
 
         await inter.message.delete()
-        if not delete_msg or not myperms.manage_messages or not is_orig_author:
+        if not delete_msg or not inter.app_permissions.manage_messages or not is_orig_author:
             return
         if msg := inter.bot.get_message(delete_msg):
             if msg.edited_at:

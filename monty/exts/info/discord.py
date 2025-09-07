@@ -34,7 +34,13 @@ INVITE_USER = """
 """
 
 
-class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Discord(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Useful discord api commands."""
 
     def __init__(self, bot: Monty) -> None:

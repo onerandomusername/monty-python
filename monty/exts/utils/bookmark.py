@@ -65,8 +65,14 @@ def check_user_read_perms(user: disnake.User, target_message: disnake.Message) -
 
 class Bookmark(
     commands.Cog,
-    slash_command_attrs={"dm_permission": False},
-    message_command_attrs={"dm_permission": False},
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
+    message_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
 ):
     """Creates personal bookmarks by relaying a message link to the user's DMs."""
 

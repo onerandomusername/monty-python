@@ -89,7 +89,13 @@ def predicate_eval_emoji_reaction(ctx: commands.Context, reaction: disnake.React
     return reaction.message.id == ctx.message.id and user.id == ctx.author.id and str(reaction) == REEVAL_EMOJI
 
 
-class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Snekbox(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
+):
     """Safe evaluation of Python code using Snekbox."""
 
     def __init__(self, bot: Monty) -> None:

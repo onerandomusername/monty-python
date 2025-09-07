@@ -68,7 +68,13 @@ def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Q
     results_queue.put(result)
 
 
-class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class PyPI(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Cog for getting information about PyPI packages."""
 
     def __init__(self, bot: Monty) -> None:

@@ -11,7 +11,7 @@ EXT_METADATA = ExtMetadata(core=True)
 logger = get_logger(__name__)
 
 
-class UptimeMonitor(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class UptimeMonitor(commands.Cog):
     """Pong a remote server for uptime monitoring."""
 
     def __init__(self, bot: Monty) -> None:

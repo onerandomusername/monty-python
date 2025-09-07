@@ -20,7 +20,13 @@ from monty.utils.messages import DeleteButton
 THUMBNAIL_SIZE = (80, 80)
 
 
-class Colour(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Colour(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Cog for the Colour command."""
 
     def __init__(self, bot: Monty) -> None:

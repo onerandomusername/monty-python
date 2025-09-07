@@ -18,7 +18,13 @@ COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"
 
 
-class XKCD(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class XKCD(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Retrieving XKCD comics."""
 
     def __init__(self, bot: Monty) -> None:

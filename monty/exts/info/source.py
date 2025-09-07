@@ -77,7 +77,7 @@ class FrozenChainMap(Mapping[K, V]):
 
     @reprlib.recursive_repr()
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({", ".join(map(repr, self.maps))})'
+        return f"{self.__class__.__name__}({', '.join(map(repr, self.maps))})"
 
     @classmethod
     def fromkeys(cls, iterable: Iterable[K], *args: V) -> "FrozenChainMap[K, V]":
@@ -95,7 +95,14 @@ class FrozenChainMap(Mapping[K, V]):
         return self.__class__(m, *self.maps)
 
 
-class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_permission": False}):
+class MetaSource(
+    commands.Cog,
+    name="Meta Source",
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Display information about my own source code."""
 
     def __init__(self, bot: Monty) -> None:
@@ -321,7 +328,7 @@ class MetaSource(commands.Cog, name="Meta Source", slash_command_attrs={"dm_perm
             except OSError:
                 raise commands.BadArgument("Cannot get source for a dynamically-created object.") from None
 
-            lines_extension = f"#L{first_line_no}-L{first_line_no+len(lines)-1}"
+            lines_extension = f"#L{first_line_no}-L{first_line_no + len(lines) - 1}"
         else:
             first_line_no = None
             lines_extension = ""

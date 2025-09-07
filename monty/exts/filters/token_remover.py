@@ -68,7 +68,7 @@ class Token:
         return f"{self.user_id}.{self.timestamp}.{self.hmac}"
 
 
-class TokenRemover(commands.Cog, name="Token Remover", slash_command_attrs={"dm_permission": False}):
+class TokenRemover(commands.Cog, name="Token Remover"):
     """Scans messages for potential discord client tokens and removes them."""
 
     def __init__(self, bot: Monty) -> None:

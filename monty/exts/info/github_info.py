@@ -208,7 +208,14 @@ class IssueState:
     raw_json: Optional[dict[str, Any]] = None
 
 
-class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"dm_permission": False}):
+class GithubInfo(
+    commands.Cog,
+    name="GitHub Information",
+    slash_command_attrs={
+        "context": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
+):
     """Fetches info from GitHub."""
 
     def __init__(self, bot: Monty) -> None:
@@ -438,7 +445,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
                 )
 
                 embed.add_field(
-                    name=f"Organization{'s' if len(orgs)!=1 else ''}",
+                    name=f"Organization{'s' if len(orgs) != 1 else ''}",
                     value=orgs_to_add if orgs else "No organizations.",
                 )
             embed.add_field(name="Website", value=blog)
@@ -1362,9 +1369,7 @@ class GithubInfo(commands.Cog, name="GitHub Information", slash_command_attrs={"
         except KeyError:
             pass
 
-    @commands.slash_command(
-        dm_permission=False,
-    )
+    @commands.slash_command()
     async def github(self, inter: disnake.ApplicationCommandInteraction, arg: str) -> None:
         """
         View information about an issue, pull, discussion, or comment on GitHub.

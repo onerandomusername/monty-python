@@ -53,7 +53,7 @@ class DocMarkdownConverter(MarkdownConverter):
         parent = el.parent
         if parent is not None and parent.name == "ol":
             li_tags = parent.find_all("li")
-            bullet = f"{li_tags.index(el)+1}."
+            bullet = f"{li_tags.index(el) + 1}."
         else:
             depth = -1
             curr_el = el

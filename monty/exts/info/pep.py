@@ -62,7 +62,14 @@ class PEPHeaders:
         return headers
 
 
-class PythonEnhancementProposals(commands.Cog, name="PEPs", slash_command_attrs={"dm_permission": False}):
+class PythonEnhancementProposals(
+    commands.Cog,
+    name="PEPs",
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Cog for displaying information about PEPs."""
 
     def __init__(self, bot: Monty) -> None:

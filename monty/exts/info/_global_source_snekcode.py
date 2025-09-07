@@ -128,7 +128,7 @@ if __name__ == "__main__":
             except OSError:
                 print(filename)
                 sys.exit(9)
-            lines_extension = f"#L{first_lineno}-L{first_lineno+len(lines)-1}"
+            lines_extension = f"#L{first_lineno}-L{first_lineno + len(lines) - 1}"
         else:
             lines_extension = ""
         module_name = ""

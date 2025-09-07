@@ -59,7 +59,7 @@ GITHUB_REQUEST_HEADERS = DEFAULT_GITHUB_REQUEST_HEADERS.copy()
 GITHUB_REQUEST_HEADERS["Accept"] = "application/vnd.github.v3.raw"
 
 
-class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_permission": False}):
+class CodeSnippets(commands.Cog, name="Code Snippets"):
     """
     commands.Cog that parses and sends code snippets to disnake.
 
@@ -167,7 +167,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets", slash_command_attrs={"dm_
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
         gist_json = await self._fetch_response(
-            f'https://api.github.com/gists/{gist_id}{f"/{revision}" if len(revision) > 0 else ""}',
+            f"https://api.github.com/gists/{gist_id}{f'/{revision}' if len(revision) > 0 else ''}",
             "json",
             headers=GITHUB_REQUEST_HEADERS,
         )

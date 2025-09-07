@@ -415,7 +415,7 @@ class HelpSession:
 
         page_count = len(self._pages)
         if page_count > 1:
-            embed.set_footer(text=f"Page {self._current_page+1} / {page_count}")
+            embed.set_footer(text=f"Page {self._current_page + 1} / {page_count}")
 
         return embed
 
@@ -510,7 +510,7 @@ class HelpSession:
             await self.message.delete()
 
 
-class Help(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Help(commands.Cog):
     """Custom disnake.Embed Pagination Help feature."""
 
     @commands.command("help")

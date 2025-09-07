@@ -89,7 +89,8 @@ class Configuration(
     commands.Cog,
     name="Config Manager",
     slash_command_attrs={
-        "dm_permission": False,
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
         "default_member_permissions": disnake.Permissions(manage_guild=True),
     },
 ):

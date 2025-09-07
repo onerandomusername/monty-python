@@ -16,7 +16,13 @@ from monty.utils.pagination import LinePaginator
 log = get_logger(__name__)
 
 
-class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Utils(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes(guild=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True),
+    },
+):
     """A selection of utilities which don't have a clear category."""
 
     def __init__(self, bot: Monty) -> None:
@@ -87,7 +93,7 @@ class Utils(commands.Cog, slash_command_attrs={"dm_permission": False}):
 
         embed = disnake.Embed(colour=disnake.Colour.blue())
         embed.set_author(
-            name=f"Snowflake{'s'[:len(snowflakes)^1]}",  # Deals with pluralisation
+            name=f"Snowflake{'s'[: len(snowflakes) ^ 1]}",  # Deals with pluralisation
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
