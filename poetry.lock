@@ -759,24 +759,27 @@ cron = ["capturer (>=2.4)"]
 
 [[package]]
 name = "disnake"
-version = "2.9.3"
+version = "2.11.0a4825+gc36126cb6"
 description = "A Python wrapper for the Discord API"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-files = [
-    {file = "disnake-2.9.3-py3-none-any.whl", hash = "sha256:ea0f69425f885a0e2f2a492365dfbaed9186b9fb9d2fa3a2832ec792953818fb"},
-    {file = "disnake-2.9.3.tar.gz", hash = "sha256:0e062042b103b18601b62cc25b301ef837b40af2de15efeb7108466078243bb8"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 aiohttp = ">=3.7.0,<4.0"
 
 [package.extras]
-discord = ["discord-disnake"]
-docs = ["sphinx (==7.0.1)", "sphinx-autobuild (>=2021.3,<2022.0)", "sphinx-hoverxref (==1.3.0)", "sphinx-notfound-page (==0.8.3)", "sphinxcontrib-towncrier (==0.3.2a0)", "sphinxcontrib-trio (>=1.1.2,<1.2.0)", "towncrier (==23.6.0)"]
+docs = ["sphinx (==7.0.1)", "sphinx-autobuild (>=2021.3,<2022.0)", "sphinx-hoverxref (==1.3.0)", "sphinx-notfound-page (==0.8.3)", "sphinxcontrib-towncrier (==0.3.2a0)", "sphinxcontrib-trio (>=1.1.2,<1.2.0)", "sphinxext-opengraph (==0.9.1)", "towncrier (==23.6.0)"]
 speed = ["Brotli", "aiodns (>=1.1)", "cchardet ; python_version < \"3.10\"", "orjson (>=3.6,<4.0)"]
-voice = ["PyNaCl (>=1.5.0,<1.6)"]
+voice = ["PyNaCl (>=1.5.0,<1.6)", "audioop-lts (==0.2.1) ; python_version >= \"3.13\""]
+
+[package.source]
+type = "git"
+url = "https://github.com/DisnakeDev/disnake.git"
+reference = "HEAD"
+resolved_reference = "bb2727312f3144d240c36a97fd62846f7eb8273f"
 
 [[package]]
 name = "distlib"
@@ -3254,4 +3257,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~=3.10"
-content-hash = "a8676f69d27f5b5246d8a600c152286e4ced5959b38801aa9b2b94d8e599d5f2"
+content-hash = "5a29b181aead5651d53d5ab25972695e7088f61fedaf0a4a37cd9d91ae5f2c53"

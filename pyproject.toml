@@ -20,7 +20,7 @@ dependencies = [
     "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
     "colorama~=0.4.5; sys_platform == \"win32\"",
     "coloredlogs~=15.0",
-    "disnake~=2.9.3",
+    "disnake @ git+https://github.com/DisnakeDev/disnake.git",
     "orjson<4.0.0,>=3.10.18",
     "gql<4.0.0,>=3.5.2",
     "lxml<6.0.0,>=5.4.0",
