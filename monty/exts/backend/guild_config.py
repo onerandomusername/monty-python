@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 import inspect
 from typing import Literal, Optional, Union
@@ -146,7 +147,6 @@ class Configuration(
         self,
         inter: disnake.GuildCommandInteraction,
         option: str,
-        value: str,
     ) -> None:
         """
         [BETA] Edit the specified config option to the provided value.
@@ -163,6 +163,54 @@ class Configuration(
 
         if metadata.requires_bot:
             self.require_bot(inter)
+
+        # determine components
+        label_component = []
+        if metadata.type is bool:
+            label_component = disnake.ui.StringSelect(
+                custom_id="value",
+                options=[
+                    disnake.SelectOption(label="Enabled", value="true", default=old is True),
+                    disnake.SelectOption(label="Disabled", value="false", default=old is False),
+                ],
+                required=True,
+                max_values=1,
+                min_values=1,
+            )
+        else:
+            label_component = disnake.ui.TextInput(
+                custom_id="value",
+                style=disnake.TextInputStyle.paragraph,
+                required=True,
+                value=old,
+            )
+
+        modal = disnake.ui.Modal(
+            title="Set Configuration Option",
+            custom_id=f"config:set:{option_name}:{inter.id}",
+            components=disnake.ui.Label(
+                text=get_localised_response(inter, "{name}", name=metadata.name),
+                description=get_localised_response(inter, "{name}", name=metadata.description),
+                component=label_component,
+            ),
+        )
+
+        await inter.response.send_modal(modal)
+
+        try:
+            inter: disnake.ModalInteraction = await self.bot.wait_for(
+                "modal_submit",
+                check=lambda i: i.custom_id == f"config:set:{option_name}:{inter.id}"
+                and i.author.id == inter.author.id
+                and i.guild_id == inter.guild_id,
+                timeout=300,
+            )
+        except asyncio.TimeoutError:
+            return
+
+        value = inter.values["value"]
+        if isinstance(value, list):
+            value = value[0]
 
         try:
             # convert the value with the metadata.type
@@ -276,35 +324,6 @@ class Configuration(
             response,
             ephemeral=True,
         )
-
-    @set_command.autocomplete("value")
-    async def set_value_autocomplete(
-        self,
-        inter: disnake.CommandInteraction,
-        value: str,
-        *,
-        option: str = None,
-    ) -> Union[dict[str, str], list[str]]:
-        """Show autocomplete for setting a config option."""
-        if not option:
-            return ["Please fill out the option parameter with a valid option."]
-
-        try:
-            metadata = METADATA[option]
-        except KeyError:
-            try:
-                _, metadata = await config_option(inter, option=option)
-            except commands.UserInputError:
-                return ["Please fill out the option parameter with a valid option."]
-
-        if metadata.type is bool:
-            return {
-                "Enabled": "True",
-                "Disabled": "False",
-                get_localised_response(inter, "{name}", name=metadata.description): "_",
-            }
-
-        return [value or get_localised_response(inter, "{name}", name=metadata.description)]
 
     @set_command.autocomplete("option")
     @clear_command.autocomplete("option")

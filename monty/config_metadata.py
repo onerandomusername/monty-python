@@ -69,6 +69,10 @@ class ConfigAttrMetadata:
     def __post_init__(self):
         if self.type not in (str, int, float, bool):
             raise ValueError("type must be one of str, int, float, or bool")
+        if len(self.name) > 45:
+            raise ValueError("name must be less than 45 characters")
+        if len(self.description) > 100:
+            raise ValueError("description must be less than 100 characters")
 
 
 METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
@@ -92,7 +96,7 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
         name="GitHub/GitLab/BitBucket File Expansions",
-        description="BitBucket, GitLab, and GitHub automatic file expansions.",
+        description="Whether to automatically expand links to specific lines for GitHub, GitLab, and BitBucket",
         long_description=(
             "Automatically expand links to specific lines for GitHub, GitLab, and BitBucket when possible."
         ),
