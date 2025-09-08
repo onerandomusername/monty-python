@@ -1,5 +1,4 @@
 import asyncio
-import textwrap
 from typing import TYPE_CHECKING, Union
 
 import disnake
@@ -15,13 +14,19 @@ from monty.utils.messages import DeleteButton
 
 if TYPE_CHECKING:
     MaybeFeature = str
+    FeatureConverter = str
 else:
-    from monty.utils.converters import MaybeFeature
+    from monty.utils.converters import FeatureConverter, MaybeFeature
 
 logger = get_logger(__name__)
 
-FEATURE_VIEW_PREFIX = "feature_view_"
-FEATURES_MAIN_LIST = "features_main_list"
+FEATURES_PREFIX = "features_"
+FEATURE_VIEW_PREFIX = FEATURES_PREFIX + "view_"
+FEATURES_MAIN_LIST = FEATURES_PREFIX + "main_list"
+FEATURES_GUILD_TOGGLE = FEATURES_PREFIX + "guild_toggle_"
+
+FEATURES_PAGINATOR_PREFIX = FEATURES_PREFIX + "paginator_"
+FEATURES_PER_PAGE = 10
 
 
 class FeatureManagement(commands.Cog, name="Feature Management"):
@@ -41,48 +46,71 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
     async def wait_for_confirmation(
         self,
-        message: disnake.Message,
+        message_or_inter: disnake.MessageInteraction | disnake.Message,
         content: str,
         *,
         timeout: float = 30,
         confirm_button_text: str = "Confirm",
         deny_button_text: str = "Deny",
-    ) -> Union[tuple[bool, disnake.MessageInteraction, disnake.ui.MessageActionRow], tuple[None, None, None]]:
+        go_back_button: disnake.ui.Button | None = None,
+    ) -> Union[tuple[bool, disnake.MessageInteraction, list[disnake.ui.Container]], tuple[None, None, None]]:
         """Wait for the user to provide confirmation, and handle expiration."""
         # ask the user if they want to add this feature
-        components = disnake.ui.ActionRow.with_message_components()
+        if isinstance(message_or_inter, disnake.Message):
+            content = "### Confirmation Required\n" + content
+        components: list = [disnake.ui.Container(disnake.ui.TextDisplay(content))]
+        row = disnake.ui.ActionRow.with_message_components()
         create_button = disnake.ui.Button(style=disnake.ButtonStyle.green, label=confirm_button_text)
-        components.append_item(create_button)
+        row.append_item(create_button)
         deny_button = disnake.ui.Button(style=disnake.ButtonStyle.red, label=deny_button_text)
-        components.append_item(deny_button)
-        custom_ids = {x.custom_id for x in components}
+        row.append_item(deny_button)
+        components[0].children.append(row)
+        custom_ids = {x.custom_id for x in row}
 
-        delete_button = DeleteButton(message.author, allow_manage_messages=False, initial_message=message)
-        components.insert_item(0, delete_button)
-        delete_button.disabled = True
-
-        sent_msg = await message.reply(
-            content,
-            components=components,
-            fail_if_not_exists=False,
+        delete_button = DeleteButton(
+            message_or_inter.author,
+            allow_manage_messages=False,
+            initial_message=message_or_inter if isinstance(message_or_inter, disnake.Message) else None,
         )
+        if isinstance(message_or_inter, disnake.Message):
+            row.insert_item(0, delete_button)
+
+        if isinstance(message_or_inter, disnake.Message):
+            sent_msg = await message_or_inter.reply(
+                components=components,
+                fail_if_not_exists=False,
+            )
+        elif isinstance(message_or_inter, disnake.MessageInteraction):
+            # add a row outside of the container with the go back button
+            components.append(disnake.ui.ActionRow(delete_button))
+            if go_back_button:
+                components[-1].append_item(go_back_button)
+            await message_or_inter.response.edit_message(
+                components=components,
+            )
+            sent_msg = message_or_inter.message
+        else:
+            raise TypeError("message_or_inter must be a Message or MessageInteraction")
+
         try:
             inter: disnake.MessageInteraction = await self.bot.wait_for(
                 "button_click",
-                check=lambda itr: itr.component.custom_id in custom_ids and itr.message == sent_msg,
+                check=lambda itr: itr.component.custom_id in custom_ids
+                and itr.message == sent_msg
+                and (itr.author.id in self.bot.owner_ids or itr.author.id == self.bot.owner_id),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
-            for comp in components:
-                comp.disabled = True
-            delete_button.disabled = False
+            if isinstance(message_or_inter, disnake.MessageInteraction):
+                return (False, message_or_inter, components)
+
             try:
-                await sent_msg.edit(content="Timed out.", components=components)
+                await sent_msg.edit()
             except disnake.HTTPException:
                 pass
             return (None, None, None)
 
-        for comp in components:
+        for comp in row:
             comp.disabled = True
         delete_button.disabled = False
 
@@ -95,125 +123,46 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     # commands
 
     @commands.group(name="features", invoke_without_command=True)
-    async def cmd_features(self, ctx: commands.Context) -> None:
+    async def cmd_features(
+        self, ctx: commands.Context, arg: disnake.Guild | disnake.Object | FeatureConverter = None
+    ) -> None:
         """Manage features."""
+        if arg is not None:
+            if isinstance(arg, (disnake.Guild, disnake.Object)):
+                # redirect to guild command
+                ctx.args = (arg,)
+                ctx.command = self.cmd_guild
+                await self.bot.invoke(ctx)
+                return
+            if isinstance(arg, Feature):
+                await self.show_feature(ctx, arg, with_guilds=True)
+                return
+
         await self.cmd_list(ctx)
 
-    # feature global state commands
-
-    @cmd_features.group(name="global", invoke_without_command=True)
-    async def cmd_global(self, ctx: commands.Context) -> None:
-        """Manage the global settings of features."""
-        await self.cmd_list(ctx)
-
-    @cmd_global.command(name="enable")
-    async def cmd_global_enable(self, ctx: commands.Context, name: MaybeFeature) -> None:
+    async def set_feature(self, feature: Feature, status: bool | None) -> Feature:
         """Enable the specified feature globally."""
-        # first validate the feature exists, then ask for confirmation
-        feature = self.features.get(name)
         if not feature:
             raise commands.UserInputError("That feature does not exist.")
-        if feature.enabled is True:
-            raise commands.UserInputError("That feature is already enabled.")
-        confirm, inter, components = await self.wait_for_confirmation(
-            ctx.message, f"Are you sure you want to **enable** feature `{name}` globally?\n\u200b"
-        )
-        if confirm is None or inter is None:
-            return
-        if not confirm:
-            await inter.response.edit_message("Aborted.", components=components)
-            return
+        if feature.enabled is status:
+            # already set, return early
+            return feature
 
-        logger.info(f"Attempting to enable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
         async with self.bot.db.begin() as session:
             feature = await session.merge(feature)
-            feature.enabled = True
+            feature.enabled = status
             await session.commit()
             self.refresh_in_cache(feature)
 
-        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await inter.response.edit_message(
-            content=f"Successfully **enabled** feature `{name}` globally.", components=button
-        )
-        logger.info(f"Successsfully enabled feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
+        return feature
 
-    @cmd_global.command(name="disable")
-    async def cmd_global_disable(self, ctx: commands.Context, name: MaybeFeature) -> None:
-        """Disable the specified feature globally."""
-        # first validate the feature exists, then ask for confirmation
-        feature = self.features.get(name)
-        if not feature:
-            raise commands.UserInputError("That feature does not exist.")
-        if feature.enabled is False:
-            raise commands.UserInputError("That feature is already disabled.")
-        confirm, inter, components = await self.wait_for_confirmation(
-            ctx.message, f"Are you sure you want to **disable** feature `{name}` globally?\n\u200b"
-        )
-        if confirm is None or inter is None:
-            return
-        if not confirm:
-            await inter.response.edit_message("Aborted.", components=components)
-            return
-
-        logger.info(f"Attempting to disable feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-        async with self.bot.db.begin() as session:
-            feature = await session.merge(feature)
-            feature.enabled = False
-            await session.commit()
-            self.refresh_in_cache(feature)
-
-        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await inter.response.edit_message(
-            content=f"Successfully **disabled** feature `{name}` globally.", components=button
-        )
-        logger.info(f"Successsfully disabled feature {name} globally as requested by {ctx.author} ({ctx.author.id}).")
-
-    @cmd_global.command(name="default")
-    async def cmd_global_default(self, ctx: commands.Context, name: MaybeFeature) -> None:
-        """Switch to guild overrides for the specified feature globally."""
-        # first validate the feature exists, then ask for confirmation
-        feature = self.features.get(name)
-        if not feature:
-            raise commands.UserInputError("That feature does not exist.")
-        if feature.enabled is None:
-            raise commands.UserInputError("That feature is already set to guild overrides.")
-        confirm, inter, components = await self.wait_for_confirmation(
-            ctx.message,
-            f"Are you sure you want to **switch to guild overrides** for feature `{name}`?\n\u200b",
-        )
-        if confirm is None or inter is None:
-            return
-        if not confirm:
-            await inter.response.edit_message("Aborted.", components=components)
-            return
-
-        logger.info(
-            f"Attempting to globally set feature {name} to guild overrides "
-            f"as requested by {ctx.author} ({ctx.author.id})."
-        )
-        async with self.bot.db.begin() as session:
-            feature = await session.merge(feature)
-            feature.enabled = None
-            await session.commit()
-            self.refresh_in_cache(feature)
-
-        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await inter.response.edit_message(
-            content=f"Successfully changed feature `{name}` to guild overrides.", components=button
-        )
-        logger.info(
-            f"Successfully changed feature {name} to guild overrides as requested by {ctx.author} ({ctx.author.id})."
-        )
-
-    async def show_features(
-        self, inter: disnake.MessageInteraction, feature: Feature, *, with_guilds: bool = False
+    async def show_feature(
+        self, inter: disnake.MessageInteraction | commands.Context, feature: Feature, *, with_guilds: bool = False
     ) -> None:
         """Show properties of the provided feature."""
-        status = "Enabled" if feature.enabled else "Disabled" if feature.enabled is False else "Guild overrides"
         components: list = [
-            disnake.ui.Container(disnake.ui.TextDisplay(f"-# **Global Features » {feature.name}**\n### {feature.name}"))
+            disnake.ui.Container(disnake.ui.TextDisplay(f"-# **Features » {feature.name}**\n### {feature.name}"))
         ]
-        components[-1].children.append(disnake.ui.TextDisplay(f"**Enabled**:\n{status}"))
         components[-1].children.append(
             disnake.ui.TextDisplay(f"**Rollout**:\n{feature.rollout.name if feature.rollout else 'None'}")
         )
@@ -232,13 +181,57 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             guild_names.sort()
 
             if guild_names:
-                components.append(disnake.ui.Separator())
-                components.append(
-                    disnake.ui.Container(
-                        disnake.ui.TextDisplay("## Guilds\n" + "\n".join(guild_names) or "No guilds have overrides")
-                    )
+                components[-1].children.append(
+                    disnake.ui.TextDisplay("**Guilds**\n" + "\n".join(guild_names) or "No guilds have overrides")
                 )
 
+        # add a button to give the feature the guild if the feature is using guild overrides
+        if feature.enabled is None and isinstance(inter.guild, disnake.Guild):
+            guild_has_feature = await self.bot.guild_has_feature(
+                inter.guild,
+                feature.name,
+                include_feature_status=False,
+                create_if_not_exists=False,
+            )
+            components[-1].children.append(
+                disnake.ui.Section(
+                    disnake.ui.TextDisplay("### Status:"),
+                    accessory=disnake.ui.Button(
+                        label="Click to disable in Guild" if guild_has_feature else "Click to enable in Guild",
+                        style=disnake.ButtonStyle.green if guild_has_feature else disnake.ButtonStyle.grey,
+                        custom_id=f"guild_feature_toggle:{inter.guild.id}:{feature.name}",
+                    ),
+                )
+            )
+        else:  # otherwise just have a title for the status
+            components[-1].children.append(disnake.ui.TextDisplay("### Status:"))
+
+        status_options = {
+            True: disnake.SelectOption(
+                label="Globally enabled" if feature.enabled is True else "Enable feature globally",
+                value="True",
+            ),
+            False: disnake.SelectOption(
+                label="Globally disabled" if feature.enabled is False else "Disable feature globally",
+                value="False",
+            ),
+            None: disnake.SelectOption(
+                label="Guild overrides" if feature.enabled is None else "Switch to guild overrides",
+                value="None",
+            ),
+        }
+
+        components[-1].children.append(
+            disnake.ui.ActionRow(
+                disnake.ui.StringSelect(
+                    placeholder=status_options[feature.enabled].label,
+                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:{inter.guild.id}",
+                    options=[v for k, v in status_options.items() if k != feature.enabled],
+                )
+            )
+        )
+
+        # Try to get the current page from the message's components (if available)
         components.append(
             disnake.ui.ActionRow(
                 DeleteButton(
@@ -249,16 +242,22 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 disnake.ui.Button(
                     emoji="\u21a9",
                     style=disnake.ButtonStyle.secondary,
-                    custom_id=FEATURES_MAIN_LIST,
+                    custom_id=f"{FEATURES_MAIN_LIST}:{feature.name}",
                 ),
             )
         )
-        await inter.response.edit_message(components=components)
+        if isinstance(inter, commands.Context):
+            await inter.reply(components=components, fail_if_not_exists=False, mention_author=False)
+        else:
+            await inter.response.edit_message(components=components)
 
     @commands.Cog.listener("on_button_click")
     async def feature_button_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for feature view buttons."""
         if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURE_VIEW_PREFIX):
+            return
+        if not await self.bot.is_owner(inter.author):
+            await inter.response.send_message("You do not own this bot.", ephemeral=True)
             return
         # this `:` ensures that split won't fail
         custom_id = inter.component.custom_id.removeprefix(FEATURE_VIEW_PREFIX) + "::"
@@ -268,38 +267,81 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if not feature:
             await inter.response.send_message("That feature does not exist.", ephemeral=True)
             return
-        await self.show_features(inter, feature, with_guilds=show_guilds)
+        await self.show_feature(inter, feature, with_guilds=show_guilds)
 
     @commands.Cog.listener("on_button_click")
     async def features_main_list_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for the main features list button."""
-        if inter.component.custom_id != FEATURES_MAIN_LIST:
+        if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_MAIN_LIST):
             return
-        await self.cmd_list(inter)
+        if not await self.bot.is_owner(inter.author):
+            await inter.response.send_message("You do not own this bot.", ephemeral=True)
+            return
+        # Parse page from custom_id if present
+        page = 0
+        parts = inter.component.custom_id.split(":")
+        if len(parts) == 2:
+            try:
+                page = int(parts[1])
+            except Exception:
+                page = 0
+        # Parse feature name from custom_id if present
+        feature_name = None
+        parts = inter.component.custom_id.split(":")
+        if len(parts) == 2:
+            feature_name = parts[1]
+        page = 0
+        if feature_name:
+            # Find the page containing the feature
+            features = sorted(self.features.items())
+            for idx, (name, _) in enumerate(features):
+                if name == feature_name:
+                    page = idx // FEATURES_PER_PAGE
+                    break
+        await self._send_features_list(inter, page=page)
 
-    @cmd_features.command(name="list")
-    async def cmd_list(self, ctx: commands.Context | disnake.MessageInteraction) -> None:
-        """List all existing features."""
+    @commands.Cog.listener("on_button_click")
+    async def features_paginator_listener(self, inter: disnake.MessageInteraction) -> None:
+        """Handle paginator navigation for features list."""
+        if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_PAGINATOR_PREFIX):
+            return
+        if not await self.bot.is_owner(inter.author):
+            await inter.response.send_message("You do not own this bot.", ephemeral=True)
+            return
+        # custom_id: features_paginator_{page}_{max_page}
+        _, page, max_page = inter.component.custom_id.split(":")
+        page = int(page)
+        max_page = int(max_page)
+        await self._send_features_list(inter, page=page, max_page=max_page)
+
+    async def _send_features_list(
+        self,
+        ctx: commands.Context | disnake.MessageInteraction,
+        page: int = 0,
+        max_page: int | None = None,
+    ) -> None:
+        def _get_feature_page(
+            features: list[tuple[str, Feature]],
+            page: int,
+            per_page: int = FEATURES_PER_PAGE,
+        ) -> list[tuple[str, Feature]]:
+            start = page * per_page
+            end = start + per_page
+            return features[start:end]
+
         features = sorted(self.features.items())
-        components: list = [
-            disnake.ui.Container(
-                disnake.ui.TextDisplay(
-                    textwrap.dedent(
-                        """
-            ### Global Features
-
-            KEY:
-            -# :blue_square: Feature force enabled globally
-            -# :black_large_square: Feature uses guild overrides
-            -# :red_square: Feature force disabled globally
-
-            -# :green_circle: Feature force-enabled in this guild
-            -# :black_circle: Feature not enabled in this guild
-            -# :yellow_circle: Feature enabled here due to rollouts."""
-                    )
-                )
-            )
-        ]
+        total = len(features)
+        if max_page is None:
+            max_page = (total - 1) // FEATURES_PER_PAGE
+        key_defaults = {
+            disnake.ButtonStyle.green: "-# :green_square: Feature force enabled globally",
+            disnake.ButtonStyle.secondary: "-# :black_large_square: Feature uses guild overrides",
+            disnake.ButtonStyle.danger: "-# :red_square: Feature force disabled globally",
+            "\U0001f7e0": "-# :orange_circle: Feature force-enabled in this guild",
+            "\U0001f7e1": "-# :yellow_circle: Feature enabled here due to rollouts",
+        }
+        needed_keys = {}
+        components: list = [disnake.ui.Container()]
         guild_feature_ids = []
         if isinstance(ctx.guild, disnake.Guild):
             guild = await self.bot.ensure_guild(ctx.guild.id)
@@ -308,12 +350,16 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         else:
             check_guild = False
 
-        for _, feature in features:
+        page_features = features
+        if total >= FEATURES_PER_PAGE:
+            page_features = _get_feature_page(features, page, FEATURES_PER_PAGE)
+
+        for _, feature in page_features:
             if feature.enabled is True:
-                button_style = disnake.ButtonStyle.primary
-                guild_status = "\U0001f535"  # blue circle
+                button_style = disnake.ButtonStyle.green
+                guild_status = "\U0001f7e2"  # green circle
             elif feature.enabled is None:
-                button_style = disnake.ButtonStyle.secondary
+                button_style = disnake.ButtonStyle.gray
                 guild_status = "\U000026ab"  # black circle
             else:
                 button_style = disnake.ButtonStyle.danger
@@ -321,11 +367,14 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
             if check_guild:
                 if feature.name in guild_feature_ids:
-                    guild_status = "\U0001f7e2"  # green circle
-                elif await self.bot.guild_has_feature(ctx.guild, feature.name):
+                    guild_status = "\U0001f7e0"  # orange circle
+                elif await self.bot.guild_has_feature(ctx.guild, feature.name, include_feature_status=False):
                     guild_status = "\U0001f7e1"  # yellow circle
-                else:
-                    guild_status = "\U000026ab"  # black circle
+
+            if button_style not in needed_keys:
+                needed_keys[button_style] = key_defaults[button_style]
+            if guild_status in key_defaults and guild_status not in needed_keys:
+                needed_keys[guild_status] = key_defaults[guild_status]
 
             components[-1].children.append(
                 disnake.ui.Section(
@@ -338,23 +387,104 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 )
             )
 
+        # Paginator buttons
+        if total >= FEATURES_PER_PAGE:
+            paginator_row = disnake.ui.ActionRow()
+            # Only two pages: show back/forward
+            if max_page == 1:
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u25c0",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:0:{max_page}",
+                        disabled=(page == 0),
+                    )
+                )
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u25b6",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:1:{max_page}",
+                        disabled=(page == max_page),
+                    )
+                )
+            else:
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u23ee",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:0:{max_page}",
+                        disabled=(page == 0),
+                    )
+                )
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u25c0",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:{max(page - 1, 0)}:{max_page}",
+                        disabled=(page == 0),
+                    )
+                )
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u25b6",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:{min(page + 1, max_page)}:{max_page}",
+                        disabled=(page == max_page),
+                    )
+                )
+                paginator_row.append_item(
+                    disnake.ui.Button(
+                        emoji="\u23ed",
+                        style=disnake.ButtonStyle.secondary,
+                        custom_id=f"{FEATURES_PAGINATOR_PREFIX}:{max_page}:{max_page}",
+                        disabled=(page == max_page),
+                    )
+                )
+            components[-1].children.append(paginator_row)
+            # Page count display
+            components[-1].children.append(disnake.ui.TextDisplay(f"Page {page + 1} of {max_page + 1}"))
+
         components.append(
-            disnake.ui.ActionRow(DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message))
+            disnake.ui.ActionRow(
+                DeleteButton(ctx.author, allow_manage_messages=False, initial_message=getattr(ctx, "message", None))
+            ),
+        )
+        components[0].children.insert(
+            0,
+            disnake.ui.TextDisplay(
+                "## Global Features\n"
+                + "\n".join(needed_keys[key] for key in needed_keys if isinstance(key, disnake.ButtonStyle))
+                + (
+                    ("\n" + "\n".join(needed_keys[key] for key in needed_keys if isinstance(key, str)))
+                    if any(isinstance(key, str) for key in needed_keys)
+                    else ""
+                )
+            ),
         )
         if isinstance(ctx, disnake.MessageInteraction):
             await ctx.response.edit_message(components=components)
         else:
             await ctx.reply(components=components, fail_if_not_exists=False, mention_author=False)
 
+    async def cmd_list(self, ctx: commands.Context | disnake.MessageInteraction) -> None:
+        """List all existing features."""
+        features = sorted(self.features.items())
+        total = len(features)
+        if total >= FEATURES_PER_PAGE:
+            await self._send_features_list(ctx, page=0)
+        else:
+            await self._send_features_list(ctx)
+
     # guild commands
 
-    @cmd_features.group(name="guild", invoke_without_command=True)
+    @cmd_features.command(name="guild")
     async def cmd_guild(
         self,
         ctx: commands.Context,
         guild: Union[disnake.Guild, disnake.Object] = None,  # type: ignore
     ) -> None:
-        """Commands for managing guild features."""
+        """Show the features for the current guild."""
         # list the features by default
         if guild is None:
             guild: disnake.Guild = ctx.guild  # type: ignore
@@ -374,7 +504,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         await ctx.send(embed=embed, components=button)
         logger.debug(f"User {ctx.author} ({ctx.author.id}) requested guild features for {name}")
 
-    @cmd_guild.command(name="add", aliases=("a", "enable"), require_var_positional=True)
+    @cmd_features.command(name="add", aliases=("a", "enable"), require_var_positional=True)
     async def cmd_guild_add(
         self,
         ctx: commands.Context,
@@ -460,7 +590,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             components=button,
         )
 
-    @cmd_guild.command(name="remove", aliases=("r", "disable"), require_var_positional=True)
+    @cmd_features.command(name="remove", aliases=("r", "disable"), require_var_positional=True)
     async def cmd_guild_remove(
         self,
         ctx: commands.Context,
@@ -509,6 +639,104 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             f"from the following features: `{'`, `'.join(sorted(feature_names))}`.",
             components=button,
         )
+
+    @commands.Cog.listener(disnake.Event.dropdown)
+    async def features_guild_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
+        """Listen for guild feature toggle select."""
+        if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GUILD_TOGGLE):
+            return
+        if not await self.bot.is_owner(inter.author):
+            await inter.response.send_message("You do not own this bot.", ephemeral=True)
+            return
+        # Parse custom_id: FEATURES_GUILD_TOGGLE:feature_name:guild_id
+        _, feature_name, guild_id = inter.component.custom_id.split(":", 2)
+        feature = self.features.get(feature_name)
+        if not feature:
+            await inter.response.send_message("That feature does not exist.", ephemeral=True)
+            return
+
+        selected_value = inter.values[0] if hasattr(inter, "values") and inter.values else None
+        if selected_value not in ("True", "False", "None"):
+            await inter.response.send_message("Invalid selection.", ephemeral=True)
+            return
+
+        # Ask for confirmation
+        action_map = {"True": "globally enable", "False": "globally disable", "None": "switch to guild overrides"}
+        confirm, conf_inter, components = await self.wait_for_confirmation(
+            inter,
+            f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation Required\nAre you"
+            f" sure you want to **{action_map[selected_value]}** feature `{feature_name}`?\n\u200b",
+            go_back_button=disnake.ui.Button(
+                emoji="\u21a9",
+                style=disnake.ButtonStyle.secondary,
+                custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1",
+            ),
+        )
+        if confirm is None or conf_inter is None:
+            return
+        if confirm:
+            # Update feature.enabled accordingly
+            feature = await self.set_feature(feature, None if selected_value == "None" else selected_value == "True")
+
+        # Show features again to return to display
+        await self.show_feature(conf_inter, feature, with_guilds=True)
+
+    @commands.Cog.listener("on_button_click")
+    async def guild_feature_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
+        """Listen for guild feature toggle button."""
+        if not inter.component.custom_id or not inter.component.custom_id.startswith("guild_feature_toggle:"):
+            return
+        if not await self.bot.is_owner(inter.author):
+            await inter.response.send_message("You do not own this bot.", ephemeral=True)
+            return
+        # Parse custom_id: guild_feature_toggle:guild_id:feature_name
+        _, guild_id, feature_name = inter.component.custom_id.split(":", 2)
+        feature = self.features.get(feature_name)
+        if not feature:
+            await inter.response.send_message("That feature does not exist.", ephemeral=True)
+            return
+
+        guild_id = int(guild_id)
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            await inter.response.send_message("Guild not found.", ephemeral=True)
+            return
+
+        guild_has_feature = await self.bot.guild_has_feature(
+            guild, feature.name, include_feature_status=False, create_if_not_exists=False
+        )
+
+        action = "remove" if guild_has_feature else "add"
+        confirm_text = (
+            f"Are you sure you want to **{action}** feature `{feature.name}` "
+            f"{'from' if action == 'remove' else 'to'} guild `{guild.name}` ({guild.id})?\n\u200b"
+        )
+        confirm, conf_inter, components = await self.wait_for_confirmation(
+            inter,
+            f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation"
+            f" Required\n{confirm_text}",
+            go_back_button=disnake.ui.Button(
+                emoji="\u21a9",
+                style=disnake.ButtonStyle.secondary,
+                custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1:",
+            ),
+        )
+        if confirm is None or conf_inter is None:
+            return
+        if confirm:
+            async with self.bot.db.begin() as session:
+                guild_db = await self.bot.ensure_guild(guild.id)
+                if action == "add":
+                    if feature.name not in guild_db.feature_ids:
+                        guild_db.feature_ids.append(feature.name)
+                else:
+                    if feature.name in guild_db.feature_ids:
+                        guild_db.feature_ids.remove(feature.name)
+                guild_db = await session.merge(guild_db)
+                self.bot.guild_db[guild.id] = guild_db
+                await session.commit()
+
+        await self.show_feature(conf_inter, feature, with_guilds=True)
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Require all commands in this cog are by the bot author and are in guilds."""
