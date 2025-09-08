@@ -127,18 +127,15 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         self, ctx: commands.Context, arg: disnake.Guild | disnake.Object | FeatureConverter = None
     ) -> None:
         """Manage features."""
+        guild = None
         if arg is not None:
             if isinstance(arg, (disnake.Guild, disnake.Object)):
-                # redirect to guild command
-                ctx.args = (arg,)
-                ctx.command = self.cmd_guild
-                await self.bot.invoke(ctx)
-                return
+                guild = arg
             if isinstance(arg, Feature):
                 await self.show_feature(ctx, arg, with_guilds=True)
                 return
 
-        await self.cmd_list(ctx)
+        await self.cmd_list(ctx, guild=guild)
 
     async def set_feature(self, feature: Feature, status: bool | None) -> Feature:
         """Enable the specified feature globally."""
@@ -157,7 +154,12 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         return feature
 
     async def show_feature(
-        self, inter: disnake.MessageInteraction | commands.Context, feature: Feature, *, with_guilds: bool = False
+        self,
+        inter: disnake.MessageInteraction | commands.Context,
+        feature: Feature,
+        *,
+        with_guilds: bool = False,
+        guild_id: int | None = None,
     ) -> None:
         """Show properties of the provided feature."""
         components: list = [
@@ -230,7 +232,6 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 )
             )
         )
-
         # Try to get the current page from the message's components (if available)
         components.append(
             disnake.ui.ActionRow(
@@ -242,7 +243,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 disnake.ui.Button(
                     emoji="\u21a9",
                     style=disnake.ButtonStyle.secondary,
-                    custom_id=f"{FEATURES_MAIN_LIST}:{feature.name}",
+                    custom_id=f"{FEATURES_MAIN_LIST}:{feature.name}:{guild_id if guild_id else ''}",
                 ),
             )
         )
@@ -261,13 +262,17 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             return
         # this `:` ensures that split won't fail
         custom_id = inter.component.custom_id.removeprefix(FEATURE_VIEW_PREFIX) + "::"
-        feature_name, show_guilds, _ = custom_id.split(":", 2)
+        feature_name, show_guilds, guild_id, _ = custom_id.split(":", 3)
         show_guilds = bool(show_guilds)
+        if guild_id == "":
+            guild_id = None
+        else:
+            guild_id = int(guild_id)
         feature = self.features.get(feature_name)
         if not feature:
             await inter.response.send_message("That feature does not exist.", ephemeral=True)
             return
-        await self.show_feature(inter, feature, with_guilds=show_guilds)
+        await self.show_feature(inter, feature, with_guilds=show_guilds, guild_id=guild_id)
 
     @commands.Cog.listener("on_button_click")
     async def features_main_list_listener(self, inter: disnake.MessageInteraction) -> None:
@@ -277,28 +282,29 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if not await self.bot.is_owner(inter.author):
             await inter.response.send_message("You do not own this bot.", ephemeral=True)
             return
-        # Parse page from custom_id if present
+        # Parse page and guild_id from custom_id if present
         page = 0
-        parts = inter.component.custom_id.split(":")
-        if len(parts) == 2:
-            try:
-                page = int(parts[1])
-            except Exception:
-                page = 0
-        # Parse feature name from custom_id if present
         feature_name = None
+        guild_id = None
         parts = inter.component.custom_id.split(":")
-        if len(parts) == 2:
+        if len(parts) == 3:
             feature_name = parts[1]
-        page = 0
+            guild_id = int(parts[2]) if parts[2] else None
+        elif len(parts) == 2:
+            feature_name = parts[1]
+            guild_id = None
+        # Find the page containing the feature if present
+        features = sorted(self.features.items())
         if feature_name:
-            # Find the page containing the feature
-            features = sorted(self.features.items())
             for idx, (name, _) in enumerate(features):
                 if name == feature_name:
                     page = idx // FEATURES_PER_PAGE
                     break
-        await self._send_features_list(inter, page=page)
+        # If guild_id is present, pass it to _send_features_list
+        if guild_id:
+            await self._send_features_list(inter, page=page, for_guild=guild_id)
+        else:
+            await self._send_features_list(inter, page=page)
 
     @commands.Cog.listener("on_button_click")
     async def features_paginator_listener(self, inter: disnake.MessageInteraction) -> None:
@@ -319,6 +325,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         ctx: commands.Context | disnake.MessageInteraction,
         page: int = 0,
         max_page: int | None = None,
+        *,
+        for_guild: disnake.Object | int | None = None,
     ) -> None:
         def _get_feature_page(
             features: list[tuple[str, Feature]],
@@ -329,7 +337,17 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             end = start + per_page
             return features[start:end]
 
-        features = sorted(self.features.items())
+        guild_id: int | None
+        if for_guild:
+            title = "Guild Features"
+            guild_id = getattr(for_guild, "id", None) or for_guild  # type: ignore
+            guild_db = await self.bot.ensure_guild(guild_id)
+            enabled_features = [f for f in self.features.values() if f.name in guild_db.feature_ids]
+            features = sorted((f.name, f) for f in enabled_features)
+        else:
+            title = "Global Features"
+            features = sorted(self.features.items())
+            guild_id = None
         total = len(features)
         if max_page is None:
             max_page = (total - 1) // FEATURES_PER_PAGE
@@ -343,8 +361,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         needed_keys = {}
         components: list = [disnake.ui.Container()]
         guild_feature_ids = []
-        if isinstance(ctx.guild, disnake.Guild):
-            guild = await self.bot.ensure_guild(ctx.guild.id)
+        if guild_id or isinstance(ctx.guild, disnake.Guild):
+            guild = await self.bot.ensure_guild(guild_id or ctx.guild.id)
             guild_feature_ids = guild.feature_ids
             check_guild = True
         else:
@@ -376,13 +394,22 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             if guild_status in key_defaults and guild_status not in needed_keys:
                 needed_keys[guild_status] = key_defaults[guild_status]
 
+            # Determine if a guild_id should be included in the feature view button
+            guild_id_for_button = None
+            if for_guild:
+                guild_id_for_button = getattr(for_guild, "id", None) or for_guild
+
             components[-1].children.append(
                 disnake.ui.Section(
                     f"{feature.name}",
                     accessory=disnake.ui.Button(
                         emoji=guild_status,
                         style=button_style,
-                        custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1",
+                        custom_id=(
+                            f"{FEATURE_VIEW_PREFIX}{feature.name}:1:{guild_id_for_button}"
+                            if guild_id_for_button
+                            else f"{FEATURE_VIEW_PREFIX}{feature.name}:1"
+                        ),
                     ),
                 )
             )
@@ -453,7 +480,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         components[0].children.insert(
             0,
             disnake.ui.TextDisplay(
-                "## Global Features\n"
+                f"## {title}\n"
                 + "\n".join(needed_keys[key] for key in needed_keys if isinstance(key, disnake.ButtonStyle))
                 + (
                     ("\n" + "\n".join(needed_keys[key] for key in needed_keys if isinstance(key, str)))
@@ -467,14 +494,13 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         else:
             await ctx.reply(components=components, fail_if_not_exists=False, mention_author=False)
 
-    async def cmd_list(self, ctx: commands.Context | disnake.MessageInteraction) -> None:
-        """List all existing features."""
-        features = sorted(self.features.items())
-        total = len(features)
-        if total >= FEATURES_PER_PAGE:
-            await self._send_features_list(ctx, page=0)
-        else:
-            await self._send_features_list(ctx)
+    async def cmd_list(
+        self,
+        ctx: commands.Context | disnake.MessageInteraction,
+        guild: disnake.Guild | disnake.Object | None = None,
+    ) -> None:
+        """List all existing features, or features enabled in a specific guild if provided."""
+        await self._send_features_list(ctx, for_guild=guild)
 
     # guild commands
 
@@ -482,27 +508,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild(
         self,
         ctx: commands.Context,
-        guild: Union[disnake.Guild, disnake.Object] = None,  # type: ignore
     ) -> None:
         """Show the features for the current guild."""
-        # list the features by default
-        if guild is None:
-            guild: disnake.Guild = ctx.guild  # type: ignore
-        name = guild.name if isinstance(guild, disnake.Guild) else "Guild ID " + str(guild.id)
-        embed = disnake.Embed(
-            title=f"Features for {name}", description="No features are enabled for this specific guild."
-        )
-        guild_db = await self.bot.ensure_guild(guild.id)
-        if guild_db.feature_ids:
-            guild_features = []
-            for feature in guild_db.feature_ids:
-                guild_features.append(feature)
-            guild_features.sort()
-            embed.description = "`" + "`\n`".join(guild_features) + "`"
-
-        button = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
-        await ctx.send(embed=embed, components=button)
-        logger.debug(f"User {ctx.author} ({ctx.author.id}) requested guild features for {name}")
+        await self.cmd_features(ctx, arg=ctx.guild)
 
     @cmd_features.command(name="add", aliases=("a", "enable"), require_var_positional=True)
     async def cmd_guild_add(
