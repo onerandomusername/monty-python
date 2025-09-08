@@ -234,7 +234,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             disnake.ui.ActionRow(
                 disnake.ui.StringSelect(
                     placeholder=status_options[feature.enabled].label,
-                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:{guild_to_check or ''}",
+                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:"
+                    f"{guild_to_check or ''}:{'1' if show_all else '0'}",
                     options=[v for k, v in status_options.items() if k != feature.enabled],
                 )
             )
