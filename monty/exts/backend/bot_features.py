@@ -706,37 +706,19 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             guild, feature.name, include_feature_status=False, create_if_not_exists=False
         )
 
-        action = "remove" if guild_has_feature else "add"
-        confirm_text = (
-            f"Are you sure you want to **{action}** feature `{feature.name}` "
-            f"{'from' if action == 'remove' else 'to'} guild `{guild.name}` ({guild.id})?\n\u200b"
-        )
-        confirm, conf_inter, components = await self.wait_for_confirmation(
-            inter,
-            f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation"
-            f" Required\n{confirm_text}",
-            go_back_button=disnake.ui.Button(
-                emoji="\u21a9",
-                style=disnake.ButtonStyle.secondary,
-                custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1:",
-            ),
-        )
-        if confirm is None or conf_inter is None:
-            return
-        if confirm:
-            async with self.bot.db.begin() as session:
-                guild_db = await self.bot.ensure_guild(guild.id)
-                if action == "add":
-                    if feature.name not in guild_db.feature_ids:
-                        guild_db.feature_ids.append(feature.name)
-                else:
-                    if feature.name in guild_db.feature_ids:
-                        guild_db.feature_ids.remove(feature.name)
-                guild_db = await session.merge(guild_db)
-                self.bot.guild_db[guild.id] = guild_db
-                await session.commit()
+        async with self.bot.db.begin() as session:
+            guild_db = await self.bot.ensure_guild(guild.id)
+            if not guild_has_feature:
+                if feature.name not in guild_db.feature_ids:
+                    guild_db.feature_ids.append(feature.name)
+            else:
+                if feature.name in guild_db.feature_ids:
+                    guild_db.feature_ids.remove(feature.name)
+            guild_db = await session.merge(guild_db)
+            self.bot.guild_db[guild.id] = guild_db
+            await session.commit()
 
-        await self.show_feature(conf_inter, feature, with_guilds=True)
+        await self.show_feature(inter, feature, with_guilds=True)
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Require all commands in this cog are by the bot author and are in guilds."""
