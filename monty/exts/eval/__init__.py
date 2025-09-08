@@ -431,7 +431,7 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if message.author.bot:
             return
 
-        if not self.bot.guild_has_feature(message.guild.id, Feature.INLINE_EVALULATION):
+        if not await self.bot.guild_has_feature(message.guild.id, Feature.INLINE_EVALULATION):
             return
 
         code = "\n".join([m[-1].strip() for m in INLINE_EVAL_REGEX.findall(message.content)])
