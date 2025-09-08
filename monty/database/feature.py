@@ -8,7 +8,7 @@ from .base import Base
 from .rollouts import Rollout
 
 
-NAME_REGEX = re.compile(r"^[A-Z_]+$")
+NAME_REGEX = re.compile(r"^[A-Z0-9_]+$")
 
 
 class Feature(MappedAsDataclass, Base):
