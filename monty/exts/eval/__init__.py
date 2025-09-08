@@ -11,7 +11,7 @@ import yarl
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import URLs
+from monty.constants import Feature, URLs
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
@@ -429,6 +429,9 @@ class Snekbox(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return
 
         if message.author.bot:
+            return
+
+        if not self.bot.guild_has_feature(message.guild.id, Feature.INLINE_EVALULATION):
             return
 
         code = "\n".join([m[-1].strip() for m in INLINE_EVAL_REGEX.findall(message.content)])
