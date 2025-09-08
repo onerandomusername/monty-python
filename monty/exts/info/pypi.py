@@ -13,6 +13,9 @@ import bs4
 import disnake
 import rapidfuzz.distance
 import rapidfuzz.process
+import readme_renderer.markdown
+import readme_renderer.rst
+import readme_renderer.txt
 import yarl
 from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands, tasks
@@ -152,22 +155,29 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             return None
 
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
-    async def fetch_description(self, package: str, max_length: int = 1000) -> Optional[str]:
+    async def fetch_description(
+        self, package: str, description: str, description_content_type: str, max_length: int = 1000
+    ) -> Optional[str]:
         """Fetch a description parsed into markdown from PyPI."""
-        url = HTML_URL.format(package=package)
-        async with self.bot.http_session.get(url, headers=PYPI_API_HEADERS) as response:
-            if response.status != 200:
-                return None
-            html = await response.text()
-        # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
-        # parse_only=bs4.SoupStrainer("a", class_="package-snippet")
-        bs_partial = functools.partial(
-            bs4.BeautifulSoup, parse_only=bs4.SoupStrainer(name="div", attrs={"class": "project-description"})
-        )
-        parsed = await self.bot.loop.run_in_executor(None, bs_partial, html, "lxml")
+        if description_content_type and description_content_type not in ("text/markdown", "text/x-rst", "text/plain"):
+            return f"Unknown description content type {description_content_type!r}."
+        if description_content_type.startswith("text/markdown") or description_content_type == "":
+            if "variant=CommonMark" in description_content_type:
+                variant = "CommonMark"
+            else:
+                variant = "GFM"
+            html = readme_renderer.markdown.render(description, variant=variant)
+        elif description_content_type == "text/plain":
+            html = readme_renderer.txt.render(description)
+        elif description_content_type == "text/x-rst":
+            html = readme_renderer.rst.render(description)
+        else:
+            raise RuntimeError("Unreachable code reached in description parsing.")
+
+        parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
         text = _get_truncated_description(
-            parsed.find("div", attrs={"class": "project-description"}),
-            DocMarkdownConverter(page_url=url),
+            parsed.find("body") or parsed,
+            DocMarkdownConverter(page_url=HTML_URL.format(package=package)),
             max_length=max_length,
             max_lines=21,
         )
@@ -209,7 +219,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 # and parse the html to get the rendered description
                 # this means that we don't have to parse the rst or markdown or whatever is the
                 # project's description content type
-                description = await self.fetch_description(package)
+                description = await self.fetch_description(package, description, info["description_content_type"] or "")
                 if description:
                     embed.description += "\n\n" + description
 

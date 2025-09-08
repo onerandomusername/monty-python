@@ -37,6 +37,7 @@ dependencies = [
     "alembic<2.0.0,>=1.15.2",
     "asyncpg~=0.30.0",
     "SQLAlchemy[asyncio]~=2.0.41",
+    "readme-renderer[md] (>=44.0,<45.0)",
 ]
 
 [project.optional-dependencies]
