@@ -42,6 +42,8 @@ class GlobalCheck(commands.Cog):
         """Require all commands be in guild."""
         if ctx.guild:
             return True
+        if await self.bot.is_owner(ctx.author):
+            return True
         raise commands.NoPrivateMessage()
 
 

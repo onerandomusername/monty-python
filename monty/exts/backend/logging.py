@@ -36,7 +36,7 @@ class InternalLogger(commands.Cog):
             ctx.author.id,
             ctx.channel,
             ctx.channel.id,
-            ctx.guild.id,
+            ctx.guild and ctx.guild.id,
             spl[0] + (" ..." if len(spl) > 1 else ""),
         )
 
@@ -56,7 +56,7 @@ class InternalLogger(commands.Cog):
             ctx.author.id,
             ctx.channel,
             ctx.channel.id,
-            ctx.guild.id,
+            ctx.guild and ctx.guild.id,
         )
 
         self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".completion")

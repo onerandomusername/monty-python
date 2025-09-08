@@ -261,6 +261,9 @@ class Monty(commands.Bot):
                 prefixes.insert(0, config.prefix)
             else:
                 prefixes.insert(0, self.command_prefix)
+        else:
+            prefixes.insert(0, self.command_prefix)
+
         return prefixes
 
     async def _create_features(self) -> None:

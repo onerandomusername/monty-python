@@ -357,10 +357,12 @@ class Configuration(
 
         return dict(sorted(options.items())[:25])
 
-    @commands.guild_only()
     @commands.command(name="prefix", hidden=True)
     async def show_prefix(self, ctx: commands.Context) -> None:
         """Show the currently set prefix for the guild. To set a prefix, use `/config prefix set`."""
+        if not ctx.guild:
+            await ctx.send(f"The prefix in DMs is ``{self.bot.command_prefix}``")
+            return
         config = await self.bot.ensure_guild_config(ctx.guild.id)  # type: ignore # checks prevent guild from being None
         components = DeleteButton(ctx.author, initial_message=ctx.message)
         if config.prefix:
