@@ -168,7 +168,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         *,
         with_guilds: bool = False,
         guild_id: int | None = None,
-        show_all: bool = False,
+        show_all: bool = True,
     ) -> None:
         """Show properties of the provided feature."""
         components: list = [
@@ -180,7 +180,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         guild_to_check = guild_id or (inter.guild.id if inter.guild else None)
 
-        if not guild_id and with_guilds:
+        if not guild_id or with_guilds:
             async with self.bot.db.begin() as session:
                 stmt = sa.select(Guild).where(Guild.feature_ids.any_() == feature.name)
                 result = await session.scalars(stmt)
@@ -194,9 +194,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             guild_names.sort()
 
             if guild_names:
-                components[-1].children.append(
-                    disnake.ui.TextDisplay("**Guilds**\n" + "\n".join(guild_names) or "No guilds have overrides")
-                )
+                text = "**Guilds**\n" + "\n".join(guild_names).strip()
+            else:
+                text = "**Guilds**\n*No guilds have overrides.*"
+            components[-1].children.append(disnake.ui.TextDisplay(text))
 
         # add a button to give the feature the guild if the feature is using guild overrides
         if feature.enabled is None and guild_to_check:
@@ -754,7 +755,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             go_back_button=disnake.ui.Button(
                 emoji="\u21a9",
                 style=disnake.ButtonStyle.secondary,
-                custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1",
+                custom_id=f"{FEATURE_VIEW_PREFIX}{feature.name}:1:{guild_id}:{'1' if show_all else '0'}",
             ),
         )
         if confirm is None or conf_inter is None:
@@ -769,7 +770,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             feature,
             with_guilds=True,
             guild_id=int(guild_id) if guild_id else None,
-            show_all=show_all == "1",
+            show_all=show_all,
         )
 
     @commands.Cog.listener("on_button_click")
