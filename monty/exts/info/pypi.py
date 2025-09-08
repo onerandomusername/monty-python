@@ -184,34 +184,42 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         text = "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
         return text
 
-    async def make_pypi_embed(self, package: str, json: dict, *, with_description: bool = False) -> disnake.Embed:
-        """Create an embed for a package."""
-        embed = disnake.Embed()
-        embed.set_thumbnail(url=PYPI_ICON)
+    async def make_pypi_components(
+        self, package: str, json: dict, *, with_description: bool = False
+    ) -> tuple[list[disnake.ui.Container], str]:
+        """Create components for a package."""
+        components: list[disnake.ui.Container] = [
+            disnake.ui.Container(accent_colour=disnake.Colour(next(PYPI_COLOURS)))
+        ]
 
         info = json["info"]
 
-        embed.title = f"{info['name']} v{info['version']}"
-
-        embed.url = info["package_url"]
-
+        components[0].children.append(
+            disnake.ui.TextDisplay(f"[{info['name']} v{info['version']}]({info['package_url']})")
+        )
+        short_about = ""
         try:
             release_info = json["releases"][info["version"]]
-            embed.timestamp = fromisoformat(release_info[0]["upload_time"])
+            short_about = (
+                f"-# Last updated: {disnake.utils.format_dt(fromisoformat(release_info[0]['upload_time']))}\n\n"
+            )
         except (KeyError, IndexError):
             pass
-        else:
-            embed.set_footer(text="Last updated")
-
-        embed.colour = next(PYPI_COLOURS)
 
         summary = disnake.utils.escape_markdown(info["summary"])
 
         # Summary could be completely empty, or just whitespace.
         if summary and not summary.isspace():
-            embed.description = summary
+            short_about += f"{summary}\n\n"
         else:
-            embed.description = "*No summary provided.*"
+            short_about += "*No summary provided.*\n\n"
+
+        components[0].children.append(
+            disnake.ui.Section(
+                disnake.ui.TextDisplay(short_about.strip()),
+                accessory=disnake.ui.Thumbnail(PYPI_ICON),
+            )
+        )
 
         if with_description and (description := info["description"]):
             if description != "UNKNOWN":
@@ -221,9 +229,9 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 # project's description content type
                 description = await self.fetch_description(package, description, info["description_content_type"] or "")
                 if description:
-                    embed.description += "\n\n" + description
+                    components[0].children.append(disnake.ui.TextDisplay(description))
 
-        return embed
+        return components, info["package_url"]
 
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
@@ -257,12 +265,19 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             # error
         if with_description:
             defer_task = maybe_defer(inter)
-        embed = await self.make_pypi_embed(package, response_json, with_description=with_description)
+        components, url = await self.make_pypi_components(package, response_json, with_description=with_description)
 
-        components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
-        if embed.url:
-            components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PyPI", url=embed.url))
-        await inter.send(embed=embed, components=components)
+        components.append(disnake.ui.ActionRow(DeleteButton(inter.author)))
+        if url:
+            components[-1].append_item(
+                disnake.ui.Button(
+                    emoji=disnake.PartialEmoji(name="pypi", id=766274397257334814),
+                    style=disnake.ButtonStyle.link,
+                    label="Open PyPI",
+                    url=url,
+                )
+            )
+        await inter.send(components=components)
         if defer_task:
             defer_task.cancel()
 
@@ -289,7 +304,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
             if not description:
                 description = ""
             url = BASE_PYPI_URL + result.get("href")
-            result = Package(str(name), str(version), description.strip(), str(url))
+            result = (Package(name=str(name), version=str(version), description=description.strip(), url=str(url)),)
             results.append(result)
 
         return results
@@ -350,7 +365,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         # packages = sorted(packages, key=lambda pack: pack.name)
         packages = packages[:max_results]
         for num, pack in enumerate(packages):
-            description += f"[**{num+1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
+            description += f"[**{num + 1}. {pack.name}**]({pack.url}) ({pack.version})\n{pack.description or None}\n\n"
 
         embed.color = next(PYPI_COLOURS)
         embed.timestamp = utcnow()
