@@ -234,7 +234,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             disnake.ui.ActionRow(
                 disnake.ui.StringSelect(
                     placeholder=status_options[feature.enabled].label,
-                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:{guild_to_check or ''}",
+                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:{guild_to_check or ''}:{show_all_flag}",
                     options=[v for k, v in status_options.items() if k != feature.enabled],
                 )
             )
@@ -251,7 +251,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 disnake.ui.Button(
                     emoji="\u21a9",
                     style=disnake.ButtonStyle.secondary,
-                    custom_id=f"{FEATURES_MAIN_LIST}:{feature.name}:{guild_to_check or ''}:{show_all_flag}",
+                    custom_id=f"{FEATURES_MAIN_LIST}:{feature.name}:{guild_to_check or ''}:{int(show_all)}",
                 ),
             )
         )
