@@ -118,8 +118,19 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
-    loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
-    loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
+    try:
+        import uvloop
+
+        uvloop.install()
+        log.info("Using uvloop as event loop.")
+    except ImportError:
+        log.info("Using default asyncio event loop.")
+    try:
+        loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
+        loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
+    except NotImplementedError:
+        # Signal handlers are not implemented on some platforms (e.g., Windows)
+        pass
     try:
         await future
     except asyncio.CancelledError:
