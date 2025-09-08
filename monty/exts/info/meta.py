@@ -162,7 +162,6 @@ class Meta(commands.Cog, slash_command_attrs={"dm_permission": False}):
             client_id=self.bot.user.id,
             permissions=permissions,
             guild_id=guild_id,
-            include_applications_commands=True,
             raw_link=raw_link,
             ephemeral=ephemeral,
         )
