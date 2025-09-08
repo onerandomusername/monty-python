@@ -22,8 +22,13 @@ logger = get_logger(__name__)
 
 FEATURES_PREFIX = "features_"
 FEATURE_VIEW_PREFIX = FEATURES_PREFIX + "view_"
+"""{FEATURE_VIEW_PREFIX}{feature.name}:1:{guild_to_check}:{show_all_flag}"""
 FEATURES_MAIN_LIST = FEATURES_PREFIX + "main_list"
+"""{FEATURES_MAIN_LIST}:{feature.name}:{guild_to_check or ''}:{show_all_flag}"""
+FEATURES_GLOBAL_TOGGLE = FEATURES_PREFIX + "global_toggle_"
+"""{FEATURES_GLOBAL_TOGGLE}:{feature.name}:{guild_to_check or ''}:{'1' if show_all else '0'}"""
 FEATURES_GUILD_TOGGLE = FEATURES_PREFIX + "guild_toggle_"
+"""{FEATURES_GUILD_TOGGLE}:{feature.name}:{guild_id}:{'1' if show_all else '0'}"""
 
 FEATURES_PAGINATOR_PREFIX = FEATURES_PREFIX + "paginator_"
 FEATURES_PER_PAGE = 10
@@ -208,7 +213,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                     accessory=disnake.ui.Button(
                         label="Click to disable in Guild" if guild_has_feature else "Click to enable in Guild",
                         style=disnake.ButtonStyle.green if guild_has_feature else disnake.ButtonStyle.grey,
-                        custom_id=f"guild_feature_toggle:{guild_to_check or ''}:{feature.name}:{show_all_flag}",
+                        custom_id=f"{FEATURES_GUILD_TOGGLE}:{guild_to_check or ''}:{feature.name}:{show_all_flag}",
                     ),
                 )
             )
@@ -234,7 +239,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             disnake.ui.ActionRow(
                 disnake.ui.StringSelect(
                     placeholder=status_options[feature.enabled].label,
-                    custom_id=f"{FEATURES_GUILD_TOGGLE}:{feature.name}:"
+                    custom_id=f"{FEATURES_GLOBAL_TOGGLE}:{feature.name}:"
                     f"{guild_to_check or ''}:{'1' if show_all else '0'}",
                     options=[v for k, v in status_options.items() if k != feature.enabled],
                 )
@@ -370,9 +375,15 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             show_all = False
 
         guild_to_check: int | None = None
+        # if guild_to_check isn't set, set it to the current guild if available
+        # and enable show_all
+        if not for_guild and getattr(ctx, "guild", None):
+            for_guild = ctx.guild
+            show_all = True
+
         if for_guild:
             title = "Guild Features"
-            guild_to_check = getattr(for_guild, "id", None) or for_guild  # type: ignore
+            guild_to_check = getattr(for_guild, "id", None) or for_guild or getattr(ctx.guild, "id", None)  # type: ignore
             guild_db = await self.bot.ensure_guild(guild_to_check)
             if show_all:
                 features = sorted(self.features.items())
@@ -409,42 +420,51 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # Determine if a guild_id should be included in the feature view button
         show_all_flag = "1" if show_all else "0"
-        for _, feature in page_features:
-            if feature.enabled is True:
-                button_style = disnake.ButtonStyle.green
-                guild_status = "\U0001f7e2"  # green circle
-            elif feature.enabled is None:
-                button_style = disnake.ButtonStyle.gray
-                guild_status = "\U000026ab"  # black circle
-            else:
-                button_style = disnake.ButtonStyle.danger
-                guild_status = "\U0001f534"  # red circle
+        if page_features:
+            for _, feature in page_features:
+                if feature.enabled is True:
+                    button_style = disnake.ButtonStyle.green
+                    guild_status = "\U0001f7e2"  # green circle
+                elif feature.enabled is None:
+                    button_style = disnake.ButtonStyle.gray
+                    guild_status = "\U000026ab"  # black circle
+                else:
+                    button_style = disnake.ButtonStyle.danger
+                    guild_status = "\U0001f534"  # red circle
 
-            if check_guild:
-                if feature.name in guild_feature_ids:
-                    guild_status = "\U0001f7e0"  # orange circle
-                elif await self.bot.guild_has_feature(guild_to_check, feature.name, include_feature_status=False):
-                    guild_status = "\U0001f7e1"  # yellow circle
+                if check_guild:
+                    if feature.name in guild_feature_ids:
+                        guild_status = "\U0001f7e0"  # orange circle
+                    elif await self.bot.guild_has_feature(guild_to_check, feature.name, include_feature_status=False):
+                        guild_status = "\U0001f7e1"  # yellow circle
 
-            if button_style not in needed_keys:
-                needed_keys[button_style] = key_defaults[button_style]
-            if guild_status in key_defaults and guild_status not in needed_keys:
-                needed_keys[guild_status] = key_defaults[guild_status]
+                if button_style not in needed_keys:
+                    needed_keys[button_style] = key_defaults[button_style]
+                if guild_status in key_defaults and guild_status not in needed_keys:
+                    needed_keys[guild_status] = key_defaults[guild_status]
 
-            components[-1].children.append(
-                disnake.ui.Section(
-                    f"{feature.name}",
-                    accessory=disnake.ui.Button(
-                        emoji=guild_status,
-                        style=button_style,
-                        custom_id=(
-                            f"{FEATURE_VIEW_PREFIX}{feature.name}:1:{guild_to_check}:{show_all_flag}"
-                            if guild_to_check
-                            else f"{FEATURE_VIEW_PREFIX}{feature.name}:1:::"
+                components[-1].children.append(
+                    disnake.ui.Section(
+                        f"{feature.name}",
+                        accessory=disnake.ui.Button(
+                            emoji=guild_status,
+                            style=button_style,
+                            custom_id=(
+                                f"{FEATURE_VIEW_PREFIX}{feature.name}:1:{guild_to_check}:{show_all_flag}"
+                                if guild_to_check
+                                else f"{FEATURE_VIEW_PREFIX}{feature.name}:1:::"
+                            ),
                         ),
-                    ),
+                    )
                 )
-            )
+        # we are here because there are no features
+        else:
+            if guild_to_check:
+                components[-1].children.append(
+                    disnake.ui.TextDisplay(f"No features are overridden for {guild_to_check}")
+                )
+            else:
+                components[-1].children.append(disnake.ui.TextDisplay("No features are overridden."))
 
         # Paginator buttons
         if total >= FEATURES_PER_PAGE:
@@ -705,14 +725,14 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         )
 
     @commands.Cog.listener(disnake.Event.dropdown)
-    async def features_guild_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
+    async def FEATURES_GLOBAL_TOGGLE_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for guild feature toggle select."""
-        if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GUILD_TOGGLE):
+        if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GLOBAL_TOGGLE):
             return
         if not await self.bot.is_owner(inter.author):
             await inter.response.send_message("You do not own this bot.", ephemeral=True)
             return
-        # Parse custom_id: FEATURES_GUILD_TOGGLE:feature_name:guild_id:show_all_flag
+        # Parse custom_id: FEATURES_GLOBAL_TOGGLE:feature_name:guild_id:show_all_flag
         _, feature_name, guild_id, show_all_flag = inter.component.custom_id.split(":", 3)
         show_all = show_all_flag == "1"
         feature = self.features.get(feature_name)
@@ -755,12 +775,11 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     @commands.Cog.listener("on_button_click")
     async def guild_feature_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for guild feature toggle button."""
-        if not inter.component.custom_id or not inter.component.custom_id.startswith("guild_feature_toggle:"):
+        if not inter.component.custom_id or not inter.component.custom_id.startswith(f"{FEATURES_GUILD_TOGGLE}"):
             return
         if not await self.bot.is_owner(inter.author):
             await inter.response.send_message("You do not own this bot.", ephemeral=True)
             return
-        # Parse custom_id: guild_feature_toggle:guild_id:feature_name:show_all_flag
         _, guild_id, feature_name, show_all_flag = inter.component.custom_id.split(":", 3)
         feature = self.features.get(feature_name)
         if not feature:
@@ -801,8 +820,6 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Require all commands in this cog are by the bot author and are in guilds."""
         if await self.bot.is_owner(ctx.author):
-            if not ctx.guild:
-                raise commands.NoPrivateMessage()
             return True
 
         raise commands.NotOwner("You do not own this bot.")
