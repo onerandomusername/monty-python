@@ -195,24 +195,34 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
         info = json["info"]
 
         components[0].children.append(
-            disnake.ui.TextDisplay(f"[{info['name']} v{info['version']}]({info['package_url']})")
+            disnake.ui.TextDisplay(f"### [{info['name']} v{info['version']}]({info['package_url']})")
         )
         short_about = ""
-        try:
-            release_info = json["releases"][info["version"]]
-            short_about = (
-                f"-# Last updated: {disnake.utils.format_dt(fromisoformat(release_info[0]['upload_time']))}\n\n"
-            )
-        except (KeyError, IndexError):
-            pass
 
         summary = disnake.utils.escape_markdown(info["summary"])
 
         # Summary could be completely empty, or just whitespace.
         if summary and not summary.isspace():
-            short_about += f"{summary}\n\n"
+            short_about += f"{summary}"
         else:
-            short_about += "*No summary provided.*\n\n"
+            short_about += "*No summary provided.*"
+
+        # add some padding
+        if not with_description:
+            magic_wrap = 20
+            rough_lines = (len(short_about) // magic_wrap) + (magic_wrap * short_about.count("\n"))
+            while rough_lines < magic_wrap:
+                short_about += "\n"
+                rough_lines += magic_wrap
+        short_about += "\n\n"
+
+        try:
+            release_info = json["releases"][info["version"]]
+            short_about += (
+                f"-# Last updated: {disnake.utils.format_dt(fromisoformat(release_info[0]['upload_time']))}\n"
+            )
+        except (KeyError, IndexError):
+            pass
 
         components[0].children.append(
             disnake.ui.Section(
@@ -273,7 +283,7 @@ class PyPI(commands.Cog, slash_command_attrs={"dm_permission": False}):
                 disnake.ui.Button(
                     emoji=disnake.PartialEmoji(name="pypi", id=766274397257334814),
                     style=disnake.ButtonStyle.link,
-                    label="Open PyPI",
+                    label="View on PyPI",
                     url=url,
                 )
             )
