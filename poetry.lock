@@ -837,7 +837,7 @@ cron = ["capturer (>=2.4)"]
 
 [[package]]
 name = "disnake"
-version = "2.11.0a4825+gc36126cb6"
+version = "2.11.0a4788+gd7050a790"
 description = "A Python wrapper for the Discord API"
 optional = false
 python-versions = ">=3.8"
@@ -856,8 +856,8 @@ voice = ["PyNaCl (>=1.5.0,<1.6)", "audioop-lts (==0.2.1) ; python_version >= \"3
 [package.source]
 type = "git"
 url = "https://github.com/DisnakeDev/disnake.git"
-reference = "HEAD"
-resolved_reference = "bb2727312f3144d240c36a97fd62846f7eb8273f"
+reference = "master"
+resolved_reference = "d7050a7905083a3649c351b6a7eb31558ea18d98"
 
 [[package]]
 name = "distlib"
@@ -3419,4 +3419,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~=3.10"
-content-hash = "e9d16b870f58de77a493a32bd37b90ceb8e66825eaa04da99e3317addc72f1d7"
+content-hash = "d2908494f9ee937fda048ae8a824df248f84452f62dbc7097635606e97e44c8b"
