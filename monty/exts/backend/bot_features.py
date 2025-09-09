@@ -1,10 +1,12 @@
 import asyncio
+import itertools
 from typing import TYPE_CHECKING, Literal, Union
 
 import disnake
 import sqlalchemy as sa
 from disnake.ext import commands
 
+from monty import constants
 from monty.bot import Monty
 from monty.database import Feature
 from monty.database.guild import Guild
@@ -39,6 +41,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        self._colours = itertools.cycle(
+            (disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue))
+        )
 
     @property
     def features(self) -> dict[str, Feature]:
@@ -63,7 +68,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         # ask the user if they want to add this feature
         if isinstance(message_or_inter, disnake.Message):
             content = "### Confirmation Required\n" + content
-        components: list = [disnake.ui.Container(disnake.ui.TextDisplay(content))]
+        components: list = [
+            disnake.ui.Container(disnake.ui.TextDisplay(content), accent_colour=disnake.Colour.dark_gold())
+        ]
         row = disnake.ui.ActionRow.with_message_components()
         create_button = disnake.ui.Button(style=disnake.ButtonStyle.green, label=confirm_button_text)
         row.append_item(create_button)
@@ -171,8 +178,15 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         show_all: bool = True,
     ) -> None:
         """Show properties of the provided feature."""
+        colour = (
+            disnake.Colour.green()
+            if feature.enabled is True
+            else disnake.Colour.greyple() if feature.enabled is None else disnake.Colour.red()
+        )
         components: list = [
-            disnake.ui.Container(disnake.ui.TextDisplay(f"-# **Features » {feature.name}**\n### {feature.name}"))
+            disnake.ui.Container(
+                disnake.ui.TextDisplay(f"-# **Features » {feature.name}**\n### {feature.name}"),
+            )
         ]
         components[-1].children.append(
             disnake.ui.TextDisplay(f"**Rollout**:\n{feature.rollout.name if feature.rollout else 'None'}")
@@ -207,6 +221,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 include_feature_status=False,
                 create_if_not_exists=False,
             )
+            if guild_has_feature:
+                colour = disnake.Colour.orange()
             show_all_flag = "1" if show_all else "0"
             components[-1].children.append(
                 disnake.ui.Section(
@@ -262,6 +278,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 ),
             )
         )
+
+        components[0].accent_colour = colour
+
         if isinstance(inter, commands.Context):
             await inter.reply(components=components, fail_if_not_exists=False, mention_author=False)
         else:
@@ -406,7 +425,11 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             "\U0001f7e1": "-# :yellow_circle: Feature enabled here due to rollouts",
         }
         needed_keys = {}
-        components: list = [disnake.ui.Container()]
+        components: list = [
+            disnake.ui.Container(
+                accent_colour=next(self._colours),
+            )
+        ]
         guild_feature_ids = []
         if guild_to_check:
             guild = await self.bot.ensure_guild(guild_to_check)
