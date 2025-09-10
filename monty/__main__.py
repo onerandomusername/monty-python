@@ -103,7 +103,7 @@ async def main() -> None:
         redis_session=redis_session,
         command_prefix=constants.Client.default_command_prefix,
         activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
-        allowed_mentions=disnake.AllowedMentions(everyone=False),
+        allowed_mentions=disnake.AllowedMentions(everyone=False, roles=False, users=False, replied_user=True),
         intents=_intents,
         command_sync_flags=command_sync_flags,
         **kwargs,
