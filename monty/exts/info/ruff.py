@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import itertools
 import json
-import pathlib
 import random
 import re
 from functools import cache
@@ -14,7 +13,6 @@ import rapidfuzz.fuzz
 import rapidfuzz.process
 from disnake.ext import commands, tasks
 
-import monty.resources
 from monty import constants
 from monty.bot import Monty
 from monty.log import get_logger
@@ -25,7 +23,7 @@ from monty.utils.messages import DeleteButton
 logger = get_logger(__name__)
 
 
-RUFF_RULES = monty.resources.folder / "ruff_rules.json"
+RUFF_RULES = "https://raw.githubusercontent.com/onerandomusername/ruff-rules/refs/heads/main/rules.json"
 
 RUFF_RULES_BASE_URL = "https://docs.astral.sh/ruff/rules"
 
@@ -136,23 +134,22 @@ class Ruff(
         self.update_rules.cancel()
 
     async def _fetch_rules(self) -> Any:
-        if isinstance(RUFF_RULES, pathlib.Path):
-            with open(RUFF_RULES, "r") as f:
-                return json.load(f)
         async with self.bot.http_session.get(RUFF_RULES) as response:
-            if response.status == 200 and response.content_type == "application/json":
-                return await response.json()
+            if response.status == 200:
+                return json.loads(await response.text())
             return None
 
-    @tasks.loop(hours=1)
+    @tasks.loop(minutes=10)
     # @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def update_rules(self) -> Optional[dict[str, Any]]:
         """Fetch Ruff rules."""
         raw_rules = await self._fetch_rules()
-        new_rules = dict[str, Rule]()
         if not raw_rules:
             logger.error("Failed to fetch rules, something went wrong")
+            self.last_fetched = utcnow()  # don't try again for an hour
             return
+
+        new_rules = dict[str, Rule]()
         for unparsed_rule in raw_rules:
             parsed_rule = Rule(**unparsed_rule)
             new_rules[parsed_rule.code] = parsed_rule
@@ -279,8 +276,10 @@ class Ruff(
     async def ruff_rule_autocomplete(self, inter: disnake.ApplicationCommandInteraction, option: str) -> dict[str, str]:
         """Provide autocomplete for ruff rules."""
         # return dict(sorted([[code, code] for code, rule in self.rules.items()])[:25])
-        option = option.upper().strip()
+        if not self.rules:
+            return {}
 
+        option = option.upper().strip()
         if not option:
             return {rule.code_with_name: rule.code for rule in random.choices(list(self.rules.values()), k=12)}
 
@@ -315,6 +314,19 @@ class Ruff(
             matches[rule.code_with_name] = code
 
         return matches
+
+    def check_ruff_rules_loaded(self, inter: disnake.ApplicationCommandInteraction) -> bool:
+        """A check for all commands in this cog."""
+        if not self.rules:
+            raise commands.CommandError("Ruff rules have not been loaded yet, please try again later.")
+        return True
+
+    def cog_slash_command_check(self, inter: disnake.ApplicationCommandInteraction) -> bool:
+        """A check for all commands in this cog."""
+        if inter.application_command.qualified_name.startswith("ruff rule"):
+            return self.check_ruff_rules_loaded(inter)
+
+        return True
 
 
 def setup(bot: Monty) -> None:
