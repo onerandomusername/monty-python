@@ -233,7 +233,10 @@ class GithubInfo(
         self.bot = bot
 
         self.gql = self._create_gql_client(GITHUB_REQUEST_HEADERS)
-        self.gql_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
+        if constants.Tokens.github_secondary:
+            self.gql_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
+        else:
+            self.gql_secondary = None
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
@@ -254,8 +257,9 @@ class GithubInfo(
         # todo: cache the schema in redis and load from there
         async with self.gql:
             pass
-        async with self.gql_secondary:
-            pass
+        if self.gql_secondary:
+            async with self.gql_secondary:
+                pass
 
     def _create_gql_client(self, headers: Dict[str, str]) -> gql.Client:
         transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers, ssl=True)
@@ -593,6 +597,8 @@ class GithubInfo(
                 return FetchError(404, "Issue not found.")
 
             if is_org_level:
+                if not self.gql_secondary:
+                    return FetchError(404, "Issue not found.")
                 # in this case, the url is "github.com/orgs/<org>/discussions/..."
                 user = repository
                 try:
