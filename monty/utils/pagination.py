@@ -7,6 +7,7 @@ from disnake.ext import commands
 from monty.constants import Emojis
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.messages import DeleteButton
 
 
 FIRST_EMOJI = "\u23ee"  # [:track_previous:]
@@ -197,7 +198,8 @@ class LinePaginator(commands.Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
-            await ctx.send(embed=embed)
+            components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+            await ctx.send(embed=embed, components=components)
             return
 
         if footer_text:
