@@ -206,12 +206,10 @@ class Bookmark(
     @commands.command(name="bookmark", aliases=("bm", "pin"))
     async def bookmark(
         self,
-        ctx: typing.Union[commands.Context, disnake.Interaction],
+        ctx: typing.Union[commands.Context, disnake.ModalInteraction, disnake.ApplicationCommandInteraction],
         target_message: Optional[WrappedMessageConverter],
         *,
         title: str = "Bookmark",
-        bypass_dm_check: bool = False,
-        bypass_read_check: bool = False,
     ) -> None:
         """Send the author a link to `target_message` via DMs."""
         if not target_message:
@@ -224,11 +222,17 @@ class Bookmark(
                     "\n3. Lookup by message URL"
                 )
             target_message = ctx.message.reference.resolved
-        if not target_message.guild and not bypass_dm_check:
+        if not target_message.guild and not isinstance(
+            ctx, (disnake.ModalInteraction, disnake.MessageCommandInteraction)
+        ):
             raise commands.NoPrivateMessage("You may only bookmark messages that aren't in DMs.")
 
         result = await self.action_bookmark(
-            ctx.channel, ctx.author, target_message, title, bypass_read_check=bypass_read_check
+            ctx.channel,
+            ctx.author,
+            target_message,
+            title,
+            bypass_read_check=isinstance(ctx, (disnake.ModalInteraction, disnake.MessageCommandInteraction)),
         )
         if isinstance(result, disnake.Embed):
             if isinstance(ctx, disnake.Interaction):
@@ -294,8 +298,6 @@ class Bookmark(
             modal_inter,
             inter.target,
             title=modal_inter.text_values["title"],
-            bypass_dm_check=True,
-            bypass_read_check=True,
         )
 
     @commands.Cog.listener("on_button_click")
