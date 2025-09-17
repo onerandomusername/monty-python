@@ -552,4 +552,7 @@ class Snekbox(
 
 def setup(bot: Monty) -> None:
     """Load the Snekbox cog."""
+    if not URLs.snekbox_api:
+        log.warning("Snekbox URL not configured, not loading Snekbox cog.")
+        return
     bot.add_cog(Snekbox(bot))
