@@ -49,4 +49,7 @@ class UptimeMonitor(commands.Cog):
 
 def setup(bot: Monty) -> None:
     """Add the uptime monitoring cog to the bot."""
+    if not UptimeMonitoring.enabled:
+        logger.info("Uptime monitoring is not enabled, skipping loading the cog.")
+        return
     bot.add_cog(UptimeMonitor(bot))

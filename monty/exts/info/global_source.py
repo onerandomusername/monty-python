@@ -7,7 +7,7 @@ from urllib.parse import urldefrag
 import disnake
 from disnake.ext import commands, tasks
 
-from monty.constants import Feature
+from monty import constants
 from monty.log import get_logger
 from monty.utils.features import require_feature
 from monty.utils.helpers import encode_github_link
@@ -43,7 +43,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
             return snekbox
         raise RuntimeError("Snekbox is not loaded")
 
-    @require_feature(Feature.GLOBAL_SOURCE)
+    @require_feature(constants.Feature.GLOBAL_SOURCE)
     @commands.command(name="globalsource", aliases=("gs",), hidden=True)
     async def globalsource(self, ctx: commands.Context, object: str) -> None:
         """Get the source of a python object."""
@@ -175,4 +175,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
 def setup(bot: Monty) -> None:
     """Add the global source cog to the bot."""
+    if not constants.URLs.snekbox_api:
+        logger.info("Snekbox URL not configured, skipping loading the cog.")
+        return
     bot.add_cog(GlobalSource(bot))

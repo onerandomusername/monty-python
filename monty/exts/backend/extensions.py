@@ -27,6 +27,14 @@ UNLOAD_BLACKLIST: set[str] = set()
 BASE_PATH_LEN = exts.__name__.count(".")
 
 
+class ExtensionStatus(str, Enum):
+    """Represents the status of an extension."""
+
+    LOADED = ":green_circle:"
+    PARTIALLY_LOADED = ":yellow_circle:"
+    UNLOADED = ":red_circle:"
+
+
 class Action(Enum):
     """Represents an action to perform on an extension."""
 
@@ -173,15 +181,38 @@ class Extensions(commands.Cog):
         log.debug(f"{ctx.author} requested a list of all cogs. Returning a paginated list.")
         await LinePaginator.paginate(lines, ctx, embed, max_size=1200, empty=False)
 
+    def get_extension_status(self, ext: str) -> ExtensionStatus:
+        """
+        Gets the status of an extension.
+
+        This is a rudimentary check for whether or not a cog
+        from that specific extensions is currently loaded.
+
+        This does not check whether or not an extension exists.
+        """
+        assert ext in EXTENSIONS, "Extension does not exist."
+
+        if not EXTENSIONS[ext].has_cog:  # we won't be checking for anything if the extension has no cogs
+            return (ext in self.bot.extensions and ExtensionStatus.LOADED) or ExtensionStatus.UNLOADED
+        if ext not in self.bot.extensions:
+            return ExtensionStatus.UNLOADED
+
+        # extension is loaded, now to determine the cog
+        def _is_submodule(parent: str, child: str) -> bool:
+            return parent == child or child.startswith(parent + ".")
+
+        for cog in self.bot.cogs.values():
+            if _is_submodule(ext, cog.__module__):
+                return ExtensionStatus.LOADED
+
+        return ExtensionStatus.PARTIALLY_LOADED
+
     def group_extension_statuses(self) -> t.Mapping[str, str]:
         """Return a mapping of extension names and statuses to their categories."""
         categories = {}
 
         for ext in EXTENSIONS:
-            if ext in self.bot.extensions:
-                status = ":green_circle:"
-            else:
-                status = ":red_circle:"
+            status = self.get_extension_status(ext)
 
             path = ext.split(".")
             if len(path) > BASE_PATH_LEN + 1:
