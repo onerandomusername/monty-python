@@ -1,42 +1,31 @@
 # Monty Python
 
-Based off of multiple open source projects, Monty is a development tool for Discord servers. See [third party licensing](./LICENSE_THIRD_PARTY) for the original projects.
+_A Python and GitHub focused Discord bot to make collaborating on Python
+projects through Discord easier than ever._
 
-### Primary features
-`/docs` View Python documentation from discord \
-`/pep` View PEPs directly within discord \
-`-eval` Evaluate Python code \
-`-black` Blacken Python code
+## How to use Monty
 
-### Additional features
-- Automatic GitHub issue linking
-- Inline Python Docs and Python Code evaluation
-- Automatic leaked Discord Webhook deletion
-- Missing python codebloc detection
-- PyPI commands to interface with packages on the Python Package Index
+Public instance of Monty Python is invitable here:
+<https://discord.com/oauth2/authorize?client_id=872576125384147005>
 
-Click [here](https://discord.com/oauth2/authorize?client_id=872576125384147005&scope=bot+applications.commands&permissions=395204488384) to invite the public instance of Monty to your Discord server.
+You can also add Monty Python to your user account and use slash commands
+anywhere on Discord.
 
-## Running Locally
+## Contributing
 
-Monty uses quite a few services to run. However, these have been consolidated into the [docker-compose.yaml](./docker-compose.yaml) file.
-
-To deploy, first clone this repo.
-
-Minimally, Monty can run with just a bot token, but a few more variables are recommended for a more full experience.
-
-```sh
-# required
-BOT_TOKEN=
-
-# optional but recommended
-GITHUB_TOKEN= # Generate this in github's api token settings. This does not need any special permissions
-```
-
-From this point, just run `docker compose up` to start all of the services. Snekbox is optional, and the bot will function without snekbox.
-
-Some services will not work, but the majority will.
+Monty is open source for a reason! If you are interested in contributing, please
+see [the docs](https://monty.arielle.codes/en/latest/contributing/) for more
+information!
 
 ## Contact
 
-For support or to contact the developer, please join the [Support Server](https://discord.gg/mPscM4FjWB).
+For support or to contact the developer, please join the
+[Support Server](https://discord.gg/mPscM4FjWB) or
+[create an issue](https://github.com/onerandomusername/monty-python/issues/new/choose).
+
+## License
+
+Monty was originally started as a fork of some of
+[Python Discord's projects](https://www.pythondiscord.com/pages/guides/pydis-guides/contributing/),
+but most components have been updated to use interactions and other
+enhancements.
