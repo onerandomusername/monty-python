@@ -45,11 +45,11 @@ fakeredis = ["fakeredis<3.0.0,>=2.29.0"]
 dev = ["fakeredis<3.0.0,>=2.29.0", "watchfiles<2.0.0,>=1.0.5"]
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.10.0"
-ruff = "==0.7.4"
-isort = "^5.13.2"
+black = "^25.1.0"
+ruff = "==0.13.0"
+isort = "==6.0.1"
 pre-commit = "^4.3.0"
-taskipy = "~=1.14.0"
+taskipy = "^1.14.1"
 python-dotenv = "^1.1.0"
 pyright = "==1.1.405"
 msgpack-types = "^0.5.0"
@@ -61,7 +61,6 @@ poetry-plugin-export = ">=1.9,<2"
 line-length = 120
 target-version = ['py38']
 include = '\.pyi?$'
-preview = true
 
 [tool.isort]
 profile = "black"
