@@ -7,10 +7,10 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
+from monty.exts.filters.codeblock._instructions import get_instructions
+from monty.exts.filters.codeblock._parsing import is_python_code
 from monty.exts.filters.token_remover import TokenRemover
 from monty.exts.filters.webhook_remover import WEBHOOK_URL_RE
-from monty.exts.info.codeblock._instructions import get_instructions
-from monty.exts.info.codeblock._parsing import is_python_code
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import has_lines

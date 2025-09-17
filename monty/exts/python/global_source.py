@@ -16,7 +16,7 @@ from monty.utils.messages import DeleteButton
 
 if TYPE_CHECKING:
     from monty.bot import Monty
-    from monty.exts.eval import Snekbox
+    from monty.exts.python.eval import Snekbox
 
 logger = get_logger(__name__)
 CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"

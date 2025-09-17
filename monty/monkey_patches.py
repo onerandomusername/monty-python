@@ -13,7 +13,7 @@ log = get_logger(__name__)
 
 class Command(commands.Command):
     """
-    A `discord.ext.commands.Command` subclass which supports root aliases.
+    A `disnake.ext.commands.Command` subclass which supports root aliases.
 
     A `root_aliases` keyword argument is added, which is a sequence of alias names that will act as
     top-level commands rather than being aliases of the command's group. It's stored as an attribute
@@ -30,7 +30,7 @@ class Command(commands.Command):
 
 class Group(commands.Group):
     """
-    A `discord.ext.commands.Group` subclass which supports root aliases.
+    A `disnake.ext.commands.Group` subclass which supports root aliases.
 
     A `root_aliases` keyword argument is added, which is a sequence of alias names that will act as
     top-level groups rather than being aliases of the command's group. It's stored as an attribute
@@ -47,11 +47,11 @@ class Group(commands.Group):
 
 def patch_typing() -> None:
     """
-    Sometimes discord turns off typing events by throwing 403's.
+    Sometimes Discord turns off typing events by throwing 403's.
 
     Handle those issues by patching the trigger_typing method so it ignores 403's in general.
     """
-    log.debug("Patching send_typing, which should fix things breaking when discord disables typing events. Stay safe!")
+    log.debug("Patching send_typing, which should fix things breaking when Discord disables typing events. Stay safe!")
 
     original = disnake.http.HTTPClient.send_typing
     last_403 = None

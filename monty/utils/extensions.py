@@ -66,7 +66,7 @@ def walk_extensions() -> Generator[Tuple[str, "ExtMetadata"], None, None]:
 
 async def invoke_help_command(ctx: commands.Context) -> None:
     """Invoke the help command or default help command if help extensions is not loaded."""
-    if "monty.exts.backend.help" in ctx.bot.extensions:
+    if ctx.bot.get_cog("Help"):
         help_command = ctx.bot.get_command("help")
         await ctx.invoke(help_command, ctx.command.qualified_name)  # type: ignore
         return

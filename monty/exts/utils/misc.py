@@ -16,7 +16,7 @@ from monty.utils.pagination import LinePaginator
 log = get_logger(__name__)
 
 
-class Utils(
+class Misc(
     commands.Cog,
     slash_command_attrs={
         "contexts": disnake.InteractionContextTypes(guild=True),
@@ -128,5 +128,5 @@ class Utils(
 
 
 def setup(bot: Monty) -> None:
-    """Load the Utils cog."""
-    bot.add_cog(Utils(bot))
+    """Load the Misc cog."""
+    bot.add_cog(Misc(bot))

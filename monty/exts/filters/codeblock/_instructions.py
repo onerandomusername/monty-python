@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from monty.exts.info.codeblock import _parsing
+from monty.exts.filters.codeblock import _parsing
 from monty.log import get_logger
 
 
