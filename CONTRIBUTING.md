@@ -1,3 +1,6 @@
+---
+description: Contributing your changes to Monty Python
+---
 # Contributing
 
 Thank you for your interest in contributing to Monty!
@@ -7,3 +10,5 @@ set up a developer environment, please see
 [https://monty.arielle.codes/page/contributing/getting-started]
 
 ## Making a change to Monty
+
+TODO.

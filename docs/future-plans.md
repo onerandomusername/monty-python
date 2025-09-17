@@ -1,3 +1,7 @@
+---
+description: What's next in Monty's future?
+---
+
 # Future plans
 
 These are a list of future plans and integrations for Monty. If you want to help

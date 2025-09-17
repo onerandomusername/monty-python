@@ -1,3 +1,6 @@
+---
+description: First steps with contributing to Monty
+---
 # Getting Started
 
 ## Requirements

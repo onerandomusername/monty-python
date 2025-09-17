@@ -1,17 +1,18 @@
 site_name: Monty Python
 site_url: https://monty.arielle.codes/page/
+site_description: A Python and GitHub focused Discord bot to make collaborating on Python projects through Discord easier than ever.
 repo_name: onerandomusername/monty-python
 repo_url: https://github.com/onerandomusername/monty-python/
 edit_uri: edit/main/docs/
 copyright: >
   Copyright &copy; 2025+ onerandomusername ·
-  <a href="/terms">Terms of Service</a> ·
-  <a href="/privacy">Privacy Policy</a>
+  <a href="/page/terms">Terms of Service</a> ·
+  <a href="/page/privacy">Privacy Policy</a>
 theme:
   name: material
   logo: assets/images/logo.png
   palette:
-    primary: blue grey
+    primary: blue
     accent: yellow
   features:
   - navigation.instant
@@ -24,7 +25,6 @@ theme:
   - search
   - search.suggest
   - search.highlight
-  - social
   - content.action.edit
   - content.action.view
   - content.code.copy
@@ -34,6 +34,11 @@ theme:
 plugins:
 - privacy
 - git-revision-date-localized
+- social:
+    cards_layout_options:
+      color: "#e0be59"
+      background_color: "#162f45"
+      font_family:  Cascadia Code
 
 markdown_extensions:
 - admonition
