@@ -4,7 +4,7 @@ description: Design language and best practices
 
 # Design
 
-## Cohesion
+## Language
 
 Monty is intended to have a design language that looks cohesive from one end to
 another. All commands and interactions should be consistent between one another.
