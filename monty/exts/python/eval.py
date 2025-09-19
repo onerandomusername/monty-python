@@ -11,7 +11,7 @@ import yarl
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Feature, URLs
+from monty.constants import Auth, Endpoints, Feature
 from monty.errors import APIError
 from monty.log import get_logger
 from monty.utils.extensions import invoke_help_command
@@ -52,8 +52,8 @@ REEVAL_EMOJI = "\U0001f501"  # :repeat:
 REEVAL_TIMEOUT = 30
 
 HEADERS = {}
-if URLs.snekbox_auth:
-    HEADERS["Authorization"] = URLs.snekbox_auth
+if Auth.snekbox:
+    HEADERS["Authorization"] = Auth.snekbox
 PLACEHOLDER_CODE = """
 from random import choice
 
@@ -111,7 +111,7 @@ class Snekbox(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.url = yarl.URL(URLs.snekbox_api)
+        self.url = yarl.URL(Endpoints.snekbox)
         self.jobs = {}
 
     async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
@@ -552,7 +552,7 @@ class Snekbox(
 
 def setup(bot: Monty) -> None:
     """Load the Snekbox cog."""
-    if not URLs.snekbox_api:
+    if not Endpoints.snekbox:
         log.warning("Snekbox URL not configured, not loading Snekbox cog.")
         return
     bot.add_cog(Snekbox(bot))

@@ -15,7 +15,7 @@ import rapidfuzz.process
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Client, Feature, Source
+from monty.constants import Client, Feature, Icons
 from monty.log import get_logger
 from monty.utils.converters import SourceConverter, SourceType
 from monty.utils.helpers import encode_github_link
@@ -225,9 +225,9 @@ class MetaSource(
 
         if not source_item:
             embed = disnake.Embed(title=f"{Client.name}'s GitHub Repository")
-            embed.add_field(name="Repository", value=f"[Go to GitHub]({Source.github})")
-            embed.set_thumbnail(url=Source.github_avatar_url)
-            components = [disnake.ui.Button(url=Source.github, label="Open Github")]
+            embed.add_field(name="Repository", value=f"[Go to GitHub]({Client.git_repo})")
+            embed.set_thumbnail(url=Icons.github_avatar_url)
+            components = [disnake.ui.Button(url=Client.git_repo, label="Open Github")]
             await send_message(embed, components)
             return
 
@@ -335,7 +335,7 @@ class MetaSource(
 
         file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
-        url = f"{Source.github}/blob/{Client.version}/{file_location}{lines_extension}"
+        url = f"{Client.git_repo}/blob/{Client.version}/{file_location}{lines_extension}"
 
         return url, file_location, first_line_no or None
 
@@ -366,7 +366,7 @@ class MetaSource(
             description = (source_object.description or "").split("\n", 1)[0]
 
         embed = disnake.Embed(title=title, description=description)
-        embed.set_thumbnail(url=Source.github_avatar_url)
+        embed.set_thumbnail(url=Icons.github_avatar_url)
         embed.add_field(name="Source Code", value=f"[Go to GitHub]({url})")
         line_text = f":{first_line}" if first_line else ""
         embed.set_footer(text=f"{location}{line_text}")

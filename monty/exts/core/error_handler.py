@@ -12,12 +12,13 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import USER_INPUT_ERROR_REPLIES, Client, Colours
+from monty.constants import Client, Colours, Monitoring
 from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import responses
 from monty.utils.messages import DeleteButton
+from monty.utils.responses import USER_INPUT_ERROR_REPLIES
 
 
 EXT_METADATA = ExtMetadata(core=True)
@@ -241,7 +242,7 @@ class ErrorHandler(
                 if logger.isEnabledFor(logging.ERROR):
                     try:
                         msg = self.make_error_message(
-                            ctx, error, extended_context=Client.debug_logging or Client.sentry_enabled
+                            ctx, error, extended_context=Monitoring.debug_logging or Monitoring.sentry_enabled
                         )
                     except Exception as e:
                         logger.error("Something went wrong creating the full logging context for an error", exc_info=e)

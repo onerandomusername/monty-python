@@ -58,23 +58,23 @@ async def main() -> None:
     monkey_patches.patch_inter_send()
 
     # we make our redis session here and pass it to cachingutils
-    if constants.RedisConfig.use_fakeredis:
+    if constants.Redis.use_fakeredis:
         try:
             import fakeredis
             import fakeredis.aioredis
         except ImportError as e:
             raise RuntimeError("fakeredis must be installed to use fake redis") from e
-        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.RedisConfig.uri)
+        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.Redis.uri)
     else:
         pool = redis.asyncio.BlockingConnectionPool.from_url(
-            constants.RedisConfig.uri,
+            constants.Redis.uri,
             max_connections=20,
             timeout=300,
         )
         redis_session = redis.asyncio.Redis(connection_pool=pool)
 
     cachingutils.redis.async_session(
-        constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
+        constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
     )
 
     # run alembic migrations
