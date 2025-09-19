@@ -491,7 +491,7 @@ class GithubInfo(
                 embed = disnake.Embed(
                     title=random.choice(responses.FAILURE_HEADERS),
                     description="The requested repository was not found.",
-                    colour=constants.Colours.soft_red,
+                    colour=responses.DEFAULT_FAILURE_COLOUR,
                 )
                 components = DeleteButton(ctx.author, initial_message=ctx.message)
                 await ctx.send(embed=embed, components=components)
@@ -753,7 +753,7 @@ class GithubInfo(
         if len(numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
                 title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
             await ctx.send(embed=embed, components=components)
@@ -1206,7 +1206,7 @@ class GithubInfo(
             # must be handled here due to local side-effect, for now
             embed = disnake.Embed(
                 title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
 

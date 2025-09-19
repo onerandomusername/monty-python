@@ -18,7 +18,6 @@ from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import responses
 from monty.utils.messages import DeleteButton
-from monty.utils.responses import USER_INPUT_ERROR_REPLIES
 
 
 EXT_METADATA = ExtMetadata(core=True)
@@ -62,7 +61,7 @@ class ErrorHandler(
         if not isinstance(error, str):
             error = error.__class__.__name__
             if error == "BadArgument":
-                return random.choice(USER_INPUT_ERROR_REPLIES)
+                return random.choice(responses.USER_INPUT_ERROR_REPLIES)
         return re.sub(ERROR_TITLE_REGEX, r" \1", error)
 
     @staticmethod
@@ -209,7 +208,9 @@ class ErrorHandler(
                     msg += f"\nReason: {reason}"
                 embed = self.error_embed("Command Disabled", msg)
         elif isinstance(error, MontyCommandError):
-            embed = self.error_embed(self.get_title_from_name(error), str(error), colour=Colours.soft_red)
+            embed = self.error_embed(
+                self.get_title_from_name(error), str(error), colour=responses.DEFAULT_FAILURE_COLOUR
+            )
         elif isinstance(error, commands.CommandOnCooldown):
             if await ctx.bot.is_owner(ctx.author):
                 if isinstance(ctx, commands.Context):
@@ -282,7 +283,7 @@ class ErrorHandler(
             embed = self.error_embed(self.get_title_from_name(error), str(error))
 
         if embed.colour and embed.colour.value in (Colours.python_yellow, Colours.python_blue):
-            embed.colour = Colours.soft_red
+            embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
         await ctx.send_error(embeds=[embed])
 
