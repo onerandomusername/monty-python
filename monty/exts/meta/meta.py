@@ -30,7 +30,7 @@ Based off of multiple open source projects, Monty is a development tool for Disc
 - Automatic leaked webhook deletion
 - Codeblock detection
 
-**GitHub**: {Client.github_bot_repo}
+**GitHub**: {Client.git_repo}
 **Invite**: Use `/monty invite` to get an invite link to add me to your server.
 **Support**: https://discord.gg/{Client.support_server}
 **Credits**: Click the Credits button below to view who I thank for helping make Monty.

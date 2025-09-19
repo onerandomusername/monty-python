@@ -9,6 +9,7 @@ from monty.bot import Monty
 from monty.constants import Colours
 from monty.errors import APIError
 from monty.log import get_logger
+from monty.utils import responses
 from monty.utils.messages import DeleteButton
 
 
@@ -62,7 +63,7 @@ class XKCD(
         if comic is not None:
             comic = str(comic)
 
-        embed.colour = Colours.soft_red
+        embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
         if comic and (comic := re.match(COMIC_FORMAT, comic)) is None:
             raise commands.BadArgument("Comic parameter should either be an integer or 'latest'.")

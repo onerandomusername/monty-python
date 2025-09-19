@@ -8,7 +8,7 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import Paste, URLs
+from monty.constants import Endpoints
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton, extract_urls
@@ -49,7 +49,7 @@ class CodeBlockActions(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.black_endpoint = URLs.black_formatter
+        self.black_endpoint = Endpoints.black_formatter
 
     def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> Optional[str]:
         """Get the code from the provided content. Parses codeblocks and assures its python code."""
@@ -78,7 +78,7 @@ class CodeBlockActions(
             return None
 
         id = query_strings["id"][0]
-        url = Paste.raw_paste_endpoint.format(key=id)
+        url = Endpoints.raw_paste.format(key=id)
 
         async with self.bot.http_session.get(url, timeout=AIOHTTP_TIMEOUT) as resp:
             if resp.status != 200:
@@ -404,7 +404,7 @@ class CodeBlockActions(
 
 def setup(bot: Monty) -> None:
     """Add the CodeBlockActions cog to the bot."""
-    if not URLs.black_formatter:
+    if not Endpoints.black_formatter:
         logger.warning("Not loading codeblock buttons as black_formatter is not set.")
         return
     bot.add_cog(CodeBlockActions(bot))

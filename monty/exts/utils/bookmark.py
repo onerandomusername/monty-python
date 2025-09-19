@@ -7,8 +7,9 @@ import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.constants import USER_INPUT_ERROR_REPLIES, Colours, Icons
+from monty.constants import Colours, Icons
 from monty.log import get_logger
+from monty.utils import responses
 from monty.utils.converters import WrappedMessageConverter
 from monty.utils.messages import DeleteButton
 
@@ -92,9 +93,9 @@ class Bookmark(
     def build_error_embed(user: disnake.Member) -> disnake.Embed:
         """Builds an error embed for when a bookmark requester has DMs disabled."""
         return disnake.Embed(
-            title=random.choice(USER_INPUT_ERROR_REPLIES),
+            title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
             description=f"{user.mention}, please enable your DMs to receive the bookmark.",
-            colour=Colours.soft_red,
+            colour=responses.DEFAULT_FAILURE_COLOUR,
         )
 
     @staticmethod
@@ -118,8 +119,8 @@ class Bookmark(
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
         if not bypass_read_check and not self.check_perms(user, target_message):
             return disnake.Embed(
-                title=random.choice(USER_INPUT_ERROR_REPLIES),
-                color=Colours.soft_red,
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description="You don't have permission to view that channel.",
             )
         embed = self.build_bookmark_dm(target_message, title)

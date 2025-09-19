@@ -27,7 +27,7 @@ from monty.bot import Monty
 from monty.constants import Feature
 from monty.errors import MontyCommandError
 from monty.log import get_logger
-from monty.utils import scheduling
+from monty.utils import responses, scheduling
 from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
@@ -489,9 +489,9 @@ class GithubInfo(
             # There won't be a message key if this repo exists
             if "message" in repo_data:
                 embed = disnake.Embed(
-                    title=random.choice(constants.NEGATIVE_REPLIES),
+                    title=random.choice(responses.FAILURE_HEADERS),
                     description="The requested repository was not found.",
-                    colour=constants.Colours.soft_red,
+                    colour=responses.DEFAULT_FAILURE_COLOUR,
                 )
                 components = DeleteButton(ctx.author, initial_message=ctx.message)
                 await ctx.send(embed=embed, components=components)
@@ -665,7 +665,7 @@ class GithubInfo(
 
         embed.url = issue.url
         embed.timestamp = fromisoformat(json_data["created_at"])
-        embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
+        embed.set_footer(text="Created ", icon_url=constants.Icons.github_avatar_url)
 
         body: Optional[str] = json_data["body"]
         if body and not body.isspace():
@@ -752,8 +752,8 @@ class GithubInfo(
 
         if len(numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
-                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
             await ctx.send(embed=embed, components=components)
@@ -1205,8 +1205,8 @@ class GithubInfo(
         if len(issues) > MAXIMUM_ISSUES:
             # must be handled here due to local side-effect, for now
             embed = disnake.Embed(
-                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
 
