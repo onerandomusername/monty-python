@@ -1,27 +1,43 @@
+# pyright: strict
+from __future__ import annotations
+
 import logging
 import logging.handlers
 import os
 import sys
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, Mapping, TypedDict, cast
 
 import coloredlogs
 
-from monty.constants import Client
+from monty import constants
+
+
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
 
 
 TRACE = 5
 
 
-def get_logger(*args, **kwargs) -> "MontyLogger":
+def get_logger(name: str) -> "MontyLogger":
     """Stub method for logging.getLogger."""
-    return cast("MontyLogger", logging.getLogger(*args, **kwargs))
+    return cast("MontyLogger", logging.getLogger(name))
+
+
+class LoggingParams(TypedDict, total=False):
+    """Parameters for logging setup."""
+
+    exc_info: logging._ExcInfoType  # type: ignore
+    stack_info: bool
+    stacklevel: int
+    extra: Mapping[str, object] | None
 
 
 class MontyLogger(logging.Logger):
     """Custom logger which implements the trace level."""
 
-    def trace(self, msg: str, *args, **kwargs) -> None:
+    def trace(self, msg: object, *args: object, **kwargs: Unpack[LoggingParams]) -> None:
         """
         Log 'msg % args' with severity 'TRACE'.
 
@@ -49,7 +65,7 @@ def setup() -> None:
 
     # we use a rotating sized log handler for local development.
     # in production, we log each day's logs to a new file and delete it after 14 days
-    if Client.log_mode == "daily":
+    if constants.Monitoring.log_mode == "daily":
         file_handler = logging.handlers.TimedRotatingFileHandler(
             log_file,
             "midnight",
@@ -81,7 +97,7 @@ def setup() -> None:
 
     coloredlogs.install(level=TRACE, stream=sys.stdout)
 
-    root_logger.setLevel(logging.DEBUG if Client.debug_logging else logging.INFO)
+    root_logger.setLevel(logging.DEBUG if constants.Monitoring.debug_logging else logging.INFO)
     # Silence irrelevant loggers
     logging.getLogger("disnake").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
@@ -106,7 +122,7 @@ def _set_trace_loggers() -> None:
     Otherwise if the env var begins with a "*",
     the root logger is set to the trace level and other contents are ignored.
     """
-    level_filter = Client.trace_loggers
+    level_filter = constants.Monitoring.trace_loggers
     if level_filter:
         if level_filter.startswith("*"):
             logging.getLogger().setLevel(TRACE)

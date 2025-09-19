@@ -21,9 +21,10 @@ from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands, tasks
 
 from monty.bot import Monty
-from monty.constants import NEGATIVE_REPLIES, Colours, Endpoints, Feature
+from monty.constants import Colours, Endpoints, Feature
 from monty.errors import MontyCommandError
 from monty.log import get_logger
+from monty.utils import responses
 from monty.utils.caching import redis_cache
 from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
@@ -266,7 +267,7 @@ class PyPI(
         package: The package on PyPI to get information about.
         with_description: Whether or not to show the full description.
         """
-        embed = disnake.Embed(title=random.choice(NEGATIVE_REPLIES), colour=Colours.soft_red)
+        embed = disnake.Embed(title=random.choice(responses.FAILURE_HEADERS), colour=responses.DEFAULT_FAILURE_COLOUR)
         embed.set_thumbnail(url=PYPI_ICON)
 
         defer_task = None

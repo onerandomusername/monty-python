@@ -71,7 +71,8 @@ class CodeBlockCog(
         self.bot = bot
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.
-        self.channel_cooldowns = dict.fromkeys(constants.CodeBlock.cooldown_channels, 0.0)
+        # TODO: remove or refactor this unused code
+        self.channel_cooldowns = dict.fromkeys((), 0.0)
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
@@ -180,7 +181,7 @@ class CodeBlockCog(
             return
 
         # When debugging, ignore cooldowns.
-        if self.is_on_cooldown(msg.channel) and not constants.DEBUG_MODE:
+        if self.is_on_cooldown(msg.channel) and not constants.Client.debug:
             log.trace(f"Skipping code block detection of {msg.id}: #{msg.channel} is on cooldown.")
             return
 
@@ -188,9 +189,8 @@ class CodeBlockCog(
         if instructions:
             await self.send_instructions(msg, instructions)
 
-            if msg.channel.id not in constants.CodeBlock.channel_whitelist:
-                log.debug(f"Adding #{msg.channel} to the channel cooldowns.")
-                self.channel_cooldowns[msg.channel.id] = time.time()
+            log.debug(f"Adding #{msg.channel} to the channel cooldowns.")
+            self.channel_cooldowns[msg.channel.id] = time.time()
 
     @commands.Cog.listener()
     async def on_raw_message_edit(self, payload: disnake.RawMessageUpdateEvent) -> None:

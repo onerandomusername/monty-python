@@ -45,8 +45,8 @@ fakeredis = ["fakeredis<3.0.0,>=2.29.0"]
 dev = ["fakeredis<3.0.0,>=2.29.0", "watchfiles<2.0.0,>=1.0.5"]
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-ruff = "==0.13.0"
+black = "^25.9.0"
+ruff = "==0.13.1"
 isort = "==6.0.1"
 pre-commit = "^4.3.0"
 taskipy = "^1.14.1"

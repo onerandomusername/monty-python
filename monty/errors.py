@@ -5,7 +5,7 @@ from typing import Hashable, Optional
 
 from disnake.ext import commands
 
-from monty.constants import NEGATIVE_REPLIES
+from monty.utils.responses import FAILURE_HEADERS
 
 
 class APIError(commands.CommandError):
@@ -63,7 +63,7 @@ class LockedResourceError(RuntimeError):
 class MontyCommandError(commands.CommandError):
     def __init__(self, message: str, *, title: str = None):
         if not title:
-            title = random.choice(NEGATIVE_REPLIES)
+            title = random.choice(FAILURE_HEADERS)
         self.title = title
         super().__init__(message)
 

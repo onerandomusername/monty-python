@@ -1,8 +1,8 @@
 import yarl
 from disnake.ext import commands, tasks
 
+from monty import constants
 from monty.bot import Monty
-from monty.constants import UptimeMonitoring
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 
@@ -11,13 +11,13 @@ EXT_METADATA = ExtMetadata(core=True)
 logger = get_logger(__name__)
 
 
-class UptimeMonitor(commands.Cog):
+class UptimePing(commands.Cog):
     """Pong a remote server for uptime monitoring."""
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self._url = yarl.URL(UptimeMonitoring.private_url)
-        if UptimeMonitoring.enabled:
+        self._url = yarl.URL(constants.Monitoring.ping_url)
+        if constants.Monitoring.ping_enabled:
             self.uptime_monitor.start()
 
     def cog_unload(self) -> None:
@@ -27,14 +27,14 @@ class UptimeMonitor(commands.Cog):
     def get_url(self) -> str:
         """Get the uptime URL with proper formatting. The result of this method should not be cached."""
         queries = {}
-        for param, value in UptimeMonitoring.query_params.items():
+        for param, value in constants.Monitoring.ping_query_params.items():
             if callable(value):
                 value = value(self.bot)
             queries[param] = value
 
         return str(self._url.update_query(**queries))
 
-    @tasks.loop(seconds=UptimeMonitoring.interval)
+    @tasks.loop(seconds=constants.Monitoring.ping_interval)
     async def uptime_monitor(self) -> None:
         """Send an uptime ack if uptime monitoring is enabled."""
         url = self.get_url()
@@ -48,8 +48,8 @@ class UptimeMonitor(commands.Cog):
 
 
 def setup(bot: Monty) -> None:
-    """Add the uptime monitoring cog to the bot."""
-    if not UptimeMonitoring.enabled:
+    """Add the Uptime Ping cog to the bot."""
+    if not constants.Monitoring.ping_enabled:
         logger.info("Uptime monitoring is not enabled, skipping loading the cog.")
         return
-    bot.add_cog(UptimeMonitor(bot))
+    bot.add_cog(UptimePing(bot))

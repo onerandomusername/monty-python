@@ -8,6 +8,7 @@ from monty import bot
 from monty.constants import Colours
 from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
+from monty.utils import responses
 
 
 logger = get_logger(__name__)
@@ -21,7 +22,7 @@ SEARCH_URL = "https://realpython.com/search?q={user_search}"
 ERROR_EMBED = disnake.Embed(
     title="Error while searching Real Python",
     description="There was an error while trying to reach Real Python. Please try again shortly.",
-    color=Colours.soft_red,
+    color=responses.DEFAULT_FAILURE_COLOUR,
 )
 
 

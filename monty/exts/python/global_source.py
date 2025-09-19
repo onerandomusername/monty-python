@@ -175,7 +175,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
 def setup(bot: Monty) -> None:
     """Add the global source cog to the bot."""
-    if not constants.URLs.snekbox_api:
+    if not constants.Endpoints.snekbox:
         logger.info("Snekbox URL not configured, skipping loading the cog.")
         return
     bot.add_cog(GlobalSource(bot))
