@@ -1,27 +1,43 @@
+# pyright: strict
+from __future__ import annotations
+
 import logging
 import logging.handlers
 import os
 import sys
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, Mapping, TypedDict, cast
 
 import coloredlogs
 
 from monty.constants import Client
 
 
+if TYPE_CHECKING:
+    from typing_extensions import Unpack
+
+
 TRACE = 5
 
 
-def get_logger(*args, **kwargs) -> "MontyLogger":
+def get_logger(name: str) -> "MontyLogger":
     """Stub method for logging.getLogger."""
-    return cast("MontyLogger", logging.getLogger(*args, **kwargs))
+    return cast("MontyLogger", logging.getLogger(name))
+
+
+class LoggingParams(TypedDict, total=False):
+    """Parameters for logging setup."""
+
+    exc_info: logging._ExcInfoType  # type: ignore
+    stack_info: bool
+    stacklevel: int
+    extra: Mapping[str, object] | None
 
 
 class MontyLogger(logging.Logger):
     """Custom logger which implements the trace level."""
 
-    def trace(self, msg: str, *args, **kwargs) -> None:
+    def trace(self, msg: object, *args: object, **kwargs: Unpack[LoggingParams]) -> None:
         """
         Log 'msg % args' with severity 'TRACE'.
 
