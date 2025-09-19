@@ -63,6 +63,9 @@ extra_css:
 nav:
 - Home: README.md
 - Future Plans: future-plans.md
+- Commands:
+  - App Commands: commands/app-commands.md
+  - Prefix Commands: commands/prefix-commands.md
 - Contributing:
   - Getting Started: contributing/README.md
   - Design: contributing/design.md
