@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 authors = [{ name = "aru", email = "genericusername414@gmail.com" }]
 license = { text = "MIT" }
-requires-python = "~=3.10"
+requires-python = ">=3.10, <4"
 name = "monty"
 version = "1.0.0"
 description = "Helpful bot for python, github, and discord things."
@@ -48,7 +48,7 @@ dev = ["fakeredis<3.0.0,>=2.29.0", "watchfiles<2.0.0,>=1.0.5"]
 black = "^25.9.0"
 ruff = "==0.13.1"
 isort = "==6.0.1"
-pre-commit = "^4.3.0"
+prek = ">=0.2.1,<0.3"
 taskipy = "^1.14.1"
 python-dotenv = "^1.1.0"
 pyright = "==1.1.405"
@@ -173,8 +173,8 @@ max-complexity = 20
 [tool.taskipy.tasks]
 export = 'poetry export --without-hashes -o requirements.txt'
 start = "python -m monty"
-lint = "pre-commit run --all-files"
-precommit = "pre-commit install"
+lint = "prek run --all-files"
+prek = "prek install"
 pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
 html = "coverage html"
 report = "coverage report"

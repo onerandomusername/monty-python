@@ -813,18 +813,6 @@ files = [
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
 
 [[package]]
-name = "cfgv"
-version = "3.4.0"
-description = "Validate configuration and produce human readable error messages."
-optional = false
-python-versions = ">=3.8"
-groups = ["dev"]
-files = [
-    {file = "cfgv-3.4.0-py2.py3-none-any.whl", hash = "sha256:b7265b1f29fd3316bfcd2b330d63d024f2bfd8bcb8b0272f8e19a504856c48f9"},
-    {file = "cfgv-3.4.0.tar.gz", hash = "sha256:e52591d4c5f5dead8e0f673fb16db7949d2cfb3f7da4582893288f0ded8fe560"},
-]
-
-[[package]]
 name = "charset-normalizer"
 version = "3.4.3"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
@@ -1095,18 +1083,6 @@ reference = "master"
 resolved_reference = "872875965e59c9255aef3298313b0e3d2cb4ca97"
 
 [[package]]
-name = "distlib"
-version = "0.4.0"
-description = "Distribution utilities"
-optional = false
-python-versions = "*"
-groups = ["dev"]
-files = [
-    {file = "distlib-0.4.0-py2.py3-none-any.whl", hash = "sha256:9659f7d87e46584a30b5780e43ac7a2143098441670ff0a49d5f9034c54a6c16"},
-    {file = "distlib-0.4.0.tar.gz", hash = "sha256:feec40075be03a04501a973d81f633735b4b69f98b05450592310c0f401a4e0d"},
-]
-
-[[package]]
 name = "docutils"
 version = "0.22"
 description = "Docutils -- Python Documentation Utilities"
@@ -1162,18 +1138,6 @@ json = ["jsonpath-ng (>=1.6,<2.0)"]
 lua = ["lupa (>=2.1,<3.0)"]
 probabilistic = ["pyprobables (>=0.6)"]
 valkey = ["valkey (>=6) ; python_version >= \"3.8\""]
-
-[[package]]
-name = "filelock"
-version = "3.19.1"
-description = "A platform independent file lock."
-optional = false
-python-versions = ">=3.9"
-groups = ["dev"]
-files = [
-    {file = "filelock-3.19.1-py3-none-any.whl", hash = "sha256:d38e30481def20772f5baf097c122c3babc4fcdb7e14e57049eb9d88c6dc017d"},
-    {file = "filelock-3.19.1.tar.gz", hash = "sha256:66eda1888b0171c998b35be2bcc0f6d75c388a7ce20c3f3f37aa8e96c2dddf58"},
-]
 
 [[package]]
 name = "frozenlist"
@@ -1584,21 +1548,6 @@ files = [
 
 [package.dependencies]
 pyreadline3 = {version = "*", markers = "sys_platform == \"win32\" and python_version >= \"3.8\""}
-
-[[package]]
-name = "identify"
-version = "2.6.14"
-description = "File identification library for Python"
-optional = false
-python-versions = ">=3.9"
-groups = ["dev"]
-files = [
-    {file = "identify-2.6.14-py2.py3-none-any.whl", hash = "sha256:11a073da82212c6646b1f39bb20d4483bfb9543bd5566fec60053c4bb309bf2e"},
-    {file = "identify-2.6.14.tar.gz", hash = "sha256:663494103b4f717cb26921c52f8751363dc89db64364cd836a9bf1535f53cd6a"},
-]
-
-[package.extras]
-license = ["ukkonen"]
 
 [[package]]
 name = "idna"
@@ -2976,23 +2925,33 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.4)", "pytest-
 type = ["mypy (>=1.14.1)"]
 
 [[package]]
-name = "pre-commit"
-version = "4.3.0"
-description = "A framework for managing and maintaining multi-language pre-commit hooks."
+name = "prek"
+version = "0.2.1"
+description = "Better `pre-commit`, re-engineered in Rust"
 optional = false
-python-versions = ">=3.9"
+python-versions = ">=3.8"
 groups = ["dev"]
 files = [
-    {file = "pre_commit-4.3.0-py2.py3-none-any.whl", hash = "sha256:2b0747ad7e6e967169136edffee14c16e148a778a54e4f967921aa1ebf2308d8"},
-    {file = "pre_commit-4.3.0.tar.gz", hash = "sha256:499fe450cc9d42e9d58e606262795ecb64dd05438943c62b66f6a8673da30b16"},
+    {file = "prek-0.2.1-py3-none-linux_armv6l.whl", hash = "sha256:bdd0e71ab6a63a9b81c268539ec249bfe1cd2b50fc39823727b256b0ba67d342"},
+    {file = "prek-0.2.1-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:99c1611aea27c75cb76d23f7ca68440478b4372b2184e4c383af06a3ea9e8b8e"},
+    {file = "prek-0.2.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:46ec9a2dc2f536ddc3381f9bc9461afbb48b767fe0159687b9a8302a0d910f9c"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:dd97d0f8d9ec3f1749d3b1c8c3310d2d946976d1ad58e54b1dce3e177b09cbb7"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:38c22c63bd18a29b27d4c56804fe10e5ae7e2a2b9d1ec2bcdbaebda9d80b2f86"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e198ddf56591cbe455ffa2106caa6aa8f0df11348a328a68e46e9a0e877f80f6"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_ppc64.manylinux2014_ppc64.whl", hash = "sha256:5be95c28c65249576e43f7894869f09db7ed62602b70b456c777881304abebf5"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:0355c6c67afe7aa376685cb5747a45e3ba9bcc091d82547ec3725ceafbe139da"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:b784eb070ac3cfea9598f8590f8aafcdae5a871a9bcfd88535c6f6f71f315252"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:300ace6901a78a203030e76750d62cff1bdc9d64b08a998029a160a2435a5575"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:0b214b14d9c1cb4a3324206486cd2ea19e0c960bd2770785c49dbdaa2476a292"},
+    {file = "prek-0.2.1-py3-none-manylinux_2_31_riscv64.whl", hash = "sha256:a087ad088e08633469fe5b35411b6fcbc7c1bc78163f3fe2105142550917b581"},
+    {file = "prek-0.2.1-py3-none-musllinux_1_1_armv7l.whl", hash = "sha256:e3b9f592af89d95b6a189f90f9f5c694086d340c79725ad165ae526a3be0be49"},
+    {file = "prek-0.2.1-py3-none-musllinux_1_1_i686.whl", hash = "sha256:194e7d898742f0e6565049f8e907e1237e5921b09c4c39ea572176e06296a745"},
+    {file = "prek-0.2.1-py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:483aa6f021874d887553cda5d651d989b2fa38f2334faffd53438a46999fc7ad"},
+    {file = "prek-0.2.1-py3-none-win32.whl", hash = "sha256:fbe488b478b47d9a7134d145b6564b90bfa1a1f7fec6bc7d7945aaa9a85f80cb"},
+    {file = "prek-0.2.1-py3-none-win_amd64.whl", hash = "sha256:f066681ffb0f4de4c3a74dfb56cf417751ee2df2c38e2ed6af78d5e15262aa5d"},
+    {file = "prek-0.2.1-py3-none-win_arm64.whl", hash = "sha256:97c8367e226930600dfad28405f091a0bc88cc601bfa66ace42ce1cd38e3ee92"},
+    {file = "prek-0.2.1.tar.gz", hash = "sha256:60543afbf72ad9ce27a5fc4301179f75f473dc4cc221ff53b2bad18ff6eac998"},
 ]
-
-[package.dependencies]
-cfgv = ">=2.0.0"
-identify = ">=1.0.0"
-nodeenv = ">=0.11.1"
-pyyaml = ">=5.1"
-virtualenv = ">=20.10.0"
 
 [[package]]
 name = "propcache"
@@ -3407,7 +3366,7 @@ version = "6.0.2"
 description = "YAML parser and emitter for Python"
 optional = false
 python-versions = ">=3.8"
-groups = ["dev", "docs"]
+groups = ["docs"]
 files = [
     {file = "PyYAML-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0a9a2848a5b7feac301353437eb7d5957887edbf81d56e903999a75a3d743086"},
     {file = "PyYAML-6.0.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:29717114e51c84ddfba879543fb232a6ed60086602313ca38cce623c1d62cfbf"},
@@ -4127,28 +4086,6 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
-name = "virtualenv"
-version = "20.34.0"
-description = "Virtual Python Environment builder"
-optional = false
-python-versions = ">=3.8"
-groups = ["dev"]
-files = [
-    {file = "virtualenv-20.34.0-py3-none-any.whl", hash = "sha256:341f5afa7eee943e4984a9207c025feedd768baff6753cd660c857ceb3e36026"},
-    {file = "virtualenv-20.34.0.tar.gz", hash = "sha256:44815b2c9dee7ed86e387b842a84f20b93f7f417f95886ca1996a72a4138eb1a"},
-]
-
-[package.dependencies]
-distlib = ">=0.3.7,<1"
-filelock = ">=3.12.2,<4"
-platformdirs = ">=3.9.1,<5"
-typing-extensions = {version = ">=4.13.2", markers = "python_version < \"3.11\""}
-
-[package.extras]
-docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.2,!=7.3)", "sphinx-argparse (>=0.4)", "sphinxcontrib-towncrier (>=0.2.1a0)", "towncrier (>=23.6)"]
-test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess (>=1)", "flaky (>=3.7)", "packaging (>=23.1)", "pytest (>=7.4)", "pytest-env (>=0.8.2)", "pytest-freezer (>=0.4.8) ; platform_python_implementation == \"PyPy\" or platform_python_implementation == \"GraalVM\" or platform_python_implementation == \"CPython\" and sys_platform == \"win32\" and python_version >= \"3.13\"", "pytest-mock (>=3.11.1)", "pytest-randomly (>=3.12)", "pytest-timeout (>=2.1)", "setuptools (>=68)", "time-machine (>=2.10) ; platform_python_implementation == \"CPython\""]
-
-[[package]]
 name = "watchdog"
 version = "6.0.0"
 description = "Filesystem events monitoring"
@@ -4461,4 +4398,4 @@ fakeredis = ["fakeredis"]
 [metadata]
 lock-version = "2.1"
 python-versions = "~=3.10"
-content-hash = "500c7114a4bd4f5b79eb9bc1f11b2f92ec3078495d3e8b9cb13fa296467d2852"
+content-hash = "486f7c40cc937488c4788c44e1463bdb5e6df36ef662d505c96e0cafba6d4659"

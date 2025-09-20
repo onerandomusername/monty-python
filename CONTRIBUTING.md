@@ -37,7 +37,7 @@ The general workflow can be summarized as follows:
 
 1. Fork + clone the repository.
 1. Initialize the development environment:
-    `poetry install && poetry run pre-commit install`.
+    `poetry install && poetry run prek install`.
 1. Create a new branch.
 1. Commit your changes, update documentation if required.
 1. Push the branch to your fork, and
@@ -105,14 +105,14 @@ TLDR:
 
 ```sh
 poetry install
-poetry run pre-commit install
+poetry run prek install
 ```
 
 If you don't already have poetry installed, check the
 [poetry documentation](https://python-poetry.org/), or use a tool like pipx or
 uvx.
 
-Make sure you install pre-commit, as it will lint every commit before its
+Make sure you install prek, as it will lint every commit before its
 created, limiting the amount of fixes needing to be made in the review process.
 
 ### Create a Discord Bot
