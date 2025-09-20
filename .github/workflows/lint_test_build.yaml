@@ -30,6 +30,7 @@ jobs:
         env:
           RUFF_OUTPUT_FORMAT: "github"
 
+
   build:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     name: Build & Push

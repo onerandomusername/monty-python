@@ -37,7 +37,7 @@ The general workflow can be summarized as follows:
 
 1. Fork + clone the repository.
 1. Initialize the development environment:
-    `poetry install && poetry run prek install`.
+    `uv sync --all-groups && uv run pre-commit install`.
 1. Create a new branch.
 1. Commit your changes, update documentation if required.
 1. Push the branch to your fork, and
@@ -62,7 +62,7 @@ developer at any time.
 - docker
     - docker compose
 - python 3.10
-- poetry
+- uv
 
 Additionally, a postgresql database is required to develop Monty, but this is
 included in the developer
@@ -104,12 +104,12 @@ GITHUB_TOKEN=...
 TLDR:
 
 ```sh
-poetry install
-poetry run prek install
+uv sync --all-groups
+uv run prek install
 ```
 
-If you don't already have poetry installed, check the
-[poetry documentation](https://python-poetry.org/), or use a tool like pipx or
+If you don't already have uv installed, check the
+[uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or
 uvx.
 
 Make sure you install prek, as it will lint every commit before its
