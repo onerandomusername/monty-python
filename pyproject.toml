@@ -106,27 +106,54 @@ select = [
     "W", # pycodestyle
     "S", # bandit
     # "RUF", # ruff specific exceptions
-    "ANN", # flake8-annotations
-    "B", # flake8-bugbear
-    "C", # flake8-comprehensions
-    "D", # flake-docstrings
-    "DTZ", # flake8-datetimez
-    "G", # flake8-logging-format
-    "Q", # flake8-quotes
-    "T201", "T203" # flake8-print
+    "ANN",  # flake8-annotations
+    "B",    # flake8-bugbear
+    "C",    # flake8-comprehensions
+    "D",    # flake-docstrings
+    "DTZ",  # flake8-datetimez
+    "G",    # flake8-logging-format
+    "Q",    # flake8-quotes
+    "T201",
+    "T203", # flake8-print
 ]
 ignore = [
     # Missing Docstrings
-    "D100","D101","D104","D105","D106","D107",
+    "D100",
+    "D101",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
     # Docstring Whitespace
-    "D203","D212","D214","D215",
+    "D203",
+    "D212",
+    "D214",
+    "D215",
     # Docstring Content
-    "D400","D402","D404","D405","D406","D407","D408","D409","D410","D411","D412","D413","D414","D416","D417",
+    "D400",
+    "D402",
+    "D404",
+    "D405",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D410",
+    "D411",
+    "D412",
+    "D413",
+    "D414",
+    "D416",
+    "D417",
 
     # ignore imperative mood for now
     "D401",
     # Type Annotations
-    "ANN002","ANN003","ANN101","ANN102","ANN204","ANN206","ANN401",
+    "ANN002",
+    "ANN003",
+    "ANN204",
+    "ANN206",
+    "ANN401",
 
     # temporarily disabled
     "C901", # mccabe
@@ -154,10 +181,7 @@ report = "coverage report"
 
 [tool.pyright]
 typeCheckingMode = "basic"
-include = [
-    "monty",
-    "*.py",
-]
+include = ["monty", "*.py"]
 
 strictParameterNoneValue = false
 
