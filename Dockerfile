@@ -1,6 +1,7 @@
 FROM python:3.10-slim
 COPY --from=ghcr.io/astral-sh/uv:0.8.19 /uv /uvx /bin/
-WORKDIR /app
+
+WORKDIR /bot
 
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
@@ -27,12 +28,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-COPY . /app
+COPY . /bot
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev
 
 # Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/bot/.venv/bin:$PATH"
 
 
 ENTRYPOINT ["python3", "-m", "monty"]
