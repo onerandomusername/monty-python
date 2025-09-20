@@ -6,7 +6,9 @@ description: Contributing your changes to Monty Python
 
 Thank you for your interest in contributing to Monty!
 
-This document explains the contributing process in full. If your question isn't answered here, please [open an issue](https://github.com/onerandomusername/monty-python/issues)
+This document explains the contributing process in full. If your question isn't
+answered here, please
+[open an issue](https://github.com/onerandomusername/monty-python/issues)
 
 ## Issue Tracker
 

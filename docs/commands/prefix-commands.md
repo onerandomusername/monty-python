@@ -4,194 +4,187 @@
 
 Admin-only eval command and repr.
 
-### `gateway`
-
-**`gateway [events...]`** **Can also use:** `gw`
+### `gateway [events...]`
 
 *Sends current stats from the gateway.*
 
-### `inter-eval`
+**Can also use:** `gw`
 
-**`inter-eval <code>`** *Sends a message with a button to evaluate code.*
+### `inter-eval <code>`
+
+*Sends a message with a button to evaluate code.*
 
 ## Bookmark
 
 Creates personal bookmarks by relaying a message link to the user's DMs.
 
-### `bookmark`
-
-**`bookmark <target_message> [title=Bookmark]`** **Can also use:** `bm`, `pin`
+### `bookmark <target_message> [title=Bookmark]`
 
 *Send the author a link to `target_message` via DMs.*
+
+**Can also use:** `bm`, `pin`
 
 ## Code Block Actions
 
 Adds automatic buttons to codeblocks if they match commands.
 
-### `blackify`
-
-**`blackify [message=None]`** **Can also use:** `bl`, `black`
+### `blackify [message=None]`
 
 *Format the provided message with black.*
 
-### `paste`
+**Can also use:** `bl`, `black`
 
-**`paste [message=None]`** **Can also use:** `p`
+### `paste [message=None]`
 
 *Paste the contents of the provided message on workbin.*
+
+**Can also use:** `p`
 
 ## Colour
 
 Cog for the Colour command.
 
-### `colour`
-
-**`colour [colour_input=None]`** **Can also use:** `color`
+### `colour [colour_input=None]`
 
 *Create an embed that displays colour information.*
 
-### `colour cmyk`
+**Can also use:** `color`
 
-**`colour cmyk <cyan> <magenta> <yellow> <key>`** *Create an embed from a CMYK
-input.*
+### `colour cmyk <cyan> <magenta> <yellow> <key>`
 
-### `colour hex`
+*Create an embed from a CMYK input.*
 
-**`colour hex <hex_code>`** *Create an embed from a HEX input.*
+### `colour hex <hex_code>`
 
-### `colour hsl`
+*Create an embed from a HEX input.*
 
-**`colour hsl <hue> <saturation> <lightness>`** *Create an embed from an HSL
-input.*
+### `colour hsl <hue> <saturation> <lightness>`
 
-### `colour hsv`
+*Create an embed from an HSL input.*
 
-**`colour hsv <hue> <saturation> <value>`** *Create an embed from an HSV input.*
+### `colour hsv <hue> <saturation> <value>`
 
-### `colour name`
+*Create an embed from an HSV input.*
 
-**`colour name <name>`** *Create an embed from a name input.*
+### `colour name <name>`
 
-### `colour random`
+*Create an embed from a name input.*
 
-**`colour random `** *Create an embed from a randomly chosen colour.*
+### `colour random `
 
-### `colour rgb`
+*Create an embed from a randomly chosen colour.*
 
-**`colour rgb <red> <green> <blue>`** *Create an embed from an RGB input.*
+### `colour rgb <red> <green> <blue>`
+
+*Create an embed from an RGB input.*
 
 ## Extensions
 
 Extension management commands.
 
-### `extensions`
-
-**`extensions `** **Can also use:** `c`, `cogs`, `ext`, `exts`
+### `extensions `
 
 *Load, unload, reload, and list loaded extensions.*
 
-### `extensions autoreload`
+**Can also use:** `c`, `cogs`, `ext`, `exts`
 
-**`extensions autoreload `** **Can also use:** `extensions ar`
+### `extensions autoreload `
 
 *Autoreload of modified extensions.*
 
-### `extensions autoreload disable`
+**Can also use:** `extensions ar`
 
-**`extensions autoreload disable `** *Disable extension autoreload.*
+### `extensions autoreload disable `
 
-### `extensions autoreload enable`
+*Disable extension autoreload.*
 
-**`extensions autoreload enable `** *Enable extension autoreload.*
+### `extensions autoreload enable `
 
-### `extensions list`
+*Enable extension autoreload.*
 
-**`extensions list `** **Can also use:** `extensions all`
+### `extensions list `
 
 *Get a list of all extensions, including their loaded status.*
 
-### `extensions load`
+**Can also use:** `extensions all`
 
-**`extensions load [extensions...]`** **Can also use:** `extensions l`
+### `extensions load [extensions...]`
 
 *Load extensions given their fully qualified or unqualified names.*
 
-### `extensions reload`
+**Can also use:** `extensions l`
 
-**`extensions reload [extensions...]`** **Can also use:** `extensions r`,
-`reload`
+### `extensions reload [extensions...]`
 
 *Reload extensions given their fully qualified or unqualified names.*
 
-### `extensions unload`
+**Can also use:** `extensions r`, `reload`
 
-**`extensions unload [extensions...]`** **Can also use:** `extensions ul`
+### `extensions unload [extensions...]`
 
-*Unload currently loaded extensions given their fully qualified or unqualified
-names.*
+*Unload currently loaded extensions given their fully qualified or unqualified names.*
+
+**Can also use:** `extensions ul`
 
 ## Feature Management
 
 Management commands for bot features.
 
-### `features`
+### `features [arg=None] [show_all=None]`
 
-**`features [arg=None] [show_all=None]`** *Manage features.*
+*Manage features.*
 
-### `features add`
-
-**`features add [guilds=None] [names...]`** **Can also use:** `features a`,
-`features enable`
+### `features add [guilds=None] [names...]`
 
 *Add the features to the provided guilds, defaulting to the local guild.*
 
-### `features guild`
+**Can also use:** `features a`, `features enable`
 
-**`features guild `** *Show the features for the current guild.*
+### `features guild `
 
-### `features remove`
+*Show the features for the current guild.*
 
-**`features remove [guilds=None] [names...]`** **Can also use:**
-`features disable`, `features r`
+### `features remove [guilds=None] [names...]`
 
 *Remove the features from the provided guilds, defaulting to the local guild.*
+
+**Can also use:** `features disable`, `features r`
 
 ## GitHub Information
 
 Fetches info from GitHub.
 
-### `github`
-
-**`github [user_or_repo=]`** **Can also use:** `gh`, `git`
+### `github [user_or_repo=]`
 
 *Commands for finding information related to GitHub.*
 
-### `github issue`
+**Can also use:** `gh`, `git`
 
-**`github issue <numbers> <repo> [user=None]`** **Can also use:** `github pr`,
-`github pull`
+### `github issue <numbers> <repo> [user=None]`
 
 *Command to retrieve issue(s) from a GitHub repository.*
 
-### `github repository`
+**Can also use:** `github pr`, `github pull`
 
-**`github repository [repo...]`** **Can also use:** `github repo`, `repo`
+### `github repository [repo...]`
 
 *Fetches a repositories' GitHub information.*
 
-### `github user`
+**Can also use:** `github repo`, `repo`
 
-**`github user <username>`** **Can also use:** `github userinfo`
+### `github user <username>`
 
 *Fetches a user's GitHub information.*
+
+**Can also use:** `github userinfo`
 
 ## Help
 
 Custom disnake.Embed Pagination Help feature.
 
-### `help`
+### `help [commands...]`
 
-**`help [commands...]`** *Shows Command Help.*
+*Shows Command Help.*
 
 ## HTTP Status Codes
 
@@ -201,185 +194,174 @@ Fetch an image depicting HTTP status codes as a dog or a cat.
 If neither animal is selected a cat or dog is chosen randomly for the given status code.
 ```
 
-### `http_status`
-
-**`http_status <code>`** **Can also use:** `http`, `httpstatus`, `status`
+### `http_status <code>`
 
 *Choose a cat or dog randomly for the given status code.*
 
-### `http_status cat`
+**Can also use:** `http`, `httpstatus`, `status`
 
-**`http_status cat <code>`** *Sends an embed with an image of a cat, portraying
-the status code.*
+### `http_status cat <code>`
 
-### `http_status dog`
+*Sends an embed with an image of a cat, portraying the status code.*
 
-**`http_status dog <code>`** *Sends an embed with an image of a dog, portraying
-the status code.*
+### `http_status dog <code>`
+
+*Sends an embed with an image of a dog, portraying the status code.*
 
 ## Meta Source
 
 Display information about my own source code.
 
-### `source`
-
-**`source [source_item=None]`** **Can also use:** `src`
+### `source [source_item=None]`
 
 *Display information and a GitHub link to the source code of a command or cog.*
+
+**Can also use:** `src`
 
 ## Misc
 
 A selection of utilities which don't have a clear category.
 
-### `snowflake`
-
-**`snowflake [snowflakes...]`** **Can also use:** `sf`, `snf`, `snfl`
+### `snowflake [snowflakes...]`
 
 *Get Discord snowflake creation time.*
+
+**Can also use:** `sf`, `snf`, `snfl`
 
 ## Real Python
 
 User initiated command to search for a Real Python article.
 
-### `realpython`
-
-**`realpython <user_search>`** **Can also use:** `rp`
+### `realpython <user_search>`
 
 *Send 5 articles that match the user's search terms.*
+
+**Can also use:** `rp`
 
 ## Rollouts
 
 Management commands for bot rollouts.
 
-### `rollouts`
-
-**`rollouts `** **Can also use:** `rollout`
+### `rollouts `
 
 *Manage feature rollouts.*
 
-### `rollouts create`
+**Can also use:** `rollout`
 
-**`rollouts create <name> <percent_goal>`** *Create a rollout.*
+### `rollouts create <name> <percent_goal>`
 
-### `rollouts delete`
+*Create a rollout.*
 
-**`rollouts delete <rollout>`** *Delete an existing rollout. There is no going
-back.*
+### `rollouts delete <rollout>`
 
-### `rollouts link`
+*Delete an existing rollout. There is no going back.*
 
-**`rollouts link `** **Can also use:** `rollouts unlink`
+### `rollouts link `
 
 *Manage rollout links to features and other components.*
 
-### `rollouts link feature`
+**Can also use:** `rollouts unlink`
 
-**`rollouts link feature <rollout> <feature>`** *Link or unlink a feature from
-the specified rollout.*
+### `rollouts link feature <rollout> <feature>`
 
-### `rollouts list`
+*Link or unlink a feature from the specified rollout.*
 
-**`rollouts list `** *List all rollouts and their current status.*
+### `rollouts list `
 
-### `rollouts modify`
+*List all rollouts and their current status.*
 
-**`rollouts modify <rollout> <new_percent>`** *Configure an existing rollout.*
+### `rollouts modify <rollout> <new_percent>`
 
-### `rollouts start`
+*Configure an existing rollout.*
 
-**`rollouts start <rollout> <dt>`** *Start a rollout now to end at the specified
-time.*
+### `rollouts start <rollout> <dt>`
 
-### `rollouts stop`
+*Start a rollout now to end at the specified time.*
 
-**`rollouts stop <rollout>`** **Can also use:** `rollouts halt`
+### `rollouts stop <rollout>`
 
-*Stop a rollout. This does not decrease the rollout amount, just stops
-increasing the rollout.*
+*Stop a rollout. This does not decrease the rollout amount, just stops increasing the rollout.*
 
-### `rollouts view`
+**Can also use:** `rollouts halt`
 
-**`rollouts view <rollout>`** **Can also use:** `rollouts show`
+### `rollouts view <rollout>`
 
 *Show information about a rollout.*
+
+**Can also use:** `rollouts show`
 
 ## Snekbox
 
 Safe evaluation of Python code using Snekbox.
 
-### `eval`
-
-**`eval [code=None]`** **Can also use:** `e`
+### `eval [code=None]`
 
 *Run Python code and get the results.*
 
-### `snekbox`
+**Can also use:** `e`
 
-**`snekbox `** **Can also use:** `snek`
+### `snekbox `
 
 *Commands for managing the snekbox instance.*
 
-### `snekbox packages`
+**Can also use:** `snek`
 
-**`snekbox packages `** **Can also use:** `snekbox p`, `snekbox pack`,
-`snekbox packs`
+### `snekbox packages `
 
 *Manage the packages installed on snekbox.*
 
-### `snekbox packages add`
+**Can also use:** `snekbox p`, `snekbox pack`, `snekbox packs`
 
-**`snekbox packages add [packages...]`** **Can also use:** `snekbox packages a`,
-`snekbox packages install`
+### `snekbox packages add [packages...]`
 
 *Install the specified packages to snekbox.*
 
-### `snekbox packages list`
+**Can also use:** `snekbox packages a`, `snekbox packages install`
 
-**`snekbox packages list `** **Can also use:** `snekbox packages l`
+### `snekbox packages list `
 
 *List all packages on snekbox.*
 
-### `snekbox packages remove`
+**Can also use:** `snekbox packages l`
 
-**`snekbox packages remove [packages...]`** **Can also use:**
-`snekbox packages d`, `snekbox packages del`, `snekbox packages delete`,
-`snekbox packages r`, `snekbox packages uninstall`
+### `snekbox packages remove [packages...]`
 
 *Uninstall the provided package from snekbox.*
 
-### `snekbox packages view`
+**Can also use:** `snekbox packages d`, `snekbox packages del`, `snekbox packages delete`, `snekbox packages r`, `snekbox packages uninstall`
 
-**`snekbox packages view <package>`** **Can also use:** `snekbox packages info`,
-`snekbox packages show`
+### `snekbox packages view <package>`
 
 *View more specific details about a single package installed on snekbox.*
+
+**Can also use:** `snekbox packages info`, `snekbox packages show`
 
 ## Stack Overflow
 
 Contains command to interact with stackoverflow from disnake.
 
-### `stackoverflow`
-
-**`stackoverflow <search_query>`** **Can also use:** `so`
+### `stackoverflow <search_query>`
 
 *Sends the top 5 results of a search query from stackoverflow.*
+
+**Can also use:** `so`
 
 ## Timed Commands
 
 Time the command execution of a command.
 
-### `timed`
-
-**`timed <command>`** **Can also use:** `t`, `time`
+### `timed <command>`
 
 *Time the command execution of a command.*
+
+**Can also use:** `t`, `time`
 
 ## Wikipedia Search
 
 Get info from wikipedia.
 
-### `wikipedia`
-
-**`wikipedia <search>`** **Can also use:** `wiki`
+### `wikipedia <search>`
 
 *Sends paginated top 10 results of Wikipedia search..*
+
+**Can also use:** `wiki`
