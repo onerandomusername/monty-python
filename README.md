@@ -14,7 +14,7 @@ anywhere on Discord.
 ## Contributing
 
 Monty is open source for a reason! If you are interested in contributing, please
-see [the docs](https://monty.arielle.codes/page/contributing/) for more
+see [the docs](https://monty.arielle.codes/contributing/) for more
 information!
 
 ## Contact

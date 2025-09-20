@@ -1,13 +1,13 @@
 site_name: Monty Python
-site_url: https://monty.arielle.codes/page/
+site_url: https://monty.arielle.codes/
 site_description: A Python and GitHub focused Discord bot to make collaborating on Python projects through Discord easier than ever.
 repo_name: onerandomusername/monty-python
 repo_url: https://github.com/onerandomusername/monty-python/
 edit_uri: edit/main/docs/
 copyright: >
   Copyright &copy; 2025+ onerandomusername ·
-  <a href="/page/terms">Terms of Service</a> ·
-  <a href="/page/privacy">Privacy Policy</a>
+  <a href="/terms">Terms of Service</a> ·
+  <a href="/privacy">Privacy Policy</a>
 theme:
   name: material
   logo: assets/images/logo.png
