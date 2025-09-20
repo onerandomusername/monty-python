@@ -34,11 +34,6 @@ theme:
 plugins:
 - privacy
 - git-revision-date-localized
-- social:
-    cards_layout_options:
-      color: "#e0be59"
-      background_color: "#162f45"
-      font_family:  Cascadia Code
 
 markdown_extensions:
 - admonition
