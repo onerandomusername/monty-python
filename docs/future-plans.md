@@ -27,11 +27,6 @@ contributing.
 ### Dependencies
 
 - Drop some of the additional markdown parsers
-- Look into switching to uv from poetry
-
-### Documentation
-
-- Add an autodoc of all app commands to the documentation website.
 
 ### GitHub Parsing
 
@@ -55,3 +50,5 @@ contributing.
 
 - Rewrite the developer-side feature view command
 - Add contributing documentation
+- Migrate to uv
+- Add an autodoc of all app commands to the documentation website.

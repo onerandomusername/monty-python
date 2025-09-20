@@ -1,13 +1,14 @@
 [build-system]
-requires = ["poetry-core>=2.0.0,<3"]
-build-backend = "poetry.core.masonry.api"
+requires = ["flit_core >=3.11,<4"]
+build-backend = "flit_core.buildapi"
 
 [project]
-authors = [{ name = "aru", email = "genericusername414@gmail.com" }]
-license = { text = "MIT" }
-requires-python = ">=3.10, <4"
+authors = [{ name = "aru", email = "me@arielle.codes" }]
+license = "MIT"
+license-files = ["LICENSE", "LICENSE_THIRD_PARTY"]
+requires-python = ">=3.10"
 name = "monty"
-version = "1.0.0"
+version = "0.0.1"
 description = "Helpful bot for python, github, and discord things."
 dependencies = [
     "aiodns~=3.4",
@@ -40,39 +41,38 @@ dependencies = [
     "readme-renderer[md] (>=44.0,<45.0)",
 ]
 
-[project.optional-dependencies]
-fakeredis = ["fakeredis<3.0.0,>=2.29.0"]
-dev = ["fakeredis<3.0.0,>=2.29.0", "watchfiles<2.0.0,>=1.0.5"]
-
-[tool.poetry.group.dev.dependencies]
-black = "^25.9.0"
-ruff = "==0.13.1"
-isort = "==6.0.1"
-prek = ">=0.2.1,<0.3"
-taskipy = "^1.14.1"
-python-dotenv = "^1.1.0"
-pyright = "==1.1.405"
-msgpack-types = "^0.5.0"
-mdformat = "^0.7.22"
-mdformat-ruff = "^0.1.3"
-mdformat-beautysh = "^0.1.1"
-mdformat-gfm = "^0.4.1"
-mdformat-gfm-alerts = "^2.0.0"
-mdformat-mkdocs = "^4.4.1"
-mdformat-pyproject = "^0.0.2"
-mdformat-simple-breaks = "^0.0.1"
-mdformat-tables = "^1.0.0"
-mdformat-frontmatter = "^2.0.8"
-
-
-[tool.poetry.group.docs.dependencies]
-mkdocs = "^1.6.1"
-mkdocs-material = {version = "^9.6.20", extras = ["imaging"]}
-mkdocs-git-revision-date-localized-plugin = "^1.4.7"
-markdown-gfm-admonition = "^0.1.1"
-
-[tool.poetry.requires-plugins]
-poetry-plugin-export = ">=1.9,<2"
+[dependency-groups]
+dev = [
+    "fakeredis<3.0.0,>=2.29.0",
+    "watchfiles<2.0.0,>=1.0.5",
+    "python-dotenv<2.0.0,>=1.1.0",
+]
+tools = [
+    "black<26.0.0,>=25.9.0",
+    "isort==6.0.1",
+    "poethepoet>=0.37.0",
+    "prek>=0.2.1,<0.3",
+    "ruff==0.13.1",
+]
+typing = ["pyright==1.1.405", "msgpack-types<1.0.0,>=0.5.0"]
+docs = [
+    "mkdocs<2.0.0,>=1.6.1",
+    "mkdocs-material[imaging]<10.0.0,>=9.6.20",
+    "mkdocs-git-revision-date-localized-plugin<2.0.0,>=1.4.7",
+    "markdown-gfm-admonition<1.0.0,>=0.1.1",
+]
+mdformat = [
+    "mdformat<1.0.0,>=0.7.22",
+    "mdformat-ruff<1.0.0,>=0.1.3",
+    "mdformat-beautysh<1.0.0,>=0.1.1",
+    "mdformat-gfm<1.0.0,>=0.4.1",
+    "mdformat-gfm-alerts<3.0.0,>=2.0.0",
+    "mdformat-mkdocs<5.0.0,>=4.4.1",
+    "mdformat-pyproject<1.0.0,>=0.0.2",
+    "mdformat-simple-breaks<1.0.0,>=0.0.1",
+    "mdformat-tables<2.0.0,>=1.0.0",
+    "mdformat-frontmatter<3.0.0,>=2.0.8",
+]
 
 [tool.black]
 line-length = 120
@@ -170,14 +170,11 @@ ignore = [
 [tool.ruff.lint.mccabe]
 max-complexity = 20
 
-[tool.taskipy.tasks]
-export = 'poetry export --without-hashes -o requirements.txt'
-start = "python -m monty"
-lint = "prek run --all-files"
-prek = "prek install"
+[tool.poe.tasks]
+lint = { cmd = "prek run --all-files", help = "Lint the source code" }
+prek = { cmd = "prek install", help = "Install the git pre-commit hooks" }
 pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
-html = "coverage html"
-report = "coverage report"
+sync = { cmd = "uv sync --all-groups --all-extras", help = "Sync all groups and extras to a local environment" }
 
 [tool.pyright]
 typeCheckingMode = "basic"

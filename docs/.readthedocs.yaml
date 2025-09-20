@@ -11,9 +11,15 @@ build:
   tools:
     python: "3.10"
   jobs:
-    post_install:
-      - pip install poetry
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
+    create_environment:
+      - asdf plugin add uv
+      - asdf install uv 0.8.19
+      - asdf global uv 0.8.19
+      - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --no-default-groups --group docs
+    install:
+      - "true"
+
+
 
 mkdocs:
   configuration: mkdocs.yaml
