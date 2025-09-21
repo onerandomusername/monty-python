@@ -112,7 +112,7 @@ class Meta(
             DeleteButton(inter.author),
             disnake.ui.Button(custom_id="meta:v1:credits", style=disnake.ButtonStyle.primary, label="View Credits"),
             disnake.ui.Button(url=app_info.privacy_policy_url, label="Privacy Policy"),
-            disnake.ui.Button(url=Client.github_bot_repo, label="GitHub"),
+            disnake.ui.Button(url=Client.git_repo, label="GitHub"),
         ]
         await inter.send(embed=e, components=components)
 

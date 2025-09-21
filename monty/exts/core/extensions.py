@@ -165,7 +165,7 @@ class Extensions(commands.Cog):
         embed = disnake.Embed(colour=disnake.Colour.blurple())
         embed.set_author(
             name="Extensions List",
-            url=Client.github_bot_repo,
+            url=Client.git_repo,
             icon_url=str(self.bot.user.display_avatar.url),
         )
 
