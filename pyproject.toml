@@ -28,7 +28,7 @@ dependencies = [
     "markdownify==0.11.6",
     "mistune<3.0.0,>=2.0.4",
     "msgpack<2.0.0,>=1.1.0",
-    "redis[hiredis]<6.0.0,>=5.2.0",
+    "redis[hiredis]>=5.2.0,<7.0.0",
     "Pillow<12.0,>=11.2",
     "psutil<6.0.0,>=5.9.8",
     "python-dateutil<3.0.0,>=2.9.0",
