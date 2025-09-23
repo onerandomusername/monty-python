@@ -173,7 +173,14 @@ class DocView(DeleteView):
                 c.disabled = True
 
 
-class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permission": False}):
+class DocCog(
+    commands.Cog,
+    name="Documentation",
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """A set of commands for querying & displaying documentation."""
 
     def __init__(self, bot: Monty) -> None:
@@ -556,7 +563,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         """Look up documentation for Python symbols."""
         await self._docs_get_command(ctx, search=search)
 
-    @commands.slash_command(name="docs", dm_permission=False)
+    @commands.slash_command(name="docs")
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""
         pass
@@ -588,7 +595,7 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
         maybe_start: bool = True,
         *,
         return_embed: bool = False,
-        threshold: commands.Range[0, 100] = 60,
+        threshold: commands.Range[int, 0, 100] = 60,
         scorer: Any = None,
     ) -> None:
         if not search:
@@ -933,7 +940,9 @@ class DocCog(commands.Cog, name="Documentation", slash_command_attrs={"dm_permis
     @docs_group.command(name="cleardoccache", aliases=("deletedoccache",))
     @commands.is_owner()
     async def clear_cache_command(
-        self, ctx: commands.Context, package_name: Union[PackageName, Literal["*"]]  # noqa: F722
+        self,
+        ctx: commands.Context,
+        package_name: Union[PackageName, Literal["*"]],  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)

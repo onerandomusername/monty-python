@@ -1,26 +1,27 @@
 import dataclasses
 import logging
 from os import environ
-from typing import TYPE_CHECKING, Literal, NamedTuple, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import disnake
 
 
 if TYPE_CHECKING:
     from monty.log import MontyLogger
+
 __all__ = (
     "Client",
+    "Monitoring",
+    "Database",
+    "Redis",
+    "CodeBlock",
     "Colours",
-    "DiscordFeatures",
     "Emojis",
     "Icons",
-    "Stats",
-    "UptimeMonitoring",
-    "Tokens",
-    "RedisConfig",
-    "USER_INPUT_ERROR_REPLIES",
-    "NEGATIVE_REPLIES",
-    "POSITIVE_REPLIES",
+    "Auth",
+    "Endpoints",
+    "Feature",
+    "Guilds",
 )
 
 # due to recursive imports, we have to use this
@@ -29,22 +30,24 @@ log = cast("MontyLogger", logging.getLogger(__name__))
 
 class Client:
     name = "Monty Python"
-    redis_prefix = config_prefix = "monty-python"
+    token = environ.get("BOT_TOKEN")
     version = environ.get("GIT_SHA", "main")
     default_command_prefix = environ.get("PREFIX", "-")
-    token = environ.get("BOT_TOKEN")
+    config_prefix = "monty-python"
+
+    # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
-    debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
-    sentry_enabled = bool(environ.get("SENTRY_DSN"))
-    github_bot_repo = "https://github.com/onerandomusername/monty-python"
-    trace_loggers = environ.get("BOT_TRACE_LOGGERS")
-    log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
+    proxy = environ.get("BOT_PROXY_URL", "") or None
     extensions = environ.get("BOT_EXTENSIONS", None) and {
         ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")  # type: ignore reportOptionalMemberAccess
     }
-    proxy = environ.get("BOT_PROXY_URL", "") or None
+
+    # source and support
+    git_repo = "https://github.com/onerandomusername/monty-python"
     support_server = "mPscM4FjWB"
-    invite_permissions = disnake.Permissions(
+    # note that these are the default invite permissions,
+    # But Monty fetches the ones configured in the developer portal and replace these
+    default_invite_permissions = disnake.Permissions(
         view_channel=True,
         send_messages=True,
         send_messages_in_threads=True,
@@ -63,34 +66,51 @@ class Client:
     )
 
 
-DEBUG_MODE = Client.debug
-
-
-class UptimeMonitoring:
-    private_url: str = environ.get("UPTIME_URL", "")
-    status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
-    interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
-    enabled: bool = bool(private_url)
-    query_params = {
-        "status": "up",
-        "msg": "OK",
-        "ping": lambda bot: f"{bot.latency * 1000:.2f}",
-    }
-
-
 class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
     run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
     migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
 
 
+class Redis:
+    uri = environ.get("REDIS_URI", "redis://redis:6379")
+    use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
+    prefix = Client.config_prefix + ":"
+
+
+class Monitoring:
+    debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
+    sentry_enabled = bool(environ.get("SENTRY_DSN"))
+    trace_loggers = environ.get("BOT_TRACE_LOGGERS")
+    log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
+
+    public_status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
+    ping_url: str = environ.get("UPTIME_URL", "")
+    ping_interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
+    ping_enabled: bool = bool(ping_url)
+    ping_query_params = {
+        "status": "up",
+        "msg": "OK",
+        "ping": lambda bot: f"{bot.latency * 1000:.2f}",
+    }
+
+
+class Stats:
+    host = environ.get("STATS_HOST", "localhost")
+    port = int(environ.get("STATS_PORT", 8125))
+    prefix = Client.config_prefix
+
+
+# DEPRECATED: to be moved to a postgres value
+# note: enablement of Codeblock actions is controlled via the Feature.CODEBLOCK_RECOMMENDATIONS
 class CodeBlock:
-    channel_whitelist: list[int] = []
-    cooldown_channels: list[int] = []
     cooldown_seconds: int = 300
     minimum_lines: int = 4
 
 
+# TODO: every colour across the bot should use colours from this palette
+# this includes calling disnake.Colour.blurple() and other methods.
+# TODO: redesign colour palette
 class Colours:
     white = 0xFFFFFF
     blue = 0x0279FD
@@ -109,12 +129,8 @@ class Colours:
     gold = 0xE6C200
 
 
-class DiscordFeatures:
-    """Whether to embrace or ignore new features on Discord, in case they get rolled back."""
-
-    extended_markdown = True
-
-
+## DEPRECATED
+# TODO: Will be replaced in favour of application emojis
 class Emojis:
     cross_mark = "\u274c"
     star = "\u2b50"
@@ -168,12 +184,40 @@ class Emojis:
     reddit_comments = "<:reddit_comments:882722838153416705>"
 
 
+# TODO: stash all icons as emojis
+class Icons:
+    questionmark = "https://cdn.discordapp.com/emojis/512367613339369475.png"
+    bookmark = (
+        "https://images-ext-2.discordapp.net/external/zl4oDwcmxUILY7sD9ZWE2fU5R7n6QcxEmPYSE5eddbg/"
+        "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
+    )
+    github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
+    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"  # noqa: E501
+
+
+## Authentication and Endpoint management for external services
+
+
+class Auth:
+    github = environ.get("GITHUB_TOKEN")
+    snekbox = environ.get("SNEKBOX_AUTH")
+
+
 class Endpoints:
     app_info = environ.get("APPLICATION_INFO_ENDPOINT")
     pypi_simple = "https://pypi.org/simple/"
     top_pypi_packages = environ.get("PYPI_TOP_PACKAGES", "")
 
+    snekbox = environ.get("SNEKBOX_URL", "")
 
+    black_formatter = environ.get("BLACK_API")
+    black_playground = environ.get("BLACK_PLAYGROUND", "https://black.vercel.app/")
+
+    paste_service = environ.get("PASTE_SERVICE", "")
+    raw_paste: str = environ.get("PASTE_SERVICE_RAW", "")
+
+
+## Feature Management
 @dataclasses.dataclass()
 class Feature:
     CODEBLOCK_RECOMMENDATIONS: str = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
@@ -185,101 +229,14 @@ class Feature:
     GITHUB_ISSUE_LINKS: str = "GITHUB_EXPAND_ISSUE_LINKS"
     GLOBAL_SOURCE: str = "GLOBAL_SOURCE_COMMAND"
     INLINE_DOCS: str = "INLINE_DOCUMENTATION"
+    INLINE_EVALULATION: str = "INLINE_EVALULATION"
     PYPI_AUTOCOMPLETE: str = "PYPI_PACKAGE_AUTOCOMPLETE"
     PYTHON_DISCOURSE_AUTOLINK: str = "PYTHON_DISCOURSE_AUTOLINK"
+    RUFF_RULE_V2: str = "RUFF_RULE_V2"
     SOURCE_AUTOCOMPLETE: str = "META_SOURCE_COMMAND_AUTOCOMPLETE"
 
 
+# legacy implementation of features, will be removed in the future
 class Guilds:
     disnake = 808030843078836254
     nextcord = 881118111967883295
-    testing = 789603028382122014
-
-
-class Icons:
-    questionmark = "https://cdn.discordapp.com/emojis/512367613339369475.png"
-    bookmark = (
-        "https://images-ext-2.discordapp.net/external/zl4oDwcmxUILY7sD9ZWE2fU5R7n6QcxEmPYSE5eddbg/"
-        "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
-    )
-    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"  # noqa: E501
-
-
-class URLs:
-    paste_service = environ.get("PASTE_SERVICE", "")
-    snekbox_api = environ.get("SNEKBOX_URL")
-    snekbox_auth = environ.get("SNEKBOX_AUTH")
-    black_formatter = environ.get("BLACK_API")
-    black_playground = environ.get("BLACK_PLAYGROUND", "https://black.vercel.app/")
-
-
-class Paste:
-    raw_paste_endpoint: str = environ.get("PASTE_SERVICE_RAW", "")
-
-
-class Stats(NamedTuple):
-    host = environ.get("STATS_HOST", "localhost")
-    port = int(environ.get("STATS_PORT", 8125))
-    prefix = Client.config_prefix
-
-
-class Tokens(NamedTuple):
-    github = environ.get("GITHUB_TOKEN")
-
-
-class RedisConfig(NamedTuple):
-    uri = environ.get("REDIS_URI", "redis://redis:6379")
-    use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
-    prefix = Client.redis_prefix + ":"
-
-
-class Source:
-    github = Client.github_bot_repo
-    github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
-
-
-# Bot replies
-USER_INPUT_ERROR_REPLIES = [
-    "That input was invaild.",
-    "Proper input not received.",
-    "Please check your arguments.",
-    "Your input was invalid.",
-    "User input invalid. Requesting backup.",
-    "arguments not found, 404",
-    "Bad Argument",
-]
-
-NEGATIVE_REPLIES = [
-    "I'm afraid that's not doable",
-    "That is not possible.",
-    "No can do.",
-    "Sorry, I can't",
-    "Ow",
-    "Try again?",
-    "That's not something I was programmed to do.",
-    "Error: ",
-    "Error? Error.",
-    "Oof.",
-    "-_-",
-    "I may have made a mistake.",
-]
-
-POSITIVE_REPLIES = [
-    "Yep.",
-    "Absolutely!",
-    "Can do!",
-    "Affirmative!",
-    "Yeah okay.",
-    "Sure.",
-    "Sure thing!",
-    "You're the boss!",
-    "Okay.",
-    "No problem.",
-    "I got you.",
-    "Alright.",
-    "You got it!",
-    "ROGER THAT",
-    "Of course!",
-    "Aye aye, cap'n!",
-    "I'll allow it.",
-]

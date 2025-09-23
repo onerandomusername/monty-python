@@ -161,7 +161,7 @@ class RedisCache:
         *,
         timeout: datetime.timedelta = datetime.timedelta(days=1),  # noqa: B008
     ) -> None:
-        session = cachingutils.redis.async_session(constants.Client.redis_prefix)
+        session = cachingutils.redis.async_session(constants.Redis.prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(prefix=prefix.rstrip(":") + ":", session=session._redis)
         self._redis_timeout = timeout.total_seconds()
         self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()

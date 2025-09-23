@@ -204,7 +204,7 @@ def _get_truncated_description(
                 split.pop()
 
         result = "\n".join(split)
-        result += "\ncont."
+        result += "\n<continued...>"
         if result.count("\n") <= max_lines:
             return result
 

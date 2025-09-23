@@ -34,7 +34,13 @@ INVITE_USER = """
 """
 
 
-class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
+class Discord(
+    commands.Cog,
+    slash_command_attrs={
+        "contexts": disnake.InteractionContextTypes.all(),
+        "install_types": disnake.ApplicationInstallTypes.all(),
+    },
+):
     """Useful discord api commands."""
 
     def __init__(self, bot: Monty) -> None:
@@ -126,19 +132,17 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         client_id: LargeInt,
         permissions: Range[int, 0, disnake.Permissions.all().value] = None,
         guild_id: LargeInt = None,
-        include_applications_commands: bool = True,
         raw_link: bool = False,
         ephemeral: bool = True,
     ) -> None:
         """
-        [BETA] Generate an invite to add a bot to a guild. NOTE: may not work on all bots.
+        [BETA] Generate an invite to add an app to a guild. NOTE: may not work on all bots.
 
         Parameters
         ----------
         client_id: ID of the user to invite
         permissions: Value of permissions to pre-fill with
         guild_id: ID of the guild to pre-fill the invite.
-        include_applications_commands: Whether or not to include the applications.commands scope.
         raw_link: Instead of a fancy button, I'll give you the raw link.
         ephemeral: Whether or not to send an ephemeral response.
         """
@@ -175,7 +179,7 @@ class Discord(commands.Cog, slash_command_attrs={"dm_permission": False}):
         if not user.bot:
             raise MontyCommandError("Sorry, that user is not a bot.")
 
-        scopes = ("bot", "applications.commands") if include_applications_commands else ("bot",)
+        scopes = ("bot", "applications.commands")
         url = disnake.utils.oauth_url(
             client_id,
             permissions=perms,

@@ -67,8 +67,8 @@ class Monty(commands.Bot):
         super().__init__(**kwargs)
 
         self.redis_session = redis_session
-        self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix, session=self.redis_session)
-        self.redis_cache_key = constants.Client.redis_prefix
+        self.redis_cache = cachingutils.redis.async_session(constants.Redis.prefix, session=self.redis_session)
+        self.redis_cache_key = constants.Redis.prefix
 
         self.create_http_session(proxy=proxy)
 
@@ -85,7 +85,7 @@ class Monty(commands.Bot):
         self.start_time: arrow.Arrow
         self.stats: AsyncStatsClient
         self.command_prefix: str
-        self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
+        self.invite_permissions: disnake.Permissions = constants.Client.default_invite_permissions
         scheduling.create_task(self.get_self_invite_perms())
         scheduling.create_task(self._create_features())
 
@@ -180,7 +180,7 @@ class Monty(commands.Bot):
                 return r
 
         user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
-            sys.version_info, constants.Client.version, constants.Source.github
+            sys.version_info, constants.Client.version, constants.Client.git_repo
         )
 
         self.http_session = aiohttp.ClientSession(
@@ -205,7 +205,7 @@ class Monty(commands.Bot):
         if app_info.install_params:
             self.invite_permissions = app_info.install_params.permissions
         else:
-            self.invite_permissions = constants.Client.invite_permissions
+            self.invite_permissions = constants.Client.default_invite_permissions
         return self.invite_permissions
 
     async def ensure_guild(self, guild_id: int, *, session: AsyncSession = None) -> Guild:
@@ -261,6 +261,9 @@ class Monty(commands.Bot):
                 prefixes.insert(0, config.prefix)
             else:
                 prefixes.insert(0, self.command_prefix)
+        else:
+            prefixes.insert(0, self.command_prefix)
+
         return prefixes
 
     async def _create_features(self) -> None:

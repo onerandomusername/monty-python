@@ -53,7 +53,7 @@ class DocMarkdownConverter(MarkdownConverter):
         parent = el.parent
         if parent is not None and parent.name == "ol":
             li_tags = parent.find_all("li")
-            bullet = f"{li_tags.index(el)+1}."
+            bullet = f"{li_tags.index(el) + 1}."
         else:
             depth = -1
             curr_el = el
@@ -149,23 +149,12 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """Return crossed-out text."""
         return f"~~{text}~~"
 
-    if constants.DiscordFeatures.extended_markdown:
-
-        def heading(self, text: str, level: int) -> str:
-            """Format the heading normally if it's large enough, or underline it."""
-            if level in (1, 2, 3):
-                return "#" * level + f" {text.strip()}\n"
-            else:
-                return f"__{text}__\n"
-
-    else:
-
-        def heading(self, text: str, level: int) -> str:
-            """Format the heading to be bold if its large enough, and underline it."""
-            if level in (1, 2, 3):
-                return f"**__{text}__**\n"
-            else:
-                return f"__{text}__\n"
+    def heading(self, text: str, level: int) -> str:
+        """Format the heading normally if it's large enough, or underline it."""
+        if level in (1, 2, 3):
+            return "#" * level + f" {text.strip()}\n"
+        else:
+            return f"__{text}__\n"
 
     def newline(self) -> str:
         """No op."""

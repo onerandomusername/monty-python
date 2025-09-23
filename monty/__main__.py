@@ -58,23 +58,23 @@ async def main() -> None:
     monkey_patches.patch_inter_send()
 
     # we make our redis session here and pass it to cachingutils
-    if constants.RedisConfig.use_fakeredis:
+    if constants.Redis.use_fakeredis:
         try:
             import fakeredis
             import fakeredis.aioredis
         except ImportError as e:
             raise RuntimeError("fakeredis must be installed to use fake redis") from e
-        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.RedisConfig.uri)
+        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.Redis.uri)
     else:
         pool = redis.asyncio.BlockingConnectionPool.from_url(
-            constants.RedisConfig.uri,
+            constants.Redis.uri,
             max_connections=20,
             timeout=300,
         )
         redis_session = redis.asyncio.Redis(connection_pool=pool)
 
     cachingutils.redis.async_session(
-        constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
+        constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
     )
 
     # run alembic migrations
@@ -103,7 +103,7 @@ async def main() -> None:
         redis_session=redis_session,
         command_prefix=constants.Client.default_command_prefix,
         activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
-        allowed_mentions=disnake.AllowedMentions(everyone=False),
+        allowed_mentions=disnake.AllowedMentions(everyone=False, roles=False, users=False, replied_user=True),
         intents=_intents,
         command_sync_flags=command_sync_flags,
         **kwargs,
@@ -118,8 +118,19 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
-    loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
-    loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
+    try:
+        import uvloop
+
+        uvloop.install()
+        log.info("Using uvloop as event loop.")
+    except ImportError:
+        log.info("Using default asyncio event loop.")
+    try:
+        loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
+        loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
+    except NotImplementedError:
+        # Signal handlers are not implemented on some platforms (e.g., Windows)
+        pass
     try:
         await future
     except asyncio.CancelledError:
