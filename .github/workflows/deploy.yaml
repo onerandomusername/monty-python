@@ -13,10 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: read
-  contents: read
-  deployments: read
-  packages: read
+  {}
 
 jobs:
   build:
@@ -24,7 +21,9 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     name: Deploy to k8s
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read  # used to checkout the repo
+      packages: read  # used to pull the container
     steps:
       - name: Create SHA Container Tag
         id: sha_tag
@@ -32,31 +31,32 @@ jobs:
           tag=$(cut -c 1-7 <<< $GITHUB_SHA)
           echo "tag=$tag" >> $GITHUB_OUTPUT
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           repository: onerandomusername/kubernetes
           token: ${{ secrets.REPO_TOKEN }}
+          persist-credentials: false
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
         with:
           version: 'latest'
 
       - name: Authenticate with Kubernetes
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@212a19233d93f03eceaac31ae5a1d1acf650b6ef # v4.0.1
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG }}
 
       - name: Login to Github Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN  }}
 
       - name: Deploy to Kubernetes
-        uses: azure/k8s-deploy@v5
+        uses: azure/k8s-deploy@6f7c489cecd8da05646259d9fa3daae92e095c7b # v5.0.4
         with:
           manifests: |
               monty/deployment.yaml

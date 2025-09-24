@@ -9,15 +9,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  {}
+
 jobs:
   create_sentry_release:
+    name: Create Sentry Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
 
       - name: Create a Sentry.io release
-        uses: tclindner/sentry-releases-action@v1.3.0
+        uses: tclindner/sentry-releases-action@6aa8f28371f3b57460bbaefce469471b117b5620 # v1.3.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
