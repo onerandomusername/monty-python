@@ -36,6 +36,7 @@ jobs:
         with:
           repository: onerandomusername/kubernetes
           token: ${{ secrets.REPO_TOKEN }}
+          persist-credentials: false
 
       - name: Install kubectl
         uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
