@@ -7,7 +7,11 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 50
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "pip"
     directory: "/"
@@ -15,4 +19,9 @@ updates:
       interval: "daily"
       time: "00:00"
       timezone: "Etc/GMT+5"
-    open-pull-requests-limit: 50
+    open-pull-requests-limit: 10
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
