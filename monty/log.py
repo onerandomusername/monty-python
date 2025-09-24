@@ -3,12 +3,9 @@ from __future__ import annotations
 
 import logging
 import logging.handlers
-import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping, TypedDict, cast
-
-import coloredlogs
 
 from monty import constants
 
@@ -16,6 +13,11 @@ from monty import constants
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
+
+try:
+    from rich.logging import RichHandler
+except ImportError:
+    RichHandler = None
 
 TRACE = 5
 
@@ -84,18 +86,14 @@ def setup() -> None:
     file_handler.setFormatter(log_format)
     root_logger.addHandler(file_handler)
 
-    if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
-        coloredlogs.DEFAULT_LEVEL_STYLES = {
-            **coloredlogs.DEFAULT_LEVEL_STYLES,
-            "trace": {"color": 246},
-            "critical": {"background": "red"},
-            "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"],
-        }
-
-    if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
-        coloredlogs.DEFAULT_LOG_FORMAT = format_string
-
-    coloredlogs.install(level=TRACE, stream=sys.stdout)
+    if RichHandler is not None:
+        rich_handler = RichHandler(rich_tracebacks=True)
+        # rich_handler.setFormatter(log_format)
+        root_logger.addHandler(rich_handler)
+    else:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(log_format)
+        root_logger.addHandler(console_handler)
 
     root_logger.setLevel(logging.DEBUG if constants.Monitoring.debug_logging else logging.INFO)
     # Silence irrelevant loggers

@@ -13,13 +13,22 @@ import logging
 import os
 from functools import partial, partialmethod
 
+import disnake
 import sentry_sdk
 from disnake.ext import commands
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 
+
+try:
+    import rich.traceback
+except ModuleNotFoundError:
+    pass
+else:
+    rich.traceback.install(show_locals=True, word_wrap=True, suppress=[disnake])
+
 ####################
-# NOTE: do not import any other modules before the `log.setup()` call
+# NOTE: do not import any other modules from monty before the `log.setup()` call
 ####################
 from monty import log
 
