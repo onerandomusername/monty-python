@@ -19,11 +19,13 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  read-all
-
+  contents: read
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -39,7 +41,8 @@ jobs:
     needs: [lint]
     runs-on: ubuntu-latest
     permissions:
-      packages: write
+      contents: read
+      packages: write # used to publish to GHCR
 
     steps:
       # Create a commit SHA-based tag for the container repositories
@@ -87,6 +90,8 @@ jobs:
     name: Generate Artifact
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
       # Prepare the Pull Request Payload artifact. If this fails, we
       # we fail silently using the `continue-on-error` option. It's

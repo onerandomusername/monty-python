@@ -9,8 +9,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  {}
+
 jobs:
   create_sentry_release:
+    name: Create Sentry Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

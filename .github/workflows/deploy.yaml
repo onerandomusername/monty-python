@@ -13,10 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  actions: read
-  contents: read
-  deployments: read
-  packages: read
+  {}
 
 jobs:
   build:
@@ -24,7 +21,9 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
     name: Deploy to k8s
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: read  # used to checkout the repo
+      packages: read  # used to pull the container
     steps:
       - name: Create SHA Container Tag
         id: sha_tag
