@@ -25,8 +25,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: j178/prek-action@v1.0.4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: j178/prek-action@71e2466721047b1317a06bcb2a2182c7969660a7 # v1.0.4
         env:
           RUFF_OUTPUT_FORMAT: "github"
 
@@ -48,15 +48,15 @@ jobs:
           echo "tag=$tag" >> $GITHUB_OUTPUT
       # Check out the current repository in the `monty` subdirectory
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           path: monty
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Login to Github Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -66,7 +66,7 @@ jobs:
       # Repository. The container will be tagged as "latest"
       # and with the short SHA of the commit.
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: monty/
           file: monty/Dockerfile
@@ -102,7 +102,7 @@ jobs:
       - name: Upload a Build Artifact
         if: always() && steps.prepare-artifact.outcome == 'success'
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pull-request-payload
           path: pull_request_payload.json
