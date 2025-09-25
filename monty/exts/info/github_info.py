@@ -673,6 +673,10 @@ class GithubInfo(
             embed.description = self.render_github_markdown(
                 body, context=RenderContext(user=issue.organisation, repo=issue.repository)
             )
+
+            if len(embed.description) > constants.TruncateLimit.embed_limit:
+                embed.description[:constants.TruncateLimit.embed_limit]
+
         if not body or body.isspace():
             embed.description = "*No description provided.*"
         return embed
