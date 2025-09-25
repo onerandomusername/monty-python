@@ -575,12 +575,14 @@ class GithubInfo(
 
             try:
                 json_data = await self.gql.execute_async(
-                    DISCUSSION_GRAPHQL_QUERY,
-                    variable_values={
-                        "user": user,
-                        "repository": repository,
-                        "number": number,
-                    },
+                    gql.GraphQLRequest(
+                        DISCUSSION_GRAPHQL_QUERY,
+                        variable_values={
+                            "user": user,
+                            "repository": repository,
+                            "number": number,
+                        },
+                    )
                 )
             except (TransportError, TransportQueryError):
                 return FetchError(-1, "Issue not found.")
@@ -1010,10 +1012,12 @@ class GithubInfo(
 
                 try:
                     json_data = await self.gql.execute_async(
-                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
-                        variable_values={
-                            "id": global_id,
-                        },
+                        gql.GraphQLRequest(
+                            DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                            variable_values={
+                                "id": global_id,
+                            },
+                        )
                     )
                 except (TransportError, TransportQueryError) as e:
                     log.warning("encountered error fetching discussion comment: %s", e)
