@@ -22,7 +22,7 @@ dependencies = [
     "colorama~=0.4.5; sys_platform == \"win32\"",
     "disnake @ git+https://github.com/DisnakeDev/disnake.git@master",
     "orjson<4.0.0,>=3.10.18",
-    "gql<4.0.0,>=3.5.2",
+    "gql~=4.0",
     "lxml<6.0.0,>=5.4.0",
     "markdownify==0.11.6",
     "mistune<3.0.0,>=2.0.4",
