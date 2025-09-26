@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import ssl
-from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union, overload
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
@@ -149,14 +149,31 @@ def ssl_create_default_context() -> ssl.SSLContext:
     return ssl_context
 
 
+@overload
+def get_invite_link_from_app_info(
+    app_info: disnake.AppInfo,
+    *,
+    default_permissions: None = None,
+) -> str | dict[int, str]: ...
+
+
+@overload
 def get_invite_link_from_app_info(
     app_info: disnake.AppInfo,
     *,
     guild_id: int = None,
     default_permissions: disnake.Permissions = None,
-) -> str | dict[int, str]:
+) -> str | None: ...
+
+
+def get_invite_link_from_app_info(
+    app_info: disnake.AppInfo,
+    *,
+    guild_id: int = None,
+    default_permissions: disnake.Permissions = None,
+) -> str | dict[int, str] | None:
     """Get an invite link from the provided disnake.AppInfo object."""
-    urls: dict[int, yarl.URL] = {}
+    urls: dict[int, yarl.URL] | None = {}
     # shortcut this mess with custom_install_urls...
     if app_info.custom_install_url:
         return str(app_info.custom_install_url)
@@ -195,7 +212,13 @@ def get_invite_link_from_app_info(
     # a discord provided url matches the case of user or guild install type config having install_params
     # if either of them have install_params, then we can assume a discord provided url exists
 
-    if any((g and g.install_params) for g in (app_info.user_install_type_config, app_info.guild_install_type_config)):
+    # HOWEVER
+    # if the `guild_id` param is provided, we can only return a guild invite link,
+    # therefore we don't even check user installations
+
+    if not guild_id and any(
+        (g and g.install_params) for g in (app_info.user_install_type_config, app_info.guild_install_type_config)
+    ):
         return str(yarl.URL("https://discord.com/oauth2/authorize").with_query(client_id=app_info.id))
 
     params = {}
@@ -203,48 +226,38 @@ def get_invite_link_from_app_info(
     if app_info.redirect_uris and app_info.redirect_uris[0]:
         params["redirect_uri"] = app_info.redirect_uris[0]
 
-    if app_info.user_install_type_config:
+    if app_info.user_install_type_config and not guild_id:
         params["scopes"] = ("applications.commands",)
         params["integration_type"] = disnake.ApplicationInstallTypes.user.flag
 
         if app_info.user_install_type_config.install_params:
-            urls[disnake.ApplicationInstallTypes.user.flag] = yarl.URL(
-                disnake.utils.oauth_url(
-                    **params,
-                )
+            params["scopes"] = app_info.user_install_type_config.install_params.scopes
+
+        urls[disnake.ApplicationInstallTypes.user.flag] = yarl.URL(
+            disnake.utils.oauth_url(
+                **params,
             )
-        else:
-            # no install params means no discord provided url
-            # fall back to a generic oauth2 url
-            urls[disnake.ApplicationInstallTypes.user.flag] = yarl.URL(
-                disnake.utils.oauth_url(
-                    **params,
-                )
-            )
+        )
 
     if app_info.guild_install_type_config:
         if guild_id:
-            params["guild_id"] = guild_id
+            params["guild"] = disnake.Object(id=guild_id)
         if default_permissions:
-            params["permissions"] = default_permissions.value
-        params["scopes"] += ("applications.commands", "bot")
+            params["permissions"] = default_permissions
         params["integration_type"] = disnake.ApplicationInstallTypes.guild.flag
 
         if app_info.guild_install_type_config.install_params:
-            urls[disnake.ApplicationInstallTypes.guild.flag] = yarl.URL(
-                disnake.utils.oauth_url(
-                    **params,
-                )
+            params["scopes"] = app_info.guild_install_type_config.install_params.scopes
+            params["permissions"] = app_info.guild_install_type_config.install_params.permissions or default_permissions
+
+        urls[disnake.ApplicationInstallTypes.guild.flag] = yarl.URL(
+            disnake.utils.oauth_url(
+                **params,
             )
-        else:
-            # no install params means no discord provided url
-            # fall back to a generic oauth2 url
-            urls[disnake.ApplicationInstallTypes.guild.flag] = yarl.URL(
-                disnake.utils.oauth_url(
-                    **params,
-                )
-            )
+        )
 
     if len(urls) == 1:
         return str(next(iter(urls.values())))
+    if len(urls) == 0:
+        return None
     return {k: str(v) for k, v in urls.items()}

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import disnake
 from disnake.ext import commands
-from disnake.ext.commands import LargeInt
+from disnake.ext.commands import LargeInt, Range
 
 from monty.bot import Monty
 from monty.constants import Endpoints
@@ -125,7 +125,7 @@ class Discord(
         self,
         inter: disnake.AppCmdInter,
         client_id: LargeInt,
-        # permissions: Range[int, 0, disnake.Permissions.all().value] = None,
+        permissions: Range[int, 0, disnake.Permissions.all().value] = None,
         guild_id: LargeInt = None,
         raw_link: bool = False,
         ephemeral: bool = True,
@@ -147,8 +147,16 @@ class Discord(
             await inter.response.send_message(str(e), ephemeral=True)
             return
 
-        urls = helpers.get_invite_link_from_app_info(app_info, guild_id=guild_id)
-
+        if isinstance(permissions, int):
+            permissions: disnake.Permissions = disnake.Permissions(permissions)
+        urls = helpers.get_invite_link_from_app_info(app_info, guild_id=guild_id, default_permissions=permissions)
+        # TODO: raise error within get_invite_link_from_app_info and propagate that to the user
+        if not urls:
+            await inter.response.send_message(
+                "Could not generate an invite link for that application. It may not be a bot or may not allow invites.",
+                ephemeral=True,
+            )
+            return
         message = " ".join(
             [
                 "Click below to invite" if not raw_link else "Click the following link to invite",
