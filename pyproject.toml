@@ -25,7 +25,7 @@ dependencies = [
     "gql~=4.0",
     "lxml<6.0.0,>=5.4.0",
     "markdownify==0.11.6",
-    "mistune<3.0.0,>=2.0.4",
+    "mistune>=2.0.4,<4.0.0",
     "msgpack<2.0.0,>=1.1.0",
     "redis[hiredis]<6.0.0,>=5.2.0",
     "Pillow<12.0,>=11.2",
