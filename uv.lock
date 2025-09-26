@@ -1239,15 +1239,15 @@ wheels = [
 
 [[package]]
 name = "markdownify"
-version = "0.11.6"
+version = "1.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/60/04/377414e1071cf1cd75d9f918ac917c6c61b57447c861965a9dba3d911cda/markdownify-0.11.6.tar.gz", hash = "sha256:009b240e0c9f4c8eaf1d085625dcd4011e12f0f8cec55dedf9ea6f7655e49bfe", size = 16183, upload-time = "2022-09-02T08:12:16.66Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/1b/6f2697b51eaca81f08852fd2734745af15718fea10222a1d40f8a239c4ea/markdownify-1.2.0.tar.gz", hash = "sha256:f6c367c54eb24ee953921804dfe6d6575c5e5b42c643955e7242034435de634c", size = 18771, upload-time = "2025-08-09T17:44:15.302Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/06/015371318ac726442672e1b570f5199cb861a5762e7d288af92d8e357327/markdownify-0.11.6-py3-none-any.whl", hash = "sha256:ba35fe289d5e9073bcd7d2cad629278fe25f1a93741fcdc0bfb4f009076d8324", size = 16113, upload-time = "2022-09-02T08:12:14.824Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/e2/7af643acb4cae0741dffffaa7f3f7c9e7ab4046724543ba1777c401d821c/markdownify-1.2.0-py3-none-any.whl", hash = "sha256:48e150a1c4993d4d50f282f725c0111bd9eb25645d41fa2f543708fd44161351", size = 15561, upload-time = "2025-08-09T17:44:14.074Z" },
 ]
 
 [[package]]
@@ -1657,7 +1657,7 @@ requires-dist = [
     { name = "disnake", git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
     { name = "gql", specifier = "~=4.0" },
     { name = "lxml", specifier = ">=5.4.0,<6.0.0" },
-    { name = "markdownify", specifier = "==0.11.6" },
+    { name = "markdownify", specifier = "==1.2.0" },
     { name = "mistune", specifier = ">=2.0.4,<3.0.0" },
     { name = "msgpack", specifier = ">=1.1.0,<2.0.0" },
     { name = "orjson", specifier = ">=3.10.18,<4.0.0" },
