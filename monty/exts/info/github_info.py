@@ -221,11 +221,9 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(
-            url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS, ssl=True
-        )
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS)
 
-        self.gql = gql.Client(transport=transport, fetch_schema_from_transport=True)
+        self.gql_client = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
@@ -244,8 +242,11 @@ class GithubInfo(
         await self._fetch_and_update_ratelimits()
 
         # todo: cache the schema in redis and load from there
-        async with self.gql:
-            pass
+        self.gql = await self.gql_client.connect_async(reconnecting=True)
+
+    def cog_unload(self) -> None:
+        """Close gql session upon unloading cog."""
+        scheduling.create_task(self.gql_client.close_async(), name="gql client close")
 
     async def _fetch_and_update_ratelimits(self) -> None:
         # this is NOT using fetch_data because we need to check the status code.
@@ -574,13 +575,15 @@ class GithubInfo(
                 return FetchError(404, "Issue not found.")
 
             try:
-                json_data = await self.gql.execute_async(
-                    DISCUSSION_GRAPHQL_QUERY,
-                    variable_values={
-                        "user": user,
-                        "repository": repository,
-                        "number": number,
-                    },
+                json_data = await self.gql.execute(
+                    gql.GraphQLRequest(
+                        DISCUSSION_GRAPHQL_QUERY,
+                        variable_values={
+                            "user": user,
+                            "repository": repository,
+                            "number": number,
+                        },
+                    )
                 )
             except (TransportError, TransportQueryError):
                 return FetchError(-1, "Issue not found.")
@@ -1015,11 +1018,13 @@ class GithubInfo(
                 )
 
                 try:
-                    json_data = await self.gql.execute_async(
-                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
-                        variable_values={
-                            "id": global_id,
-                        },
+                    json_data = await self.gql.execute(
+                        gql.GraphQLRequest(
+                            DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                            variable_values={
+                                "id": global_id,
+                            },
+                        )
                     )
                 except (TransportError, TransportQueryError) as e:
                     log.warning("encountered error fetching discussion comment: %s", e)
