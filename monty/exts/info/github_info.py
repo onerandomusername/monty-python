@@ -678,9 +678,7 @@ class GithubInfo(
             )
 
             if len(embed.description) > constants.TruncateLimit.embed_limit:
-                embed.description = (
-                    embed.description[: len(embed.description) - constants.TruncateLimit.embed_limit] + "..."
-                )
+                embed.description = embed.description[: constants.TruncateLimit.embed_limit] + "..."
 
         if not body or body.isspace():
             embed.description = "*No description provided.*"
