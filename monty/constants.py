@@ -108,6 +108,10 @@ class CodeBlock:
     minimum_lines: int = 4
 
 
+class TruncateLimit:
+    embed_limit: int = 1024
+
+
 # TODO: every colour across the bot should use colours from this palette
 # this includes calling disnake.Colour.blurple() and other methods.
 # TODO: redesign colour palette
