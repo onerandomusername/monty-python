@@ -38,10 +38,9 @@ class Client:
     # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     proxy = environ.get("BOT_PROXY_URL", "") or None
-    extensions = environ.get("BOT_EXTENSIONS", None) and {
-        ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")  # type: ignore reportOptionalMemberAccess
-    }
-
+    extensions: bool | str | set[str] = (
+        "BOT_EXTENSIONS" in environ and {ext.strip() for ext in environ["BOT_EXTENSIONS"].split(",")}
+    ) or "BOT_EXTENSIONS" in environ
     # source and support
     git_repo = "https://github.com/onerandomusername/monty-python"
     support_server = "mPscM4FjWB"

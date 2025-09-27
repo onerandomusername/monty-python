@@ -3,6 +3,10 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
+
+
+EXT_METADATA = ExtMetadata(core=True)
 
 
 logger = get_logger(__name__)

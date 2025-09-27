@@ -11,8 +11,11 @@ from monty.bot import Monty
 from monty.database import Feature
 from monty.database.guild import Guild
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 if TYPE_CHECKING:
     MaybeFeature = str
