@@ -228,7 +228,7 @@ def get_invite_link_from_app_info(
 
     if app_info.user_install_type_config and not guild_id:
         params["scopes"] = ("applications.commands",)
-        params["integration_type"] = disnake.ApplicationInstallTypes.user.flag
+        params["integration_type"] = disnake.ApplicationInstallTypes(user=True).values[0]
 
         if app_info.user_install_type_config.install_params:
             params["scopes"] = app_info.user_install_type_config.install_params.scopes
@@ -244,7 +244,7 @@ def get_invite_link_from_app_info(
             params["guild"] = disnake.Object(id=guild_id)
         if default_permissions:
             params["permissions"] = default_permissions
-        params["integration_type"] = disnake.ApplicationInstallTypes.guild.flag
+        params["integration_type"] = disnake.ApplicationInstallTypes(guild=True).values[0]
 
         if app_info.guild_install_type_config.install_params:
             params["scopes"] = app_info.guild_install_type_config.install_params.scopes
