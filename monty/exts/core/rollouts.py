@@ -12,6 +12,7 @@ from disnake.ext import commands, tasks
 from monty.bot import Monty
 from monty.database import Feature, Rollout
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
 from monty.utils import rollouts, scheduling
 from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
@@ -33,6 +34,8 @@ else:
             """Convert a percent to a float."""
             return float(argument.removesuffix("%"))
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 logger = get_logger(__name__)
 
