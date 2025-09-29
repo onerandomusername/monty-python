@@ -15,9 +15,11 @@ if TYPE_CHECKING:
 
 
 try:
+    from rich.console import Console
     from rich.logging import RichHandler
 except ImportError:
     RichHandler = None
+    Console = None
 
 TRACE = 5
 
@@ -86,12 +88,12 @@ def setup() -> None:
     file_handler.setFormatter(log_format)
     root_logger.addHandler(file_handler)
 
-    if RichHandler is not None:
-        rich_handler = RichHandler(rich_tracebacks=True)
+    if RichHandler and Console:
+        rich_handler = RichHandler(rich_tracebacks=True, console=Console(stderr=True))
         # rich_handler.setFormatter(log_format)
         root_logger.addHandler(rich_handler)
     else:
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setFormatter(log_format)
         root_logger.addHandler(console_handler)
 

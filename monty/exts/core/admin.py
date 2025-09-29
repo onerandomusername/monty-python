@@ -76,7 +76,7 @@ if TYPE_CHECKING:
 
 log = get_logger(__name__)
 
-Executor = Union[exec, eval]
+Executor = t.Literal["exec", "eval"]
 
 MESSAGE_LIMIT = 2000
 
@@ -120,22 +120,22 @@ class Admin(
     def get_syntax_error(self, e: SyntaxError) -> str:
         """If there's a syntax error in the exception, get some text from it."""
         if e.text is None:
-            return f"```py\n{e.__class__.__name__}: {e}\n```"
-        return f"```py\n{e.text}{'^':>{e.offset}}\n{e.__class__.__name__}: {e}```"
+            return f"```ansi\n{e.__class__.__name__}: {e}\n```"
+        return f"```ansi\n{e.text}{'^':>{e.offset}}\n{e.__class__.__name__}: {e}\n```"
 
     @staticmethod
     def _runwith(code: str) -> Executor:
         """Determine which method to run the code."""
         code = code.strip()
         if ";" in code:
-            return exec
+            return "exec"
         if "\n" in code:
-            return exec
+            return "exec"
         parsed_code = ast.parse(code)
         for node in ast.iter_fields(parsed_code):
             if isinstance(node, ast.Assign):
-                return exec
-        return eval
+                return "exec"
+        return "eval"
 
     async def _send_stdout(
         self,
@@ -166,8 +166,8 @@ class Admin(
         # unless, for some reason, it has a ``` in it
         error_file: disnake.File = None
         total_len = 0
-        fmt_resp: str = "```py\n{0}```"
-        fmt_err: str = "\nAn error occured. Unfortunate.```py\n{0}```"
+        fmt_resp: str = "```ansi\n{0}```"
+        fmt_err: str = "\nAn error occured. Unfortunate.```ansi\n{0}```"
         out = ""
         files = []
 
@@ -185,12 +185,11 @@ class Admin(
                 error_file = True
 
         if total_len > MESSAGE_LIMIT or resp_file:
-            log.debug("rats we gotta upload as a file")
+            log.debug("Evaluation response is %i characters long, sending as file.", total_len)
 
             resp_file: disnake.File = create_file_obj(resp, ext="py")
         else:
-            # good job, not a file
-            log.debug("sending response as plaintext")
+            log.debug("sending evaluation response as plaintext")
             out += fmt_resp.format(resp) if resp is not None else ""
         out += fmt_err.format(error) if error is not None else ""
 
@@ -239,21 +238,34 @@ class Admin(
         result = None
         error = None
         try:
-            with redirect_stdout(stdout):
-                runwith = self._runwith(code)
-                log.trace(runwith.__name__)
+            runwith = self._runwith(code)
+            log.trace(runwith)
+            try:
                 co_code = compile(
                     code,
                     "<int eval>",
-                    runwith.__name__,
+                    runwith,
+                    flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
+                )
+            except SyntaxError:
+                runwith = "exec"
+                # try using exec if that fails
+                co_code = compile(
+                    code,
+                    "<int eval>",
+                    runwith,
                     flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT,
                 )
 
-                if inspect.CO_COROUTINE & co_code.co_flags == inspect.CO_COROUTINE:
+            with redirect_stdout(stdout):
+                if inspect.CO_COROUTINE & co_code.co_flags:
                     awaitable = FunctionType(co_code, env)
                     result = await awaitable()
                 else:
-                    result = runwith(co_code, env)
+                    if runwith == "eval":
+                        result = eval(co_code, env)  # noqa: S307
+                    else:
+                        result = exec(co_code, env)  # noqa: S102
         except Exception:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             error = traceback.format_exception(exc_type, exc_value, exc_traceback)
@@ -369,14 +381,14 @@ class Admin(
                         result = await result
             except Exception:
                 value = stdout.getvalue()
-                fmt = f"```py\n{value}{traceback.format_exc()}\n```"
+                fmt = f"```ansi\n{value}{traceback.format_exc()}\n```"
             else:
                 value = stdout.getvalue()
                 if result is not None:
-                    fmt = f"```py\n{value}{result}\n```"
+                    fmt = f"```ansi\n{value}{result}\n```"
                     variables["_"] = result
                 elif value:
-                    fmt = f"```py\n{value}\n```"
+                    fmt = f"```ansi\n{value}\n```"
             try:
                 if fmt is not None:
                     if len(fmt) > MESSAGE_LIMIT:

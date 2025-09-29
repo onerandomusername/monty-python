@@ -3,8 +3,11 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
 from monty.utils.messages import DELETE_ID_V2
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 
