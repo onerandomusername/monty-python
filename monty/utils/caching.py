@@ -58,7 +58,7 @@ def _get_sig(
     include_posargs: Optional[list[int]] = None,
     include_kwargs: Optional[list[str]] = None,
     allow_unset: bool = False,
-) -> Tuple[int]:
+) -> Tuple[int, ...]:
     signature: list[int] = [id(func)]
 
     if include_posargs is not None:
@@ -103,7 +103,7 @@ def redis_cache(
     elif isinstance(timeout, float):
         timeout = int(timeout)
 
-    cache_logger = get_logger(__package__ + ".caching")
+    cache_logger = get_logger("monty.caching")
 
     prefix = prefix + ":"
 

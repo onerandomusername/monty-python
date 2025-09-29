@@ -4,7 +4,6 @@ import asyncio
 import inspect
 from collections import defaultdict
 from functools import partial
-from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,6 +27,8 @@ from monty.utils.function import command_wraps
 
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")

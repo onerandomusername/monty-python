@@ -56,7 +56,7 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
 def get_arg_value_wrapper(
     decorator_func: t.Callable[[ArgValGetter], Decorator[FuncT, OtherFuncT]],
     name_or_pos: Argument,
-    func: t.Callable[[t.Any], t.Any] = None,
+    func: t.Callable[[t.Any], t.Any] | None = None,
 ) -> Decorator[FuncT, OtherFuncT]:
     """
     Call `decorator_func` with the value of the arg at the given name/position.
@@ -95,7 +95,7 @@ def update_wrapper_globals(
     wrapper: FuncT,
     wrapped: AnyCallable,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
 ) -> FuncT:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -143,7 +143,7 @@ def command_wraps(
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
 ) -> t.Callable[[FuncT], FuncT]:
     """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
     if ignored_conflict_names is None:

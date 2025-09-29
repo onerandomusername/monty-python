@@ -113,7 +113,7 @@ class Monty(commands.Bot):
             aiohttp_log.info(
                 "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
                     status=resp.status,
-                    reason=resp.reason,
+                    reason=resp.reason or "None",
                     method=end.method.upper(),
                     url=end.url,
                     content_type=resp.content_type,
@@ -160,14 +160,16 @@ class Monty(commands.Bot):
                     cache_logger.debug("HTTP Cache hit on %s", cache_key)
                     # decode the original headers
                     headers: CIMultiDict[str] = CIMultiDict()
-                    for key, value in resp_headers:
-                        headers[key.decode()] = value.decode()
+                    if resp_headers:
+                        for key, value in resp_headers:
+                            headers[key.decode()] = value.decode()
                     r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
                     r.content = reader = aiohttp.StreamReader(
                         protocol=Mock(_reading_paused=False),
-                        limit=len(body),
+                        limit=len(body) if body else 0,
                     )
-                    reader.feed_data(body)
+                    if body:
+                        reader.feed_data(body)
                     reader.feed_eof()
                     r.status = 200
                     return r
@@ -389,11 +391,11 @@ class Monty(commands.Bot):
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
-        if constants.Client.extensions:
+        if constants.Client.extensions is not None:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
         for ext, ext_metadata in walk_extensions():
-            if not constants.Client.extensions:
+            if constants.Client.extensions is None:
                 self.load_extension(ext)
                 continue
 

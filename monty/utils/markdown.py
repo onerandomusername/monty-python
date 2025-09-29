@@ -133,7 +133,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         else:
             return link
 
-    def image(self, src: str, alt: str = None, title: str = None) -> str:
+    def image(self, src: str, alt: str | None = None, title: str | None = None) -> str:
         """Return a link to the provided image."""
         return "!" + self.link(src, text="image", title=alt)
 

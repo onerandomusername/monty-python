@@ -23,7 +23,7 @@ class AsyncStatsClient(StatsClientBase):
         transport, _ = await self._loop.create_datagram_endpoint(
             asyncio.DatagramProtocol, family=socket.AF_INET, remote_addr=self._addr
         )
-        self._transport = cast(asyncio.DatagramTransport, transport)
+        self._transport = cast("asyncio.DatagramTransport", transport)
 
     def _send(self, data: str) -> None:
         """Start an async task to send data to statsd."""

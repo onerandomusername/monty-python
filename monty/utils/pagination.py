@@ -4,6 +4,7 @@ from typing import Iterable, List, Optional, Tuple, Union, cast
 import disnake
 from disnake.ext import commands
 
+from monty.bot import Monty
 from monty.constants import Emojis
 from monty.log import get_logger
 from monty.utils import scheduling
@@ -101,7 +102,7 @@ class LinePaginator(commands.Paginator):
     async def paginate(
         cls,
         lines: Iterable[str],
-        ctx: commands.Context,
+        ctx: commands.Context[Monty],
         embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
@@ -111,8 +112,8 @@ class LinePaginator(commands.Paginator):
         linesep: str = "\n",
         restrict_to_user: Union[disnake.User, disnake.Member] = None,
         timeout: int = 300,
-        footer_text: str = None,
-        url: str = None,
+        footer_text: Optional[str] = None,
+        url: Optional[str] = None,
         exception_on_empty_embed: bool = False,
     ) -> None:
         """
@@ -238,7 +239,7 @@ class LinePaginator(commands.Paginator):
                 log.debug("Timed out waiting for a reaction")
                 break  # We're done, no reactions for the last 5 minutes
 
-            custom_id = cast(str, inter.component.custom_id)
+            custom_id = cast("str", inter.component.custom_id)
             event_name = custom_id[len(CUSTOM_ID_PREFIX) :]
 
             if PAGINATION_EMOJI.get(event_name) == DELETE_EMOJI:  # Note: DELETE_EMOJI is a string and not unicode

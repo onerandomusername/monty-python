@@ -109,8 +109,8 @@ class Bookmark(
 
     async def action_bookmark(
         self,
-        channel: disnake.TextChannel,
-        user: disnake.Member,
+        channel: disnake.abc.Messageable,
+        user: disnake.Member | disnake.User,
         target_message: disnake.Message,
         title: str,
         *,
@@ -309,15 +309,17 @@ class Bookmark(
             return
         custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
 
-        def remove_button(message: disnake.Message) -> disnake.ui.View:
-            view = disnake.ui.View.from_message(message)
-            for child in view.children:
+        def remove_button(message: disnake.Message | None) -> list[disnake.ui.MessageUIComponent]:
+            if message is None:
+                return []
+            comp = disnake.ui.components_from_message(message)
+            for child in disnake.ui.walk_components(comp):
                 if (getattr(child, "custom_id", "") or "").startswith(CUSTOM_ID):
-                    view.remove_item(child)
+                    comp.remove(child)
                     break
             else:
                 log.warning("Button was not found to be removed.")
-            return view
+            return comp
 
         channel_id, message_id = custom_id.split("-")
         channel_id, message_id = int(channel_id), int(message_id)
@@ -337,8 +339,8 @@ class Bookmark(
         try:
             message = await channel.fetch_message(message_id)
         except (disnake.NotFound, disnake.Forbidden):
-            view = remove_button(inter.message)
-            await inter.response.edit_message(view=view)
+            components = remove_button(inter.message)
+            await inter.response.edit_message(components=components)
             await inter.send("This message either no longer exists or I cannot reference it.", ephemeral=True)
             return
         maybe_error = await self.action_bookmark(inter.channel, inter.author, message, title="Bookmark")

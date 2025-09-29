@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
+
+
+if TYPE_CHECKING:
+    from monty.bot import Monty
 
 
 log = get_logger(__name__)
@@ -40,7 +43,7 @@ class Misc(
 
     @commands.slash_command(name="char-info")
     async def charinfo(
-        self, ctx: disnake.ApplicationCommandInteraction, characters: commands.String[str, ..., 50]
+        self, ctx: disnake.ApplicationCommandInteraction[Monty], characters: commands.String[str, ..., 50]
     ) -> None:
         """
         Shows you information on up to 50 unicode characters.
@@ -83,7 +86,7 @@ class Misc(
         await ctx.send(embed=embed, components=DeleteButton(ctx.author))
 
     @commands.command(aliases=("snf", "snfl", "sf"))
-    async def snowflake(self, ctx: commands.Context, *snowflakes: disnake.Object) -> None:
+    async def snowflake(self, ctx: commands.Context[Monty], *snowflakes: disnake.Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
             raise commands.BadArgument("At least one snowflake must be provided.")
@@ -97,7 +100,7 @@ class Misc(
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
-        lines = []
+        lines: list[str] = []
         for snowflake in snowflakes:
             lines.append(self._format_snowflake(snowflake))
 
@@ -106,7 +109,7 @@ class Misc(
     @commands.slash_command(name="snowflake")
     async def slash_snowflake(
         self,
-        inter: disnake.AppCommandInteraction,
+        inter: disnake.AppCommandInteraction[Monty],
         snowflake: disnake.Object,
     ) -> None:
         """
