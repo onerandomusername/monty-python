@@ -80,7 +80,7 @@ class Rule:
         list[tuple[str, str]]
             A list of tuples containing section names and their corresponding content.
         """
-        sections = []
+        sections: list[tuple[str, str]] = []
         text = self.explanation
 
         # support markdown shorthand when they're defined

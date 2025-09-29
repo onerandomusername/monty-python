@@ -4,6 +4,7 @@ from typing import Callable, Container, Iterable, List, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
+from markupsafe import Markup
 
 from monty.log import get_logger
 
@@ -125,7 +126,7 @@ def get_signatures(start_signature: PageElement) -> List[str]:
     First the signatures under the `start_signature` are included;
     if less than 2 are found, tags above the start signature are added to the result if any are present.
     """
-    signatures = []
+    signatures: list[str] = []
     for element in (
         *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
         start_signature,

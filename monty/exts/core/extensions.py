@@ -169,7 +169,7 @@ class Extensions(commands.Cog):
             icon_url=str(self.bot.user.display_avatar.url),
         )
 
-        lines = []
+        lines: list[str] = []
         categories = self.group_extension_statuses()
         for category, extensions in sorted(categories.items()):
             # Treat each category as a single line by concatenating everything.
@@ -209,7 +209,7 @@ class Extensions(commands.Cog):
 
     def group_extension_statuses(self) -> t.Mapping[str, str]:
         """Return a mapping of extension names and statuses to their categories."""
-        categories = {}
+        categories: dict[str, str] = {}
 
         for ext in EXTENSIONS:
             status = self.get_extension_status(ext)

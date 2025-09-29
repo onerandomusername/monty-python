@@ -119,7 +119,7 @@ class PythonDiscourse(commands.Cog):
 
     def extract_topic_urls(self, content: str) -> list[DiscussionTopic]:
         """Extract python discourse urls from the provided content."""
-        posts = []
+        posts: list[DiscussionTopic] = []
         for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content))):
             posts.append(
                 DiscussionTopic(

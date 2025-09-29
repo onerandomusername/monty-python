@@ -68,7 +68,7 @@ class QueueItem(NamedTuple):
     doc_item: _cog.DocItem
     soup: BeautifulSoup
 
-    def __eq__(self, other: Union[QueueItem, _cog.DocItem]):
+    def __eq__(self, other: Union[QueueItem, _cog.DocItem]) -> bool:
         if isinstance(other, _cog.DocItem):
             return self.doc_item == other
         return NamedTuple.__eq__(self, other)

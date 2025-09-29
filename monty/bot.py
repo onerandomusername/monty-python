@@ -18,6 +18,7 @@ import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
+from aiohttp.tracing import TraceConfig
 from disnake.ext import commands
 from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -99,7 +100,7 @@ class Monty(commands.Bot):
 
     def create_http_session(self, proxy: str = None) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs = []
+        trace_configs: list[TraceConfig] = []
 
         aiohttp_log = get_logger(__package__ + ".http")
 

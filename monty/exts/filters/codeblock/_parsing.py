@@ -82,7 +82,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     """
     log.trace("Finding all code blocks in a message.")
 
-    code_blocks = []
+    code_blocks: list[CodeBlock] = []
     for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")

@@ -66,7 +66,7 @@ class ConfigAttrMetadata:
     validator: Optional[Union[Callable, Callable[Any, Coroutine]]] = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.type not in (str, int, float, bool):
             raise ValueError("type must be one of str, int, float, or bool")
         if len(self.name) > 45:

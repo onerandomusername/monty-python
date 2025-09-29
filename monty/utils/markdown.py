@@ -106,7 +106,7 @@ class DocMarkdownConverter(MarkdownConverter):
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
-    def __init__(self, repo: str = None):
+    def __init__(self, repo: str = None) -> None:
         self._repo = (repo or "").rstrip("/")
 
     def text(self, text: str) -> str:

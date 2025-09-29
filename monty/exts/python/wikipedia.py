@@ -52,7 +52,7 @@ class WikipediaSearch(commands.Cog, name="Wikipedia Search"):
                     log.error(f"There was an error while communicating with the Wikipedia API: {error}")
                 raise APIError("Wikipedia API", resp.status, error)
 
-            lines = []
+            lines: list[str] = []
             if raw_data["query"]["searchinfo"]["totalhits"]:
                 for article in raw_data["query"]["search"]:
                     line = WIKI_SEARCH_RESULT.format(

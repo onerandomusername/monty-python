@@ -221,7 +221,7 @@ def get_invite_link_from_app_info(
     ):
         return str(yarl.URL("https://discord.com/oauth2/authorize").with_query(client_id=app_info.id))
 
-    params = {}
+    params: dict[str, int] = {}
     params["client_id"] = app_info.id
     if app_info.redirect_uris and app_info.redirect_uris[0]:
         params["redirect_uri"] = app_info.redirect_uris[0]

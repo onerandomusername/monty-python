@@ -169,7 +169,7 @@ class Admin(
         fmt_resp: str = "```ansi\n{0}```"
         fmt_err: str = "\nAn error occured. Unfortunate.```ansi\n{0}```"
         out = ""
-        files = []
+        files: list[disnake.File] = []
 
         # make a resp object
         if resp is not None:

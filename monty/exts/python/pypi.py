@@ -300,7 +300,7 @@ class PyPI(
 
     async def parse_pypi_search(self, content: str) -> list[Package]:
         """Parse PyPI search results."""
-        results = []
+        results: list[Package] = []
         log.debug("Beginning to parse with bs4")
         # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
         bs_partial = functools.partial(bs4.BeautifulSoup, parse_only=bs4.SoupStrainer("a", class_="package-snippet"))

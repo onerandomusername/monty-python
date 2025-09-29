@@ -11,7 +11,7 @@ import typing
 from collections import ChainMap, defaultdict
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Literal, MutableMapping, Optional, Set, Tuple, Union
 
 import aiohttp
 import disnake
@@ -219,7 +219,7 @@ class DocCog(
         for packages in self.whitelist.values():
             to_exclude |= packages
 
-        res = []
+        res: list[MutableMapping[str, DocItem]] = []
         for k, v in self.doc_symbols_new.items():
             if k in to_exclude:
                 continue
@@ -749,7 +749,7 @@ class DocCog(
 
         tweak = sorted(tweak, key=lambda v: v[1], reverse=True)
 
-        res = []
+        res: list[str] = []
         if include_query:
             res.append(query)
         for name, score in tweak:

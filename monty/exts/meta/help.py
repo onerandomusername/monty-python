@@ -254,7 +254,7 @@ class HelpSession:
         This is a custom implementation of `command.signature` in order to format the command
         signature without aliases.
         """
-        results = []
+        results: list[str] = []
         for name, param in cmd.clean_params.items():
             # if argument has a default value
             if param.default is not param.empty:

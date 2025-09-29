@@ -95,7 +95,7 @@ async def main() -> None:
         sync_on_cog_actions=True,
     )
 
-    kwargs = {}
+    kwargs: dict[str, str] = {}
     if constants.Client.proxy is not None:
         kwargs["proxy"] = constants.Client.proxy
 

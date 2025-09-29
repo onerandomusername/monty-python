@@ -166,7 +166,7 @@ class Discord(
             ]
         )
 
-        components = []
+        components: list[DeleteButton] = []
 
         labels = {
             disnake.ApplicationInstallTypes.user.flag: "User install",
