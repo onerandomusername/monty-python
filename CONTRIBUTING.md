@@ -37,7 +37,7 @@ The general workflow can be summarized as follows:
 
 1. Fork + clone the repository.
 1. Initialize the development environment:
-    `uv sync --all-groups && uv run pre-commit install`.
+    `uv sync --all-groups && uv run prek install`.
 1. Create a new branch.
 1. Commit your changes, update documentation if required.
 1. Push the branch to your fork, and
@@ -71,7 +71,7 @@ file.
 
 If running the bot within docker, most of the following steps can be skipped as
 the environment is built within docker automatically. You'll still need to clone
-the repository and set up pre-commit hooks.
+the repository and set up the git pre-commit hooks using prek.
 
 ### Clone the repo
 
