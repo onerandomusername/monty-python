@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import datetime
 import functools
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Callable, Coroutine, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Callable, Coroutine, Optional, Tuple, Type, TypeVar, Union, cast
 from weakref import WeakValueDictionary
 
 import cachingutils
@@ -15,6 +15,7 @@ from monty.log import get_logger
 
 
 if TYPE_CHECKING:
+    import redis.asyncio
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")
@@ -162,7 +163,9 @@ class RedisCache:
         timeout: datetime.timedelta = datetime.timedelta(days=1),  # noqa: B008
     ) -> None:
         session = cachingutils.redis.async_session(constants.Redis.prefix)
-        self._rediscache = cachingutils.redis.AsyncRedisCache(prefix=prefix.rstrip(":") + ":", session=session._redis)
+        self._rediscache = cachingutils.redis.AsyncRedisCache(
+            prefix=prefix.rstrip(":") + ":", session=cast("redis.asyncio.Redis", session._redis)
+        )
         self._redis_timeout = timeout.total_seconds()
         self._locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
 
