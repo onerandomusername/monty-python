@@ -61,7 +61,7 @@ class LockedResourceError(RuntimeError):
 
 
 class MontyCommandError(commands.CommandError):
-    def __init__(self, message: str, *, title: str = None):
+    def __init__(self, message: str, *, title: str = None) -> None:
         if not title:
             title = random.choice(FAILURE_HEADERS)
         self.title = title
@@ -69,7 +69,7 @@ class MontyCommandError(commands.CommandError):
 
 
 class OpenDMsRequired(commands.UserInputError):
-    def __init__(self, message: str = None, *args):
+    def __init__(self, message: str = None, *args) -> None:
         self.title = "Open DMs Required"
         if message is None:
             message = "I must be able to DM you to run this command. Please open your DMs"

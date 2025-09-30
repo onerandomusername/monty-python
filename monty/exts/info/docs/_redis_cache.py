@@ -5,10 +5,11 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import cachingutils
 import cachingutils.redis
-import redis.asyncio
 
 
 if TYPE_CHECKING:
+    import redis.asyncio
+
     from ._cog import DocItem
 
 WEEK_SECONDS = datetime.timedelta(weeks=1)

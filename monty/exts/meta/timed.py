@@ -1,10 +1,14 @@
 from copy import copy
 from time import perf_counter
+from typing import TYPE_CHECKING
 
-import disnake
 from disnake.ext import commands
 
 from monty.bot import Monty
+
+
+if TYPE_CHECKING:
+    import disnake
 
 
 class TimedCommands(commands.Cog, name="Timed Commands"):

@@ -284,7 +284,7 @@ class Snowflake(commands.IDConverter):
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
-    has_id_or_mention = bool(commands.IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
+    has_id_or_mention = bool(commands.IDConverter._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
     # Check to see if the author passed a username (a discriminator exists)
     argument = argument.removeprefix("@")

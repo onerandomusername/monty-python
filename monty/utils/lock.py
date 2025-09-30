@@ -3,8 +3,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import defaultdict
-from functools import partial
-from types import TracebackType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,6 +26,8 @@ from monty.utils.function import command_wraps
 
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")
@@ -164,21 +164,3 @@ def lock(
         return wrapper
 
     return decorator
-
-
-def lock_arg(
-    namespace: Hashable,
-    name_or_pos: function.Argument,
-    func: Callable[[Any], _IdCallableReturn] = None,
-    *,
-    raise_error: bool = False,
-    wait: bool = False,
-) -> Callable:
-    """
-    Apply the `lock` decorator using the value of the arg at the given name/position as the ID.
-
-    `func` is an optional callable or awaitable which will return the ID given the argument value.
-    See `lock` docs for more information.
-    """
-    decorator_func = partial(lock, namespace, raise_error=raise_error, wait=wait)
-    return function.get_arg_value_wrapper(decorator_func, name_or_pos, func)

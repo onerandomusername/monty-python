@@ -4,7 +4,6 @@ import random
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, Union
 
-import arrow
 import disnake
 import sqlalchemy as sa
 from disnake.ext import commands, tasks
@@ -19,6 +18,8 @@ from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
+    import arrow
+
     ArrowConverter = arrow.Arrow
     FeatureConverter = Feature
     RolloutConverter = Rollout

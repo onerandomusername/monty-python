@@ -51,7 +51,7 @@ SIGKILL = 9
 REEVAL_EMOJI = "\U0001f501"  # :repeat:
 REEVAL_TIMEOUT = 30
 
-HEADERS = {}
+HEADERS: dict[str, str] = {}
 if Auth.snekbox:
     HEADERS["Authorization"] = Auth.snekbox
 PLACEHOLDER_CODE = """

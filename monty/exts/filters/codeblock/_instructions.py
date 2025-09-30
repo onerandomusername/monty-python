@@ -94,7 +94,7 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
         log.trace("Aborting bad language instructions: language specified isn't Python.")
         return
 
-    lines = []
+    lines: list[str] = []
     language = info.language
 
     if info.has_leading_spaces:

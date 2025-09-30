@@ -7,19 +7,15 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping, TypedDict, cast
 
+from rich.console import Console
+from rich.logging import RichHandler
+
 from monty import constants
 
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
-
-try:
-    from rich.console import Console
-    from rich.logging import RichHandler
-except ImportError:
-    RichHandler = None
-    Console = None
 
 TRACE = 5
 

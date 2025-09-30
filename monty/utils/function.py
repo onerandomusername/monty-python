@@ -56,7 +56,7 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
 def get_arg_value_wrapper(
     decorator_func: t.Callable[[ArgValGetter], Decorator[FuncT, OtherFuncT]],
     name_or_pos: Argument,
-    func: t.Callable[[t.Any], t.Any] = None,
+    func: t.Callable[[t.Any], t.Any] | None = None,
 ) -> Decorator[FuncT, OtherFuncT]:
     """
     Call `decorator_func` with the value of the arg at the given name/position.
@@ -95,12 +95,12 @@ def update_wrapper_globals(
     wrapper: FuncT,
     wrapped: AnyCallable,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
 ) -> FuncT:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
 
-    For forwardrefs in command annotations discordpy uses the __global__ attribute of the function
+    For forwardrefs in command annotations disnake uses the __global__ attribute of the function
     to resolve their values, with decorators that replace the function this breaks because they have
     their own globals.
 
@@ -109,7 +109,7 @@ def update_wrapper_globals(
 
     An exception will be raised in case `wrapper` and `wrapped` share a global name that is used by
     `wrapped`'s typehints and is not in `ignored_conflict_names`,
-    as this can cause incorrect objects being used by discordpy's converters.
+    as this can cause incorrect objects being used by disnake's converters.
     """
     if ignored_conflict_names is None:
         ignored_conflict_names = frozenset()
@@ -143,18 +143,19 @@ def command_wraps(
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
 ) -> t.Callable[[FuncT], FuncT]:
-    """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
+    """Update the decorated function to look like `wrapped` and update globals for disnake forwardref evaluation."""
     if ignored_conflict_names is None:
         ignored_conflict_names = frozenset()
 
     def decorator(wrapper: FuncT) -> FuncT:
-        return functools.update_wrapper(
+        result = functools.update_wrapper(
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
             wrapped,
             assigned,
             updated,
         )
+        return result  # type: ignore
 
     return decorator

@@ -19,7 +19,7 @@ class Guild(Base):
         name="features",
         nullable=False,
         default=[],
-        server_default=r"{}",  # noqa: P103
+        server_default=r"{}",
     )
 
     # features: Mapped[List[Feature]] = relationship(Feature)

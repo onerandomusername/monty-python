@@ -1,14 +1,10 @@
 import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
-
-
-if TYPE_CHECKING:
-    pass
 
 
 class Rollout(Base):

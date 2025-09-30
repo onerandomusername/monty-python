@@ -4,16 +4,17 @@ from typing import TYPE_CHECKING
 
 import disnake
 from disnake.ext import commands
-from disnake.ext.commands import LargeInt, Range
 
-from monty.bot import Monty
 from monty.constants import Endpoints
 from monty.utils import helpers
 from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
+    from disnake.ext.commands import LargeInt, Range
     from disnake.types.appinfo import AppInfo as AppInfoPayload
+
+    from monty.bot import Monty
 
 
 INVITE = """
@@ -165,7 +166,7 @@ class Discord(
             ]
         )
 
-        components = []
+        components: list[DeleteButton] = []
 
         labels = {
             disnake.ApplicationInstallTypes.user.flag: "User install",

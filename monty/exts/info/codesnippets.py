@@ -308,7 +308,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
                     snippet = await handler(**match.groupdict())
                     all_snippets.append((match.start(), snippet))
                 except ClientResponseError as error:
-                    error_message = error.message  # noqa: B306
+                    error_message = error.message
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
                         f"Failed to fetch code snippet from {match[0]!r}: {error.status} "

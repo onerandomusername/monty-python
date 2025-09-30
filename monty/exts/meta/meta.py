@@ -129,7 +129,7 @@ class Meta(
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
         ephemeral = bool(inter.guild_id)
-        components = []
+        components: list[DeleteButton] = []
         if not ephemeral:
             components.append(DeleteButton(inter.author))
         await inter.send(embed=e, ephemeral=ephemeral, components=components)
@@ -165,7 +165,7 @@ class Meta(
             disnake.ApplicationInstallTypes.guild.flag: "Guild invite",
         }
 
-        components = []
+        components: list[DeleteButton] = []
 
         if not ephemeral:
             components.append(DeleteButton(inter.author))

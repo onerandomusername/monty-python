@@ -3,18 +3,21 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import inspect
-from typing import Literal, Optional, Union
+from typing import TYPE_CHECKING, Literal, Optional, Union
 
 import disnake
 import sqlalchemy as sa
 from disnake.ext import commands
 
-from monty.bot import Monty
 from monty.config_metadata import METADATA, ConfigAttrMetadata
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
+
+
+if TYPE_CHECKING:
+    from monty.bot import Monty
 
 
 logger = get_logger(__name__)

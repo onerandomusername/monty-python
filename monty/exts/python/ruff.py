@@ -1,11 +1,10 @@
 import asyncio
-import datetime
 import itertools
 import json
 import random
 import re
 from functools import cache
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import attrs
 import disnake
@@ -18,6 +17,10 @@ from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
+
+
+if TYPE_CHECKING:
+    import datetime
 
 
 logger = get_logger(__name__)
@@ -77,7 +80,7 @@ class Rule:
         list[tuple[str, str]]
             A list of tuples containing section names and their corresponding content.
         """
-        sections = []
+        sections: list[tuple[str, str]] = []
         text = self.explanation
 
         # support markdown shorthand when they're defined

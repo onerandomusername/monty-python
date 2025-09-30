@@ -18,6 +18,7 @@ import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
+from aiohttp.tracing import TraceConfig
 from disnake.ext import commands
 from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -99,29 +100,29 @@ class Monty(commands.Bot):
 
     def create_http_session(self, proxy: str = None) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs = []
+        trace_configs: list[TraceConfig] = []
 
-        aiohttp_log = get_logger(__package__ + ".http")
+        aiohttp_log = get_logger("monty.http")
 
         async def on_request_end(
             session: aiohttp.ClientSession,
-            ctx: SimpleNamespace,
-            end: aiohttp.TraceRequestEndParams,
+            trace_config_ctx: SimpleNamespace,
+            params: aiohttp.TraceRequestEndParams,
         ) -> None:
             """Log all aiohttp requests on request end."""
-            resp = end.response
+            resp = params.response
             aiohttp_log.info(
                 "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
                     status=resp.status,
-                    reason=resp.reason,
-                    method=end.method.upper(),
-                    url=end.url,
+                    reason=resp.reason or "None",
+                    method=params.method.upper(),
+                    url=params.url,
                     content_type=resp.content_type,
                 )
             )
 
         trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)
+        trace_config.on_request_end.append(on_request_end)  # pyright: ignore[reportArgumentType]
         trace_configs.append(trace_config)
 
         # dead simple ETag caching
@@ -160,14 +161,16 @@ class Monty(commands.Bot):
                     cache_logger.debug("HTTP Cache hit on %s", cache_key)
                     # decode the original headers
                     headers: CIMultiDict[str] = CIMultiDict()
-                    for key, value in resp_headers:
-                        headers[key.decode()] = value.decode()
+                    if resp_headers:
+                        for key, value in resp_headers:
+                            headers[key.decode()] = value.decode()
                     r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
                     r.content = reader = aiohttp.StreamReader(
                         protocol=Mock(_reading_paused=False),
-                        limit=len(body),
+                        limit=len(body) if body else 0,
                     )
-                    reader.feed_data(body)
+                    if body:
+                        reader.feed_data(body)
                     reader.feed_eof()
                     r.status = 200
                     return r
@@ -389,15 +392,19 @@ class Monty(commands.Bot):
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
-        if constants.Client.extensions:
+        if constants.Client.extensions is not None:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
+        requested_extensions = set()
+        if isinstance(constants.Client.extensions, set):
+            requested_extensions.update(constants.Client.extensions)
+
         for ext, ext_metadata in walk_extensions():
-            if not constants.Client.extensions:
+            if constants.Client.extensions is None:
                 self.load_extension(ext)
                 continue
 
-            if ext_metadata.core or ext in constants.Client.extensions:
+            if ext_metadata.core or ext in requested_extensions:
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")

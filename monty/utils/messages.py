@@ -131,7 +131,7 @@ def extract_urls(content: str) -> Generator[str, None, None]:
     pos = 0
     while pos < len(content):
         for regex in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
-            match: re.Match[str] = regex.match(content, pos)
+            match: re.Match[str] | None = regex.match(content, pos)
             if match:
                 break
         else:

@@ -677,7 +677,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 guild_db = await self.bot.ensure_guild(guild.id)
                 guild_dbs.append(guild_db)
 
-                more_features = []
+                more_features: list[str] = []
                 for name in feature_names:
                     if name in guild_db.feature_ids:
                         if len(guilds) == 1:

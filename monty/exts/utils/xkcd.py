@@ -1,6 +1,5 @@
 import re
-from random import randint
-from typing import Dict, Optional, Union
+from typing import Optional, TypedDict, Union
 
 import disnake
 from disnake.ext import commands, tasks
@@ -19,6 +18,17 @@ COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"
 
 
+class XkcdDict(TypedDict):
+    num: int
+    month: str  # is int of month in string form
+    year: str
+    day: str
+    alt: str
+    img: str
+    title: str
+    safe_title: str
+
+
 class XKCD(
     commands.Cog,
     slash_command_attrs={
@@ -30,7 +40,7 @@ class XKCD(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.latest_comic_info: Dict[str, Union[str, int]] = {}
+        self.latest_comic_info: Optional[XkcdDict] = None
         self.get_latest_comic_info.start()
 
     def cog_unload(self) -> None:
@@ -48,7 +58,7 @@ class XKCD(
 
     @commands.slash_command(name="xkcd")
     async def fetch_xkcd_comics(
-        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None
+        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[Union[str, int]] = None
     ) -> None:
         """
         View an xkcd comic.
@@ -65,17 +75,17 @@ class XKCD(
 
         embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
-        if comic and (comic := re.match(COMIC_FORMAT, comic)) is None:
+        if comic and (match := re.match(COMIC_FORMAT, comic)) is None:
             raise commands.BadArgument("Comic parameter should either be an integer or 'latest'.")
 
-        comic = randint(1, self.latest_comic_info["num"]) if comic is None else comic.group(0)
-
-        if comic == "latest":
+        if not comic or match.group(0) == "latest":
+            if self.latest_comic_info is None:
+                raise APIError("xkcd", 500, "Could not fetch the latest comic from XKCD. Please try again later.")
             info = self.latest_comic_info
         else:
             async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
                 if resp.status == 200:
-                    info = await resp.json()
+                    info: XkcdDict = await resp.json()
                 elif resp.status == 404:
                     # 404 was avoided as an easter egg. We should show an embed for it
                     if comic != "404":

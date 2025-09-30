@@ -11,7 +11,7 @@ import typing
 from collections import ChainMap, defaultdict
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Literal, MutableMapping, Optional, Set, Tuple, Union
 
 import aiohttp
 import disnake
@@ -22,12 +22,10 @@ import sqlalchemy as sa
 from disnake.ext import commands
 
 from monty import constants
-from monty.bot import Monty
 from monty.database import PackageInfo
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.converters import Inventory, PackageName, ValidURL
 from monty.utils.helpers import maybe_defer
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
@@ -36,6 +34,11 @@ from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
+
+
+if typing.TYPE_CHECKING:
+    from monty.bot import Monty
+    from monty.utils.converters import Inventory, PackageName, ValidURL
 
 
 log = get_logger(__name__)
@@ -216,7 +219,7 @@ class DocCog(
         for packages in self.whitelist.values():
             to_exclude |= packages
 
-        res = []
+        res: list[MutableMapping[str, DocItem]] = []
         for k, v in self.doc_symbols_new.items():
             if k in to_exclude:
                 continue
@@ -746,7 +749,7 @@ class DocCog(
 
         tweak = sorted(tweak, key=lambda v: v[1], reverse=True)
 
-        res = []
+        res: list[str] = []
         if include_query:
             res.append(query)
         for name, score in tweak:

@@ -106,7 +106,7 @@ class DocMarkdownConverter(MarkdownConverter):
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
-    def __init__(self, repo: str = None):
+    def __init__(self, repo: str = None) -> None:
         self._repo = (repo or "").rstrip("/")
 
     def text(self, text: str) -> str:
@@ -133,7 +133,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         else:
             return link
 
-    def image(self, src: str, alt: str = None, title: str = None) -> str:
+    def image(self, src: str, alt: str | None = None, title: str | None = None) -> str:
         """Return a link to the provided image."""
         return "!" + self.link(src, text="image", title=alt)
 
