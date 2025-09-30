@@ -38,7 +38,7 @@ class Client:
     # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     proxy = environ.get("BOT_PROXY_URL", "") or None
-    extensions: bool | str | set[str] = (
+    extensions: bool | set[str] = (
         "BOT_EXTENSIONS" in environ and {ext.strip() for ext in environ["BOT_EXTENSIONS"].split(",")}
     ) or "BOT_EXTENSIONS" in environ
     # source and support

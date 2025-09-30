@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Coroutine, Optional, Type, TypeVar, Union
 
 import aiohttp
 import disnake
@@ -23,7 +23,7 @@ T = TypeVar("T", bound=VALID_CONFIG_TYPES)
 AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context["Monty"]]
 
 
-async def validate_github_org(ctx: AnyContext, arg: T) -> Optional[T]:
+async def validate_github_org(ctx: AnyContext, arg: str) -> Optional[str]:
     """Validate all GitHub orgs meet GitHub's naming requirements."""
     if not arg:
         return None
@@ -63,7 +63,7 @@ class ConfigAttrMetadata:
     requires_bot: bool = True
     long_description: Optional[str] = None
     depends_on_features: Optional[tuple[str]] = None
-    validator: Optional[Union[Callable, Callable[Any, Coroutine]]] = None
+    validator: Optional[Union[Callable, Callable[..., Coroutine]]] = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
     def __post_init__(self) -> None:

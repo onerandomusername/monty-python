@@ -102,27 +102,27 @@ class Monty(commands.Bot):
         """Create the aiohttp session and set the trace logger, if desired."""
         trace_configs: list[TraceConfig] = []
 
-        aiohttp_log = get_logger(__package__ + ".http")
+        aiohttp_log = get_logger("monty.http")
 
         async def on_request_end(
             session: aiohttp.ClientSession,
-            ctx: SimpleNamespace,
-            end: aiohttp.TraceRequestEndParams,
+            trace_config_ctx: SimpleNamespace,
+            params: aiohttp.TraceRequestEndParams,
         ) -> None:
             """Log all aiohttp requests on request end."""
-            resp = end.response
+            resp = params.response
             aiohttp_log.info(
                 "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
                     status=resp.status,
                     reason=resp.reason or "None",
-                    method=end.method.upper(),
-                    url=end.url,
+                    method=params.method.upper(),
+                    url=params.url,
                     content_type=resp.content_type,
                 )
             )
 
         trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)
+        trace_config.on_request_end.append(on_request_end)  # pyright: ignore[reportArgumentType]
         trace_configs.append(trace_config)
 
         # dead simple ETag caching
@@ -395,12 +395,16 @@ class Monty(commands.Bot):
         if constants.Client.extensions is not None:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
+        requested_extensions = set()
+        if isinstance(constants.Client.extensions, set):
+            requested_extensions.update(constants.Client.extensions)
+
         for ext, ext_metadata in walk_extensions():
             if constants.Client.extensions is None:
                 self.load_extension(ext)
                 continue
 
-            if ext_metadata.core or ext in constants.Client.extensions:
+            if ext_metadata.core or ext in requested_extensions:
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")

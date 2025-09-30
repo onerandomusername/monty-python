@@ -12,7 +12,8 @@ import disnake
 import redis
 import redis.asyncio
 from disnake.ext import commands
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy import Connection
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import monty.alembic
 from monty import constants, monkey_patches
@@ -31,7 +32,7 @@ _intents.webhooks = False
 _intents.voice_states = False
 
 
-def run_upgrade(connection: AsyncConnection, cfg: alembic.config.Config) -> None:
+def run_upgrade(connection: Connection, cfg: alembic.config.Config) -> None:
     """Run alembic upgrades."""
     cfg.attributes["connection"] = connection
     alembic.command.upgrade(cfg, "head")
@@ -119,7 +120,7 @@ async def main() -> None:
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
     try:
-        import uvloop
+        import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
 
         uvloop.install()
         log.info("Using uvloop as event loop.")
