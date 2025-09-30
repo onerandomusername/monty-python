@@ -392,7 +392,8 @@ class Monty(commands.Bot):
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
-        if constants.Client.extensions is not None:
+        partial_load = bool(constants.Client.extensions)
+        if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
         requested_extensions = set()
@@ -400,7 +401,7 @@ class Monty(commands.Bot):
             requested_extensions.update(constants.Client.extensions)
 
         for ext, ext_metadata in walk_extensions():
-            if constants.Client.extensions is None:
+            if not partial_load:
                 self.load_extension(ext)
                 continue
 

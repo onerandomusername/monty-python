@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, Optional, Union
 from urllib.parse import urljoin
 
 import aiohttp
@@ -11,15 +9,12 @@ import disnake
 from cachingutils import LRUMemoryCache, async_cached
 from disnake.ext import commands
 
+from monty.bot import Monty
 from monty.constants import Feature, Icons
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
-
-
-if TYPE_CHECKING:
-    from monty.bot import Monty
 
 
 DOMAIN = "https://discuss.python.org"

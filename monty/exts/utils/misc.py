@@ -1,19 +1,14 @@
-from __future__ import annotations
-
 import re
 import unicodedata
-from typing import TYPE_CHECKING, Tuple
+from typing import Tuple
 
 import disnake
 from disnake.ext import commands
 
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
-
-
-if TYPE_CHECKING:
-    from monty.bot import Monty
 
 
 log = get_logger(__name__)

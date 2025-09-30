@@ -7,8 +7,6 @@ License, v. 2.0. If a copy of the MPL was not distributed with this
 file, You can obtain one at http://mozilla.org/MPL/2.0/.
 """  # noqa: D415
 
-from __future__ import annotations
-
 import ast
 import asyncio
 import builtins
@@ -25,12 +23,13 @@ from contextlib import redirect_stdout
 # to expose to the eval command
 from pprint import pprint
 from types import FunctionType
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import arrow
 import disnake
 from disnake.ext import commands
 
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton
@@ -68,10 +67,6 @@ def create_file_obj(
     fp = io.BytesIO(encoded)
     filename = f"{name}.{ext}"
     return disnake.File(fp=fp, filename=filename, spoiler=spoiler)
-
-
-if TYPE_CHECKING:
-    from monty.bot import Monty
 
 
 log = get_logger(__name__)

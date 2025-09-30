@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import functools
 import logging
 import random
@@ -11,6 +9,7 @@ import typing
 import disnake
 from disnake.ext import commands
 
+from monty.bot import Monty
 from monty.constants import Client, Colours, Monitoring
 from monty.errors import APIError, MontyCommandError
 from monty.log import get_logger
@@ -20,10 +19,8 @@ from monty.utils.messages import DeleteButton
 
 
 EXT_METADATA = ExtMetadata(core=True)
-if typing.TYPE_CHECKING:
-    from monty.bot import Monty
 
-    AnyContext = typing.Union[commands.Context, disnake.Interaction]
+AnyContext = typing.Union[commands.Context, disnake.Interaction]
 
 logger = get_logger(__name__)
 

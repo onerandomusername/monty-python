@@ -1,13 +1,12 @@
-from __future__ import annotations
-
 import os
-from typing import TYPE_CHECKING, Final, List
+from typing import TYPE_CHECKING, Final, List, cast
 from urllib.parse import urldefrag
 
 import disnake
 from disnake.ext import commands, tasks
 
 from monty import constants
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.features import require_feature
 from monty.utils.helpers import encode_github_link
@@ -15,8 +14,8 @@ from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
-    from monty.bot import Monty
     from monty.exts.python.eval import Snekbox
+
 
 logger = get_logger(__name__)
 CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
@@ -36,10 +35,10 @@ class GlobalSource(commands.Cog, name="Global Source"):
         self.refresh_code.stop()
 
     @property
-    def snekbox(self) -> Snekbox:
+    def snekbox(self) -> "Snekbox":
         """Return the snekbox cog where the code is ran."""
-        snekbox: Snekbox
-        if snekbox := self.bot.get_cog("Snekbox"):  # type: ignore # this will always be a Snekbox instance
+        snekbox: "Snekbox"
+        if snekbox := cast("Snekbox | None", self.bot.get_cog("Snekbox")):  # this will always be a Snekbox instance
             return snekbox
         raise RuntimeError("Snekbox is not loaded")
 

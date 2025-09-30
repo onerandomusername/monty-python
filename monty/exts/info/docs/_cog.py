@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import copy
 import dataclasses
@@ -22,10 +20,12 @@ import sqlalchemy as sa
 from disnake.ext import commands
 
 from monty import constants
+from monty.bot import Monty
 from monty.database import PackageInfo
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
+from monty.utils.converters import Inventory, PackageName, ValidURL
 from monty.utils.helpers import maybe_defer
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
@@ -34,11 +34,6 @@ from monty.utils.pagination import LinePaginator
 from monty.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
-
-
-if typing.TYPE_CHECKING:
-    from monty.bot import Monty
-    from monty.utils.converters import Inventory, PackageName, ValidURL
 
 
 log = get_logger(__name__)
@@ -76,7 +71,7 @@ class DocItem:
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
     symbol_name: str  # The key in the dictionary where this is found
-    attributes: list[DocItem] = dataclasses.field(default_factory=list, hash=False, repr=False)
+    attributes: "list[DocItem]" = dataclasses.field(default_factory=list, hash=False, repr=False)
 
     @property
     def url(self) -> str:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -12,10 +10,11 @@ if TYPE_CHECKING:
 
     from ._cog import DocItem
 
+
 WEEK_SECONDS = datetime.timedelta(weeks=1)
 
 
-def item_key(item: DocItem) -> str:
+def item_key(item: "DocItem") -> str:
     """Get the redis redis key string from `item`."""
     return f"{item.package}:{item.relative_url_path.removesuffix('.html')}"
 
@@ -29,7 +28,7 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
         self.namespace = self._prefix
         self._redis: redis.asyncio.Redis
 
-    async def set(self, item: DocItem, value: str) -> None:
+    async def set(self, item: "DocItem", value: str) -> None:
         """
         Set the Markdown `value` for the symbol `item`.
 
@@ -48,7 +47,7 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
         if needs_expire:
             await self._redis.expire(redis_key, WEEK_SECONDS)
 
-    async def get(self, item: DocItem, default: Any = None) -> Optional[str]:
+    async def get(self, item: "DocItem", default: Any = None) -> Optional[str]:
         """Return the Markdown content of the symbol `item` if it exists."""
         res = await self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)
         if res:
@@ -68,9 +67,9 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
 
 
 class StaleItemCounter(DocRedisCache):
-    """Manage increment counters for stale `DocItem`s."""
+    """Manage increment counters for stale `"DocItem"`s."""
 
-    async def increment_for(self, item: DocItem) -> int:
+    async def increment_for(self, item: "DocItem") -> int:
         """
         Increment the counter for `item` by 1, set it to expire in 3 weeks and return the new value.
 

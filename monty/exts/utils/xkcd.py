@@ -1,5 +1,5 @@
 import re
-from typing import Optional, TypedDict, Union
+from typing import Optional, TypedDict
 
 import disnake
 from disnake.ext import commands, tasks
@@ -58,7 +58,7 @@ class XKCD(
 
     @commands.slash_command(name="xkcd")
     async def fetch_xkcd_comics(
-        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[Union[str, int]] = None
+        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None
     ) -> None:
         """
         View an xkcd comic.
@@ -67,11 +67,7 @@ class XKCD(
         ----------
         comic: number or 'latest'. Leave empty to show a random comic.
         """
-        embed = disnake.Embed(title=f"XKCD comic '{comic}'")
-
-        # temporary casting back to a string, until a subcommand is added for latest support
-        if comic is not None:
-            comic = str(comic)
+        embed = disnake.Embed()
 
         embed.colour = responses.DEFAULT_FAILURE_COLOUR
 

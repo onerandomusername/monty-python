@@ -1,16 +1,15 @@
-from __future__ import annotations
-
 import asyncio
 import collections
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import TYPE_CHECKING, DefaultDict, Deque, List, NamedTuple, Optional, Union
+from typing import DefaultDict, Deque, List, NamedTuple, Optional, Union
 
 import cachingutils.redis
 from bs4 import BeautifulSoup
 
 from monty import constants
+from monty.bot import Monty
 
 # from bot.constants import Channels
 from monty.log import get_logger
@@ -20,9 +19,6 @@ from monty.utils.html_parsing import get_symbol_markdown
 from . import _cog, doc_cache
 from ._redis_cache import StaleItemCounter
 
-
-if TYPE_CHECKING:
-    from monty.bot import Monty
 
 log = get_logger(__name__)
 
@@ -46,7 +42,7 @@ class StaleInventoryNotifier:
         # await bot.wait_until_guild_available()
         # self._dev_log = self._bot.get_channel(Channels.dev_log)
 
-    async def send_warning(self, doc_item: _cog.DocItem) -> None:
+    async def send_warning(self, doc_item: "_cog.DocItem") -> None:
         """Send a warning to dev log if one wasn't already sent for `item`'s url."""
         pass
         # if doc_item.url not in self._warned_urls:
@@ -65,10 +61,10 @@ class StaleInventoryNotifier:
 class QueueItem(NamedTuple):
     """Contains a `DocItem` and the `BeautifulSoup` object needed to parse it."""
 
-    doc_item: _cog.DocItem
+    doc_item: "_cog.DocItem"
     soup: BeautifulSoup
 
-    def __eq__(self, other: Union[QueueItem, _cog.DocItem]) -> bool:
+    def __eq__(self, other: "Union[QueueItem, _cog.DocItem]") -> bool:
         if isinstance(other, _cog.DocItem):
             return self.doc_item == other
         return NamedTuple.__eq__(self, other)
@@ -99,13 +95,13 @@ class BatchParser:
     def __init__(self, bot: Monty) -> None:
         self._bot: Monty = bot
         self._queue: Deque[QueueItem] = collections.deque()
-        self._page_doc_items: DefaultDict[str, List[_cog.DocItem]] = defaultdict(list)
-        self._item_futures: DefaultDict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
+        self._page_doc_items: "DefaultDict[str, List[_cog.DocItem]]" = defaultdict(list)
+        self._item_futures: "DefaultDict[_cog.DocItem, ParseResultFuture]" = defaultdict(ParseResultFuture)
         self._parse_task = None
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
-    async def get_markdown(self, doc_item: _cog.DocItem) -> Optional[str]:
+    async def get_markdown(self, doc_item: "_cog.DocItem") -> Optional[str]:
         """
         Get the result Markdown of `doc_item`.
 
@@ -181,7 +177,7 @@ class BatchParser:
             self._parse_task = None
             log.trace("Finished parsing queue.")
 
-    def _move_to_front(self, item: Union[QueueItem, _cog.DocItem]) -> None:
+    def _move_to_front(self, item: "Union[QueueItem, _cog.DocItem]") -> None:
         """Move `item` to the front of the parse queue."""
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.
@@ -192,7 +188,7 @@ class BatchParser:
         self._queue.append(queue_item)
         log.trace(f"Moved {item} to the front of the queue.")
 
-    def add_item(self, doc_item: _cog.DocItem) -> None:
+    def add_item(self, doc_item: "_cog.DocItem") -> None:
         """Map a DocItem to its page so that the symbol will be parsed once the page is requested."""
         self._page_doc_items[doc_item.url].append(doc_item)
 
