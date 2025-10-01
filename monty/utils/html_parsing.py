@@ -262,7 +262,7 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     The method of parsing and what information gets included depends on the symbol's group.
     """
     symbol_heading = soup.find(id=symbol_data.symbol_id)
-    if symbol_heading is None or not isinstance(symbol_heading, Tag):
+    if not isinstance(symbol_heading, Tag):
         return None
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,
