@@ -4,7 +4,6 @@ import ast
 import contextlib
 import enum
 import io
-import traceback
 import types
 from dataclasses import dataclass, field
 from typing import Any, Sequence
@@ -43,13 +42,11 @@ class Result:
 
 @dataclass
 class Response:
-    content: str = ""
-    embeds: Sequence[disnake.Embed] = ()
-    files: Sequence[disnake.File] = ()
-    components: Sequence[disnake.ui.MessageUIComponent] = ()
+    files: list[disnake.File] = field(default_factory=list)
+    components: list[disnake.ui.action_row.MessageTopLevelComponent] = field(default_factory=list)
 
 
-class Admin(commands.Cog):
+class Internal(commands.Cog):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
@@ -141,25 +138,92 @@ class Admin(commands.Cog):
                 result._ = new_results
         return result
 
-    def formulate_response(self, result: Result) -> Response:
+    def maybe_file(
+        self, content: str, *, prefix: str = "result", suffix: str = "txt"
+    ) -> tuple[str, disnake.File] | None:
+        """If the content is too long, return a file instead of a string. Returns a tuple of filename and file."""
+        if len(content) > 2000:
+            filename = f"{prefix}.{suffix}"
+            file = disnake.File(io.StringIO(content), filename=filename)
+            return filename, file
+        return None
+
+    def get_component_for_segment(
+        self, *, content: str, title: str, language: str, display_colour: int | disnake.Colour | None = None
+    ) -> tuple[disnake.ui.Container | list[Any], disnake.File | None]:
+        """Get a UI component for a given segment of text."""
+        file = None
+        if len(content) > 2000:
+            file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
+            if file_tuple:
+                filename, file = file_tuple
+                container = disnake.ui.Container(
+                    disnake.ui.TextDisplay(f"Output too long, sent as file `{filename}`."),
+                    disnake.ui.File(f"attachment://{filename}"),
+                )
+        else:
+            container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n```{language}\n{content}\n```"))
+
+        if display_colour is None:
+            display_colour = constants.Colours.python_yellow
+        if isinstance(display_colour, int):
+            display_colour = disnake.Colour(display_colour)
+        container.accent_color = display_colour
+        return container.children, file
+
+    def add_segments(
+        self,
+        response: Response,
+        *,
+        components: Sequence[disnake.ui.action_row.MessageTopLevelComponent] | disnake.ui.Container | None = None,
+        files: Sequence[disnake.File] | disnake.File | None = None,
+    ) -> None:
+        """Add components to a response, ensuring they are in action rows."""
+        if components:
+            if isinstance(components, Sequence):
+                response.components.extend(components)
+            else:
+                response.components.append(components)
+        if files:
+            if isinstance(files, Sequence):
+                response.files.extend(files)
+            else:
+                response.files.append(files)
+
+    def get_formatted_response(self, result: Result) -> Response:
         """Formulate a response message based on the result."""
         response = Response()
-        if result.stdout:
-            response.content += f"**Stdout:**\n```ansi\n{result.stdout}\n```\n"
+        components: list[disnake.ui.Container] = []
         if result.raw_value is not None:
-            response.content += f"**Result:**\n```ansi\n{result.raw_value}\n```"
-        if result.errors:
-            error_trace = "".join(
-                traceback.format_exception(type(result.errors[-1]), result.errors[-1], result.errors[-1].__traceback__)
+            component, file = self.get_component_for_segment(
+                content=result.raw_value, title="Result", language="ansi", display_colour=disnake.Colour.greyple()
             )
-            error_messages = "\n".join(f"{type(e).__name__}: {e}" for e in result.errors)
-            response.content += f"**Errors:**\n```ansi\n{error_messages}\n{error_trace}\n```"
-        if result._:
-            nl = "\n"
-            response.content += f"**Outputs:**\n```ansi\n{nl.join(result._)}\n```"
-        if not response.content:
-            response.content = "No output."
+            self.add_segments(response, components=component, files=file)
+        if result.errors:
+            component, file = self.get_component_for_segment(
+                content="\n".join(repr(item) for item in result.errors),
+                title="Errors",
+                language="ansi",
+                display_colour=constants.Colours.soft_red,
+            )
+            self.add_segments(response, components=component, files=file)
 
+        if result.stdout:
+            component, file = self.get_component_for_segment(
+                content=result.stdout, title="Stdout", language="ansi", display_colour=constants.Colours.blue
+            )
+            self.add_segments(response, components=component, files=file)
+
+        if result._:
+            component, file = self.get_component_for_segment(
+                content="\n".join(repr(item) for item in result._),
+                title="Captured output",
+                language="ansi",
+                display_colour=constants.Colours.soft_orange,
+            )
+            self.add_segments(response, components=component, files=file)
+
+        response.components.extend(components)
         return response
 
     @commands.command(name="ieval", aliases=["iexec"], hidden=True)
@@ -197,12 +261,19 @@ class Admin(commands.Cog):
         body = prepare_input(body)
         result = await self.run_code(body, global_vars, rules=rules)
         result = self.make_pretty(result, rules)
-        response = self.formulate_response(result)
+        response = self.get_formatted_response(result)
 
-        components = [
-            DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m) for m in (ctx.message, None)
+        response.components += [
+            disnake.ui.ActionRow(
+                *[
+                    DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
+                    for m in (ctx.message, None)
+                ]
+            )
         ]
-        await ctx.send(response.content, allowed_mentions=disnake.AllowedMentions.none(), components=components)
+        await ctx.send(
+            allowed_mentions=disnake.AllowedMentions.none(), components=response.components, files=response.files
+        )
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Ensure only the owner can run commands in this extension."""
@@ -213,5 +284,5 @@ class Admin(commands.Cog):
 
 
 def setup(bot: Monty) -> None:
-    """Load the Admin cog."""
-    bot.add_cog(cog=Admin(bot))
+    """Load the Internal cog."""
+    bot.add_cog(cog=Internal(bot))
