@@ -15,8 +15,12 @@ from rich.pretty import pprint
 
 from monty import constants
 from monty.bot import Monty
+from monty.metadata import ExtMetadata
 from monty.utils.code import prepare_input
 from monty.utils.messages import DeleteButton
+
+
+EXT_METADATA = ExtMetadata(core=True)
 
 
 class EvalRules(enum.IntFlag):
@@ -46,7 +50,7 @@ class Response:
     components: list[disnake.ui.action_row.MessageTopLevelComponent] = field(default_factory=list)
 
 
-class Internal(commands.Cog):
+class InternalEval(commands.Cog):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
@@ -287,4 +291,4 @@ class Internal(commands.Cog):
 
 def setup(bot: Monty) -> None:
     """Load the Internal cog."""
-    bot.add_cog(cog=Internal(bot))
+    bot.add_cog(cog=InternalEval(bot))
