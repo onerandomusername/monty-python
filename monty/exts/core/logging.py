@@ -1,5 +1,5 @@
 import traceback
-from typing import Any
+from typing import Any, Optional
 
 import disnake
 from disnake.ext import commands
@@ -20,14 +20,16 @@ class InternalLogger(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_command(self, ctx: commands.Context, command: Any = None, spl: str = None) -> None:
+    async def on_command(
+        self, ctx: commands.Context, command: Optional[commands.Command] = None, content: str = None
+    ) -> None:
         """Log a command invoke."""
-        if not spl:
-            spl = ctx.message.content
-        spl = spl.split("\n")
-        if command is None:
-            command: commands.Command = ctx.command
-        qualname = command.qualified_name
+        if not isinstance(content, str):
+            content = ctx.message.content
+        spl = content.split("\n")
+        if not command:
+            command = ctx.command
+        qualname = command.qualified_name if command else "unknown"
         self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".uses")
         logger.info(
             "command %s by %s (%s) in channel %s (%s) in guild %s: %s",
@@ -48,7 +50,7 @@ class InternalLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
         """Log a successful command completion."""
-        qualname = ctx.command.qualified_name
+        qualname = ctx.command.qualified_name if ctx.command else "unknown"
         logger.info(
             "command %s by %s (%s) in channel %s (%s) in guild %s has completed!",
             qualname,
