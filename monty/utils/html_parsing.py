@@ -6,7 +6,7 @@ import textwrap
 from collections import namedtuple
 from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional, Union
 
-from bs4.element import NavigableString, PageElement, Tag
+from bs4.element import NavigableString, Tag
 
 from monty.exts.info.docs import MAX_SIGNATURE_AMOUNT
 from monty.exts.info.docs._html import get_dd_description, get_general_description, get_signatures
@@ -262,7 +262,7 @@ def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[s
     The method of parsing and what information gets included depends on the symbol's group.
     """
     symbol_heading = soup.find(id=symbol_data.symbol_id)
-    if symbol_heading is None or isinstance(symbol_heading, PageElement):
+    if symbol_heading is None or not isinstance(symbol_heading, Tag):
         return None
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,
