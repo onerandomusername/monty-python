@@ -1,9 +1,11 @@
 """Evaluation features for Monty. These commands provide the ability to evaluate code within the bot context."""
 
 import ast
+import asyncio
 import contextlib
 import enum
 import io
+import sys
 import types
 from dataclasses import dataclass, field
 from typing import Any, Sequence
@@ -37,6 +39,7 @@ class Result:
     message: str | None = None
     stdout: str | None = None
     _: list[Any] = field(default_factory=list)
+    local_vars: dict[str, Any] = field(default_factory=dict)
 
     @property
     def value(self) -> str:
@@ -53,6 +56,7 @@ class Response:
 class InternalEval(commands.Cog):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        self._repl_session = asyncio.Lock()
 
     def get_tree(self, code: str, *, modify: bool = False) -> list[ast.stmt]:
         """Parse code into an AST module, and add a _ assignment to the last statement if desired."""
@@ -116,6 +120,8 @@ class InternalEval(commands.Cog):
         result.raw_value = maybe_value
         if result._:
             result.raw_value = result._.pop()
+
+        result.local_vars.update(global_vars)
 
         return result
 
@@ -263,6 +269,7 @@ class InternalEval(commands.Cog):
             "me": ctx.me,
             "message": ctx.message,
             "pprint": pprint,
+            "asyncio": asyncio,
         }
         body = prepare_input(body)
         result = await self.run_code(body, global_vars, rules=rules)
@@ -280,6 +287,77 @@ class InternalEval(commands.Cog):
         await ctx.send(
             allowed_mentions=disnake.AllowedMentions.none(), components=response.components, files=response.files
         )
+
+    @commands.command(name="repl", hidden=True)
+    async def repl(self, ctx: commands.Context) -> None:
+        """Start a REPL session in the channel."""
+        rules = (
+            EvalRules.pprint_result | EvalRules.modify_return_underscore | EvalRules.dual_await | EvalRules.sort_lists
+        )
+        if self._repl_session.locked():
+            await ctx.send("A REPL session is already running. Please cancel it before starting a new one.")
+            return
+
+        vars = {
+            "author": ctx.author,
+            "bot": self.bot,
+            "channel": ctx.channel,
+            "commands": commands,
+            "constants": constants,
+            "ctx": ctx,
+            "disnake": disnake,
+            "guild": ctx.guild,
+            "me": ctx.me,
+            "message": ctx.message,
+            "pprint": pprint,
+            "asyncio": asyncio,
+        }
+        last_result: Any = None
+        async with self._repl_session:
+            await ctx.send("Starting REPL session. Type code to evaluate it. Send `exit` or `quit` to exit.")
+            while True:
+                # first get a message
+                try:
+                    msg: disnake.Message = await self.bot.wait_for(
+                        "message",
+                        check=lambda m: m.author == ctx.author
+                        and m.channel == ctx.channel
+                        and (content := m.content.removeprefix(sys.ps1).strip())
+                        and (
+                            bool(prepare_input(content, require_fenced=True))
+                            or content.lower().removesuffix("()") in ("exit", "quit")
+                        ),
+                    )
+                except asyncio.TimeoutError:
+                    await ctx.reply("REPL session timed out.")
+                    break
+                if msg.content.strip("`").lower() in ("exit", "quit"):
+                    await msg.reply("Exiting REPL session.")
+                    break
+                body = prepare_input(msg.content, require_fenced=True)
+                try:
+                    result = await self.run_code(body, vars, rules=rules)
+                except SystemExit:
+                    break
+
+                result = self.make_pretty(result, rules)
+                if result.raw_value == last_result:
+                    result.raw_value = None
+                response = self.get_formatted_response(result)
+                response.components += [
+                    disnake.ui.ActionRow(
+                        *[
+                            DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
+                            for m in (ctx.message, None)
+                        ]
+                    )
+                ]
+                await ctx.send(
+                    allowed_mentions=disnake.AllowedMentions.none(),
+                    components=response.components,
+                    files=response.files,
+                )
+                vars = result.local_vars
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Ensure only the owner can run commands in this extension."""
