@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - uses: j178/prek-action@d26c975c4b1a6d0a99add6d5e46f330167356ece # v1.0.7
+      - uses: j178/prek-action@8b6a22b79a7469cb7048b98da156f98876c960b1 # v1.0.10
         env:
           RUFF_OUTPUT_FORMAT: "github"
 
