@@ -142,9 +142,11 @@ class Internal(commands.Cog):
         self, content: str, *, prefix: str = "result", suffix: str = "txt"
     ) -> tuple[str, disnake.File] | None:
         """If the content is too long, return a file instead of a string. Returns a tuple of filename and file."""
+        # TODO: Files are not previewed in components v2
+        # either revert to components v1 or Figure out some different long-output strategy
         if len(content) > 2000:
             filename = f"{prefix}.{suffix}"
-            file = disnake.File(io.StringIO(content), filename=filename)
+            file = disnake.File(io.StringIO(content), filename=filename)  # TODO: fix in Disnake
             return filename, file
         return None
 
