@@ -382,7 +382,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         page: int = 0,
         max_page: int | None = None,
         *,
-        for_guild: disnake.Object | int | None = None,
+        for_guild: disnake.abc.Snowflake | int | None = None,
         show_all: bool | None = None,
     ) -> None:
         def _get_feature_page(
@@ -397,23 +397,22 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if show_all is None:
             show_all = False
 
-        guild_to_check: int | None = None
         # if guild_to_check isn't set, set it to the current guild if available
         # and enable show_all
         if not for_guild and getattr(ctx, "guild", None):
             for_guild = ctx.guild
             show_all = True
 
+        guild_to_check: int | None = None
+        features: list[tuple[str, Feature]] = []
         if for_guild:
             title = "Guild Features"
             guild_to_check = getattr(for_guild, "id", None) or for_guild or getattr(ctx.guild, "id", None)  # type: ignore
-            guild_db = await self.bot.ensure_guild(guild_to_check)
-            if show_all:
-                features = sorted(self.features.items())
-            else:
-                enabled_features = [f for f in self.features.values() if f.name in guild_db.feature_ids]
-                features = sorted((f.name, f) for f in enabled_features)
-        else:
+            if guild_to_check:
+                guild_db = await self.bot.ensure_guild(guild_to_check)
+                features = [(f.name, f) for f in self.features.values() if f.name in guild_db.feature_ids]
+
+        if not features or show_all:
             title = "Global Features"
             features = sorted(self.features.items())
 

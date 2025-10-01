@@ -12,7 +12,6 @@ from monty.constants import Client
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import scheduling
-from monty.utils.converters import Extension
 from monty.utils.extensions import EXTENSIONS, invoke_help_command
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
@@ -25,6 +24,11 @@ log = get_logger(__name__)
 
 UNLOAD_BLACKLIST: set[str] = set()
 BASE_PATH_LEN = exts.__name__.count(".")
+
+if t.TYPE_CHECKING:
+    Extension = str
+else:
+    from monty.utils.converters import Extension
 
 
 class ExtensionStatus(str, Enum):
@@ -93,7 +97,7 @@ class Extensions(commands.Cog):
             return
 
         if "*" in extensions or "**" in extensions:
-            extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
+            extensions = tuple(set(EXTENSIONS) - set(self.bot.extensions.keys()))  # type: ignore
 
         msg = self.batch_manage(Action.LOAD, *extensions)
 
@@ -144,10 +148,9 @@ class Extensions(commands.Cog):
             return
 
         if "**" in extensions:
-            extensions = EXTENSIONS
+            extensions = tuple(EXTENSIONS)
         elif "*" in extensions:
-            extensions = set(self.bot.extensions.keys()) | set(extensions)
-            extensions.remove("*")
+            extensions = tuple(ext for ext in (set(self.bot.extensions.keys()) | set(extensions)) if ext != "*")
 
         msg = self.batch_manage(Action.RELOAD, *extensions)
 
@@ -207,9 +210,9 @@ class Extensions(commands.Cog):
 
         return ExtensionStatus.PARTIALLY_LOADED
 
-    def group_extension_statuses(self) -> t.Mapping[str, str]:
+    def group_extension_statuses(self) -> t.Mapping[str, list[str]]:
         """Return a mapping of extension names and statuses to their categories."""
-        categories: dict[str, str] = {}
+        categories: dict[str, list[str]] = {}
 
         for ext in EXTENSIONS:
             status = self.get_extension_status(ext)
@@ -268,8 +271,7 @@ class Extensions(commands.Cog):
             msg = f":x: Extension `{ext}` is already {verb}ed."
             log.debug(msg[4:])
         except Exception as e:
-            if hasattr(e, "original"):
-                e = e.original
+            e = getattr(e, "original", e)
 
             log.exception(f"Extension '{ext}' failed to {verb}.")
 
@@ -298,7 +300,7 @@ class Extensions(commands.Cog):
             if __name__ in modified_extensions:
                 # we bug out if we try to reload ourselves. It cancels the task
                 # this is utterly terrible code
-                self.bot.cogs["Extensions"]._unloading_through_autoreload = True
+                self._unloading_through_autoreload = True
                 self.bot._autoreload_log_channel = channel  # readd in case it was removed
 
             msg = self.batch_manage(Action.RELOAD, *modified_extensions)
