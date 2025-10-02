@@ -35,6 +35,11 @@ class GatewayLog(commands.Cog):
         self.log.debug(f"Socket event: {event_type}")
         self.socket_events[event_type] += 1
 
+    @commands.Cog.listener()
+    async def on_command_completion(self, ctx: commands.Context) -> None:
+        """Log commands in the socket event log."""
+        self.socket_events["COMMAND_COMPLETION"] += 1
+
     @commands.command(name="gw", hidden=True)
     async def gateway(self, ctx: commands.Context) -> None:
         """Displays gateway event statistics."""
