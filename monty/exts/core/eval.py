@@ -8,7 +8,7 @@ import io
 import sys
 import types
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Sequence, Union
+from typing import Any, Sequence, Union
 
 import disnake
 from disnake.ext import commands
@@ -24,16 +24,15 @@ from monty.utils.messages import DeleteButton
 
 EXT_METADATA = ExtMetadata(core=True)
 
-if TYPE_CHECKING:
-    MessageTopLevelComponent = Union[
-        "disnake.ui.Section",
-        "disnake.ui.TextDisplay",
-        "disnake.ui.MediaGallery",
-        "disnake.ui.File",
-        "disnake.ui.Separator",
-        "disnake.ui.Container",
-        "disnake.ui.ActionRow",
-    ]
+MessageTopLevelComponent = Union[
+    "disnake.ui.Section",
+    "disnake.ui.TextDisplay",
+    "disnake.ui.MediaGallery",
+    "disnake.ui.File",
+    "disnake.ui.Separator",
+    "disnake.ui.Container",
+    "disnake.ui.ActionRow",
+]
 
 
 class EvalRules(enum.IntFlag):
