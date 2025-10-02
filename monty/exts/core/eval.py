@@ -118,7 +118,7 @@ class InternalEval(commands.Cog):
 
             result.stdout = stdout.getvalue()
         result.raw_value = maybe_value
-        if result._:
+        if result._ is not None:
             result.raw_value = result._.pop()
 
         result.local_vars.update(global_vars)
@@ -136,7 +136,7 @@ class InternalEval(commands.Cog):
 
         if EvalRules.pprint_result in rules:
             with io.StringIO() as buf:
-                if result.raw_value:
+                if result.raw_value is not None:
                     pprint(result.raw_value, console=Console(file=buf, no_color=False, color_system="standard"))
                 result.raw_value = buf.getvalue()
                 new_results = []
@@ -173,8 +173,10 @@ class InternalEval(commands.Cog):
                     disnake.ui.TextDisplay(f"Output too long, sent as file `{filename}`."),
                     disnake.ui.File(f"attachment://{filename}"),
                 )
-        else:
+        elif content.strip():
             container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n```{language}\n{content}\n```"))
+        else:
+            container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n*No output.*"))
 
         if display_colour is None:
             display_colour = constants.Colours.python_yellow
@@ -206,7 +208,7 @@ class InternalEval(commands.Cog):
         """Formulate a response message based on the result."""
         response = Response()
         components: list[disnake.ui.Container] = []
-        if result.raw_value is not None:
+        if result.raw_value is not None and result.raw_value.strip():
             component, file = self.get_component_for_segment(
                 content=result.raw_value, title="Result", language="ansi", display_colour=disnake.Colour.greyple()
             )
