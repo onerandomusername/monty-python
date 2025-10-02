@@ -11,6 +11,7 @@ from monty.bot import Monty
 from monty.constants import Endpoints
 from monty.errors import MontyCommandError
 from monty.log import get_logger
+from monty.utils.code import prepare_input
 from monty.utils.messages import DeleteButton, extract_urls
 from monty.utils.services import send_to_paste_service
 
@@ -53,10 +54,7 @@ class CodeBlockActions(
 
     def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> Optional[str]:
         """Get the code from the provided content. Parses codeblocks and assures its python code."""
-        if not (snekbox := self.get_snekbox()):
-            logger.trace("Could not parse message as the snekbox cog is not loaded.")
-            return None
-        code = snekbox.prepare_input(content, require_fenced=require_fenced)
+        code = prepare_input(content, require_fenced=require_fenced)
         if not code:
             logger.trace("Parsed message but either no code was found or was too short.")
             return None
