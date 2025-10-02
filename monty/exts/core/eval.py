@@ -278,12 +278,13 @@ class InternalEval(commands.Cog):
         result = self.make_pretty(result, rules)
         response = self.get_formatted_response(result)
 
+        if ctx.guild is not None and ctx.channel.permissions_for(ctx.guild.me).manage_messages:
+            delete_contexts = (ctx.message, None)
+        else:
+            delete_contexts = (None,)
         response.components += [
             disnake.ui.ActionRow(
-                *[
-                    DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
-                    for m in (ctx.message, None)
-                ]
+                *[DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m) for m in delete_contexts]
             )
         ]
         await ctx.send(
