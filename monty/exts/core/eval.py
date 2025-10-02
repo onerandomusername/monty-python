@@ -58,11 +58,12 @@ class InternalEval(commands.Cog):
         self.bot = bot
         self._repl_session = asyncio.Lock()
 
-    def get_tree(self, code: str, *, modify: bool = False) -> list[ast.stmt]:
+    def get_tree(self, code: str, *, modify: bool = False) -> tuple[list[ast.stmt], bool]:
         """Parse code into an AST module, and add a _ assignment to the last statement if desired."""
         # we force an ast parse to see if we can make the final statement an assignment to `_` so we can print the repr
         tree = ast.parse(code, filename="<ieval>", mode="exec")
 
+        added_underscore = False
         if modify:
             last_node = tree.body[-1]
             if isinstance(last_node, ast.Expr):
@@ -71,8 +72,9 @@ class InternalEval(commands.Cog):
                     targets=[ast.Name(id="_", ctx=ast.Store())],
                     value=last_node.value,
                 )
+                added_underscore = True
 
-        return tree.body
+        return tree.body, added_underscore
 
     async def _run_stmt(self, stmt: ast.stmt, global_vars: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
         """Run a single statement. stdout won't be redirected."""
@@ -99,7 +101,7 @@ class InternalEval(commands.Cog):
         """Run code in an async context if necessary."""
         result = Result()
         try:
-            tree = self.get_tree(code, modify=EvalRules.modify_return_underscore in rules)
+            tree, added_underscore = self.get_tree(code, modify=EvalRules.modify_return_underscore in rules)
         except SyntaxError as e:
             result.errors.append(e.with_traceback(None))
             return result
@@ -118,7 +120,7 @@ class InternalEval(commands.Cog):
 
             result.stdout = stdout.getvalue()
         result.raw_value = maybe_value
-        if result._ is not None:
+        if result._ and added_underscore:
             result.raw_value = result._.pop()
 
         result.local_vars.update(global_vars)
