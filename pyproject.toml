@@ -52,7 +52,7 @@ tools = [
     "isort==6.1.0",
     "poethepoet>=0.37.0",
     "prek>=0.2.1,<0.3",
-    "ruff==0.13.1",
+    "ruff==0.13.2",
 ]
 typing = ["pyright==1.1.406", "msgpack-types<1.0.0,>=0.5.0"]
 docs = [
