@@ -8,7 +8,7 @@ import io
 import sys
 import types
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence, Union
 
 import disnake
 from disnake.ext import commands
@@ -23,6 +23,17 @@ from monty.utils.messages import DeleteButton
 
 
 EXT_METADATA = ExtMetadata(core=True)
+
+if TYPE_CHECKING:
+    MessageTopLevelComponent = Union[
+        "disnake.ui.Section",
+        "disnake.ui.TextDisplay",
+        "disnake.ui.MediaGallery",
+        "disnake.ui.File",
+        "disnake.ui.Separator",
+        "disnake.ui.Container",
+        "disnake.ui.ActionRow",
+    ]
 
 
 class EvalRules(enum.IntFlag):
@@ -50,7 +61,7 @@ class Result:
 @dataclass
 class Response:
     files: list[disnake.File] = field(default_factory=list)
-    components: list[disnake.ui.action_row.MessageTopLevelComponent] = field(default_factory=list)
+    components: list[MessageTopLevelComponent] = field(default_factory=list)
 
 
 class InternalEval(commands.Cog):
@@ -158,7 +169,7 @@ class InternalEval(commands.Cog):
         # either revert to components v1 or Figure out some different long-output strategy
         if len(content) > 2000:
             filename = f"{prefix}.{suffix}"
-            file = disnake.File(io.StringIO(content), filename=filename)  # TODO: fix in Disnake
+            file = disnake.File(io.BytesIO(content.encode()), filename=filename)  # TODO: fix in Disnake
             return filename, file
         return None
 
@@ -191,7 +202,7 @@ class InternalEval(commands.Cog):
         self,
         response: Response,
         *,
-        components: Sequence[disnake.ui.action_row.MessageTopLevelComponent] | disnake.ui.Container | None = None,
+        components: Sequence[MessageTopLevelComponent] | disnake.ui.Container | None = None,
         files: Sequence[disnake.File] | disnake.File | None = None,
     ) -> None:
         """Add components to a response, ensuring they are in action rows."""
