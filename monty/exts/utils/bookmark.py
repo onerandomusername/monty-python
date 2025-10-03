@@ -300,9 +300,11 @@ class Bookmark(
     # cursed.
     async def bookmark_button(self, inter: Union[disnake.MessageInteraction, disnake.ModalInteraction]) -> None:
         """Listen for bookmarked button events and respond to them."""
-        if not inter.component.custom_id.startswith(CUSTOM_ID):
+        custom_id: str = inter.component.custom_id
+        if not custom_id.startswith(CUSTOM_ID):
             return
-        custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
+
+        custom_id = custom_id.removeprefix(CUSTOM_ID)
 
         def remove_button(message: disnake.Message | None) -> list[disnake.ui.MessageUIComponent]:
             if message is None:
@@ -327,7 +329,8 @@ class Bookmark(
             await inter.response.send_message("I can no longer view this channel.", ephemeral=True)
             return
 
-        if not channel.permissions_for(channel.guild.me).read_message_history:
+        app_permissions = channel.permissions_for(channel.me)  # type: ignore
+        if not app_permissions.read_message_history:
             # while we could remove the button there is no reason to as we aren't making an invalid api request
             await inter.response.send_message("I am currently unable to view the message this button is for.")
             return
