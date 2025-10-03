@@ -36,7 +36,10 @@ class Colour(
             del self.colour_mapping["_"]  # Delete source credit entry
 
     async def send_colour_response(
-        self, ctx: Union[commands.Context, disnake.CommandInteraction], rgb: tuple[int, int, int], input_colour: str
+        self,
+        ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],
+        rgb: tuple[int, int, int],
+        input_colour: str | None,
     ) -> None:
         """Create and send embed from user given colour information."""
         name = self._rgb_to_name(rgb) or ""
@@ -61,7 +64,7 @@ class Colour(
         elif colour_mode == "name":
             input_colour = kwargs["name"]
         elif colour_mode == "hex":
-            if len(input_colour) > 7:
+            if input_colour and len(input_colour) > 7:
                 input_colour = input_colour[:-2]
         else:
             input_colour = str(rgb)
@@ -73,9 +76,15 @@ class Colour(
 
         colour_embed = disnake.Embed(
             title=f"{name or input_colour}",
-            description=f"{colour_or_color.title()} information for {colour_mode} `{input_colour or name}`.",
             colour=disnake.Color.from_rgb(*rgb),
         )
+        description = f"{colour_or_color.title()} information "
+        if input_colour or name:
+            description += f"for {colour_mode} `{input_colour or name}`"
+        else:
+            description += f"for RGB `{rgb[0]}, {rgb[1]}, {rgb[2]}`"
+        colour_embed.description = description
+
         colour_conversions = self.get_colour_conversions(rgb)
         for colour_space, value in colour_conversions.items():
             colour_embed.add_field(name=colour_space, value=f"`{value}`", inline=True)
@@ -106,13 +115,13 @@ class Colour(
             return
 
         try:
-            extra_colour = ImageColor.getrgb(colour_input)
+            extra_colour = ImageColor.getrgb(colour_input)[:3]
             await self.send_colour_response(ctx, extra_colour, input_colour=colour_input)
         except ValueError:
             await invoke_help_command(ctx)
 
     @commands.slash_command(name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}))
-    async def slash_colour(self, inter: disnake.CommandInteraction) -> None:
+    async def slash_colour(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Show information about a colour."""
         pass
 
@@ -129,7 +138,7 @@ class Colour(
     @slash_colour.sub_command(name="rgb")
     async def slash_rgb(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.ApplicationCommandInteraction,
         red: commands.Range[int, 0, 255],
         green: commands.Range[int, 0, 255],
         blue: commands.Range[int, 0, 255],
@@ -157,13 +166,13 @@ class Colour(
                 )
             )
         input_colour = f"hsv({hue}, {saturation}%, {value}%)"
-        hsv_tuple = ImageColor.getrgb(input_colour)
+        hsv_tuple = ImageColor.getrgb(input_colour)[:3]
         await self.send_colour_response(ctx, hsv_tuple, input_colour=input_colour)
 
     @slash_colour.sub_command(name="hsv")
     async def slash_hsv(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.ApplicationCommandInteraction,
         hue: commands.Range[int, 0, 360],
         sat: commands.Range[int, 0, 360],
         value: commands.Range[int, 0, 100],
@@ -178,7 +187,7 @@ class Colour(
         value: Value.
         """
         input_colour = f"hsv({hue}, {sat}%, {value}%)"
-        hsv_tuple = ImageColor.getrgb(input_colour)
+        hsv_tuple = ImageColor.getrgb(input_colour)[:3]
         await self.send_colour_response(inter, hsv_tuple, input_colour=input_colour)
 
     @colour.command()
@@ -192,13 +201,13 @@ class Colour(
                 )
             )
         input_colour = f"hsl({hue}, {saturation}%, {lightness}%)"
-        hsl_tuple = ImageColor.getrgb(input_colour)
+        hsl_tuple = ImageColor.getrgb(input_colour)[:3]
         await self.send_colour_response(ctx, hsl_tuple, input_colour=input_colour)
 
     @slash_colour.sub_command(name="hsl")
     async def slash_hsl(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.ApplicationCommandInteraction,
         hue: commands.Range[int, 0, 360],
         sat: commands.Range[int, 0, 360],
         lightness: commands.Range[int, 0, 100],
@@ -213,25 +222,25 @@ class Colour(
         lightness: Lightness.
         """
         input_colour = f"hsl({hue}, {sat}%, {lightness}%)"
-        hsl_tuple = ImageColor.getrgb(input_colour)
+        hsl_tuple = ImageColor.getrgb(input_colour)[:3]
         await self.send_colour_response(inter, hsl_tuple, input_colour=input_colour)
 
     @colour.command()
-    async def cmyk(self, ctx: commands.Context, cyan: int, magenta: int, yellow: int, key: int) -> None:
+    async def cmyk(self, ctx: commands.Context, cyan: int, magenta: int, yellow: int, black: int) -> None:
         """Create an embed from a CMYK input."""
-        if any(c not in range(101) for c in (cyan, magenta, yellow, key)):
+        if any(c not in range(101) for c in (cyan, magenta, yellow, black)):
             raise commands.BadArgument(
-                message=f"CMYK values can only be from 0 to 100. User input was: `{cyan, magenta, yellow, key}`."
+                message=f"CMYK values can only be from 0 to 100. User input was: `{cyan, magenta, yellow, black}`."
             )
-        r = round(255 * (1 - (cyan / 100)) * (1 - (key / 100)))
-        g = round(255 * (1 - (magenta / 100)) * (1 - (key / 100)))
-        b = round(255 * (1 - (yellow / 100)) * (1 - (key / 100)))
-        await self.send_colour_response(ctx, (r, g, b), input_colour=f"CMYK: {cyan}, {magenta}, {yellow}, {key}")
+        r = round(255 * (1 - (cyan / 100)) * (1 - (black / 100)))
+        g = round(255 * (1 - (magenta / 100)) * (1 - (black / 100)))
+        b = round(255 * (1 - (yellow / 100)) * (1 - (black / 100)))
+        await self.send_colour_response(ctx, (r, g, b), input_colour=f"CMYK: {cyan}, {magenta}, {yellow}, {black}")
 
     @slash_colour.sub_command(name="cymk")
-    async def slash_cymk(
+    async def slash_cmyk(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.ApplicationCommandInteraction,
         cyan: commands.Range[int, 0, 100],
         magenta: commands.Range[int, 0, 100],
         yellow: commands.Range[int, 0, 100],
@@ -247,14 +256,19 @@ class Colour(
         yellow: Yellow.
         black: Black.
         """
-        await self.cmyk(inter, cyan, magenta, yellow, black)
+        if any(c not in range(101) for c in (cyan, magenta, yellow, black)):
+            raise commands.BadArgument(
+                message=f"CMYK values can only be from 0 to 100. User input was: `{cyan, magenta, yellow, black}`."
+            )
+        r = round(255 * (1 - (cyan / 100)) * (1 - (black / 100)))
+        g = round(255 * (1 - (magenta / 100)) * (1 - (black / 100)))
+        b = round(255 * (1 - (yellow / 100)) * (1 - (black / 100)))
+        await self.send_colour_response(inter, (r, g, b), input_colour=f"CMYK: {cyan}, {magenta}, {yellow}, {black}")
 
-    @colour.command()
-    async def hex(self, ctx: commands.Context, hex_code: str) -> None:
-        """Create an embed from a HEX input."""
+    def _hex(self, hex_code: str) -> tuple[str, tuple[int, int, int]]:
+        """Convert HEX code to RGB tuple."""
         if hex_code[0] != "#":
             hex_code = f"#{hex_code}"
-
         if len(hex_code) not in (4, 5, 7, 9) or any(digit not in string.hexdigits for digit in hex_code[1:]):
             raise commands.BadArgument(
                 message=(
@@ -262,14 +276,16 @@ class Colour(
                     "Hex values must be hexadecimal and take the form *#RRGGBB* or *#RGB*."
                 )
             )
+        return hex_code, ImageColor.getrgb(hex_code)[:3]
 
-        hex_tuple = ImageColor.getrgb(hex_code)
-        if len(hex_tuple) > 3:
-            hex_tuple = hex_tuple[:3]  # Colour must be RGB. If RGBA, we remove the alpha value
+    @colour.command()
+    async def hex(self, ctx: commands.Context | disnake.ApplicationCommandInteraction, hex_code: str) -> None:
+        """Create an embed from a HEX input."""
+        hex_code, hex_tuple = self._hex(hex_code)
         await self.send_colour_response(ctx, hex_tuple, input_colour=hex_code)
 
     @slash_colour.sub_command(name="hex")
-    async def slash_hex(self, inter: disnake.CommandInteraction, hex: str) -> None:
+    async def slash_hex(self, inter: disnake.ApplicationCommandInteraction, hex: str) -> None:
         """
         HEX Format.
 
@@ -277,24 +293,24 @@ class Colour(
         ----------
         hex: Hex colour code.
         """
-        try:
-            await self.hex(inter, hex)
-        except commands.BadArgument as e:
-            await inter.send(str(e), ephemeral=True)
+        hex, hex_tuple = self._hex(hex)
+        await self.send_colour_response(inter, hex_tuple, input_colour=hex)
+
+    def _name(self, name: str) -> tuple[str, tuple[int, int, int]]:
+        """Convert colour name to RGB tuple."""
+        matched_hex = self.match_colour_name(name)
+        if matched_hex is None:
+            raise MontyCommandError(f"Could not find a close match for the colour name `{name}`.")
+        return name, ImageColor.getrgb(matched_hex)[:3]
 
     @colour.command()
     async def name(self, ctx: commands.Context, *, name: str) -> None:
         """Create an embed from a name input."""
-        hex_colour = self.match_colour_name(ctx, name)
-        if hex_colour is None:
-            raise MontyCommandError(f"No colour found for: `{name}`", title="No colour match found.")
-        hex_tuple = ImageColor.getrgb(hex_colour)
-        if len(hex_tuple) > 3:
-            hex_tuple = hex_tuple[:3]
-        await self.send_colour_response(ctx, hex_tuple, input_colour=name)
+        name, name_tuple = self._name(name)
+        await self.send_colour_response(ctx, name_tuple, input_colour=name)
 
     @slash_colour.sub_command(name="name")
-    async def slash_name(self, inter: disnake.CommandInteraction, name: str) -> None:
+    async def slash_name(self, inter: disnake.ApplicationCommandInteraction, name: str) -> None:
         """
         Get a colour by name.
 
@@ -302,23 +318,30 @@ class Colour(
         ----------
         name: Colour name, by close match.
         """
-        await self.name(inter, name=name)
+        name, name_tuple = self._name(name)
+        await self.send_colour_response(inter, name_tuple, input_colour=name)
 
-    @colour.command()
-    async def random(self, ctx: commands.Context) -> None:
-        """Create an embed from a randomly chosen colour."""
+    def _random(self) -> tuple[int, int, int]:
+        """Generate a random RGB tuple."""
         hex_colour = random.choice(list(self.colour_mapping.values()))
         hex_tuple = ImageColor.getrgb(f"#{hex_colour}")
         if len(hex_tuple) > 3:
             hex_tuple = hex_tuple[:3]
-        await self.send_colour_response(ctx, hex_tuple, input_colour=None)
+        return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+
+    @colour.command()
+    async def random(self, ctx: commands.Context) -> None:
+        """Create an embed from a randomly chosen colour."""
+        await self.send_colour_response(ctx, self._random(), input_colour=None)
 
     @slash_colour.sub_command(name="random")
-    async def slash_random(self, inter: disnake.CommandInteraction) -> None:
+    async def slash_random(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Random colour."""
-        await self.random(inter)
+        await self.send_colour_response(inter, self._random(), input_colour=None)
 
-    def get_colour_conversions(self, rgb: tuple[int, int, int]) -> dict[str, str]:
+    def get_colour_conversions(
+        self, rgb: tuple[int, int, int]
+    ) -> dict[str, tuple[int, int, int] | tuple[int, int, int, int] | str]:
         """Create a dictionary mapping of colour types and their values."""
         colour_name = self._rgb_to_name(rgb)
         if colour_name is None:
@@ -372,23 +395,28 @@ class Colour(
         """Convert RGB values to a fuzzy matched name."""
         input_hex_colour = self._rgb_to_hex(rgb)
         try:
-            match, certainty, _ = rapidfuzz.process.extractOne(
+            result = rapidfuzz.process.extractOne(
                 query=input_hex_colour, choices=self.colour_mapping.values(), score_cutoff=80
             )
-            colour_name = [name for name, hex_code in self.colour_mapping.items() if hex_code == match][0]
-        except TypeError:
-            colour_name = None
-        return colour_name
+            if result:
+                match, certainty, _ = result
+                return [name for name, hex_code in self.colour_mapping.items() if hex_code == match][0]
+        except (TypeError, ValueError):
+            pass
+        return None
 
-    def match_colour_name(self, ctx: commands.Context, input_colour_name: str) -> Optional[str]:
+    def match_colour_name(self, input_colour_name: str) -> Optional[str]:
         """Convert a colour name to HEX code."""
         try:
-            match, certainty, _ = rapidfuzz.process.extractOne(
+            result = rapidfuzz.process.extractOne(
                 query=input_colour_name, choices=self.colour_mapping.keys(), score_cutoff=80
             )
+            if result:
+                match, certainty, _ = result
+                return f"#{self.colour_mapping[match]}"
         except (ValueError, TypeError):
-            return
-        return f"#{self.colour_mapping[match]}"
+            pass
+        return None
 
 
 def setup(bot: Monty) -> None:
