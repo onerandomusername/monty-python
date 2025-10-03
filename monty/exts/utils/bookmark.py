@@ -166,11 +166,10 @@ class Bookmark(
                 disnake.ui.Button(label="Jump to Message", url=target_message.jump_url),
             ),
         ]
+        kwargs = {}
         if isinstance(ctx, commands.Context):
             if ctx.channel == target_message.channel and ctx.channel.permissions_for(ctx.me).read_message_history:
-                reference = target_message.to_reference(fail_if_not_exists=False)
-            else:
-                reference = None
+                kwargs["reference"] = target_message.to_reference(fail_if_not_exists=False)
 
             allowed_mentions = disnake.AllowedMentions.none()
             allowed_mentions.users = [ctx.author]
@@ -178,14 +177,10 @@ class Bookmark(
             await ctx.send(
                 content=content,
                 allowed_mentions=allowed_mentions,
-                reference=reference,
                 components=DeleteButton(ctx.author, initial_message=ctx.message),
             )
             message = await ctx.send(
-                embed=embed,
-                allowed_mentions=disnake.AllowedMentions.none(),
-                components=components,
-                reference=reference,
+                embed=embed, allowed_mentions=disnake.AllowedMentions.none(), components=components, **kwargs
             )
         else:
             if (

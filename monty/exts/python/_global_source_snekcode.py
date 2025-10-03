@@ -95,23 +95,28 @@ if __name__ == "__main__":
         for node in ast.walk(parsed):
             if not hasattr(node, "lineno"):
                 continue
-            if node.lineno < first_lineno:
-                continue
+
             if isinstance(node, ast.Assign):
                 target = node.targets[0]
             elif isinstance(node, ast.AnnAssign):
                 target = node.target
             else:
                 continue
+
+            if node.lineno < first_lineno:
+                continue
+
             if parents:
                 if getattr(target, "attr", None) != name:
                     continue
             elif getattr(target, "id", None) != name:
                 continue
+
             if node.end_lineno:
                 end_lineno = node.end_lineno
             else:
                 end_lineno = node.lineno
+
             _endlines.add((node.lineno, end_lineno))
 
         if _endlines:
@@ -131,6 +136,7 @@ if __name__ == "__main__":
             lines_extension = f"#L{first_lineno}-L{first_lineno + len(lines) - 1}"
         else:
             lines_extension = ""
+
         module_name = ""
     if not filename:
         sys.exit(6)
@@ -153,7 +159,7 @@ if __name__ == "__main__":
         sys.exit(5)
 
     # get the version and link to the source of the module
-    if top_module_name in sys.stdlib_module_names:  # type: ignore # this code runs on py3.10
+    if top_module_name in sys.stdlib_module_names:
         if top_module_name in sys.builtin_module_names:
             sys.exit(6)
         # handle the object being part of the stdlib
@@ -170,9 +176,11 @@ if __name__ == "__main__":
         except importlib.metadata.PackageNotFoundError:
             print(f"Sorry, I can't find the metadata for `{object_name}`.")
             sys.exit(7)
-        # print(metadata.keys())
+
         version = metadata["Version"]
-        for url in [metadata.get("Home-page"), *metadata.json.get("project_url", [])]:  # type: ignore # runs on py3.10
+
+        urls = [metadata[name] for name in ("Home-page", "Project-URL") if name in metadata]
+        for url in urls:
             if not url:
                 continue
             url = url.split(",", 1)[-1].strip().rstrip("/")
@@ -182,12 +190,15 @@ if __name__ == "__main__":
         else:
             print("This package isn't supported right now.")
             sys.exit(8)
+
         # I ideally want to use the database for this and run that locally by sending a pickled result.
         if top_module_name not in ("arrow", "databases", "ormar", "typing_extensions"):
             version = f"v{version}"
         if top_module_name in ("typing_extensions",):
             filename = f"src/{filename}"
+
         url += f"/blob/{version}/{filename}{lines_extension}"
+
     # used to be able to slice code to ignore import side-effects
     print("#" * 80)
     print(url)

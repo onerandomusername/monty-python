@@ -46,6 +46,8 @@ class Discord(
 
     async def fetch_app_info_for_client(self, client_id: int) -> disnake.AppInfo:
         """Given a client ID, fetch the user."""
+        if not Endpoints.app_info:
+            raise commands.UserInputError("The application info endpoint is not configured.")
         async with self.bot.http_session.get(Endpoints.app_info.format(application_id=client_id)) as resp:
             if resp.status != 200:
                 content = "Could not get application info."
@@ -121,7 +123,7 @@ class Discord(
     @discord.sub_command(name="app-invite")
     async def app_invite(
         self,
-        inter: disnake.AppCmdInter,
+        inter: disnake.ApplicationCommandInteraction,
         client_id: LargeInt,
         permissions: Range[int, 0, disnake.Permissions.all().value] = None,
         guild_id: LargeInt = None,
@@ -145,9 +147,12 @@ class Discord(
             await inter.response.send_message(str(e), ephemeral=True)
             return
 
-        if isinstance(permissions, int):
-            permissions: disnake.Permissions = disnake.Permissions(permissions)
-        urls = helpers.get_invite_link_from_app_info(app_info, guild_id=guild_id, default_permissions=permissions)
+        permissions_instance: disnake.Permissions | None = (
+            disnake.Permissions(permissions) if permissions is not None else None
+        )
+        urls = helpers.get_invite_link_from_app_info(
+            app_info, guild_id=guild_id, default_permissions=permissions_instance
+        )
         # TODO: raise error within get_invite_link_from_app_info and propagate that to the user
         if not urls:
             await inter.response.send_message(
@@ -163,7 +168,7 @@ class Discord(
             ]
         )
 
-        components: list[DeleteButton] = []
+        components: list[disnake.ui.Button] = []
 
         labels = {
             disnake.ApplicationInstallTypes.user.flag: "User install",
@@ -204,7 +209,7 @@ class Discord(
     @api.sub_command(name="guild-invite")
     async def guild_invite(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.ApplicationCommandInteraction,
         invite: disnake.Invite,
         ephemeral: bool = True,
         with_features: bool = False,
@@ -220,6 +225,8 @@ class Discord(
         """
         if not invite.guild:
             raise commands.BadArgument("Group dm invites are not supported.")
+        if not isinstance(invite.guild, disnake.Guild | disnake.PartialInviteGuild):
+            raise commands.BadArgument("Could not get guild information from that invite.")
         if invite.guild.nsfw_level not in (disnake.NSFWLevel.default, disnake.NSFWLevel.safe):
             raise commands.BadArgument(f"Refusing to process invite for the nsfw guild, {invite.guild.name}.")
             return

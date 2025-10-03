@@ -36,13 +36,29 @@ class HeaderParser:
     def parse(self, soup: BeautifulSoup) -> dict[str, str]:
         """Parse the provided BeautifulSoup object and return a dict of pep headers."""
         dl = soup.find("dl")
+        if not dl:
+            log.error("Failed to find descriptor list in PEP HTML. `dl` could not be found.")
+            raise MontyCommandError("Failed to parse PEP headers. Please report this issue in the support server.")
         results = {}
-        for dt in dl.find_all("dt"):
-            results[dt.text] = dt.find_next_sibling("dd").text
+        # all headers should be in dt/dd pairs
+        try:
+            for dt in dl.find_all("dt"):
+                next_sibling = dt.find_next_sibling("dd")
+                if not next_sibling:
+                    raise ValueError("Failed to find matching dd for dt in PEP headers.")
+                results[dt.text] = next_sibling.text
+        except Exception as e:
+            log.error("Failed to parse PEP headers.", exc_info=e)
+            raise MontyCommandError(
+                "Failed to parse PEP headers. Please report this issue in the support server."
+            ) from None
 
         # readd title to headers
         # this was removed from the headers in python/peps#2532
         h1 = soup.find("h1", attrs={"class": "page-title"})
+        if not h1:
+            log.error("Failed to find PEP title in PEP HTML. `h1.page-title` could not be found.")
+            raise MontyCommandError("Failed to parse PEP title. Please report this issue in the support server.")
         results["title"] = h1.text.split("–", 1)[-1]
 
         return results
@@ -53,9 +69,9 @@ class PEPHeaders:
 
     header_tags = ["h2", "h3", "h4", "h5", "h6"]
 
-    def parse(self, soup: BeautifulSoup) -> str:
-        """Parse the provided BeautifulSoup object and return a string of headers in the pep's body."""
-        headers: dict[tuple[str, str], str] = {}
+    def parse(self, soup: BeautifulSoup) -> dict[str, str]:
+        """Parse the provided BeautifulSoup object and return a dict of PEP header to body."""
+        headers: dict[str, str] = {}
         for header in soup.find_all(self.header_tags):
             headers[header.text] = header.name
 

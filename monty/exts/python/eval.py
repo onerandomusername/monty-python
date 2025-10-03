@@ -2,7 +2,7 @@ import asyncio
 import re
 from functools import partial
 from signal import Signals
-from typing import Any, Optional, Tuple, overload
+from typing import Literal, Optional, Tuple, overload
 
 import aiohttp
 import disnake
@@ -101,7 +101,7 @@ class Snekbox(
     async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = self.url / "eval"
-        data = {"input": code}
+        data: dict[str, str | list[str]] = {"input": code}
 
         if args is not None:
             data["args"] = args
@@ -188,9 +188,9 @@ class Snekbox(
         lines = output.count("\n")
 
         if lines > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
-            output = output[:11]  # Limiting to only 11 lines
-            output = "\n".join(output)
+            output_lines = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
+            output_lines = output_lines[:11]  # Limiting to only 11 lines
+            output = "\n".join(output_lines)
 
         if lines > 10:
             truncated = True
@@ -211,19 +211,49 @@ class Snekbox(
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = True, original_source: bool = False
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: Literal[True] = True,
+        original_source: bool = False,
     ) -> tuple[str, Optional[str]]:
         pass
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
     ) -> disnake.Message:
         pass
 
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
-    ) -> Any:
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.MessageCommandInteraction
+            | disnake.ModalInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
+    ) -> tuple[str, Optional[str]] | disnake.Message:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
@@ -231,6 +261,8 @@ class Snekbox(
         """
         if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
+        elif isinstance(ctx, disnake.Message):
+            await ctx.channel.trigger_typing()
         results = await self.post_eval(code)
         msg, error = self.get_results_message(results)
 
@@ -245,8 +277,8 @@ class Snekbox(
         log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
         if original_source:
-            original_source = await self.upload_output(code)
-            msg += f"\nOriginal code link: {original_source}"
+            original_source_link = await self.upload_output(code)
+            msg += f"\nOriginal code link: {original_source_link}"
 
         if return_result:
             return msg, paste_link
@@ -255,7 +287,7 @@ class Snekbox(
             msg = f"{msg}\nFull output: {paste_link}"
 
         components = DeleteButton(ctx.author)
-        if hasattr(ctx, "reply"):
+        if isinstance(ctx, (disnake.Message, commands.Context)) or isinstance(ctx, disnake.Message):
             response = await ctx.reply(msg, components=components)
         else:
             await ctx.send(msg, components=components)
@@ -333,7 +365,7 @@ class Snekbox(
         contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
         install_types=disnake.ApplicationInstallTypes.all(),
     )
-    async def slash_eval(self, inter: disnake.CommandInteraction, code: Optional[str] = None) -> None:
+    async def slash_eval(self, inter: disnake.ApplicationCommandInteraction, code: Optional[str] = None) -> None:
         """
         Evaluate python code.
 
@@ -341,12 +373,22 @@ class Snekbox(
         ----------
         code: Code to evaluate, leave blank to open a modal.
         """
-        if code:
-            await inter.response.defer()
-            await self.eval_command(inter, code=code)
-            return
-        else:
+        if not code:
             await inter.response.send_modal(EvalModal(self))
+            return
+
+        if inter.author.id in self.jobs:
+            await inter.send(f"{inter.author.mention} You've already got a job running - please wait for it to finish!")
+            return
+
+        log.info(f"Received code from {inter.author} for evaluation:\n{code}")
+
+        self.jobs[inter.author.id] = utcnow()
+        code = prepare_input(code)
+        try:
+            await self.send_eval(inter, code)
+        finally:
+            del self.jobs[inter.author.id]
 
     @commands.command(name="eval", aliases=("e",))
     @commands.guild_only()
@@ -375,12 +417,9 @@ class Snekbox(
             self.jobs[ctx.author.id] = utcnow()
             code = prepare_input(code)
             try:
-                response = await self.send_eval(ctx, code)
+                response = await self.send_eval(ctx, code, return_result=False, original_source=True)
             finally:
                 del self.jobs[ctx.author.id]
-
-            if not isinstance(ctx, commands.Context):
-                return
 
             code = await self.continue_eval(ctx, response)
             if not code:

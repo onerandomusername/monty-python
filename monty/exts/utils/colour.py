@@ -39,21 +39,19 @@ class Colour(
         self, ctx: Union[commands.Context, disnake.CommandInteraction], rgb: tuple[int, int, int], input_colour: str
     ) -> None:
         """Create and send embed from user given colour information."""
-        name = self._rgb_to_name(rgb)
-        try:
-            colour_or_color = ctx.invoked_parents[0]
-        except (IndexError, AttributeError):
-            if isinstance(ctx, disnake.Interaction):
-                colour_or_color = "color" if ctx.locale is disnake.Locale.en_US else "colour"
+        name = self._rgb_to_name(rgb) or ""
+        if isinstance(ctx, commands.Context):
+            if ctx.invoked_parents:
+                colour_or_color = ctx.invoked_parents[0]
             else:
                 colour_or_color = "colour"
+            colour_mode = ctx.invoked_with or ""
+            kwargs = ctx.kwargs
+        elif isinstance(ctx, disnake.Interaction):
+            colour_or_color = "color" if ctx.locale is disnake.Locale.en_US else "colour"
 
-        if isinstance(ctx, disnake.CommandInteraction):
             colour_mode = ctx.application_command.name
             kwargs = ctx.filled_options
-        else:
-            colour_mode = ctx.invoked_with
-            kwargs = ctx.kwargs
 
         if colour_mode == "random":
             colour_mode = colour_or_color

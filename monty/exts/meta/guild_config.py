@@ -31,7 +31,9 @@ def get_locale_from_dict(
     return table[disnake.Locale.en_GB]
 
 
-def get_localised_response(inter: disnake.ApplicationCommandInteraction, text: str, **kwargs) -> str:
+def get_localised_response(
+    inter: disnake.ApplicationCommandInteraction | disnake.ModalInteraction, text: str, **kwargs
+) -> str:
     """For the provided string, add the correct localised option names based on the interaction's locales."""
     for name, content in kwargs.items():
         if isinstance(content, dict):
@@ -196,7 +198,7 @@ class Configuration(
         await inter.response.send_modal(modal)
 
         try:
-            inter: disnake.ModalInteraction = await self.bot.wait_for(
+            modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
                 "modal_submit",
                 check=lambda i: i.custom_id == f"config:set:{option_name}:{inter.id}"
                 and i.author.id == inter.author.id
@@ -206,7 +208,7 @@ class Configuration(
         except asyncio.TimeoutError:
             return
 
-        value = inter.values["value"]
+        value = modal_inter.values["value"]
         if isinstance(value, list):
             value = value[0]
 
@@ -237,13 +239,13 @@ class Configuration(
             await session.commit()
 
         response = get_localised_response(
-            inter,
+            modal_inter,
             metadata.status_messages.set_attr_success,
             name=metadata.name,
             old_setting=old,
             new_setting=value,
         )
-        await inter.response.send_message(
+        await modal_inter.response.send_message(
             response,
             ephemeral=True,
         )
@@ -328,7 +330,7 @@ class Configuration(
     @view_command.autocomplete("option")
     async def config_autocomplete(
         self,
-        inter: disnake.CommandInteraction,
+        inter: disnake.GuildCommandInteraction,
         option: str,
     ) -> Union[dict[str, str], list[str]]:
         """Provide autocomplete for config options."""
