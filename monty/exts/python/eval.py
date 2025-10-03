@@ -7,6 +7,7 @@ from typing import Literal, Optional, Tuple, overload
 import aiohttp
 import disnake
 import yarl
+from disnake import Message
 from disnake.ext import commands
 
 from monty.bot import Monty
@@ -244,8 +245,8 @@ class Snekbox(
     async def send_eval(
         self,
         ctx: (
-            commands.Context
-            | disnake.Message
+            Message
+            | commands.Context
             | disnake.ApplicationCommandInteraction
             | disnake.MessageCommandInteraction
             | disnake.ModalInteraction
@@ -261,8 +262,7 @@ class Snekbox(
         """
         if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
-        elif isinstance(ctx, disnake.Message):
-            await ctx.channel.trigger_typing()
+
         results = await self.post_eval(code)
         msg, error = self.get_results_message(results)
 
@@ -287,11 +287,11 @@ class Snekbox(
             msg = f"{msg}\nFull output: {paste_link}"
 
         components = DeleteButton(ctx.author)
-        if isinstance(ctx, (disnake.Message, commands.Context)) or isinstance(ctx, disnake.Message):
-            response = await ctx.reply(msg, components=components)
-        else:
+        if isinstance(ctx, (disnake.Interaction)):
             await ctx.send(msg, components=components)
             response = await ctx.original_message()
+        else:
+            response = await ctx.reply(msg, components=components)
 
         return response
 
@@ -317,8 +317,10 @@ class Snekbox(
                 await response.delete()
             except disnake.NotFound:
                 pass
+
             # if we have permissions, delete the user's reaction
-            if ctx.channel.permissions_for(ctx.me).manage_messages:
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+            if app_permissions.manage_messages:
                 try:
                     await ctx.message.clear_reaction(REEVAL_EMOJI)
                 except disnake.Forbidden:
@@ -497,6 +499,7 @@ class Snekbox(
     @manage_snekbox_packages.command(name="remove", aliases=("delete", "uninstall", "r", "d", "del"))
     async def uninstall_snekbox_package(self, ctx: commands.Context, *packages: str) -> None:
         """Uninstall the provided package from snekbox."""
+        resp = None
         async with ctx.typing():
             for package in packages:
                 try:
@@ -506,8 +509,9 @@ class Snekbox(
                         pass
                 except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                     raise APIError("snekbox", 0, "Request errored.") from e
+        status = resp.status if resp else "N/A"
         await ctx.reply(
-            f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
+            f"[{status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
