@@ -380,7 +380,10 @@ class Snekbox(
             return
 
         if inter.author.id in self.jobs:
-            await inter.send(f"{inter.author.mention} You've already got a job running - please wait for it to finish!")
+            await inter.send(
+                f"{inter.author.mention} You've already got a job running - please wait for it to finish!",
+                ephemeral=True,
+            )
             return
 
         log.info(f"Received code from {inter.author} for evaluation:\n{code}")
