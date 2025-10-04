@@ -137,7 +137,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-    elements: Iterable[Union[Tag, NavigableString]],
+    elements: Iterable[Union[Tag, NavigableString]] | Tag,
     markdown_converter: DocMarkdownConverter,
     max_length: int,
     max_lines: int,

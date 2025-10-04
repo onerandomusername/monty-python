@@ -3,15 +3,13 @@ import collections
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import DefaultDict, Deque, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, DefaultDict, List, NamedTuple, Optional, Union
 
 import cachingutils.redis
 from bs4 import BeautifulSoup
 
 from monty import constants
 from monty.bot import Monty
-
-# from bot.constants import Channels
 from monty.log import get_logger
 from monty.utils import helpers, scheduling
 from monty.utils.html_parsing import get_symbol_markdown
@@ -70,6 +68,17 @@ class QueueItem(NamedTuple):
         return NamedTuple.__eq__(self, other)
 
 
+# only used for type hinting
+if TYPE_CHECKING:
+
+    class Deque(collections.deque[QueueItem]):
+
+        def index(self, value: Union[QueueItem, _cog.DocItem], start: int = 0, stop: Optional[int] = None) -> int: ...
+
+else:
+    Deque = collections.deque
+
+
 class ParseResultFuture(asyncio.Future):
     """
     Future with metadata for the parser class.
@@ -94,7 +103,7 @@ class BatchParser:
 
     def __init__(self, bot: Monty) -> None:
         self._bot: Monty = bot
-        self._queue: Deque[QueueItem] = collections.deque()
+        self._queue: Deque = Deque()
         self._page_doc_items: "DefaultDict[str, List[_cog.DocItem]]" = defaultdict(list)
         self._item_futures: "DefaultDict[_cog.DocItem, ParseResultFuture]" = defaultdict(ParseResultFuture)
         self._parse_task = None

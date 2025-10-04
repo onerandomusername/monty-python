@@ -1,7 +1,7 @@
 import asyncio
 import re
 import urllib.parse
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, cast
 
 import aiohttp
 import disnake
@@ -17,8 +17,8 @@ from monty.utils.services import send_to_paste_service
 
 
 if TYPE_CHECKING:
-    from monty.exts.eval import Snekbox
-    from monty.exts.info.codeblock._cog import CodeBlockCog
+    from monty.exts.filters.codeblock._cog import CodeBlockCog
+    from monty.exts.python.eval import Snekbox
 
 logger = get_logger(__name__)
 
@@ -128,11 +128,11 @@ class CodeBlockActions(
 
     def get_snekbox(self) -> Optional["Snekbox"]:
         """Get the Snekbox cog. This method serves for typechecking."""
-        return self.bot.get_cog("Snekbox")
+        return cast("Snekbox | None", self.bot.get_cog("Snekbox"))
 
     def get_codeblock_cog(self) -> Optional["CodeBlockCog"]:
         """Get the Codeblock cog. This method serves for typechecking."""
-        return self.bot.get_cog("Code Block")
+        return cast("CodeBlockCog | None", self.bot.get_cog("Code Block"))
 
     async def _upload_to_workbin(
         self,

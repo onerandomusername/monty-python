@@ -56,7 +56,7 @@ class FrozenChainMap(Mapping[K, V]):
                 pass
         return self.__missing__(key)  # support subclasses that define __missing__
 
-    def get(self, key: K, default: V = None) -> Union[K, V]:
+    def get(self, key: K, default: V = None) -> V | None:
         """Get the object at the provided key."""
         return self[key] if key in self else default
 

@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Coroutine, List, Tuple
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Tuple
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -70,20 +70,27 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         """Initializes the cog's bot."""
         self.bot = bot
 
-        self.pattern_handlers: List[Tuple[re.Pattern, Coroutine]] = [
+        self.pattern_handlers: List[Tuple[re.Pattern, Callable[..., Awaitable[str]]]] = [
             (GITHUB_RE, self._fetch_github_snippet),
             (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
             (GITLAB_RE, self._fetch_gitlab_snippet),
             (BITBUCKET_RE, self._fetch_bitbucket_snippet),
         ]
 
-        self.request_cache: cachingutils.MemoryCache[str, Any] = cachingutils.MemoryCache(timeout=timedelta(minutes=6))
+        self.request_cache: cachingutils.MemoryCache[tuple[str, str], Any] = cachingutils.MemoryCache(
+            timeout=timedelta(minutes=6)
+        )
+
+    def get_github_cog(self) -> "GithubInfo | None":
+        """Return the GitHub Information cog if it is loaded."""
+        if (cog := self.bot.get_cog("GitHub Information")) and isinstance(cog, GithubInfo):
+            return cog
+        return None
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         # make the request with the github_info cog if it is loaded
-        if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GitHub Information")):
-            cog: GithubInfo
+        if url.startswith("https://api.github.com/") and (cog := self.get_github_cog()):
             return await cog.fetch_data(
                 url,
                 as_text=True if response_format == "text" else False,

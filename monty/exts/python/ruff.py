@@ -220,7 +220,7 @@ class Ruff(
             components=[container, action_row],
         )
 
-    async def _legacy_embed(self, inter: disnake.ApplicationCommandInteraction, ruleObj: Rule) -> disnake.Embed:
+    async def _legacy_embed(self, inter: disnake.ApplicationCommandInteraction, ruleObj: Rule) -> None:
         """Create an embed for a rule."""
         embed = disnake.Embed(colour=next(RUFF_COLOUR_CYCLE))
 

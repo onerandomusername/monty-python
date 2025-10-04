@@ -2,11 +2,12 @@ import asyncio
 import re
 from functools import partial
 from signal import Signals
-from typing import Any, Optional, Tuple, overload
+from typing import Literal, Optional, Tuple, overload
 
 import aiohttp
 import disnake
 import yarl
+from disnake import Message
 from disnake.ext import commands
 
 from monty.bot import Monty
@@ -101,7 +102,7 @@ class Snekbox(
     async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = self.url / "eval"
-        data = {"input": code}
+        data: dict[str, str | list[str]] = {"input": code}
 
         if args is not None:
             data["args"] = args
@@ -188,9 +189,9 @@ class Snekbox(
         lines = output.count("\n")
 
         if lines > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
-            output = output[:11]  # Limiting to only 11 lines
-            output = "\n".join(output)
+            output_lines = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
+            output_lines = output_lines[:11]  # Limiting to only 11 lines
+            output = "\n".join(output_lines)
 
         if lines > 10:
             truncated = True
@@ -211,19 +212,49 @@ class Snekbox(
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = True, original_source: bool = False
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: Literal[True] = True,
+        original_source: bool = False,
     ) -> tuple[str, Optional[str]]:
         pass
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
     ) -> disnake.Message:
         pass
 
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
-    ) -> Any:
+        self,
+        ctx: (
+            Message
+            | commands.Context
+            | disnake.ApplicationCommandInteraction
+            | disnake.MessageCommandInteraction
+            | disnake.ModalInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
+    ) -> tuple[str, Optional[str]] | disnake.Message:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
@@ -231,6 +262,7 @@ class Snekbox(
         """
         if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
+
         results = await self.post_eval(code)
         msg, error = self.get_results_message(results)
 
@@ -245,8 +277,8 @@ class Snekbox(
         log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
         if original_source:
-            original_source = await self.upload_output(code)
-            msg += f"\nOriginal code link: {original_source}"
+            original_source_link = await self.upload_output(code)
+            msg += f"\nOriginal code link: {original_source_link}"
 
         if return_result:
             return msg, paste_link
@@ -255,11 +287,11 @@ class Snekbox(
             msg = f"{msg}\nFull output: {paste_link}"
 
         components = DeleteButton(ctx.author)
-        if hasattr(ctx, "reply"):
-            response = await ctx.reply(msg, components=components)
-        else:
+        if isinstance(ctx, (disnake.Interaction)):
             await ctx.send(msg, components=components)
             response = await ctx.original_message()
+        else:
+            response = await ctx.reply(msg, components=components)
 
         return response
 
@@ -285,8 +317,10 @@ class Snekbox(
                 await response.delete()
             except disnake.NotFound:
                 pass
+
             # if we have permissions, delete the user's reaction
-            if ctx.channel.permissions_for(ctx.me).manage_messages:
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+            if app_permissions.manage_messages:
                 try:
                     await ctx.message.clear_reaction(REEVAL_EMOJI)
                 except disnake.Forbidden:
@@ -333,7 +367,7 @@ class Snekbox(
         contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
         install_types=disnake.ApplicationInstallTypes.all(),
     )
-    async def slash_eval(self, inter: disnake.CommandInteraction, code: Optional[str] = None) -> None:
+    async def slash_eval(self, inter: disnake.ApplicationCommandInteraction, code: Optional[str] = None) -> None:
         """
         Evaluate python code.
 
@@ -341,12 +375,25 @@ class Snekbox(
         ----------
         code: Code to evaluate, leave blank to open a modal.
         """
-        if code:
-            await inter.response.defer()
-            await self.eval_command(inter, code=code)
-            return
-        else:
+        if not code:
             await inter.response.send_modal(EvalModal(self))
+            return
+
+        if inter.author.id in self.jobs:
+            await inter.send(
+                f"{inter.author.mention} You've already got a job running - please wait for it to finish!",
+                ephemeral=True,
+            )
+            return
+
+        log.info(f"Received code from {inter.author} for evaluation:\n{code}")
+
+        self.jobs[inter.author.id] = utcnow()
+        code = prepare_input(code)
+        try:
+            await self.send_eval(inter, code)
+        finally:
+            del self.jobs[inter.author.id]
 
     @commands.command(name="eval", aliases=("e",))
     @commands.guild_only()
@@ -375,12 +422,9 @@ class Snekbox(
             self.jobs[ctx.author.id] = utcnow()
             code = prepare_input(code)
             try:
-                response = await self.send_eval(ctx, code)
+                response = await self.send_eval(ctx, code, return_result=False, original_source=True)
             finally:
                 del self.jobs[ctx.author.id]
-
-            if not isinstance(ctx, commands.Context):
-                return
 
             code = await self.continue_eval(ctx, response)
             if not code:
@@ -458,6 +502,7 @@ class Snekbox(
     @manage_snekbox_packages.command(name="remove", aliases=("delete", "uninstall", "r", "d", "del"))
     async def uninstall_snekbox_package(self, ctx: commands.Context, *packages: str) -> None:
         """Uninstall the provided package from snekbox."""
+        resp = None
         async with ctx.typing():
             for package in packages:
                 try:
@@ -467,8 +512,9 @@ class Snekbox(
                         pass
                 except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                     raise APIError("snekbox", 0, "Request errored.") from e
+        status = resp.status if resp else "N/A"
         await ctx.reply(
-            f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
+            f"[{status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )

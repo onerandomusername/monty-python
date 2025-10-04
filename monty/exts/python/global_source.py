@@ -37,7 +37,6 @@ class GlobalSource(commands.Cog, name="Global Source"):
     @property
     def snekbox(self) -> "Snekbox":
         """Return the snekbox cog where the code is ran."""
-        snekbox: "Snekbox"
         if snekbox := cast("Snekbox | None", self.bot.get_cog("Snekbox")):  # this will always be a Snekbox instance
             return snekbox
         raise RuntimeError("Snekbox is not loaded")

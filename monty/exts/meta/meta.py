@@ -165,14 +165,13 @@ class Meta(
             disnake.ApplicationInstallTypes.guild.flag: "Guild invite",
         }
 
-        components: list[DeleteButton] = []
+        components: list[disnake.ui.Button] = []
 
         if not ephemeral:
             components.append(DeleteButton(inter.author))
 
         if raw_link:
             if isinstance(urls, dict):
-
                 message += "\n"
                 for num, url in urls.items():
                     title = labels[num]

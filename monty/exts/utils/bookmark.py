@@ -166,11 +166,10 @@ class Bookmark(
                 disnake.ui.Button(label="Jump to Message", url=target_message.jump_url),
             ),
         ]
+        kwargs = {}
         if isinstance(ctx, commands.Context):
             if ctx.channel == target_message.channel and ctx.channel.permissions_for(ctx.me).read_message_history:
-                reference = target_message.to_reference(fail_if_not_exists=False)
-            else:
-                reference = None
+                kwargs["reference"] = target_message.to_reference(fail_if_not_exists=False)
 
             allowed_mentions = disnake.AllowedMentions.none()
             allowed_mentions.users = [ctx.author]
@@ -178,14 +177,13 @@ class Bookmark(
             await ctx.send(
                 content=content,
                 allowed_mentions=allowed_mentions,
-                reference=reference,
                 components=DeleteButton(ctx.author, initial_message=ctx.message),
             )
             message = await ctx.send(
                 embed=embed,
                 allowed_mentions=disnake.AllowedMentions.none(),
                 components=components,
-                reference=reference,
+                **kwargs,
             )
         else:
             if (
@@ -305,9 +303,11 @@ class Bookmark(
     # cursed.
     async def bookmark_button(self, inter: Union[disnake.MessageInteraction, disnake.ModalInteraction]) -> None:
         """Listen for bookmarked button events and respond to them."""
-        if not inter.component.custom_id.startswith(CUSTOM_ID):
+        custom_id: str = inter.component.custom_id
+        if not custom_id.startswith(CUSTOM_ID):
             return
-        custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
+
+        custom_id = custom_id.removeprefix(CUSTOM_ID)
 
         def remove_button(message: disnake.Message | None) -> list[disnake.ui.MessageUIComponent]:
             if message is None:
@@ -332,7 +332,8 @@ class Bookmark(
             await inter.response.send_message("I can no longer view this channel.", ephemeral=True)
             return
 
-        if not channel.permissions_for(channel.guild.me).read_message_history:
+        app_permissions = channel.permissions_for(channel.me)  # type: ignore
+        if not app_permissions.read_message_history:
             # while we could remove the button there is no reason to as we aren't making an invalid api request
             await inter.response.send_message("I am currently unable to view the message this button is for.")
             return
