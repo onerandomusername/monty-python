@@ -12,8 +12,26 @@ theme:
   name: material
   logo: assets/images/logo.png
   palette:
-    primary: blue
-    accent: yellow
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+      primary: blue
+      accent: yellow
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: blue
+      accent: yellow
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+      primary: blue
+      accent: yellow
   features:
   - navigation.instant
   - navigation.instant.progress
