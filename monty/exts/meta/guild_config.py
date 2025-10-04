@@ -53,7 +53,7 @@ async def can_guild_set_config_option(bot: Monty, *, metadata: ConfigAttrMetadat
 
 
 @commands.register_injection
-async def config_option(inter: disnake.ApplicationCommandInteraction, option: str) -> tuple[str, ConfigAttrMetadata]:
+async def config_option(inter: disnake.GuildCommandInteraction, option: str) -> tuple[str, ConfigAttrMetadata]:
     """
     Get a valid configuration option and its metadata.
 

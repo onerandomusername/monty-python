@@ -108,17 +108,18 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
             f"There must not be any spaces after `{language}`."
         )
 
-    if lines:
-        lines = " ".join(lines)
-        example_blocks = _get_example(language)
-
-        # Note that _get_bad_ticks_message expects the first line to have two newlines.
-        return (
-            f"It looks like you incorrectly specified a language for your code block.\n\n{lines}"
-            f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
-        )
-    else:
+    if not lines:
         log.trace("Nothing wrong with the language specifier; no instructions to return.")
+        return
+
+    joined_lines = " ".join(lines)
+    example_blocks = _get_example(language)
+
+    # Note that _get_bad_ticks_message expects the first line to have two newlines.
+    return (
+        f"It looks like you incorrectly specified a language for your code block.\n\n{joined_lines}"
+        f"\n\n**Here is an example of how it should look:**\n{example_blocks}"
+    )
 
 
 def _get_no_lang_message(content: str) -> Optional[str]:

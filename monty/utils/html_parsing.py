@@ -6,7 +6,7 @@ import textwrap
 from collections import namedtuple
 from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional, Union
 
-from bs4.element import NavigableString, Tag
+from bs4.element import NavigableString, PageElement, Tag
 
 from monty.exts.info.docs import MAX_SIGNATURE_AMOUNT
 from monty.exts.info.docs._html import get_dd_description, get_general_description, get_signatures
@@ -137,7 +137,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-    elements: Iterable[Union[Tag, NavigableString]] | Tag,
+    elements: Iterable[Union[Tag, NavigableString, PageElement]] | Tag,
     markdown_converter: DocMarkdownConverter,
     max_length: int,
     max_lines: int,
@@ -153,21 +153,28 @@ def _get_truncated_description(
     rendered_length = 0
 
     tag_end_index = 0
+
     for element in elements:
         is_tag = isinstance(element, Tag)
+        is_page_element = isinstance(element, PageElement)
         if is_tag:
             # remove links in headers
             # see also https://github.com/sphinx-doc/sphinx/blob/ba7408209e84ee413f240afc20f3c6b484a81f8f/sphinx/themes/basic/static/searchtools.js#L157
             for link in element.select(".headerlink"):
                 link.decompose()
-        element_length = len(element.text) if is_tag else len(element)
+
+            element_length = len(element.text)
+        elif is_page_element:
+            element_length = 0
+        else:
+            element_length = len(element)
 
         if rendered_length + element_length >= max_length:
             break
         if is_tag:
             element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
         else:
-            element_markdown = markdown_converter.process_text(element)
+            element_markdown = markdown_converter.process_text(element.text)
 
         rendered_length += element_length
         tag_end_index += len(element_markdown)

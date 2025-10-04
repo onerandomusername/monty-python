@@ -72,7 +72,7 @@ class CodeBlockCog(
 
         # Stores allowed channels plus epoch times since the last instructional messages sent.
         # TODO: remove or refactor this unused code
-        self.channel_cooldowns = dict.fromkeys((), 0.0)
+        self.channel_cooldowns: dict[int, float] = dict.fromkeys((), 0.0)
 
         # Maps users' messages to the messages the bot sent with instructions.
         self.codeblock_message_ids = {}
@@ -104,7 +104,10 @@ class CodeBlockCog(
             log.debug("Could not find instructions message; it was probably deleted.")
             return None
 
-    def is_on_cooldown(self, channel: Union[GuildMessageable, disnake.DMChannel]) -> bool:
+    def is_on_cooldown(
+        self,
+        channel: disnake.DMChannel | disnake.GroupChannel | disnake.abc.GuildChannel | disnake.Thread,
+    ) -> bool:
         """
         Return True if an embed was sent too recently for `channel`.
 
@@ -115,10 +118,13 @@ class CodeBlockCog(
         cooldown = constants.CodeBlock.cooldown_seconds
         return (time.time() - self.channel_cooldowns.get(channel.id, 0)) < cooldown
 
-    async def is_valid_channel(self, channel: Union[GuildMessageable, disnake.DMChannel]) -> bool:
+    async def is_valid_channel(
+        self,
+        channel: disnake.DMChannel | disnake.GroupChannel | disnake.abc.GuildChannel | disnake.Thread,
+    ) -> bool:
         """Return True if `channel` is a help channel, may be on a cooldown, or is whitelisted."""
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
-        if isinstance(channel, disnake.DMChannel):
+        if not isinstance(channel, GuildMessageable):
             return False
         res = channel.guild and await self.bot.guild_has_feature(
             channel.guild, constants.Feature.CODEBLOCK_RECOMMENDATIONS
