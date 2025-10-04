@@ -180,7 +180,10 @@ class Bookmark(
                 components=DeleteButton(ctx.author, initial_message=ctx.message),
             )
             message = await ctx.send(
-                embed=embed, allowed_mentions=disnake.AllowedMentions.none(), components=components, **kwargs
+                embed=embed,
+                allowed_mentions=disnake.AllowedMentions.none(),
+                components=components,
+                **kwargs,
             )
         else:
             if (
