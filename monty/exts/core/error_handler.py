@@ -20,7 +20,7 @@ from monty.utils.messages import DeleteButton
 
 EXT_METADATA = ExtMetadata(core=True)
 
-AnyContext = typing.Union[commands.Context, disnake.Interaction]
+AnyContext = typing.Union[commands.Context, disnake.ApplicationCommandInteraction]
 
 logger = get_logger(__name__)
 
@@ -62,29 +62,43 @@ class ErrorHandler(
                 return random.choice(responses.USER_INPUT_ERROR_REPLIES)
         return re.sub(ERROR_TITLE_REGEX, r" \1", error)
 
-    @staticmethod
-    def _reset_command_cooldown(ctx: AnyContext) -> bool:
-        if return_value := ctx.command.is_on_cooldown(ctx):
-            ctx.command.reset_cooldown(ctx)
-        return return_value
+    def _reset_command_cooldown(self, ctx: AnyContext) -> bool:
+        if isinstance(ctx, commands.Context):
+            command = self.get_command(ctx)
+            if command and command.is_on_cooldown(ctx):
+                command.reset_cooldown(ctx)
+                return True
+        elif isinstance(ctx, disnake.ApplicationCommandInteraction):
+            command = self.get_command(ctx)
+            if command.is_on_cooldown(ctx):
+                command.reset_cooldown(ctx)
+                return True
+        return False
 
     def make_error_message(
-        self, ctx: AnyContext, error: commands.CommandError, *, extended_context: bool = True
+        self,
+        ctx: AnyContext | disnake.ModalInteraction | disnake.MessageInteraction,
+        error: commands.CommandError,
+        *,
+        extended_context: bool = False,
     ) -> str:
         """Log the error with enough relevant context to properly fix the issue."""
         if isinstance(ctx, commands.Context):
+            command = self.get_command(ctx)
+            qualname = command.qualified_name if command else "Unknown"
             msg = (
-                f"Error occurred in prefix command {ctx.command.qualified_name} in guild"
+                f"Error occurred in prefix command {qualname} in guild"
                 f" {ctx.guild and ctx.guild.id} with user {ctx.author.id}\n"
             )
         elif isinstance(ctx, disnake.ApplicationCommandInteraction):
+            command = self.get_command(ctx)
             cmd_type = ctx.data.type
             try:
                 cmd_type = cmd_type.name
             except AttributeError:
                 pass
             msg = (
-                f"Error occurred in app command {ctx.application_command.qualified_name} of type {cmd_type} in guild"
+                f"Error occurred in app command {command.qualified_name} of type {cmd_type} in guild"
                 f" {ctx.guild_id} with user {ctx.author.id}\n"
             )
         elif isinstance(ctx, disnake.MessageInteraction):
@@ -101,7 +115,7 @@ class ErrorHandler(
         msg_type = getattr(type(ctx), "__name__", None) or str(type(ctx))
         msg += f"{self.get_title_from_name(msg_type)}:\n"
         # dump all attrs of the context minus a few attributes
-        skip = {"token", "bot", "client", "send_error"}
+        skip = {"token", "bot", "client"}
         for attr in dir(ctx):
             if attr in skip or attr.startswith("_"):
                 continue
@@ -111,6 +125,80 @@ class ErrorHandler(
             msg += f"\t{attr}={prop}\n"
 
         return msg
+
+    async def send_error(self, ctx: AnyContext, content: str | None = None, **kwargs) -> None:
+        """Send an error message to the context."""
+        if kwargs.get("components") is not None:
+            raise ValueError("Cannot pass components to send_error, they are added automatically.")
+
+        if content:
+            kwargs["content"] = content
+
+        components = disnake.ui.MessageActionRow()
+        components.add_button(
+            style=disnake.ButtonStyle.url, label="Support Server", url=f"https://discord.gg/{Client.support_server}"
+        )
+        if isinstance(ctx, commands.Context):
+            components.insert_item(0, DeleteButton(ctx.author, initial_message=ctx.message))
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # pyright: ignore[reportArgumentType]
+            if app_permissions.manage_messages:
+                send_error = functools.partial(
+                    ctx.reply,
+                    components=components,
+                    fail_if_not_exists=False,
+                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
+                )
+            else:
+                send_error = functools.partial(ctx.send, components=components)
+        elif isinstance(ctx, disnake.Interaction):
+            if ctx.response.is_done():
+                send_error = functools.partial(
+                    ctx.followup.send,
+                    ephemeral=True,
+                    components=components,
+                )
+            else:
+                send_error = functools.partial(
+                    ctx.send,
+                    ephemeral=True,
+                    components=components,
+                )
+        await send_error(**kwargs)
+
+    @typing.overload
+    def get_command(self, ctx: commands.Context) -> commands.Command | None: ...
+    @typing.overload
+    def get_command(self, ctx: disnake.ApplicationCommandInteraction) -> commands.InvokableApplicationCommand: ...
+    @typing.overload
+    def get_command(self, ctx: disnake.ModalInteraction) -> disnake.Message: ...
+
+    @typing.overload
+    def get_command(self, ctx: disnake.MessageInteraction) -> disnake.Message | None: ...
+
+    def get_command(
+        self, ctx: AnyContext | disnake.ModalInteraction | disnake.MessageInteraction
+    ) -> (
+        commands.Command
+        | commands.InvokableApplicationCommand
+        | disnake.Message
+        | disnake.ApplicationCommandInteraction
+        | disnake.ModalInteraction
+        | disnake.MessageInteraction
+        | None
+    ):
+        """Get the command from the context."""
+        if isinstance(ctx, commands.Context):
+            command = ctx.command
+        elif isinstance(ctx, disnake.ApplicationCommandInteraction):
+            command = ctx.application_command
+        elif isinstance(ctx, disnake.MessageInteraction):
+            command = ctx.message
+        elif isinstance(ctx, disnake.ModalInteraction):
+            # TODO: this should also consider the app command if possible
+            command = ctx.message
+        else:
+            command = None
+        return command
 
     async def handle_user_input_error(
         self,
@@ -127,20 +215,24 @@ class ErrorHandler(
         title = self.get_title_from_name(error)
         return self.error_embed(title, msg or str(error))
 
-    async def handle_bot_missing_perms(self, ctx: AnyContext, error: commands.BotMissingPermissions) -> None:
+    async def handle_bot_missing_perms(
+        self, ctx: AnyContext, error: commands.BotMissingPermissions | disnake.Forbidden
+    ) -> None:
         """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""  # noqa: E501
         embed = self.error_embed("Permissions Failure", str(error))
-        bot_perms = ctx.channel.permissions_for(ctx.me)
-        not_responded = True  # noqa: F841
-        if bot_perms >= disnake.Permissions(send_messages=True, embed_links=True):
-            await ctx.send_error(embeds=[embed])
-            not_responded = False  # noqa: F841
-        elif bot_perms >= disnake.Permissions(send_messages=True):
+        if isinstance(ctx, commands.Context):
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # pyright: ignore[reportArgumentType]
+        else:
+            app_permissions = ctx.app_permissions
+        if app_permissions >= disnake.Permissions(send_messages=True, embed_links=True):
+            await self.send_error(ctx, embeds=[embed])
+        elif app_permissions >= disnake.Permissions(send_messages=True):
             # make a message as similar to the embed, using as few permissions as possible
             # this is the only place we send a standard message instead of an embed
             # so no helper methods are necessary
-            await ctx.send_error(
-                "**Permissions Failure**\n\nI am missing the permissions required to properly execute your command."
+            await self.send_error(
+                ctx,
+                "**Permissions Failure**\n\nI am missing the permissions required to properly execute your command.",
             )
             # intentionally not setting responded to True, since we want to attempt to dm the user
             logger.warning(
@@ -174,10 +266,11 @@ class ErrorHandler(
         embed = self.error_embed(title, str(error))
         return embed
 
-    async def on_command_error(self, ctx: AnyContext, error: commands.CommandError) -> None:
+    async def on_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Activates when a command raises an error."""
         if getattr(error, "handled", False):
-            logging.debug(f"Command {ctx.command} had its error already handled locally, ignoring.")
+            command = self.get_command(ctx)
+            logging.debug("Command %s had its error already handled locally, ignoring.", command)
             return
 
         if isinstance(error, commands.CommandNotFound):
@@ -198,13 +291,18 @@ class ErrorHandler(
             if embed is None:
                 should_respond = False
         elif isinstance(error, commands.DisabledCommand):
-            if ctx.command.hidden:
-                should_respond = False
+            if isinstance(ctx, commands.Context):
+                command = self.get_command(ctx)
+                if command and not command.hidden:
+                    msg = f"Command `{ctx.invoked_with}` is disabled."
+                    if reason := command.extras.get("disabled_reason", None):
+                        msg += f"\nReason: {reason}"
+                    embed = self.error_embed("Command Disabled", msg)
+                else:
+                    should_respond = False
             else:
-                msg = f"Command `{ctx.invoked_with}` is disabled."
-                if reason := ctx.command.extras.get("disabled_reason", None):
-                    msg += f"\nReason: {reason}"
-                embed = self.error_embed("Command Disabled", msg)
+                command = self.get_command(ctx)
+
         elif isinstance(error, MontyCommandError):
             embed = self.error_embed(
                 self.get_title_from_name(error), str(error), colour=responses.DEFAULT_FAILURE_COLOUR
@@ -212,14 +310,15 @@ class ErrorHandler(
         elif isinstance(error, commands.CommandOnCooldown):
             if await ctx.bot.is_owner(ctx.author):
                 if isinstance(ctx, commands.Context):
-                    ctx.command.reset_cooldown(ctx)
+                    if command := ctx.command:
+                        command.reset_cooldown(ctx)
                     try:
                         await ctx.reinvoke()
                     except Exception as exc:
                         # two times is not the charm.
                         self.bot.dispatch("command_error", ctx, exc)
                     should_respond = False
-                elif isinstance(ctx, disnake.CommandInteraction):
+                elif isinstance(ctx, disnake.ApplicationCommandInteraction):
                     ctx.application_command.reset_cooldown(ctx)
                     try:
                         await self.bot.process_application_commands(ctx)
@@ -231,9 +330,11 @@ class ErrorHandler(
 
         elif isinstance(error, (commands.CommandInvokeError, commands.ConversionError)):
             if isinstance(error.original, disnake.Forbidden):
-                logger.warning(f"Permissions error occurred in {ctx.command}.")
-                await self.handle_bot_missing_perms(ctx, error.original)
-                should_respond = False
+                command = self.get_command(ctx)
+                if command and not getattr(command, "hidden", False):
+                    logger.debug(f"Permissions error occurred in {command}.")
+                    await self.handle_bot_missing_perms(ctx, error.original)
+                    should_respond = False
             if isinstance(error.original, APIError):
                 error = error.original
             else:
@@ -283,7 +384,7 @@ class ErrorHandler(
         if embed.colour and embed.colour.value in (Colours.python_yellow, Colours.python_blue):
             embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
-        await ctx.send_error(embeds=[embed])
+        await self.send_error(ctx, embeds=[embed])
 
     @commands.Cog.listener(name="on_command_error")
     @commands.Cog.listener(name="on_slash_command_error")
@@ -291,52 +392,6 @@ class ErrorHandler(
     async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         # add the support button
-        components = disnake.ui.MessageActionRow()
-        components.add_button(
-            style=disnake.ButtonStyle.url, label="Support Server", url=f"https://discord.gg/{Client.support_server}"
-        )
-        if isinstance(ctx, commands.Context):
-            components.insert_item(0, DeleteButton(ctx.author, initial_message=ctx.message))
-            if ctx.channel.permissions_for(ctx.me).read_message_history:
-                ctx.send_error = functools.partial(
-                    ctx.reply,
-                    components=components,
-                    fail_if_not_exists=False,
-                    allowed_mentions=disnake.AllowedMentions(replied_user=False),
-                )
-            else:
-                ctx.send_error = functools.partial(ctx.send, components=components)
-        elif isinstance(ctx, disnake.Interaction):
-            if ctx.response.is_done():
-                ctx.send_error = functools.partial(
-                    ctx.followup.send,
-                    ephemeral=True,
-                    components=components,
-                )
-            else:
-                ctx.send_error = functools.partial(
-                    ctx.send,
-                    ephemeral=True,
-                    components=components,
-                )
-
-            if isinstance(
-                ctx,
-                (
-                    disnake.ApplicationCommandInteraction,
-                    disnake.MessageCommandInteraction,
-                    disnake.UserCommandInteraction,
-                ),
-            ):
-                ctx.command = ctx.application_command
-            elif isinstance(ctx, (disnake.MessageInteraction, disnake.ModalInteraction)):
-                # todo: this is a hack, but it works for now
-                ctx.command = ctx.message
-            else:
-                # i don't even care, this code should be unreachable but its also the error handler
-                ctx.command = ctx
-        else:
-            raise RuntimeError("how was this even reached")
         try:
             await self.on_command_error(ctx, error)
         except Exception as e:
