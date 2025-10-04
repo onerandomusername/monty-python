@@ -196,11 +196,10 @@ class Configuration(
         )
 
         await inter.response.send_modal(modal)
-
         try:
             modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
                 "modal_submit",
-                check=lambda i: i.custom_id == f"config:set:{option_name}:{inter.id}"
+                check=lambda i, inter=inter: i.custom_id == f"config:set:{option_name}:{inter.id}"
                 and i.author.id == inter.author.id
                 and i.guild_id == inter.guild_id,
                 timeout=300,
@@ -215,21 +214,25 @@ class Configuration(
         try:
             # convert the value with the metadata.type
             param = inspect.Parameter(option_name, kind=inspect.Parameter.KEYWORD_ONLY)
-            value = await commands.run_converters(inter, metadata.type, value, param)  # type: ignore
+            value = await commands.run_converters(modal_inter, metadata.type, value, param)  # type: ignore
             setattr(config, option_name, value)
         except (TypeError, ValueError) as e:
-            err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
+            err = get_localised_response(
+                modal_inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e)
+            )
             raise commands.BadArgument(err) from None
         except commands.UserInputError as e:
-            err = get_localised_response(inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e))
+            err = get_localised_response(
+                modal_inter, metadata.status_messages.set_attr_fail, name=metadata.name, err=str(e)
+            )
             raise e
 
         if validator := metadata.validator:
             try:
                 if inspect.iscoroutinefunction(validator):
-                    value = await validator(inter, value)
+                    value = await validator(modal_inter, value)
                 else:
-                    value = validator(inter, value)
+                    value = validator(modal_inter, value)
             except Exception:
                 # reset the configuration
                 setattr(config, option_name, old)
