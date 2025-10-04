@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, cast
 from urllib.parse import urljoin
 
 import aiohttp
+import bs4
 import disnake
 import rapidfuzz
 import rapidfuzz.fuzz
@@ -74,6 +75,8 @@ class PEPHeaders:
         headers: dict[str, str] = {}
         for header in soup.find_all(self.header_tags):
             headers[header.text] = header.name
+
+        headers.pop("Contents", None)
 
         return headers
 
@@ -193,11 +196,11 @@ class PythonEnhancementProposals(
         await self.validate_pep_number(number)
 
         url = self.peps[number]
-        tags, soup = await self.fetch_pep_info(url, number)
+        metadata, soup = cast(Tuple[dict[str, str], BeautifulSoup], await self.fetch_pep_info(url, number))
 
-        tag = soup.find(PEPHeaders.header_tags, text=header)
+        tag: bs4.element.Tag | None = soup.find(PEPHeaders.header_tags, text=header)
 
-        if tag is None:
+        if tag is None or not tag.parent:
             raise MontyCommandError("Could not find the requested header in the PEP.")
 
         text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=14)
@@ -208,18 +211,20 @@ class PythonEnhancementProposals(
         embed = disnake.Embed(
             title=header,
             description=text,
-            url=urljoin(url, tag.a["href"]),
         )
-        embed.set_author(name=f"PEP {number} - {tags['title']}", url=url)
+        embed.set_author(name=f"PEP {number} - {metadata['title']}", url=url)
+
+        if tag.a and (href := tag.a.get("href")):
+            embed.url = urljoin(url, str(href))
 
         embed.set_thumbnail(url=ICON_URL)
-        if tags.get("Created"):
+        if metadata.get("created"):
             embed.set_footer(text="PEP Created")
-            embed.timestamp = datetime.strptime(tags["Created"], "%d-%b-%Y").replace(tzinfo=timezone.utc)
+            embed.timestamp = datetime.strptime(metadata["created"], "%d-%b-%Y").replace(tzinfo=timezone.utc)
 
         components = [
             DeleteButton(inter.author),
-            disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url),
+            disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=embed.url or url),
         ]
         await inter.send(embed=embed, components=components)
 
@@ -242,7 +247,7 @@ class PythonEnhancementProposals(
         await self.validate_pep_number(number)
         pep_embed = await self.get_pep_embed(number)
 
-        components = [DeleteButton(inter.author)]
+        components: list[disnake.ui.Button] = [DeleteButton(inter.author)]
         if pep_embed.url:
             components.append(disnake.ui.Button(style=disnake.ButtonStyle.link, label="Open PEP", url=pep_embed.url))
         await inter.send(embed=pep_embed, components=components)
@@ -291,9 +296,11 @@ class PythonEnhancementProposals(
         return peps
 
     @pep_command.autocomplete("header")
-    async def pep_header_completion(self, inter: disnake.ApplicationCommandInteraction, query: str) -> dict[str, str]:
+    async def pep_header_completion(
+        self, inter: disnake.ApplicationCommandInteraction, query: str
+    ) -> dict[str, str] | list[str]:
         """Completion for pep headers."""
-        number = inter.filled_options.get("number")
+        number = cast(int | None, inter.filled_options.get("number"))
         if number is None:
             return ["No PEP number provided.", "You must provide a valid pep number before providing a header."]
         if number not in self.peps:

@@ -4,7 +4,7 @@ import re
 import zlib
 from collections import defaultdict
 from datetime import timedelta
-from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple
 
 import aiohttp
 
@@ -22,7 +22,7 @@ log = get_logger(__name__)
 FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r"(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)")
 
-InventoryDict = DefaultDict[str, List[Union[Tuple[str, str], Tuple[str, str, str]]]]
+InventoryDict = DefaultDict[str, List[Tuple[str, str, str]]]
 
 
 class InvalidHeaderError(Exception):
