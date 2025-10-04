@@ -11,9 +11,10 @@ from dataclasses import dataclass, field
 from typing import Any, Sequence, Union
 
 import disnake
+import rich.console
+import rich.pretty
+import rich.text
 from disnake.ext import commands
-from rich.console import Console
-from rich.pretty import pprint
 
 from monty import constants
 from monty.bot import Monty
@@ -137,9 +138,15 @@ class InternalEval(commands.Cog):
 
         return result
 
-    def make_pretty(self, result: Result, rules: EvalRules) -> Result:
+    def make_pretty(
+        self,
+        result: Result,
+        rules: EvalRules,
+        *,
+        use_ansi: bool = True,
+    ) -> Result:
         """Modify the result to be pretty-printed if the rules specify it."""
-        if EvalRules.sort_lists in rules and isinstance(result.raw_value, list):
+        if EvalRules.sort_lists in rules and isinstance(result.raw_value, (list, set, tuple)):
             try:
                 result.raw_value = sorted(result.raw_value)
             except TypeError:
@@ -147,26 +154,39 @@ class InternalEval(commands.Cog):
                 pass
 
         if EvalRules.pprint_result in rules:
+            console = rich.console.Console(file=sys.stdout, no_color=not use_ansi, color_system="standard")
             with io.StringIO() as buf:
                 if result.raw_value is not None:
-                    pprint(result.raw_value, console=Console(file=buf, no_color=False, color_system="standard"))
+                    rich.pretty.pprint(result.raw_value, console=console)
                 result.raw_value = buf.getvalue()
                 new_results = []
                 for val in result._:
                     buf.seek(0)
                     buf.truncate(0)
-                    pprint(val, console=Console(file=buf, no_color=False, color_system="standard"))
+                    rich.pretty.pprint(val, console=console)
                     new_results.append(buf.getvalue())
                 result._ = new_results
         return result
 
+    def check_limits_to_file(self, result: Result) -> bool:
+        """Check if the result exceeds any limits. Returns True if it does."""
+        # Currently no limits are enforced
+        return False
+
     def maybe_file(
-        self, content: str, *, prefix: str = "result", suffix: str = "txt"
+        self,
+        content: str,
+        *,
+        prefix: str = "result",
+        suffix: str = "txt",
+        length: int = 2000,
     ) -> tuple[str, disnake.File] | None:
         """If the content is too long, return a file instead of a string. Returns a tuple of filename and file."""
         # TODO: Files are not previewed in components v2
         # either revert to components v1 or Figure out some different long-output strategy
-        if len(content) > 2000:
+        if len(content) > length:
+            # strip ansi
+            content = rich.text.Text.from_ansi(content).plain
             filename = f"{prefix}.{suffix}"
             file = disnake.File(io.BytesIO(content.encode()), filename=filename)  # TODO: fix in Disnake
             return filename, file
@@ -177,14 +197,13 @@ class InternalEval(commands.Cog):
     ) -> tuple[disnake.ui.Container | list[Any], disnake.File | None]:
         """Get a UI component for a given segment of text."""
         file = None
-        if len(content) > 2000:
-            file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
-            if file_tuple:
-                filename, file = file_tuple
-                container = disnake.ui.Container(
-                    disnake.ui.TextDisplay(f"Output too long, sent as file `{filename}`."),
-                    disnake.ui.File(f"attachment://{filename}"),
-                )
+        file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
+        if file_tuple:
+            filename, file = file_tuple
+            container = disnake.ui.Container(
+                disnake.ui.TextDisplay(f"Output too long, sent as file `{filename}`."),
+                disnake.ui.File(f"attachment://{filename}"),
+            )
         elif content.strip():
             container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n```{language}\n{content}\n```"))
         else:
@@ -282,7 +301,7 @@ class InternalEval(commands.Cog):
             "guild": ctx.guild,
             "me": ctx.me,
             "message": ctx.message,
-            "pprint": pprint,
+            "pprint": rich.pretty.pprint,
             "asyncio": asyncio,
         }
         body = prepare_input(body)
@@ -324,7 +343,7 @@ class InternalEval(commands.Cog):
             "guild": ctx.guild,
             "me": ctx.me,
             "message": ctx.message,
-            "pprint": pprint,
+            "pprint": rich.pretty.pprint,
             "asyncio": asyncio,
         }
         last_result: Any = None
