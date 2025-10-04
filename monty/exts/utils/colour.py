@@ -237,6 +237,7 @@ class Colour(
         b = round(255 * (1 - (yellow / 100)) * (1 - (black / 100)))
         await self.send_colour_response(ctx, (r, g, b), input_colour=f"CMYK: {cyan}, {magenta}, {yellow}, {black}")
 
+    # TODO: fix this typoed name
     @slash_colour.sub_command(name="cymk")
     async def slash_cmyk(
         self,
