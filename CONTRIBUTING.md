@@ -130,7 +130,7 @@ You'll also need to connect this bot to at least one server you have access to.
 > Monty Python requires the message content intent and **won't start** if that
 > intent is disabled. Be sure to enable it when configuring the bot.
 
-# Running Monty
+## Run a development instance
 
 From this point, I suggest running two separate docker compose commands. The
 first one to run is `docker compose up --detach postgres redis` which starts the
@@ -172,3 +172,19 @@ docker compose up monty
 
 Monty should now be running! There's now a few other configuration things to do
 to finish initialising the database. See the bot only commands.
+
+## Building the documentation
+
+TLDR
+```sh
+uv run nox -s docs
+```
+
+Alternatively you can run mkdocs directly once dev dependencies are installed:
+
+```sh
+uv run mkdocs serve
+```
+
+The dev server runs on http://127.0.0.1:8000 by default. Use `mkdocs build`
+to produce the static site into `site/`.
