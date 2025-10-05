@@ -9,16 +9,13 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 from typing import (
-    TYPE_CHECKING,
     Any,
     Dict,
     Final,
     List,
     Sequence,
-    Tuple,
 )
 
 import nox
@@ -41,32 +38,6 @@ CI: Final[bool] = "CI" in os.environ
 
 # used to reset cached coverage data once for the first test run only
 reset_coverage = True
-
-if TYPE_CHECKING:
-    ExecutionGroupType = object
-else:
-    ExecutionGroupType = Dict[str, Any]
-
-
-@dataclasses.dataclass
-class ExecutionGroup(ExecutionGroupType):
-    sessions: Tuple[str, ...] = ()
-    python: str = MIN_PYTHON
-    project: bool = True
-    extras: Tuple[str, ...] = ()
-    groups: Tuple[str, ...] = ()
-    dependencies: Tuple[str, ...] = ()
-    experimental: bool = False
-    pyright_paths: Tuple[str, ...] = ()
-
-    def __post_init__(self) -> None:
-        if self.pyright_paths and "pyright" not in self.sessions:
-            msg = "pyright_paths can only be set if pyright is in sessions"
-            raise TypeError(msg)
-        if self.python in EXPERIMENTAL_PYTHON_VERSIONS:
-            self.experimental = True
-        for key in self.__dataclass_fields__:
-            self[key] = getattr(self, key)  # type: ignore
 
 
 def install_deps(
@@ -168,7 +139,7 @@ def mdformat(session: nox.Session) -> None:
 @nox.session()
 def pyright(session: nox.Session) -> None:
     """Run Pyright on the project."""
-    install_deps(session, groups=["typing"])
+    install_deps(session, groups=["typing", "devlibs"])
     env = {
         "PYRIGHT_PYTHON_IGNORE_WARNINGS": "1",
     }
