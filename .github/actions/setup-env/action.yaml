@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: MIT
+
+name: Set up environment
+description: .
+inputs:
+  python-version:
+    description: The python version to install
+    required: false
+    default: '3.9'
+outputs:
+  python-version:
+    description: The python version that was installed.
+    value: ${{ steps.python-version.outputs.python-version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up uv with Python ${{ inputs.python-version }}
+      id: setup-python
+      uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4 # v6.7.0
+      with:
+        version: '0.8.14'
+        enable-cache: true
+        # this doesn't install python but pins the uv version; its the same as providing UV_PYTHON
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Python ${{ inputs.python-version }}
+      shell: bash
+      env:
+        UV_PYTHON_DOWNLOADS: automatic
+        PYTHON_VERSION: ${{ inputs.python-version }}
+      run: |
+        uv python install ${PYTHON_VERSION}
+
+    - name: Install nox
+      shell: bash
+      run: |
+        uv tool install nox
+
+    - name: Set Python version
+      id: python-version
+      shell: bash
+      env:
+        UV_VENV_CLEAR: 1
+      run: |
+        uv venv .venv
+        echo "python-version=$(uv run python -c 'import sys; print(".".join(map(str,sys.version_info[:2])))')" >> $GITHUB_OUTPUT

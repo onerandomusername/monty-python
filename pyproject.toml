@@ -43,13 +43,15 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "fakeredis<3.0.0,>=2.29.0",
-    "watchfiles<2.0.0,>=1.0.5",
-    "python-dotenv<2.0.0,>=1.1.0",
     {include-group = "tools"},
     {include-group = "typing"},
     {include-group = "docs"},
     {include-group = "mdformat"},
+]
+devlibs = [
+    "fakeredis<3.0.0,>=2.29.0",
+    "watchfiles<2.0.0,>=1.0.5",
+    "python-dotenv<2.0.0,>=1.1.0",
 ]
 tools = [
     "black<26.0.0,>=25.9.0",

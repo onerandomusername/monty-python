@@ -1634,7 +1634,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "fakeredis" },
     { name = "isort" },
     { name = "markdown-gfm-admonition" },
     { name = "mdformat" },
@@ -1654,8 +1653,11 @@ dev = [
     { name = "poethepoet" },
     { name = "prek" },
     { name = "pyright" },
-    { name = "python-dotenv" },
     { name = "ruff" },
+]
+devlibs = [
+    { name = "fakeredis" },
+    { name = "python-dotenv" },
     { name = "watchfiles" },
 ]
 docs = [
@@ -1723,7 +1725,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=25.9.0,<26.0.0" },
-    { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
     { name = "isort", specifier = "==6.1.0" },
     { name = "markdown-gfm-admonition", specifier = ">=0.1.1,<1.0.0" },
     { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
@@ -1743,8 +1744,11 @@ dev = [
     { name = "poethepoet", specifier = ">=0.37.0" },
     { name = "prek", specifier = ">=0.2.1,<0.3" },
     { name = "pyright", specifier = "==1.1.406" },
-    { name = "python-dotenv", specifier = ">=1.1.0,<2.0.0" },
     { name = "ruff", specifier = "==0.13.3" },
+]
+devlibs = [
+    { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
+    { name = "python-dotenv", specifier = ">=1.1.0,<2.0.0" },
     { name = "watchfiles", specifier = ">=1.0.5,<2.0.0" },
 ]
 docs = [
