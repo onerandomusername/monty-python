@@ -98,7 +98,7 @@ def install_deps(
     session.run_install(
         *command,
         env=env,
-        silent=True,
+        silent=not CI,
     )
 
     if dependencies:
@@ -138,17 +138,25 @@ def mdformat(session: nox.Session) -> None:
 
 @nox.session()
 def pyright(session: nox.Session) -> None:
-    """Run Pyright on the project."""
-    install_deps(session, groups=["typing", "devlibs"])
+    """Run BasedPyright on Monty."""
+    install_deps(
+        session,
+        groups=[
+            "typing",
+            "devlibs",
+            "nox",
+        ],
+    )
     env = {
         "PYRIGHT_PYTHON_IGNORE_WARNINGS": "1",
     }
-    args = session.posargs or ["monty"]
+
+    args = ["--venvpath", session.virtualenv.location, *session.posargs]
     try:
         session.run(
             "python",
             "-m",
-            "pyright",
+            "basedpyright",
             *args,
             env=env,
         )

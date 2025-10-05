@@ -44,7 +44,8 @@ jobs:
   typing:
     name: Pyright type check
     runs-on: ubuntu-latest
-    continue-on-error: true
+    env:
+      NOXSESSION: pyright
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -56,37 +57,13 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Add .venv/bin to PATH
-        id: venv-bin
-        run: |
-          uv venv .venv
-          dirname "$(uv python find)" >> $GITHUB_PATH
-          echo python="$(uv python find)" >> $GITHUB_OUTPUT
-
       - name: Install dependencies
-        # `--no-venv` to install in the main pdm venv instead of nox's pyright-specific one
-        # because nox uses pdm internally to install, this means that the venv that is used is
-        # the one that pdm would create in project: `.venv`
-        # python is NOT forced here because the session name is explicit
-        env:
-          NOXSESSION: pyright
-          NOX_DEFAULT_VENV_BACKEND: "none"
-          ## needed to install specific dependencies
-          ## used internally when nox calls pip to install a dependency in the venv
-          PIP_PYTHON: ${{ steps.venv-bin.outputs.python }}
         run: |
           nox --install-only
 
       - name: Run pyright (Linux)
-        uses: jakebailey/pyright-action@6cabc0f01c4994be48fd45cd9dbacdd6e1ee6e5e # v2.3.3
-        id: pyright-linux
-        with:
-          version: PATH
-          python-version: ${{ steps.setup-env.outputs.python-version }}
-          python-platform: "Linux"
-          annotate: true
-          warnings: true
-
+        run:
+          nox
 
   check:  # This job does nothing and is only used for the branch protection
     name: Check CI passed
