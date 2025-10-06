@@ -1,6 +1,5 @@
 import re
 from html import unescape
-from typing import List
 
 import disnake
 from disnake.ext import commands
@@ -37,7 +36,7 @@ class WikipediaSearch(commands.Cog, name="Wikipedia Search"):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-    async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> List[str]:
+    async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> list[str]:
         """Search wikipedia search string and return formatted first 10 pages found."""
         params = WIKI_PARAMS | {"srlimit": 10, "srsearch": search}
         async with self.bot.http_session.get(url=SEARCH_API, params=params) as resp:

@@ -1,7 +1,7 @@
 import asyncio
 import dataclasses
 import inspect
-from typing import Literal, Optional, Union
+from typing import Literal
 
 import disnake
 import sqlalchemy as sa
@@ -19,9 +19,9 @@ logger = get_logger(__name__)
 
 
 def get_locale_from_dict(
-    locales: Union[disnake.Locale, list[disnake.Locale | Literal[None]]],
+    locales: disnake.Locale | list[disnake.Locale | Literal[None]],
     table: dict[disnake.Locale | Literal["_"], str],
-) -> Optional[str]:
+) -> str | None:
     """Get the first string out of table that matches a locale. Defaults to en_GB if no locale can be found."""
     if isinstance(locales, disnake.Locale):
         locales = [locales]
@@ -335,7 +335,7 @@ class Configuration(
         self,
         inter: disnake.GuildCommandInteraction,
         option: str,
-    ) -> Union[dict[str, str], list[str]]:
+    ) -> dict[str, str] | list[str]:
         """Provide autocomplete for config options."""
         # todo: make this better and not like this
         # todo: support non-nullable names (maybe a second autocomplete)

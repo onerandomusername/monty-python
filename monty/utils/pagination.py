@@ -1,5 +1,6 @@
 import asyncio
-from typing import Iterable, List, Optional, Tuple, Union, cast
+from collections.abc import Iterable
+from typing import cast
 
 import disnake
 from disnake.ext import commands
@@ -39,7 +40,7 @@ class LinePaginator(commands.Paginator):
         prefix: str = "```",
         suffix: str = "```",
         max_size: int = 2000,
-        max_lines: Optional[int] = None,
+        max_lines: int | None = None,
         linesep: str = "\n",
     ) -> None:
         """
@@ -90,7 +91,7 @@ class LinePaginator(commands.Paginator):
             self._count += 1
 
     @staticmethod
-    def strip_custom_id(custom_id: str) -> Optional[str]:
+    def strip_custom_id(custom_id: str) -> str | None:
         """Remove paginator custom id prefix."""
         if not custom_id.startswith(CUSTOM_ID_PREFIX):
             return None
@@ -105,14 +106,14 @@ class LinePaginator(commands.Paginator):
         embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
-        max_lines: Optional[int] = None,
+        max_lines: int | None = None,
         max_size: int = 500,
         empty: bool = True,
         linesep: str = "\n",
-        restrict_to_user: Union[disnake.User, disnake.Member] = None,
+        restrict_to_user: disnake.User | disnake.Member = None,
         timeout: int = 300,
-        footer_text: Optional[str] = None,
-        url: Optional[str] = None,
+        footer_text: str | None = None,
+        url: str | None = None,
         exception_on_empty_embed: bool = False,
     ) -> None:
         """
@@ -351,7 +352,7 @@ class ImagePaginator(commands.Paginator):
     @classmethod
     async def paginate(
         cls,
-        pages: List[Tuple[str, str]],
+        pages: list[tuple[str, str]],
         ctx: commands.Context,
         embed: disnake.Embed,
         prefix: str = "",

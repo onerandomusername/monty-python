@@ -6,8 +6,9 @@ import contextlib
 import enum
 import io
 import types
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence, Union
+from typing import Any, Union
 
 import disnake
 import rich.console

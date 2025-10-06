@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Tuple, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -21,6 +21,7 @@ from monty.utils.services import GITHUB_REQUEST_HEADERS as DEFAULT_GITHUB_REQUES
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from typing import NoReturn
 
     from monty.exts.info.github_info import GithubInfo
@@ -71,7 +72,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         """Initializes the cog's bot."""
         self.bot = bot
 
-        self.pattern_handlers: List[Tuple[re.Pattern, Callable[..., Awaitable[str]]]] = [
+        self.pattern_handlers: list[tuple[re.Pattern, Callable[..., Awaitable[str]]]] = [
             (GITHUB_RE, self._fetch_github_snippet),
             (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
             (GITLAB_RE, self._fetch_gitlab_snippet),

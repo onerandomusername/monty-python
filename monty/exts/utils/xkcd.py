@@ -1,5 +1,5 @@
 import re
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import disnake
 from disnake.ext import commands, tasks
@@ -40,7 +40,7 @@ class XKCD(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.latest_comic_info: Optional[XkcdDict] = None
+        self.latest_comic_info: XkcdDict | None = None
         self.get_latest_comic_info.start()
 
     def cog_unload(self) -> None:
@@ -57,9 +57,7 @@ class XKCD(
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
     @commands.slash_command(name="xkcd")
-    async def fetch_xkcd_comics(
-        self, inter: disnake.ApplicationCommandInteraction, comic: Optional[str] = None
-    ) -> None:
+    async def fetch_xkcd_comics(self, inter: disnake.ApplicationCommandInteraction, comic: str | None = None) -> None:
         """
         View an xkcd comic.
 

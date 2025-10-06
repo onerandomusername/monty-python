@@ -32,7 +32,7 @@ class Scheduler:
         self.name = name
 
         self._log = get_logger(f"{__name__}.{name}")
-        self._scheduled_tasks: t.Dict[t.Hashable, asyncio.Task] = {}
+        self._scheduled_tasks: dict[t.Hashable, asyncio.Task] = {}
 
     def __contains__(self, task_id: t.Hashable) -> bool:
         """Return True if a task with the given `task_id` is currently scheduled."""
@@ -82,7 +82,7 @@ class Scheduler:
 
         self.schedule(task_id, coroutine)
 
-    def schedule_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_later(self, delay: int | float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
         Schedule `coroutine` to be executed after the given `delay` number of seconds.
 
@@ -111,7 +111,7 @@ class Scheduler:
         for task_id in self._scheduled_tasks.copy():
             self.cancel(task_id)
 
-    async def _await_later(self, delay: t.Union[int, float], task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    async def _await_later(self, delay: int | float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """Await `coroutine` after the given `delay` number of seconds."""
         try:
             self._log.trace(f"Waiting {delay} seconds before awaiting coroutine for #{task_id}.")
@@ -169,8 +169,8 @@ class Scheduler:
 def create_task(
     coro: t.Coroutine[t.Any, t.Any, T],
     *,
-    suppressed_exceptions: tuple[t.Type[Exception], ...] = (),
-    event_loop: t.Optional[asyncio.AbstractEventLoop] = None,
+    suppressed_exceptions: tuple[type[Exception], ...] = (),
+    event_loop: asyncio.AbstractEventLoop | None = None,
     **kwargs,
 ) -> asyncio.Task[T]:
     """
@@ -186,7 +186,7 @@ def create_task(
     return task
 
 
-def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: t.Tuple[t.Type[Exception], ...]) -> None:
+def _log_task_exception(task: asyncio.Task, *, suppressed_exceptions: tuple[type[Exception], ...]) -> None:
     """Retrieve and log the exception raised in `task` if one exists."""
     with contextlib.suppress(asyncio.CancelledError):
         exception = task.exception()

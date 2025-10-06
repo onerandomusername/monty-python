@@ -1,5 +1,4 @@
 import typing
-from typing import Dict, Optional
 
 from aiohttp import ClientConnectorError
 from attrs import define
@@ -38,7 +37,7 @@ class GitHubRateLimit:
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
-async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
+async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> str | None:
     """
     Upload `contents` to the paste service.
 
@@ -118,7 +117,7 @@ def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
 # https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
 def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
     """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
-    ratelimits: Dict[str, Dict[str, int]] = json["resources"]
+    ratelimits: dict[str, dict[str, int]] = json["resources"]
     for name, resource in ratelimits.items():
         GITHUB_RATELIMITS[name] = GitHubRateLimit(
             limit=resource["limit"],

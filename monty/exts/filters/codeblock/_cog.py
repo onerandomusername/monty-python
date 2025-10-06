@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Optional, Union
+from typing import Union
 
 import disnake
 from disnake.ext import commands
@@ -87,7 +87,7 @@ class CodeBlockCog(
         """Return an embed which displays code block formatting `instructions`."""
         return disnake.Embed(description=instructions)
 
-    async def get_sent_instructions(self, payload: disnake.RawMessageUpdateEvent) -> Optional[disnake.Message]:
+    async def get_sent_instructions(self, payload: disnake.RawMessageUpdateEvent) -> disnake.Message | None:
         """
         Return the bot's sent instructions message associated with a user's message `payload`.
 
@@ -205,7 +205,7 @@ class CodeBlockCog(
             log.trace(f"Ignoring message edit {payload.message_id}: message isn't being tracked.")
             return
 
-        content: Optional[str]
+        content: str | None
         if (content := payload.data.get("content")) is None or payload.data.get("channel_id") is None:
             log.trace(f"Ignoring message edit {payload.message_id}: missing content or channel ID.")
             return

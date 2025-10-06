@@ -1,5 +1,3 @@
-from typing import Optional
-
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
@@ -16,12 +14,12 @@ class GuildConfig(MappedAsDataclass, Base):
     __tablename__ = "guild_config"
 
     id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=False)
-    guild_id: Mapped[Optional[int]] = mapped_column(sa.ForeignKey("guilds.id"), name="guild", unique=True)
-    guild: Mapped[Optional[Guild]] = relationship(Guild, default=None)
-    prefix: Mapped[Optional[str]] = mapped_column(
+    guild_id: Mapped[int | None] = mapped_column(sa.ForeignKey("guilds.id"), name="guild", unique=True)
+    guild: Mapped[Guild | None] = relationship(Guild, default=None)
+    prefix: Mapped[str | None] = mapped_column(
         sa.String(length=50), nullable=True, default=constants.Client.default_command_prefix
     )
-    github_issues_org: Mapped[Optional[str]] = mapped_column(sa.String(length=39), nullable=True, default=None)
+    github_issues_org: Mapped[str | None] = mapped_column(sa.String(length=39), nullable=True, default=None)
     git_file_expansions: Mapped[bool] = mapped_column(sa.Boolean, default=True)
     github_issue_linking: Mapped[bool] = mapped_column(sa.Boolean, default=True)
     github_comment_linking: Mapped[bool] = mapped_column(sa.Boolean, default=True)

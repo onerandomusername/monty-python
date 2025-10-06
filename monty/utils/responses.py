@@ -8,7 +8,7 @@ response if a command raises a disnake.ext.commands.CommandError exception.
 """
 
 import random
-from typing import Any, Literal, Tuple
+from typing import Any, Literal
 
 import disnake
 from disnake.ext import commands
@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 
 
 DEFAULT_SUCCESS_COLOUR = disnake.Colour(constants.Colours.soft_green)
-SUCCESS_HEADERS: Tuple[str, ...] = (
+SUCCESS_HEADERS: tuple[str, ...] = (
     "Affirmative",
     "As you wish",
     "Done",
@@ -64,7 +64,7 @@ SUCCESS_HEADERS: Tuple[str, ...] = (
 )
 
 DEFAULT_FAILURE_COLOUR = disnake.Colour(constants.Colours.soft_red)
-FAILURE_HEADERS: Tuple[str, ...] = (
+FAILURE_HEADERS: tuple[str, ...] = (
     "Abort!",
     "I cannot do that",
     "Hold up!",
@@ -89,7 +89,7 @@ FAILURE_HEADERS: Tuple[str, ...] = (
 )
 
 # Bot replies
-USER_INPUT_ERROR_REPLIES: Tuple[str, ...] = (
+USER_INPUT_ERROR_REPLIES: tuple[str, ...] = (
     "That input was invalid.",
     "Proper input not received.",
     "Please check your arguments.",

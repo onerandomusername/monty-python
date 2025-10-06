@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import ssl
-from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
@@ -17,6 +17,8 @@ from monty.utils.messages import extract_urls
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")
@@ -34,7 +36,7 @@ def suppress_links(message: str) -> str:
     return message
 
 
-def find_nth_occurrence(string: str, substring: str, n: int) -> Optional[int]:
+def find_nth_occurrence(string: str, substring: str, n: int) -> int | None:
     """Return index of `n`th occurrence of `substring` in `string`, or None if not found."""
     index = 0
     for _ in range(n):
@@ -104,7 +106,7 @@ def decode_github_link(compressed: str) -> str:
     return urlunsplit(("https", "github.com", path, "", fragment))
 
 
-def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> asyncio.Task:
+def maybe_defer(inter: disnake.Interaction, *, delay: float | int = 2.0, **options) -> asyncio.Task:
     """Defer an interaction if it has not been responded to after ``delay`` seconds."""
     loop = inter.bot.loop
     if delay <= 0:

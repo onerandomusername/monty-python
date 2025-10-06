@@ -2,7 +2,7 @@ import asyncio
 import re
 from functools import partial
 from signal import Signals
-from typing import Literal, Optional, Tuple, overload
+from typing import Literal, overload
 
 import aiohttp
 import disnake
@@ -99,7 +99,7 @@ class Snekbox(
         self.url = yarl.URL(Endpoints.snekbox)
         self.jobs = {}
 
-    async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
+    async def post_eval(self, code: str, *, args: list[str] | None = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = self.url / "eval"
         data: dict[str, str | list[str]] = {"input": code}
@@ -118,7 +118,7 @@ class Snekbox(
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
 
-    async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
+    async def upload_output(self, output: str, extension: str = "text") -> str | None:
         """Upload the eval output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
@@ -128,7 +128,7 @@ class Snekbox(
         return await send_to_paste_service(self.bot, output, extension=extension)
 
     @staticmethod
-    def get_results_message(results: dict) -> Tuple[str, str]:
+    def get_results_message(results: dict) -> tuple[str, str]:
         """Return a user-friendly message and error corresponding to the process's return code."""
         stdout, returncode = results["stdout"], results["returncode"]
         msg = f"Your eval job has completed with return code {returncode}"
@@ -162,7 +162,7 @@ class Snekbox(
         else:  # Exception
             return ":x:"
 
-    async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
+    async def format_output(self, output: str) -> tuple[str, str | None]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
 
@@ -223,7 +223,7 @@ class Snekbox(
         code: str,
         return_result: Literal[True] = True,
         original_source: bool = False,
-    ) -> tuple[str, Optional[str]]:
+    ) -> tuple[str, str | None]:
         pass
 
     @overload
@@ -254,7 +254,7 @@ class Snekbox(
         code: str,
         return_result: bool = False,
         original_source: bool = False,
-    ) -> tuple[str, Optional[str]] | disnake.Message:
+    ) -> tuple[str, str | None] | disnake.Message:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
@@ -295,7 +295,7 @@ class Snekbox(
 
         return response
 
-    async def continue_eval(self, ctx: commands.Context, response: disnake.Message) -> Optional[str]:
+    async def continue_eval(self, ctx: commands.Context, response: disnake.Message) -> str | None:
         """
         Check if the eval session should continue.
 
@@ -342,7 +342,7 @@ class Snekbox(
         else:
             return code
 
-    async def get_code(self, message: disnake.Message) -> Optional[str]:
+    async def get_code(self, message: disnake.Message) -> str | None:
         """
         Return the code from `message` to be evaluated.
 
@@ -367,7 +367,7 @@ class Snekbox(
         contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
         install_types=disnake.ApplicationInstallTypes.all(),
     )
-    async def slash_eval(self, inter: disnake.ApplicationCommandInteraction, code: Optional[str] = None) -> None:
+    async def slash_eval(self, inter: disnake.ApplicationCommandInteraction, code: str | None = None) -> None:
         """
         Evaluate python code.
 

@@ -41,7 +41,7 @@ TIMEDELTA_REGEX = re.compile(
 )
 
 
-def str_timedelta_from_now(human: str, /) -> t.Optional[timedelta]:
+def str_timedelta_from_now(human: str, /) -> timedelta | None:
     """Convert a string to a timedelta relative to the current time."""
     match = TIMEDELTA_REGEX.fullmatch(human)
     if not match:
@@ -227,7 +227,7 @@ class Inventory(commands.Converter):
     """
 
     @staticmethod
-    async def convert(ctx: commands.Context, url: str) -> t.Tuple[str, inventory_parser.InventoryDict]:
+    async def convert(ctx: commands.Context, url: str) -> tuple[str, inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         try:
@@ -401,7 +401,7 @@ if t.TYPE_CHECKING:
     Extension = str  # type: ignore  # noqa: F811
     PackageName = str  # type: ignore  # noqa: F811
     ValidURL = str  # type: ignore  # noqa: F811
-    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
+    Inventory = tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
     Snowflake = int  # type: ignore  # noqa: F811
     UnambiguousUser = disnake.User  # type: ignore  # noqa: F811
     UnambiguousMember = disnake.Member  # type: ignore  # noqa: F811

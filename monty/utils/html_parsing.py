@@ -4,7 +4,7 @@ import re
 import string
 import textwrap
 from collections import namedtuple
-from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from bs4.element import NavigableString, PageElement, Tag
 
@@ -16,6 +16,8 @@ from monty.utils.markdown import DocMarkdownConverter
 
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Iterator
+
     from bs4 import BeautifulSoup
 
     from monty.exts.info.docs._cog import DocItem
@@ -57,7 +59,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     """
     last_split = 0
     depth = 0
-    current_search: Optional[BracketPair] = None
+    current_search: BracketPair | None = None
 
     enumerated_string = enumerate(parameters_string)
     for index, character in enumerated_string:
@@ -93,7 +95,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     yield parameters_string[last_split:]
 
 
-def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
+def _truncate_signatures(signatures: Collection[str]) -> list[str] | Collection[str]:
     """
     Truncate passed signatures to not exceed `_MAX_SIGNATURES_LENGTH`.
 
@@ -137,7 +139,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-    elements: Iterable[Union[Tag, NavigableString, PageElement]] | Tag,
+    elements: Iterable[Tag | NavigableString | PageElement] | Tag,
     markdown_converter: DocMarkdownConverter,
     max_length: int,
     max_lines: int,
@@ -242,9 +244,7 @@ def _get_truncated_description(
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
-def _create_markdown(
-    signatures: Optional[List[str]], description: Iterable[Union[Tag, NavigableString]], url: str
-) -> str:
+def _create_markdown(signatures: list[str] | None, description: Iterable[Tag | NavigableString], url: str) -> str:
     """
     Create a Markdown string with the signatures at the top, and the converted html description below them.
 
@@ -262,7 +262,7 @@ def _create_markdown(
         return description_str
 
 
-def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
+def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str | None:
     """
     Return parsed Markdown of the passed item using the passed in soup, truncated to fit within a discord message.
 

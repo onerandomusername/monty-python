@@ -1,7 +1,7 @@
 import asyncio
 import re
 import urllib.parse
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import aiohttp
 import disnake
@@ -52,7 +52,7 @@ class CodeBlockActions(
         self.bot = bot
         self.black_endpoint = Endpoints.black_formatter
 
-    def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> Optional[str]:
+    def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> str | None:
         """Get the code from the provided content. Parses codeblocks and assures its python code."""
         code = prepare_input(content, require_fenced=require_fenced)
         if not code:
@@ -64,7 +64,7 @@ class CodeBlockActions(
             return None
         return code
 
-    async def check_paste_link(self, content: str) -> Optional[str]:
+    async def check_paste_link(self, content: str) -> str | None:
         """Fetch code from a paste link."""
         match: re.Match[str] | None = next(filter(None, map(PASTE_REGEX.match, extract_urls(content))), None)
         if not match:
@@ -143,7 +143,7 @@ class CodeBlockActions(
     async def _upload_to_workbin(
         self,
         message: disnake.Message,
-    ) -> tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         success, code, is_paste = await self.parse_code(
             message,
             require_fenced=False,
@@ -250,7 +250,7 @@ class CodeBlockActions(
         self,
         message: disnake.Message,
         include_message: bool = False,
-    ) -> tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         # success, string, link
         if not self.black_endpoint:
             raise RuntimeError("Black endpoint is not configured.")

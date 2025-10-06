@@ -78,7 +78,7 @@ def get_arg_value_wrapper(
     return decorator_func(wrapper)
 
 
-def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> BoundArgs:
+def get_bound_args(func: t.Callable, args: tuple, kwargs: dict[str, t.Any]) -> BoundArgs:
     """
     Bind `args` and `kwargs` to `func` and return a mapping of parameter names to argument values.
 
@@ -95,7 +95,7 @@ def update_wrapper_globals(
     wrapper: FuncT,
     wrapped: AnyCallable,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
+    ignored_conflict_names: set[str] | frozenset[str] | None = None,
 ) -> FuncT:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
@@ -143,7 +143,7 @@ def command_wraps(
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] | None = None,
+    ignored_conflict_names: set[str] | frozenset[str] | None = None,
 ) -> t.Callable[[FuncT], FuncT]:
     """Update the decorated function to look like `wrapped` and update globals for disnake forwardref evaluation."""
     if ignored_conflict_names is None:

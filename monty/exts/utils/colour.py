@@ -4,7 +4,6 @@ import pathlib
 import random
 import string
 from io import BytesIO
-from typing import Optional, Union
 
 import disnake
 import rapidfuzz
@@ -37,7 +36,7 @@ class Colour(
 
     async def send_colour_response(
         self,
-        ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],
+        ctx: commands.Context | disnake.ApplicationCommandInteraction,
         rgb: tuple[int, int, int],
         input_colour: str | None,
     ) -> None:
@@ -104,7 +103,7 @@ class Colour(
         await ctx.send(file=thumbnail_file, embed=colour_embed, components=components)
 
     @commands.group(aliases=("color",), invoke_without_command=True)
-    async def colour(self, ctx: commands.Context, *, colour_input: Optional[str] = None) -> None:
+    async def colour(self, ctx: commands.Context, *, colour_input: str | None = None) -> None:
         """
         Create an embed that displays colour information.
 
@@ -392,7 +391,7 @@ class Colour(
         hex_code = f"#{hex_}".upper()
         return hex_code
 
-    def _rgb_to_name(self, rgb: tuple[int, int, int]) -> Optional[str]:
+    def _rgb_to_name(self, rgb: tuple[int, int, int]) -> str | None:
         """Convert RGB values to a fuzzy matched name."""
         input_hex_colour = self._rgb_to_hex(rgb)
         try:
@@ -406,7 +405,7 @@ class Colour(
             pass
         return None
 
-    def match_colour_name(self, input_colour_name: str) -> Optional[str]:
+    def match_colour_name(self, input_colour_name: str) -> str | None:
         """Convert a colour name to HEX code."""
         try:
             result = rapidfuzz.process.extractOne(
