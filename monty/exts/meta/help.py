@@ -103,7 +103,9 @@ class HelpSession:
             self.description = self.query.description
             if not self.description and isinstance(self.query, commands.Command):
                 self.description = self.query.help
+        else:
             self.query = ctx.bot
+            self.description = None
         self.author = ctx.author
         self.destination = ctx.channel
 
@@ -319,7 +321,7 @@ class HelpSession:
 
     async def _list_child_commands(self, paginator: LinePaginator) -> None:
         # remove hidden commands if session is not wanting hiddens
-        assert isinstance(self.query, Cog)
+        assert isinstance(self.query, (commands.GroupMixin | Cog))
         if not self._show_hidden:
             filtered = [c for c in self.query.commands if not c.hidden]
         else:
