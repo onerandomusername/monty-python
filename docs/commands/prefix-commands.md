@@ -122,7 +122,8 @@ Extension management commands.
 
 ### `extensions unload [extensions...]`
 
-*Unload currently loaded extensions given their fully qualified or unqualified names.*
+*Unload currently loaded extensions given their fully qualified or unqualified
+names.*
 
 **Can also use:** `extensions ul`
 
@@ -280,7 +281,8 @@ Management commands for bot rollouts.
 
 ### `rollouts stop <rollout>`
 
-*Stop a rollout. This does not decrease the rollout amount, just stops increasing the rollout.*
+*Stop a rollout. This does not decrease the rollout amount, just stops
+increasing the rollout.*
 
 **Can also use:** `rollouts halt`
 
@@ -328,7 +330,8 @@ Safe evaluation of Python code using Snekbox.
 
 *Uninstall the provided package from snekbox.*
 
-**Can also use:** `snekbox packages d`, `snekbox packages del`, `snekbox packages delete`, `snekbox packages r`, `snekbox packages uninstall`
+**Can also use:** `snekbox packages d`, `snekbox packages del`,
+`snekbox packages delete`, `snekbox packages r`, `snekbox packages uninstall`
 
 ### `snekbox packages view <package>`
 

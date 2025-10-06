@@ -128,15 +128,17 @@ def lint(session: nox.Session) -> None:
     session.run("prek", "run", "--all-files", *session.posargs)
 
 
-@nox.session(name="mdformat")
+@nox.session(name="mdformat", tags=("ci",))
 def mdformat(session: nox.Session) -> None:
     """Run mdformat on the documentation files."""
     install_deps(session, groups=["mdformat"])
     args = session.posargs or ["docs", "README.md", "CONTRIBUTING.md"]
+    if CI:
+        args.append("--check")
     session.run("mdformat", *args)
 
 
-@nox.session()
+@nox.session(tags=("ci",))
 def pyright(session: nox.Session) -> None:
     """Run BasedPyright on Monty."""
     install_deps(
