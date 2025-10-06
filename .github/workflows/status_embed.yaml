@@ -5,7 +5,7 @@ name: Status Embed
 on:
   workflow_run:
     workflows:
-      - Lint, Test, Build
+      - CI
     types:
       - completed
 
