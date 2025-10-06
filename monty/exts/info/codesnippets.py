@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Tuple
+from typing import Any, Awaitable, Callable, List, NoReturn, Tuple
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -12,6 +12,7 @@ from aiohttp import ClientResponseError
 from disnake.ext import commands
 
 from monty.bot import Monty
+from monty.exts.info.github_info import GithubInfo
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
@@ -19,11 +20,6 @@ from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
 from monty.utils.services import GITHUB_REQUEST_HEADERS as DEFAULT_GITHUB_REQUEST_HEADERS
 
-
-if TYPE_CHECKING:
-    from typing import NoReturn
-
-    from monty.exts.info.github_info import GithubInfo
 
 log = get_logger(__name__)
 
