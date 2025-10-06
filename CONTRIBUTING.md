@@ -110,8 +110,9 @@ uv run prek install
 If you don't already have uv installed, check the
 [uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or uvx.
 
-Make sure you install prek, as it will lint every commit before commiting,
-limiting the amount of fixes needing to be made in the review process.
+Make sure you run `prek install`, as it will integrate with git and lint every
+commit before committing, limiting the amount of fixes needing to be made in the
+review process.
 
 Some fixes aren't automatic or done with prek, so take a look at
 [Running CI locally](#running-ci-locally)
