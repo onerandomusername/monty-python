@@ -1,8 +1,6 @@
 # Github Action Workflow enforcing our code style and running tests.
 
-# misnomer, but not worth changing it
-# still not worth changing imo
-name: Lint, Test, Build
+name: CI
 
 # Trigger the workflow on both push (to the main repository)
 # and pull requests (against the main repository, but from any repo).
@@ -41,11 +39,37 @@ jobs:
       - uses: j178/prek-action@8b6a22b79a7469cb7048b98da156f98876c960b1 # v1.0.10
         env:
           RUFF_OUTPUT_FORMAT: "github"
-  typing:
-    name: Pyright type check
+
+  sessions:
+    name: Nox Sessions
     runs-on: ubuntu-latest
+    outputs:
+      sessions: ${{ steps.set-sessions.outputs.sessions }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        id: setup-env
+        uses: ./.github/actions/setup-env
+        with:
+          python-version: "3.10"
+
+      - name: Get Sessions
+        id: set-sessions
+        run: |
+          echo "sessions=$(nox --list --json | jq -c '[.[].session]')" >> $GITHUB_OUTPUT
+
+  ci:
+    name: ${{ matrix.session }}
+    runs-on: ubuntu-latest
+    needs: [sessions]
+    strategy:
+      matrix:
+        session: ${{ fromJson(needs.sessions.outputs.sessions) }}
     env:
-      NOXSESSION: pyright
+      NOXSESSION: ${{ matrix.session }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -61,7 +85,7 @@ jobs:
         run: |
           nox --install-only
 
-      - name: Run pyright (Linux)
+      - name: Run nox ${{ matrix.session }}
         run:
           nox
 
@@ -70,7 +94,7 @@ jobs:
     if: always()
     needs:
       - lint
-      - typing
+      - ci
 
     runs-on: ubuntu-latest
 
