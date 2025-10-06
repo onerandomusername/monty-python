@@ -1,6 +1,6 @@
 import asyncio
 import itertools
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Union
 
 import disnake
 import sqlalchemy as sa
@@ -620,7 +620,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_add(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[disnake.Guild | disnake.Object] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Add the features to the provided guilds, defaulting to the local guild."""
@@ -706,7 +706,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_remove(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[disnake.Guild | disnake.Object] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Remove the features from the provided guilds, defaulting to the local guild."""
