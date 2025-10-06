@@ -1,6 +1,5 @@
 import asyncio
 import time
-from typing import Union
 
 import disnake
 from disnake.ext import commands
@@ -19,7 +18,7 @@ from monty.utils.messages import DeleteButton
 
 log = get_logger(__name__)
 
-GuildMessageable = Union[disnake.TextChannel, disnake.Thread, disnake.VoiceChannel]
+GuildMessageable = disnake.TextChannel | disnake.Thread | disnake.VoiceChannel
 
 
 # seconds until the delete button is shown

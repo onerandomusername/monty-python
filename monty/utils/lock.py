@@ -4,14 +4,7 @@ import asyncio
 import inspect
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Coroutine, Hashable
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Literal,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from weakref import WeakValueDictionary
 
 from monty.errors import LockedResourceError
@@ -33,9 +26,9 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
-_IdCallableReturn = Union[Hashable, Awaitable[Hashable]]
+_IdCallableReturn = Hashable | Awaitable[Hashable]
 _IdCallable = Callable[[function.BoundArgs], _IdCallableReturn]
-ResourceId = Union[Hashable, _IdCallable]
+ResourceId = Hashable | _IdCallable
 
 
 class SharedEvent:

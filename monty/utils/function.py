@@ -14,7 +14,7 @@ AnyCallable = t.Callable[..., t.Any]
 FuncT = t.TypeVar("FuncT", bound=AnyCallable)
 OtherFuncT = t.TypeVar("OtherFuncT", bound=AnyCallable)
 
-Argument = t.Union[int, str]
+Argument = int | str
 BoundArgs = t.OrderedDict[str, t.Any]
 Decorator = t.Callable[[FuncT], OtherFuncT]
 ArgValGetter = t.Callable[[BoundArgs], t.Any]

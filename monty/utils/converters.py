@@ -26,7 +26,7 @@ log = get_logger(__name__)
 DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
-AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context[Monty]]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context[Monty]
 
 TIMEDELTA_REGEX = re.compile(
     r"^"
@@ -344,15 +344,15 @@ class WrappedMessageConverter(commands.MessageConverter):
         return await super().convert(ctx, argument)
 
 
-SourceType = t.Union[
-    commands.Command,
-    commands.Cog,
-    commands.InvokableSlashCommand,
-    commands.InvokableMessageCommand,
-    commands.InvokableUserCommand,
-    commands.SubCommand,
-    commands.SubCommandGroup,
-]
+SourceType = (
+    commands.Command
+    | commands.Cog
+    | commands.InvokableSlashCommand
+    | commands.InvokableMessageCommand
+    | commands.InvokableUserCommand
+    | commands.SubCommand
+    | commands.SubCommandGroup
+)
 
 
 class SourceConverter(commands.Converter):

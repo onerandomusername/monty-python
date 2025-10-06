@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import re
-from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import aiohttp
 import disnake
@@ -12,16 +13,18 @@ from monty.constants import Feature
 
 
 if TYPE_CHECKING:
-    from monty.bot import Monty
+    from collections.abc import Callable, Coroutine
+
+    from monty.bot import Monty  # noqa: F401
 
 
 __all__ = ("METADATA",)
 
 GITHUB_ORG_REGEX = re.compile(r"[a-zA-Z0-9\-]{1,}")
 
-VALID_CONFIG_TYPES = Union[str, bool, float, int]
+VALID_CONFIG_TYPES = str | bool | float | int
 T = TypeVar("T", bound=VALID_CONFIG_TYPES)
-AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context["Monty"]]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context["Monty"]
 
 
 async def validate_github_org(ctx: AnyContext, arg: str) -> str | None:

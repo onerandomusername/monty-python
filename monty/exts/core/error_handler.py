@@ -20,7 +20,7 @@ from monty.utils.messages import DeleteButton
 
 EXT_METADATA = ExtMetadata(core=True)
 
-AnyContext = typing.Union[commands.Context, disnake.ApplicationCommandInteraction]
+AnyContext = commands.Context | disnake.ApplicationCommandInteraction
 
 logger = get_logger(__name__)
 

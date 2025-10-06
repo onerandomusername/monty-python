@@ -1,6 +1,6 @@
 import asyncio
 import random
-from typing import TYPE_CHECKING, Union, overload
+from typing import TYPE_CHECKING, overload
 
 import disnake
 from disnake.ext import commands
@@ -17,15 +17,15 @@ if TYPE_CHECKING:
 else:
     from monty.utils.converters import WrappedMessageConverter
 
-MessageTopLevelComponent = Union[
-    "disnake.ui.Section",
-    "disnake.ui.TextDisplay",
-    "disnake.ui.MediaGallery",
-    "disnake.ui.File",
-    "disnake.ui.Separator",
-    "disnake.ui.Container",
-    "disnake.ui.ActionRow",
-]
+MessageTopLevelComponent = (
+    disnake.ui.Section
+    | disnake.ui.TextDisplay
+    | disnake.ui.MediaGallery
+    | disnake.ui.File
+    | disnake.ui.Separator
+    | disnake.ui.Container
+    | disnake.ui.ActionRow
+)
 
 log = get_logger(__name__)
 

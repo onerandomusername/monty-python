@@ -65,7 +65,7 @@ class HelpSession:
     Expected attributes include:
         * title: str
             The title of the help message.
-        * query: Union[disnake.ext.commands.Bot, disnake.ext.commands.Command]
+        * query: disnake.ext.commands.Bot | disnake.ext.commands.Command
         * description: str
             The description of the query.
         * pages: list[str]

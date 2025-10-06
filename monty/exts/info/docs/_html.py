@@ -1,7 +1,7 @@
 import re
 from collections.abc import Callable, Container, Iterable
 from functools import partial
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
@@ -41,7 +41,7 @@ class Strainer(SoupStrainer):
             log.warning("`text` is not a supported kwarg in the custom strainer.")
         super().__init__(**kwargs)
 
-    Markup = Union[PageElement, list["Markup"]]
+    Markup = PageElement | list["Markup"]
 
     def search(self, markup: Markup) -> PageElement | str | None:
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""

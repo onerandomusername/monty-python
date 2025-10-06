@@ -6,7 +6,7 @@ This provides a util for a feature in the database to be created representing a 
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import disnake
 from disnake.ext import commands
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from monty.bot import Monty
 
 
-AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context
 T = TypeVar("T")
 
 
