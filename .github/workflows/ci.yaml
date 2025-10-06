@@ -28,7 +28,7 @@ permissions:
   contents: read
 jobs:
   lint:
-    name: Lint
+    name: lint
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,7 +41,7 @@ jobs:
           RUFF_OUTPUT_FORMAT: "github"
 
   sessions:
-    name: Nox Sessions
+    name: nox sessions
     runs-on: ubuntu-latest
     outputs:
       sessions: ${{ steps.set-sessions.outputs.sessions }}
@@ -50,13 +50,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up environment
+      - name: set up environment
         id: setup-env
         uses: ./.github/actions/setup-env
         with:
           python-version: "3.10"
 
-      - name: Get Sessions
+      - name: export nox sessions
         id: set-sessions
         run: |
           echo "sessions=$(nox --list -t ci --json | jq -c '[.[].session]')" >> $GITHUB_OUTPUT
@@ -75,7 +75,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up environment
+      - name: set up environment
         id: setup-env
         uses: ./.github/actions/setup-env
         with:
@@ -89,7 +89,7 @@ jobs:
         run:
           nox
 
-  check:  # This job does nothing and is only used for the branch protection
+  check:
     name: Check CI passed
     if: always()
     needs:
