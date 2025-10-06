@@ -111,7 +111,7 @@ class TokenRemover(commands.Cog, name="Token Remover"):
         if found_tokens:
             # now check if the token is valid
             ids = await self.check_valid(*found_tokens)
-            for token, application_id in zip(found_tokens, ids):
+            for token, application_id in zip(found_tokens, ids, strict=False):
                 if application_id:
                     token.application_id = application_id
                 else:

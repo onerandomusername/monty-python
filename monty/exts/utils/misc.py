@@ -71,7 +71,7 @@ class Misc(
             info = f"`{u_code.ljust(10)}`: {name} - {disnake.utils.escape_markdown(char)}"
             return (info, u_code)
 
-        (char_list, raw_list) = zip(*(get_info(c) for c in characters))
+        (char_list, raw_list) = zip(*(get_info(c) for c in characters), strict=False)
         embed = disnake.Embed().set_author(name="Character Info")
 
         if len(characters) > 1:

@@ -72,7 +72,6 @@ class QueueItem(NamedTuple):
 if TYPE_CHECKING:
 
     class Deque(collections.deque[QueueItem]):
-
         def index(self, value: Union[QueueItem, _cog.DocItem], start: int = 0, stop: Optional[int] = None) -> int: ...
 
 else:

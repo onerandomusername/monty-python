@@ -184,7 +184,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         colour = (
             disnake.Colour.green()
             if feature.enabled is True
-            else disnake.Colour.greyple() if feature.enabled is None else disnake.Colour.red()
+            else disnake.Colour.greyple()
+            if feature.enabled is None
+            else disnake.Colour.red()
         )
         components: list = [
             disnake.ui.Container(
