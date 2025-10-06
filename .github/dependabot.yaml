@@ -4,7 +4,10 @@ version: 2
 updates:
   - package-ecosystem: "github-actions"
     # Workflow files in .github/workflows will be checked
-    directory: "/"
+    # so will the actions in .github/actions/
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 2
