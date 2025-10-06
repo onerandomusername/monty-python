@@ -240,9 +240,7 @@ class PyPI(
                 # and parse the html to get the rendered description
                 # this means that we don't have to parse the rst or markdown or whatever is the
                 # project's description content type
-                description = await self.fetch_description(
-                    package, description, info["description_content_type"] or ""
-                )  # pyright: ignore[reportCallIssue]
+                description = await self.fetch_description(package, description, info["description_content_type"] or "")  # pyright: ignore[reportCallIssue]
                 if description:
                     components[0].children.append(disnake.ui.TextDisplay(description))
 

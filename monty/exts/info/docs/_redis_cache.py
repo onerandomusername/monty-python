@@ -49,9 +49,7 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
 
     async def get(self, item: "DocItem", default: Any = None) -> Optional[str]:
         """Return the Markdown content of the symbol `item` if it exists."""
-        res = await self._redis.hget(
-            f"{self.namespace}:{item_key(item)}", item.symbol_id
-        )  # pyright: ignore[reportGeneralTypeIssues]
+        res = await self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)  # pyright: ignore[reportGeneralTypeIssues]
         if res:
             return res.decode()
         return default
