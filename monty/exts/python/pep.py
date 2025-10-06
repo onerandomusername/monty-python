@@ -197,7 +197,7 @@ class PythonEnhancementProposals(
 
         url = self.peps[number]
         metadata, soup = cast(
-            Tuple[dict[str, str], BeautifulSoup],
+            "Tuple[dict[str, str], BeautifulSoup]",
             await self.fetch_pep_info(url, number),  # pyright: ignore[reportCallIssue]
         )
 
@@ -303,7 +303,7 @@ class PythonEnhancementProposals(
         self, inter: disnake.ApplicationCommandInteraction, query: str
     ) -> dict[str, str] | list[str]:
         """Completion for pep headers."""
-        number = cast(int | None, inter.filled_options.get("number"))
+        number = cast("int | None", inter.filled_options.get("number"))
         if number is None:
             return ["No PEP number provided.", "You must provide a valid pep number before providing a header."]
         if number not in self.peps:

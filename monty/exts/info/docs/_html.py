@@ -1,15 +1,18 @@
 import re
 from functools import partial
-from typing import Callable, Container, Iterable, List, Union
+from typing import TYPE_CHECKING, Callable, Container, Iterable, List, Union
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
 from bs4.filter import SoupStrainer
-from markupsafe import Markup
 
 from monty.log import get_logger
 
 from . import MAX_SIGNATURE_AMOUNT
+
+
+if TYPE_CHECKING:
+    from markupsafe import Markup
 
 
 log = get_logger(__name__)

@@ -6,7 +6,7 @@ import socket
 import sys
 from datetime import timedelta
 from types import SimpleNamespace
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from unittest.mock import Mock
 from weakref import WeakValueDictionary
 
@@ -18,7 +18,6 @@ import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
-from aiohttp.tracing import TraceConfig
 from disnake.ext import commands
 from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -32,6 +31,10 @@ from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
 from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
+
+
+if TYPE_CHECKING:
+    from aiohttp.tracing import TraceConfig
 
 
 log = get_logger(__name__)

@@ -384,7 +384,7 @@ class CodeBlockActions(
 
             try:
                 modal_inter = cast(
-                    disnake.ModalInteraction,
+                    "disnake.ModalInteraction",
                     await self.bot.wait_for(
                         "modal_submit",
                         timeout=300,

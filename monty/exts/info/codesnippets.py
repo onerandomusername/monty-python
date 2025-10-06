@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Tuple
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Tuple, cast
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from typing import NoReturn
 
     from monty.exts.info.github_info import GithubInfo
+
 
 log = get_logger(__name__)
 
@@ -83,7 +84,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
     def get_github_cog(self) -> "GithubInfo | None":
         """Return the GitHub Information cog if it is loaded."""
-        if (cog := self.bot.get_cog("GitHub Information")) and isinstance(cog, GithubInfo):
+        if cog := cast("GithubInfo | None", self.bot.get_cog("GitHub Information")):
             return cog
         return None
 

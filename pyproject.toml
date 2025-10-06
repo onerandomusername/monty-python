@@ -125,6 +125,7 @@ select = [
     "DTZ",  # flake8-datetimez
     "G",    # flake8-logging-format
     "Q",    # flake8-quotes
+    "TC",  # flake8-typechecking
     "T201",
     "T203", # flake8-print
 ]
