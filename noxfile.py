@@ -121,6 +121,21 @@ def docs(session: nox.Session) -> None:
     )
 
 
+@nox.session(tags=("ci",))
+def autodoc(session: nox.Session) -> None:
+    """Generate command documentation."""
+    install_deps(
+        session,
+        groups=[
+            "devlibs",
+        ],
+    )
+    args = session.posargs
+    session.run("python", "autodoc.py", *args)
+
+    session.notify("mdformat", ["docs/commands", "--no-check"])
+
+
 @nox.session
 def lint(session: nox.Session) -> None:
     """Check all paths for linting errors."""
@@ -133,8 +148,12 @@ def mdformat(session: nox.Session) -> None:
     """Run mdformat on the documentation files."""
     install_deps(session, groups=["mdformat"])
     args = session.posargs or ["docs", "README.md", "CONTRIBUTING.md"]
-    if CI:
-        args.append("--check")
+    check = CI
+    if "--no-check" in session.posargs:
+        check = False
+        args.remove("--no-check")
+    if check:
+        args.insert(0, "--check")
     session.run("mdformat", *args)
 
 
