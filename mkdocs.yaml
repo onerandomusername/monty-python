@@ -56,6 +56,8 @@ plugins:
 markdown_extensions:
 - admonition
 - pymdownx.details
+- pymdownx.tasklist:
+    custom_checkbox: true
 - pymdownx.superfences
 - markdown_gfm_admonition
 - pymdownx.highlight:

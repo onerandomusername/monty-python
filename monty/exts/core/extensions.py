@@ -314,7 +314,11 @@ class Extensions(commands.Cog):
         invoke_without_command=True,
     )
     async def autoreload(self, ctx: commands.Context) -> None:
-        """Autoreload of modified extensions."""
+        """
+        Autoreload of modified extensions.
+
+        This watches for file edits, and will reload modified extensions automatically.
+        """
         msg = "Autoreload is currently: "
         msg += "enabled" if self.bot._autoreload_task and not self.bot._autoreload_task.done() else "disabled"
         msg += "."
