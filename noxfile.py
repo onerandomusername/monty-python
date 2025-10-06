@@ -133,6 +133,8 @@ def mdformat(session: nox.Session) -> None:
     """Run mdformat on the documentation files."""
     install_deps(session, groups=["mdformat"])
     args = session.posargs or ["docs", "README.md", "CONTRIBUTING.md"]
+    if CI:
+        args.append("--check")
     session.run("mdformat", *args)
 
 

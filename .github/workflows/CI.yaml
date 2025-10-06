@@ -85,7 +85,7 @@ jobs:
         run: |
           nox --install-only
 
-      - name: Run nox ${{ matrix.session }}
+      - name: Run nox -s ${{ matrix.session }}
         run:
           nox
 
