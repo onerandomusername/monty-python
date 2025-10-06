@@ -59,7 +59,7 @@ jobs:
       - name: Get Sessions
         id: set-sessions
         run: |
-          echo "sessions=$(nox --list --json | jq -c '[.[].session]')" >> $GITHUB_OUTPUT
+          echo "sessions=$(nox --list -t ci --json | jq -c '[.[].session]')" >> $GITHUB_OUTPUT
 
   ci:
     name: ${{ matrix.session }}
