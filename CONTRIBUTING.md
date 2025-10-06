@@ -109,11 +109,10 @@ uv run prek install
 ```
 
 If you don't already have uv installed, check the
-[uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or
-uvx.
+[uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or uvx.
 
-Make sure you install prek, as it will lint every commit before its
-created, limiting the amount of fixes needing to be made in the review process.
+Make sure you install prek, as it will lint every commit before its created,
+limiting the amount of fixes needing to be made in the review process.
 
 ### Create a Discord Bot
 
@@ -176,6 +175,7 @@ to finish initialising the database. See the bot only commands.
 ## Building the documentation
 
 TLDR
+
 ```sh
 uv run nox -s docs
 ```
@@ -186,5 +186,5 @@ Alternatively you can run mkdocs directly once dev dependencies are installed:
 uv run mkdocs serve
 ```
 
-The dev server runs on http://127.0.0.1:8000 by default. Use `mkdocs build`
-to produce the static site into `site/`.
+The dev server runs on http://127.0.0.1:8000 by default. Use `mkdocs build` to
+produce the static site into `site/`.
