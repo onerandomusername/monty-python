@@ -154,8 +154,8 @@ class InternalEval(commands.Cog):
                 pass
 
         if EvalRules.pprint_result in rules:
-            console = rich.console.Console(file=sys.stdout, no_color=not use_ansi, color_system="standard")
             with io.StringIO() as buf:
+                console = rich.console.Console(file=buf, no_color=not use_ansi, color_system="standard")
                 if result.raw_value is not None:
                     rich.pretty.pprint(result.raw_value, console=console)
                 result.raw_value = buf.getvalue()
