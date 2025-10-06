@@ -112,7 +112,7 @@ class Snekbox(
                 json=data,
                 raise_for_status=True,
                 headers=HEADERS,
-                timeout=10,
+                timeout=aiohttp.ClientTimeout(10),
             ) as resp:
                 return await resp.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
