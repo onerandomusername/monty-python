@@ -9,7 +9,7 @@ import typing
 from collections import ChainMap, defaultdict
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, List, Literal, MutableMapping, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, MutableMapping, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 import disnake
@@ -25,7 +25,6 @@ from monty.database import PackageInfo
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.converters import Inventory, PackageName, ValidURL
 from monty.utils.helpers import maybe_defer
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
@@ -35,6 +34,14 @@ from monty.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 
+
+if TYPE_CHECKING:
+    ValidURL = str
+    Inventory = Tuple[str, InventoryDict]
+    PackageName = str
+    from monty.exts.python.pypi import PyPI
+else:
+    from monty.utils.converters import Inventory, PackageName, ValidURL
 
 log = get_logger(__name__)
 
@@ -147,7 +154,13 @@ class DocView(DeleteView):
         """Allow selecting an attribute of the initial view."""
         if not await self.doc_check(inter):
             return
-        new_embed: disnake.Embed = (await self.bot.get_cog("Documentation").create_symbol_embed(select.values[0]))[0]
+        cog = cast("DocCog | None", self.bot.get_cog("Documentation"))
+        if not cog:
+            raise MontyCommandError("The Documentation cog is not loaded.")
+        result = await cog.create_symbol_embed(select.values[0])
+        if not result:
+            raise MontyCommandError("An error occurred fetching the selected attribute.")
+        new_embed, _ = result
         self.set_link_button(new_embed.url)
         self.sync_attribute_dropdown(select.values[0])
         if inter.response.is_done():
@@ -167,7 +180,9 @@ class DocView(DeleteView):
     def disable(self) -> None:
         """Disable all attributes in this view."""
         for c in self.children:
-            if hasattr(c, "disabled") and c.is_dispatchable() and c is not self.delete_button:
+            if c is not self.delete_button and (
+                isinstance(c, (disnake.ui.Select, disnake.ui.Button)) and c.is_dispatchable()
+            ):
                 c.disabled = True
 
 
@@ -568,7 +583,8 @@ class DocCog(
 
     async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, Optional[str]]:
         """Find the documentation url on PyPI for a given package."""
-        if (pypi := self.bot.get_cog("PyPI")) is None:
+        pypi: "PyPI | None"
+        if (pypi := cast("PyPI | None", self.bot.get_cog("PyPI"))) is None:
             return False, None
         if pypi.check_characters(package):
             return False, None
@@ -597,6 +613,8 @@ class DocCog(
         scorer: Any = None,
     ) -> None:
         if not search:
+            if isinstance(inter, disnake.Message):
+                raise RuntimeError("if inter is a Message, search must be provided")
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
             )
@@ -708,7 +726,7 @@ class DocCog(
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
         guild_id = inter.guild and inter.guild.id or inter.guild_id
-        blacklist = BLACKLIST_MAPPING.get(guild_id)
+        blacklist = BLACKLIST_MAPPING.get(guild_id or 0)
 
         query = query.strip()
 

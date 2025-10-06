@@ -235,7 +235,13 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
-    def _snippet_to_codeblock(self, file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
+    def _snippet_to_codeblock(
+        self,
+        file_contents: str,
+        file_path: str,
+        start_line: str | int,
+        end_line: str | int | None,
+    ) -> str:
         """
         Given the entire file contents and target lines, creates a code block.
 
@@ -365,17 +371,17 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
         Listener to send expanded links for a given issue/pull request.
         """
-        if not inter.component.custom_id.startswith(EXPAND_BUTTON_PREFIX):
+        if not inter.data.custom_id.startswith(EXPAND_BUTTON_PREFIX):
             return
 
-        custom_id = inter.component.custom_id[len(EXPAND_BUTTON_PREFIX) :]
+        custom_id = inter.data.custom_id[len(EXPAND_BUTTON_PREFIX) :]
         link = decode_github_link(custom_id)
         snippet = await self._parse_snippets(link)
 
         def disable_button() -> disnake.ui.View:
             view = disnake.ui.View.from_message(inter.message)
             for comp in view.children:
-                if custom_id in (getattr(comp, "custom_id", None) or ""):
+                if isinstance(comp, disnake.ui.Button) and comp.custom_id == inter.data.custom_id:
                     comp.disabled = True
                     break
             return view

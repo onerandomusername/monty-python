@@ -3,7 +3,8 @@ from functools import partial
 from typing import Callable, Container, Iterable, List, Union
 
 from bs4 import BeautifulSoup
-from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
+from bs4.element import NavigableString, PageElement, Tag
+from bs4.filter import SoupStrainer
 from markupsafe import Markup
 
 from monty.log import get_logger
@@ -38,7 +39,7 @@ class Strainer(SoupStrainer):
 
     Markup = Union[PageElement, List["Markup"]]
 
-    def search(self, markup: Markup) -> Union[PageElement, str]:
+    def search(self, markup: Markup) -> Union[PageElement, str, None]:
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""
         if isinstance(markup, str):
             # Let everything through the text filter if we're including strings and tags.
@@ -108,7 +109,8 @@ def get_general_description(start_element: PageElement) -> List[Union[Tag, Navig
     If it's found it's used as the tag to start the search from instead of the `start_element`.
     """
     child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
-    header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)
+    tag_children = [el for el in child_tags if isinstance(el, Tag)]
+    header = next(filter(_class_filter_factory(["headerlink"]), tag_children), None)
     start_tag = header.parent if header is not None else start_element
     return _find_next_siblings_until_tag(start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True)
 
