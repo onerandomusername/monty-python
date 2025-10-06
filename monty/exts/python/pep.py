@@ -181,7 +181,7 @@ class PythonEnhancementProposals(
         url = self.peps[pep_nr]
 
         try:
-            pep_header, *_ = await self.fetch_pep_info(url, pep_nr)
+            pep_header, *_ = await self.fetch_pep_info(url, pep_nr)  # pyright: ignore[reportCallIssue]
         except aiohttp.ClientResponseError as e:
             log.trace(f"The user requested PEP {pep_nr}, but the response had an unexpected status code: {e.status}.")
             raise MontyCommandError(
@@ -196,7 +196,10 @@ class PythonEnhancementProposals(
         await self.validate_pep_number(number)
 
         url = self.peps[number]
-        metadata, soup = cast(Tuple[dict[str, str], BeautifulSoup], await self.fetch_pep_info(url, number))
+        metadata, soup = cast(
+            Tuple[dict[str, str], BeautifulSoup],
+            await self.fetch_pep_info(url, number),  # pyright: ignore[reportCallIssue]
+        )
 
         tag: bs4.element.Tag | None = soup.find(PEPHeaders.header_tags, text=header)
 
@@ -306,7 +309,7 @@ class PythonEnhancementProposals(
         if number not in self.peps:
             return [f"Cannot find PEP {number}.", "You must provide a valid pep number before providing a header."]
 
-        _, soup = await self.fetch_pep_info(self.peps[number], number)
+        _, soup = await self.fetch_pep_info(self.peps[number], number)  # pyright: ignore[reportCallIssue]
 
         headers = PEPHeaders().parse(soup)
 

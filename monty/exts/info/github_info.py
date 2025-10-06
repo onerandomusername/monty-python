@@ -61,10 +61,6 @@ PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
 
-# webhooks owned by this application that aren't the following
-# id (as that would be an interaction response) will relay autolinkers
-CROSSCHAT_BOT = 931285254319247400
-
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
 AUTOMATIC_REGEX = re.compile(
@@ -458,22 +454,22 @@ class GithubInfo(
         await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="repository", aliases=("repo",), root_aliases=("repo",))
-    async def github_repo_info(self, ctx: commands.Context, *repo: str) -> None:
+    async def github_repo_info(self, ctx: commands.Context, *repository: str) -> None:
         """
         Fetches a repositories' GitHub information.
 
         The repository should look like `user/reponame` or `user reponame`.
         """
-        original_args = repo
-        if repo[0].count("/"):
-            repo: str = repo[0]
-        elif len(repo) >= 2:
-            repo: str = "/".join(repo[:2])
+        repo_name: str
+        if repository[0].count("/"):
+            repo_name = repository[0]
+        elif len(repository) >= 2:
+            repo_name = "/".join(repository[:2])
         else:
-            repo: str = ""
+            repo_name = ""
 
-        if not repo or repo.count("/") > 1:
-            args = " ".join(original_args[:2])
+        if not repo_name or repo_name.count("/") > 1:
+            args = " ".join(repository[:2])
 
             raise commands.BadArgument(
                 "The repository should look like `user/reponame` or `user reponame`"
@@ -483,7 +479,7 @@ class GithubInfo(
 
         async with ctx.typing():
             repo_data: dict[str, Any] = await self.fetch_data(
-                f"{GITHUB_API_URL}/repos/{quote(repo)}",
+                f"{GITHUB_API_URL}/repos/{quote(repo_name)}",
                 headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
@@ -741,11 +737,12 @@ class GithubInfo(
                     raise commands.CommandError("No user provided, a user must be provided.")
                 # repo is non-existant
                 raise commands.CommandError("No repo provided, a repo must be provided.")
-        # Remove duplicates and sort
-        numbers = dict.fromkeys(numbers)
+        # Remove duplicates while maintaining order
+        issue_numbers = list(dict.fromkeys(numbers))
 
         # check if its empty, send help if it is
-        if len(numbers) == 0:
+        if len(issue_numbers) == 0:
+            assert isinstance(ctx, commands.Context)
             await invoke_help_command(ctx)
             return
 
@@ -753,7 +750,7 @@ class GithubInfo(
             ctx.author, initial_message=ctx.message if isinstance(ctx, commands.Context) else None
         )
 
-        if len(numbers) > MAXIMUM_ISSUES:
+        if len(issue_numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
                 title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
                 color=responses.DEFAULT_FAILURE_COLOUR,
@@ -764,7 +761,7 @@ class GithubInfo(
                 await invoke_help_command(ctx)
             return
 
-        results = [await self.fetch_issues(number, repo, user) for number in numbers]
+        results = [await self.fetch_issues(number, repo, user) for number in issue_numbers]
         expand_one_issue = await self.bot.guild_has_feature(ctx.guild, constants.Feature.GITHUB_ISSUE_EXPAND)
         await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
 
@@ -1100,13 +1097,15 @@ class GithubInfo(
         if not comments:
             return
 
-        if len(comments) > 4:
-            if isinstance(message, disnake.Message):
-                method = message.reply
-            else:
-                method = message.send
+        if isinstance(message, disnake.Message):
+            reply_method = message.reply
+        elif isinstance(message, disnake.Interaction):
+            reply_method = message.send
+        else:
+            raise RuntimeError("unreachable")
 
-            await method(
+        if len(comments) > 4:
+            await reply_method(
                 "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
                 " them to be expanded!",
                 components=DeleteButton(message.author),
@@ -1115,7 +1114,7 @@ class GithubInfo(
             return
 
         if isinstance(message, disnake.Message):
-            if message.guild.me and message.channel.permissions_for(message.guild.me).manage_messages:
+            if message.guild and message.channel.permissions_for(message.guild.me).manage_messages:
                 scheduling.create_task(suppress_embeds(self.bot, message))
 
         if len(comments) > 1:
@@ -1126,7 +1125,6 @@ class GithubInfo(
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))
-        reply_method = message.reply if isinstance(message, disnake.Message) else message.send
         await reply_method(
             embeds=comments,
             components=components,
@@ -1142,12 +1140,7 @@ class GithubInfo(
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        # Ignore bots but NOT webhooks owned by crosschat which also aren't the application id
-        # this allows webhooks that are owned by crosschat but aren't application responses
-        # interaction commands cannot be sent by bots so the typing here doesn't matter
-        if message.author.bot and not (
-            message.webhook_id and message.application_id == CROSSCHAT_BOT and message.webhook_id != CROSSCHAT_BOT
-        ):
+        if message.author.bot:
             return
 
         if isinstance(message, disnake.Message):
@@ -1177,7 +1170,7 @@ class GithubInfo(
                 guild_id=guild_id,
                 extract_full_links=extract_full_links,
             )
-        else:
+        elif isinstance(message, disnake.ApplicationCommandInteraction):
             # HACK
             guild_id = message.guild_id  # type: ignore
             perms = message.app_permissions
@@ -1189,6 +1182,8 @@ class GithubInfo(
                 guild_id=guild_id,
                 extract_full_links=extract_full_links,
             )
+        else:
+            raise RuntimeError("unreachable")
 
         # no issues found, return early
         if not issues:
@@ -1219,7 +1214,7 @@ class GithubInfo(
             if isinstance(message, disnake.Message):
                 response = await message.channel.send(embed=embed, components=components)
                 self.autolink_cache.set(message.id, (response, issues))
-            else:
+            elif isinstance(message, disnake.ApplicationCommandInteraction):
                 await message.send(embed=embed, ephemeral=True)
             return
 
@@ -1347,7 +1342,7 @@ class GithubInfo(
         if allow_expand:
             for row in rows:
                 for comp in row:
-                    if comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+                    if comp.custom_id and comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
                         # get the current state if its already expanded
                         is_expanded = self.get_current_button_expansion_state(comp.custom_id)
                         row.remove_item(comp)

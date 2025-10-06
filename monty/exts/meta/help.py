@@ -2,7 +2,7 @@
 import asyncio
 import itertools
 from contextlib import suppress
-from typing import List, NamedTuple, Optional, Union
+from typing import List, NamedTuple, NoReturn, Optional, Union
 
 import disnake
 from disnake.ext import commands
@@ -29,6 +29,8 @@ PAGINATION_EMOJI: dict[str, str] = {
     "end": LAST_EMOJI,
     "stop": DELETE_EMOJI,
 }
+
+_OLD_HELP = None
 
 
 class Cog(NamedTuple):
@@ -94,13 +96,14 @@ class HelpSession:
         self.title = "Command Help"
 
         # set the query details for the session
+        self.query: commands.Command | Cog | Monty | commands.GroupMixin
         if command:
             query_str = " ".join(command)
             self.query = self._get_query(query_str)
-            self.description = self.query.description or self.query.help
-        else:
-            self.query = ctx.bot
             self.description = self.query.description
+            if not self.description and isinstance(self.query, commands.Command):
+                self.description = self.query.help
+            self.query = ctx.bot
         self.author = ctx.author
         self.destination = ctx.channel
 
@@ -111,7 +114,7 @@ class HelpSession:
         self._max_lines = max_lines
 
         # init session states
-        self._pages = None
+        self._pages: list[str] = []
         self._current_page = 0
         self.message = None
         self._timeout_task = None
@@ -127,10 +130,9 @@ class HelpSession:
         cog_matches = []
         description = None
         for cog in self._bot.cogs.values():
-            if hasattr(cog, "category") and cog.category == query:
+            if getattr(cog, "category", None) == query:
                 cog_matches.append(cog)
-                if hasattr(cog, "category_description"):
-                    description = cog.category_description
+                description = getattr(cog, "category_description", None)
 
         # Try to search by cog name if no categories match.
         if not cog_matches:
@@ -145,14 +147,14 @@ class HelpSession:
             cmds = (cog.get_commands() for cog in cog_matches)  # Commands of all cogs
 
             return Cog(
-                name=cog.category if hasattr(cog, "category") else cog.qualified_name,
+                name=getattr(cog, "category", cog.qualified_name),
                 description=description or cog.description,
-                commands=tuple(itertools.chain.from_iterable(cmds)),  # Flatten the list
+                commands=list(itertools.chain.from_iterable(cmds)),  # Flatten the list
             )
 
         self._handle_not_found(query)
 
-    def _handle_not_found(self, query: str) -> None:
+    def _handle_not_found(self, query: str) -> NoReturn:
         """
         Handles when a query does not match a valid command or cog.
 
@@ -303,6 +305,7 @@ class HelpSession:
     async def _add_command_signature(self, paginator: LinePaginator) -> None:
         prefix = ""
 
+        assert isinstance(self.query, commands.Command)
         signature = self._get_command_params(self.query)
         parent = self.query.full_parent_name + " " if self.query.parent else ""
         paginator.add_line(f"**```{prefix}{parent}{signature}```**")
@@ -316,6 +319,7 @@ class HelpSession:
 
     async def _list_child_commands(self, paginator: LinePaginator) -> None:
         # remove hidden commands if session is not wanting hiddens
+        assert isinstance(self.query, Cog)
         if not self._show_hidden:
             filtered = [c for c in self.query.commands if not c.hidden]
         else:
@@ -470,7 +474,7 @@ class HelpSession:
             else:
                 view = disnake.ui.View.from_message(self.message, timeout=1)
                 for child in view.children:
-                    if hasattr(child, "disabled") and child.is_dispatchable():
+                    if isinstance(child, (disnake.ui.Button, disnake.ui.Select)):
                         child.disabled = True
                 await self.message.edit(view=view)
 
@@ -537,7 +541,8 @@ def unload(bot: Monty) -> None:
     This is run if the cog raises an exception on load, or if the extension is unloaded.
     """
     bot.remove_command("help")
-    bot.add_command(bot._old_help)
+    if _OLD_HELP:
+        bot.add_command(_OLD_HELP)
 
 
 def setup(bot: Monty) -> None:
@@ -545,13 +550,13 @@ def setup(bot: Monty) -> None:
     The setup for the help extension.
 
     This is called automatically on `bot.load_extension` being run.
-    Stores the original help command instance on the `bot._old_help` attribute for later
+    Stores the original help command instance in `_old_help` attribute for later
     reinstatement, before removing it from the command registry so the new help command can be
     loaded successfully.
     If an exception is raised during the loading of the cog, `unload` will be called in order to
     reinstate the original help command.
     """
-    bot._old_help = bot.get_command("help")
+    _OLD_HELP = bot.get_command("help")
     bot.remove_command("help")
 
     try:

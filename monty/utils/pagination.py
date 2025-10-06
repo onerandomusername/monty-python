@@ -4,7 +4,6 @@ from typing import Iterable, List, Optional, Tuple, Union, cast
 import disnake
 from disnake.ext import commands
 
-from monty.bot import Monty
 from monty.constants import Emojis
 from monty.log import get_logger
 from monty.utils import scheduling
@@ -102,7 +101,7 @@ class LinePaginator(commands.Paginator):
     async def paginate(
         cls,
         lines: Iterable[str],
-        ctx: commands.Context[Monty],
+        ctx: commands.Context | disnake.Interaction,
         embed: disnake.Embed,
         prefix: str = "",
         suffix: str = "",
@@ -199,7 +198,8 @@ class LinePaginator(commands.Paginator):
                 log.trace(f"Setting embed url to '{url}'")
 
             log.debug("There's less than two pages, so we won't paginate - sending single page on its own")
-            components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
+            initial_message = ctx.message if isinstance(ctx, commands.Context) else None
+            components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=initial_message)
             await ctx.send(embed=embed, components=components)
             return
 
@@ -227,7 +227,13 @@ class LinePaginator(commands.Paginator):
             )
 
         log.debug("Sending first page to channel...")
-        message = await ctx.send(embed=embed, view=view)
+        if isinstance(ctx, commands.Context):
+            message = await ctx.send(embed=embed, view=view)
+        else:
+            inter_message = await ctx.send(embed=embed, view=view)
+            if not inter_message:
+                inter_message = await ctx.original_message()
+            message = inter_message
 
         while True:
             try:

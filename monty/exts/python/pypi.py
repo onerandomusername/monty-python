@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import functools
 import itertools
-import multiprocessing
 import random
 import re
 from dataclasses import dataclass
@@ -60,13 +59,6 @@ class Package:
     version: str
     description: str
     url: str
-
-
-def parse_simple_index(html: bs4.BeautifulSoup, results_queue: multiprocessing.Queue) -> None:
-    """Parse the provided simple index html."""
-    soup = bs4.BeautifulSoup(html, "lxml")
-    result = {str(pack.text) for pack in soup.find_all("a")}
-    results_queue.put(result)
 
 
 class PyPI(
@@ -179,8 +171,12 @@ class PyPI(
         elif description_content_type == "text/x-rst":
             html = readme_renderer.rst.render(description)
         else:
-            raise RuntimeError("Unreachable code reached in description parsing.")
-
+            html = None
+        if not html:
+            raise RuntimeError(
+                "Unreachable code reached in description parsing. HTML is None."
+                " Content type was {description_content_type!r}"
+            )
         parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
         text = _get_truncated_description(
             parsed.find("body") or parsed,
@@ -193,7 +189,7 @@ class PyPI(
 
     async def make_pypi_components(
         self, package: str, json: dict, *, with_description: bool = False
-    ) -> tuple[list[disnake.ui.Container], str]:
+    ) -> tuple[list[disnake.ui.MessageUIComponent | disnake.ui.Container | disnake.ui.ActionRow], str]:
         """Create components for a package."""
         components: list[disnake.ui.Container] = [
             disnake.ui.Container(accent_colour=disnake.Colour(next(PYPI_COLOURS)))
@@ -244,11 +240,13 @@ class PyPI(
                 # and parse the html to get the rendered description
                 # this means that we don't have to parse the rst or markdown or whatever is the
                 # project's description content type
-                description = await self.fetch_description(package, description, info["description_content_type"] or "")
+                description = await self.fetch_description(
+                    package, description, info["description_content_type"] or ""
+                )  # pyright: ignore[reportCallIssue]
                 if description:
                     components[0].children.append(disnake.ui.TextDisplay(description))
 
-        return components, info["package_url"]
+        return list(components), info["package_url"]
 
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
@@ -284,9 +282,10 @@ class PyPI(
             defer_task = maybe_defer(inter)
         components, url = await self.make_pypi_components(package, response_json, with_description=with_description)
 
-        components.append(disnake.ui.ActionRow(DeleteButton(inter.author)))
+        row = disnake.ui.ActionRow(DeleteButton(inter.author))
+        components.append(row)
         if url:
-            components[-1].append_item(
+            row.append_item(
                 disnake.ui.Button(
                     emoji=disnake.PartialEmoji(name="pypi", id=766274397257334814),
                     style=disnake.ButtonStyle.link,
@@ -303,7 +302,9 @@ class PyPI(
         results: list[Package] = []
         log.debug("Beginning to parse with bs4")
         # because run_in_executor only supports args we create a functools partial to be able to pass keyword arguments
-        bs_partial = functools.partial(bs4.BeautifulSoup, parse_only=bs4.SoupStrainer("a", class_="package-snippet"))
+        bs_partial = functools.partial(
+            bs4.BeautifulSoup, parse_only=bs4.filter.SoupStrainer("a", class_="package-snippet")
+        )
         parsed = await self.bot.loop.run_in_executor(None, bs_partial, content, "lxml")
         log.debug("Finished parsing.")
         log.info(f"len of parse {len(parsed)}")
@@ -320,8 +321,8 @@ class PyPI(
             description = getattr(result.find("p", class_="package-snippet__description"), "text", None)
             if not description:
                 description = ""
-            url = BASE_PYPI_URL + result.get("href")
-            result = (Package(name=str(name), version=str(version), description=description.strip(), url=str(url)),)
+            url = HTML_URL.format(package=name)
+            result = Package(name=str(name), version=str(version), description=description.strip(), url=str(url))
             results.append(result)
 
         return results
@@ -373,7 +374,7 @@ class PyPI(
         defer_task = maybe_defer(inter, delay=2)
 
         # todo: fix typing for async_cached
-        result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)
+        result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)  # pyright: ignore[reportCallIssue]
         packages, query_url = result
 
         embed = disnake.Embed(title=f"PYPI Package Search: {query}")
