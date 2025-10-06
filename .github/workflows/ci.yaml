@@ -89,6 +89,10 @@ jobs:
         run:
           nox
 
+      - name: check diff
+        run:
+          git diff --exit-code
+
   check:
     name: Check CI passed
     if: always()
