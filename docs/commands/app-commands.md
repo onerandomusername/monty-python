@@ -174,31 +174,13 @@ RGB Format.
 
 Configuration management for each guild.
 
-### `config edit`
+### `config`
 
-- `option` (`string`) (required) The configuration option to change.
+- `category` (`string`) Choose a configuration category to view the options in
+    that category. Choices: `⚙️ General bot configuration` (`General`),
+    `🐙 GitHub Configuration` (`GitHub`), `🐍 Python tools` (`Python`)
 
-[BETA] Edit the specified config option to the provided value.
-
-**Usable in:** `Guilds`
-
-**Installable as:** `Guild`
-
-### `config reset`
-
-- `option` (`string`) (required) The configuration option to act on.
-
-[BETA] Reset the config for a config option to the default.
-
-**Usable in:** `Guilds`
-
-**Installable as:** `Guild`
-
-### `config view`
-
-- `option` (`string`) (required) The configuration option to act on.
-
-[BETA] View the current config for a config option.
+[BETA] Manage per-guild configuration for Monty.
 
 **Usable in:** `Guilds`
 

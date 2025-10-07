@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 import disnake
 from disnake.ext import commands
 
+from monty.constants import Feature
 from monty.database.feature import NAME_REGEX
 from monty.errors import FeatureDisabled
 
@@ -23,12 +24,13 @@ AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context]
 T = TypeVar("T")
 
 
-def require_feature(name: str) -> Callable[[T], T]:
+def require_feature(name: Feature) -> Callable[[T], T]:
     """Require the specified feature for this command."""
     # validate the name meets the regex
-    match = NAME_REGEX.fullmatch(name)
+    assert name in Feature
+    match = NAME_REGEX.fullmatch(name.value)
     if not match:
-        raise RuntimeError(f"name must match regex '{NAME_REGEX.pattern}'")
+        raise RuntimeError(f"Feature value must match regex '{NAME_REGEX.pattern}'")
 
     async def predicate(ctx: AnyContext) -> bool:
         bot: Monty = ctx.bot  # type: ignore # this will be a Monty instance

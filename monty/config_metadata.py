@@ -1,14 +1,14 @@
 import enum
 import re
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Coroutine, Optional, Type, TypeVar, Union
+from dataclasses import InitVar, dataclass, field
+from typing import TYPE_CHECKING, Callable, Coroutine, Literal, Optional, Type, TypeVar, Union, cast
 
 import aiohttp
 import disnake
 from disnake import Locale
 from disnake.ext import commands
 
-from monty.constants import Feature
+from monty import constants
 
 
 if TYPE_CHECKING:
@@ -22,6 +22,8 @@ GITHUB_ORG_REGEX = re.compile(r"[a-zA-Z0-9\-]{1,}")
 VALID_CONFIG_TYPES = Union[str, bool, float, int]
 T = TypeVar("T", bound=VALID_CONFIG_TYPES)
 AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context["Monty"]]
+
+Localised = Union[str, dict[Locale | Literal["_"], str]]
 
 
 async def validate_github_org(ctx: AnyContext, arg: str) -> Optional[str]:
@@ -56,23 +58,91 @@ class StatusMessages:
     clear_attr_success_with_default: str = "The `{name}` setting has been reset to ``{default}``."
 
 
-class Category(enum.IntEnum):
-    General = 1
-    GitHub = 2
-    Python = 3
+@dataclass(kw_only=True, frozen=True)
+class CategoryButtonMetadata:
+    label: Localised
+    style: disnake.ButtonStyle = disnake.ButtonStyle.grey
+
+
+@dataclass(kw_only=True, frozen=True)
+class CategoryMetadata:
+    name: Localised
+    description: Localised
+    emoji: disnake.PartialEmoji | str
+    button: CategoryButtonMetadata
+    autocomplete_text: Localised
+
+
+class Category(enum.Enum):
+    General = CategoryMetadata(
+        name="General",
+        description="General bot configuration options.",
+        emoji="⚙️",
+        button=CategoryButtonMetadata(
+            label="Edit General",
+        ),
+        autocomplete_text="General bot configuration",
+    )
+    GitHub = CategoryMetadata(
+        name="GitHub Configuration",
+        description="Configuration options for GitHub related features.",
+        emoji="🐙",
+        button=CategoryButtonMetadata(
+            label="Edit Github",
+        ),
+        autocomplete_text="GitHub Configuration",
+    )
+    Python = CategoryMetadata(
+        name="Python",
+        description="Configuration options for Python related features.",
+        emoji="🐍",
+        button=CategoryButtonMetadata(
+            label="Edit Python",
+        ),
+        autocomplete_text="Python tools",
+    )
+
+
+def get_category_choices() -> list[disnake.OptionChoice]:
+    options = []
+    for cat in Category:
+        metadata: CategoryMetadata = cat.value
+        default_name = (
+            metadata.autocomplete_text
+            if isinstance(metadata.autocomplete_text, str)
+            else (metadata.autocomplete_text.get("_") or metadata.name)
+        )
+        assert isinstance(default_name, str)
+        localised: disnake.Localized | str
+        if isinstance(metadata.autocomplete_text, dict):
+            data = metadata.autocomplete_text.copy()
+            data.pop("_", default_name)
+            data = cast("dict[disnake.Locale, str]", data)
+            for opt, val in data.items():
+                data[opt] = str(metadata.emoji) + " " + val
+            localised = disnake.Localized(
+                string=default_name,
+                data=data,
+            )
+        else:
+            localised = str(metadata.emoji) + " " + default_name
+        options.append(disnake.OptionChoice(name=localised, value=cat.name))
+    return options
 
 
 @dataclass(kw_only=True, frozen=True)
 class SelectMetadata:
-    supertext: Union[str, dict[Locale, str]] | None = None
-    placeholder: Union[str, dict[Locale, str]]
-    subtext: Union[str, dict[Locale, str]] | None = None
+    supertext: Localised | None = None
+    description: Localised
+    placeholder: Localised
+    subtext: Localised | None = None
 
 
 class SelectGroup(enum.Enum):
     GITHUB_EXPANSIONS = SelectMetadata(
         supertext="GitHub Expansions",
-        placeholder="Options for automatically expanding GitHub links.",
+        description="Options for automatically expanding GitHub links, such as issues and specific lines in files.",
+        placeholder="Select GitHub expansions to enable",
         subtext="Select none to disable all GitHub expansions.",
     )
 
@@ -80,31 +150,38 @@ class SelectGroup(enum.Enum):
 @dataclass(kw_only=True, frozen=True)
 class SelectOptionMetadata:
     group: SelectGroup
-    description: Union[str, dict[Locale, str]] | None = None
+    description: Localised | None = None
 
 
 @dataclass(kw_only=True, frozen=True)
 class ButtonMetadata:
-    label: Union[str, dict[Locale, str]]
-    style: Callable[[str | int | float | bool | None], disnake.ButtonStyle] = lambda x: disnake.ButtonStyle.primary
+    label: Localised
+    style: Callable[..., disnake.ButtonStyle] = lambda _: disnake.ButtonStyle.green
 
 
 @dataclass(kw_only=True)
 class ConfigAttrMetadata:
-    name: Union[str, dict[Locale, str]]
-    description: Union[str, dict[Locale, str]]
+    name: Localised
+    description: Localised
     type: Union[Type[str], Type[int], Type[float], Type[bool]]
-    category: Category
     emoji: disnake.PartialEmoji | str | None = None
+    category: InitVar[Category | None] = None
+    categories: set[Category] | frozenset[Category] = field(default_factory=frozenset)
     select_option: Optional[SelectOptionMetadata] = None
     button: Optional[ButtonMetadata] = None
     requires_bot: bool = False
     long_description: Optional[str] = None
-    depends_on_features: Optional[tuple[str]] = None
+    depends_on_features: Optional[tuple[constants.Feature]] = None
     validator: Optional[Union[Callable, Callable[..., Coroutine]]] = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, category: Category | None) -> None:
+        if not category and not self.categories:
+            raise ValueError("Either category or categories must be provided")
+        if category and self.categories:
+            raise ValueError("Only one of category or categories can be provided")
+        object.__setattr__(self, "categories", self.categories or frozenset({category}))
+
         if self.type not in (str, int, float, bool):
             raise ValueError("type must be one of str, int, float, or bool")
         if len(self.name) > 45:
@@ -119,7 +196,8 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         name="Command Prefix",
         description="The prefix used for text based commands.",
         requires_bot=True,
-        category=Category.General,
+        categories={Category.General},
+        button=ButtonMetadata(label="Set Prefix", style=lambda x: disnake.ButtonStyle.green),
     ),
     github_issues_org=ConfigAttrMetadata(
         type=str,
@@ -133,10 +211,11 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         },
         validator=validate_github_org,
         category=Category.GitHub,
-        button=ButtonMetadata(label="Edit Org", style=lambda x: disnake.ButtonStyle.grey),
+        button=ButtonMetadata(label="Edit Org"),
     ),
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
+        categories={Category.GitHub, Category.General},
         name="GitHub/GitLab/BitBucket File Expansions",
         description="Whether to automatically expand links to specific lines for GitHub, GitLab, and BitBucket",
         long_description=(
@@ -147,12 +226,12 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
             group=SelectGroup.GITHUB_EXPANSIONS,
             description="github.com/<owner>/<repo>/blob/<branch>/<file>#L<line>",
         ),
-        category=Category.GitHub,
         emoji="📄",
     ),
     github_issue_linking=ConfigAttrMetadata(
         type=bool,
-        name="GitHub Issue Linking",
+        category=Category.GitHub,
+        name="Issue Linking",
         description="Automatically link GitHub issues if they match the inline markdown syntax on GitHub.",
         long_description=(
             "Automatically link GitHub issues if they match the inline markdown syntax on GitHub. "
@@ -163,15 +242,14 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
             description="github.com/<owner>/<repo>/issues/<number>",
         ),
         requires_bot=True,
-        category=Category.GitHub,
         emoji="🐛",
     ),
     github_comment_linking=ConfigAttrMetadata(
         type=bool,
-        name="GitHub Comment Linking",
-        depends_on_features=(Feature.GITHUB_COMMENT_LINKS,),
-        description="Automatically expand a GitHub comment link. Requires GitHub Issue Linking to have an effect.",
         category=Category.GitHub,
+        name="Comment Linking",
+        depends_on_features=(constants.Feature.GITHUB_COMMENT_LINKS,),
+        description="Automatically expand a GitHub comment link. Requires GitHub Issue Linking to have an effect.",
         requires_bot=True,
         select_option=SelectOptionMetadata(
             group=SelectGroup.GITHUB_EXPANSIONS,
@@ -186,6 +264,13 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
 def _check_config_metadata(metadata: dict[str, ConfigAttrMetadata]) -> None:
     for m in metadata.values():
         assert 0 < len(m.description) < 100
+        assert m.button or m.select_option
+        if m.select_option:
+            assert isinstance(m.select_option, SelectOptionMetadata)
+            assert m.type is bool
+        if m.depends_on_features:
+            for feature in m.depends_on_features:
+                assert feature in constants.Feature
 
 
 _check_config_metadata(METADATA)

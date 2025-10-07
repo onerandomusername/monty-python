@@ -52,15 +52,14 @@ class Category(pydantic.BaseModel):
 class ConfigOptionMetadata(pydantic.BaseModel):
     name: str
     description: str | None = None
-    installation_contexts: list[disnake.InstallationContext]
+    installation_contexts: list[disnake.ApplicationInstallTypes]
     categories: list[CategoryName]
     renderable: type[disnake.ui.Select | disnake.ui.TextInput]
     button_label: str | None = None
-    button_style: Callable[..., ..., disnake.ButtonStyle] | None = None
+    button_style: Callable[..., disnake.ButtonStyle] | None = None
     """Function that returns a ButtonStyle, given the current value. This allows for toggle buttons."""
     emoji: disnake.PartialEmoji | None = None
     """Emoji to use for the button that launches the modal or select menu."""
-    validator: pydantic.Validator | None = None
     async_validator: Callable | None = None
 
 
