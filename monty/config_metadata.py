@@ -1,3 +1,4 @@
+import enum
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable, Coroutine, Optional, Type, TypeVar, Union
@@ -55,12 +56,49 @@ class StatusMessages:
     clear_attr_success_with_default: str = "The `{name}` setting has been reset to ``{default}``."
 
 
+class Category(enum.IntEnum):
+    General = 1
+    GitHub = 2
+    Python = 3
+
+
+@dataclass(kw_only=True, frozen=True)
+class SelectMetadata:
+    supertext: Union[str, dict[Locale, str]] | None = None
+    placeholder: Union[str, dict[Locale, str]]
+    subtext: Union[str, dict[Locale, str]] | None = None
+
+
+class SelectGroup(enum.Enum):
+    GITHUB_EXPANSIONS = SelectMetadata(
+        supertext="GitHub Expansions",
+        placeholder="Options for automatically expanding GitHub links.",
+        subtext="Select none to disable all GitHub expansions.",
+    )
+
+
+@dataclass(kw_only=True, frozen=True)
+class SelectOptionMetadata:
+    group: SelectGroup
+    description: Union[str, dict[Locale, str]] | None = None
+
+
+@dataclass(kw_only=True, frozen=True)
+class ButtonMetadata:
+    label: Union[str, dict[Locale, str]]
+    style: Callable[[str | int | float | bool | None], disnake.ButtonStyle] = lambda x: disnake.ButtonStyle.primary
+
+
 @dataclass(kw_only=True)
 class ConfigAttrMetadata:
     name: Union[str, dict[Locale, str]]
     description: Union[str, dict[Locale, str]]
     type: Union[Type[str], Type[int], Type[float], Type[bool]]
-    requires_bot: bool = True
+    category: Category
+    emoji: disnake.PartialEmoji | str | None = None
+    select_option: Optional[SelectOptionMetadata] = None
+    button: Optional[ButtonMetadata] = None
+    requires_bot: bool = False
     long_description: Optional[str] = None
     depends_on_features: Optional[tuple[str]] = None
     validator: Optional[Union[Callable, Callable[..., Coroutine]]] = None
@@ -80,6 +118,8 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         type=str,
         name="Command Prefix",
         description="The prefix used for text based commands.",
+        requires_bot=True,
+        category=Category.General,
     ),
     github_issues_org=ConfigAttrMetadata(
         type=str,
@@ -92,6 +132,8 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
             Locale.en_GB: "A specific organisation or user to use as the default org for GitHub related commands.",
         },
         validator=validate_github_org,
+        category=Category.GitHub,
+        button=ButtonMetadata(label="Edit Org", style=lambda x: disnake.ButtonStyle.grey),
     ),
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
@@ -100,6 +142,13 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
         long_description=(
             "Automatically expand links to specific lines for GitHub, GitLab, and BitBucket when possible."
         ),
+        requires_bot=True,
+        select_option=SelectOptionMetadata(
+            group=SelectGroup.GITHUB_EXPANSIONS,
+            description="github.com/<owner>/<repo>/blob/<branch>/<file>#L<line>",
+        ),
+        category=Category.GitHub,
+        emoji="📄",
     ),
     github_issue_linking=ConfigAttrMetadata(
         type=bool,
@@ -109,12 +158,26 @@ METADATA: dict[str, ConfigAttrMetadata] = dict(  # noqa: C408
             "Automatically link GitHub issues if they match the inline markdown syntax on GitHub. "
             "For example, `onerandomusername/monty-python#223` will provide a link to issue 223."
         ),
+        select_option=SelectOptionMetadata(
+            group=SelectGroup.GITHUB_EXPANSIONS,
+            description="github.com/<owner>/<repo>/issues/<number>",
+        ),
+        requires_bot=True,
+        category=Category.GitHub,
+        emoji="🐛",
     ),
     github_comment_linking=ConfigAttrMetadata(
         type=bool,
         name="GitHub Comment Linking",
         depends_on_features=(Feature.GITHUB_COMMENT_LINKS,),
         description="Automatically expand a GitHub comment link. Requires GitHub Issue Linking to have an effect.",
+        category=Category.GitHub,
+        requires_bot=True,
+        select_option=SelectOptionMetadata(
+            group=SelectGroup.GITHUB_EXPANSIONS,
+            description="github.com/<owner>/<repo>/issues/<number>/#issuecomment-<number>",
+        ),
+        emoji="💬",
     ),
 )
 

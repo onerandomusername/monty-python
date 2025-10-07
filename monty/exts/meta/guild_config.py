@@ -1,6 +1,7 @@
 import asyncio
 import dataclasses
 import inspect
+from collections import defaultdict
 from typing import Literal, Optional, Union
 
 import disnake
@@ -8,7 +9,7 @@ import sqlalchemy as sa
 from disnake.ext import commands
 
 from monty.bot import Monty
-from monty.config_metadata import METADATA, ConfigAttrMetadata
+from monty.config_metadata import METADATA, Category, ConfigAttrMetadata, SelectGroup
 from monty.database import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.log import get_logger
@@ -50,6 +51,23 @@ async def can_guild_set_config_option(bot: Monty, *, metadata: ConfigAttrMetadat
             if not await bot.guild_has_feature(guild_id, feature, create_if_not_exists=False):
                 return False
     return True
+
+
+@commands.register_injection
+async def config_category(inter: disnake.GuildCommandInteraction, category: str) -> tuple[str, Category]:
+    """
+    Get a valid configuration category.
+
+    Parameters
+    ----------
+    category: The configuration category to act on.
+    """
+    try:
+        cat = Category[category.upper()]
+    except KeyError:
+        raise commands.UserInputError("Could not find a configuration category with that name.") from None
+
+    return category, cat
 
 
 @commands.register_injection
@@ -137,16 +155,110 @@ class Configuration(
         )
         raise BotAccountRequired(msg)
 
-    @commands.slash_command()
-    async def config(self, inter: disnake.GuildCommandInteraction) -> None:
-        """[BETA] Manage per-guild configuration for Monty."""
-        pass
+    async def _get_category_options(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        category: Category,
+        current_config: GuildConfig | None = None,
+    ) -> None:
+        category_options = {attr: meta for attr, meta in METADATA.items() if meta.category == category}
+        select_group_options: defaultdict[SelectGroup, list[disnake.SelectOption]] = defaultdict(list)
+        for attr, meta in tuple(category_options.items()):
+            if not meta.select_option:
+                continue
+            default = False
+            if current_config:
+                default = bool(getattr(current_config, attr))
 
-    @config.sub_command("edit")
+            select_group_options[meta.select_option.group].append(
+                disnake.SelectOption(
+                    label=get_localised_response(inter, "{data}", data=meta.name),
+                    value=attr,
+                    emoji=meta.emoji,
+                    default=default,
+                    description=get_localised_response(inter, "{data}", data=meta.select_option.description),
+                )
+            )
+            del category_options[attr]
+
+        nested_components = []
+        for select_group, options in select_group_options.items():
+            if select_group.value.supertext:
+                if isinstance(select_group.value.supertext, dict):
+                    supertext = get_localised_response(inter, "{data}", data=select_group.value.supertext)
+                else:
+                    supertext = select_group.value.supertext
+                nested_components.append(disnake.ui.TextDisplay(supertext))
+            if isinstance(select_group.value.placeholder, dict):
+                placeholder = get_localised_response(inter, "{data}", data=select_group.value.placeholder)
+            else:
+                placeholder = select_group.value.placeholder
+            nested_components.append(
+                disnake.ui.ActionRow(
+                    disnake.ui.Select(
+                        placeholder=placeholder,
+                        options=options,
+                        min_values=0,
+                        max_values=len(options),
+                        custom_id=f"config:v1:github_expansions:{inter.id}",
+                    )
+                )
+            )
+            if select_group.value.subtext:
+                if isinstance(select_group.value.subtext, dict):
+                    subtext = get_localised_response(inter, "{data}", data=select_group.value.subtext)
+                else:
+                    subtext = select_group.value.subtext
+                nested_components.append(disnake.ui.TextDisplay(subtext))
+
+        # we've gotten through all of the select groups, now add the rest of the options
+        button_components = []
+        if category_options:
+            for attr, meta in category_options.items():
+                if not meta.button:
+                    continue
+                if current_config:
+                    current = bool(getattr(current_config, attr))
+                else:
+                    current = None
+                button_components.append(
+                    disnake.ui.Section(
+                        disnake.ui.TextDisplay(
+                            content=get_localised_response(inter, "### {data}", data=meta.name),
+                        ),
+                        accessory=disnake.ui.Button(
+                            style=meta.button.style(current),
+                            emoji=meta.emoji,
+                            label=get_localised_response(inter, "{data}", data=meta.button.label),
+                            custom_id=f"config:v1:edit:{attr}:{inter.id}",
+                        ),
+                    )
+                )
+
+        if not button_components and not nested_components:
+            raise RuntimeError("No configuration options found for this category.")
+
+        components: list[disnake.ui.Container | disnake.ui.ActionRow] = [
+            disnake.ui.Container(*button_components, *nested_components)
+        ]
+        components.append(
+            disnake.ui.ActionRow(DeleteButton(inter.author)),
+        )
+        await inter.response.send_message(components=components)
+
+    @commands.slash_command()
+    async def config(self, inter: disnake.GuildCommandInteraction, category: Category | None = None) -> None:
+        """[BETA] Manage per-guild configuration for Monty."""
+        config = await self.bot.ensure_guild_config(inter.guild_id)
+        if category:
+            await self._get_category_options(inter, category, current_config=config)
+            return
+
+    # @config.sub_command("edit")
     async def set_command(
         self,
         inter: disnake.GuildCommandInteraction,
-        option: str,
+        option: tuple[str, ConfigAttrMetadata],
     ) -> None:
         """
         [BETA] Edit the specified config option to the provided value.
@@ -253,7 +365,7 @@ class Configuration(
             ephemeral=True,
         )
 
-    @config.sub_command("view")
+    # @config.sub_command("view")
     async def view_command(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
@@ -283,7 +395,7 @@ class Configuration(
             ephemeral=True,
         )
 
-    @config.sub_command("reset")
+    # @config.sub_command("reset")
     async def clear_command(
         self, inter: disnake.GuildCommandInteraction, option: tuple[str, ConfigAttrMetadata]
     ) -> None:
@@ -328,9 +440,9 @@ class Configuration(
             ephemeral=True,
         )
 
-    @set_command.autocomplete("option")
-    @clear_command.autocomplete("option")
-    @view_command.autocomplete("option")
+    # @set_command.autocomplete("option")
+    # @clear_command.autocomplete("option")
+    # @view_command.autocomplete("option")
     async def config_autocomplete(
         self,
         inter: disnake.GuildCommandInteraction,
