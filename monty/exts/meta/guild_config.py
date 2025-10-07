@@ -8,13 +8,13 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
-from monty.configuration.schema import (
+from monty.config import (
     METADATA,
     Category,
     ConfigAttrMetadata,
     SelectGroup,
 )
-from monty.configuration.schema import (
+from monty.config import (
     get_category_choices as _get_category_choices,
 )
 from monty.database import GuildConfig
@@ -98,7 +98,7 @@ async def config_option(inter: disnake.GuildCommandInteraction, option: str) -> 
 
 class Configuration(
     commands.Cog,
-    name="Config Manager",
+    name="Guild Config",
     slash_command_attrs={
         "contexts": disnake.InteractionContextTypes(guild=True),
         "install_types": disnake.ApplicationInstallTypes(guild=True),
