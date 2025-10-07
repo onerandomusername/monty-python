@@ -94,6 +94,16 @@ before pagination is required.
 Configuration is implemented with Pydantic models, one for each category of configuration. There is a mapping of values
 to component type needed.
 
+This also features specific pydantic validators, which are run when the model is updated with the new configuration.
+
+Depending on the type of configuration, the configuration varies between a component table of options, or a modal.
+
+
+As for how this is implemented with disnake, that's a bit more complicated.
+
+This is our first stateful component, as there is too much state here to keep in component IDs. This will timeout after
+15 minutes of inactivity, and will need to be re-launched.
+
 
 ## Rejected Alternatives
 
