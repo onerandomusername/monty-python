@@ -21,6 +21,17 @@ from monty.bot import Monty
 
 
 log = logging.getLogger(__name__)
+
+try:
+    import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
+
+
+except ImportError:
+    log.info("Using default asyncio event loop.")
+else:
+    uvloop.insta5ll()
+    log.info("Using uvloop as event loop.")
+
 _intents = disnake.Intents.all()
 _intents.members = False
 _intents.presences = False
@@ -119,13 +130,6 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
-    try:
-        import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
-
-        uvloop.install()
-        log.info("Using uvloop as event loop.")
-    except ImportError:
-        log.info("Using default asyncio event loop.")
     try:
         loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
         loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
