@@ -170,22 +170,6 @@ RGB Format.
 
 **Installable as:** `Guild`, `User`
 
-## Config Manager
-
-Configuration management for each guild.
-
-### `config`
-
-- `category` (`string`) Choose a configuration category to view the options in
-    that category. Choices: `⚙️ General bot configuration` (`General`),
-    `🐙 GitHub Configuration` (`GitHub`), `🐍 Python tools` (`Python`)
-
-[BETA] Manage per-guild configuration for Monty.
-
-**Usable in:** `Guilds`
-
-**Installable as:** `Guild`
-
 ## Discord
 
 Useful discord api commands.
@@ -270,6 +254,22 @@ Fetches info from GitHub.
 View information about an issue, pull, discussion, or comment on GitHub.
 
 **Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
+
+**Installable as:** `Guild`
+
+## Guild Config
+
+Configuration management for each guild.
+
+### `config`
+
+- `category` (`string`) Choose a configuration category to view the options in
+    that category. Choices: `⚙️ General bot configuration` (`General`),
+    `🐙 GitHub Configuration` (`GitHub`)
+
+[BETA] Manage per-guild configuration for Monty.
+
+**Usable in:** `Guilds`
 
 **Installable as:** `Guild`
 
