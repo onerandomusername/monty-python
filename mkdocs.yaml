@@ -81,8 +81,12 @@ nav:
   - Prefix Commands: commands/prefix-commands.md
 - Contributing:
   - Getting Started: contributing/README.md
-  - Design: contributing/design.md
+  - Design:
+      - contributing/design/index.md
+      - Configuration System: contributing/design/config.md
   - Developer Commands: contributing/developer-commands.md
+- Privacy: privacy.md
+- Terms of Service: terms.md
 extra:
   social:
   - icon: fontawesome/brands/github

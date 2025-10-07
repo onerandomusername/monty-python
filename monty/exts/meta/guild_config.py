@@ -8,13 +8,13 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
-from monty.config_metadata import (
+from monty.configuration.schema import (
     METADATA,
     Category,
     ConfigAttrMetadata,
     SelectGroup,
 )
-from monty.config_metadata import (
+from monty.configuration.schema import (
     get_category_choices as _get_category_choices,
 )
 from monty.database import GuildConfig
