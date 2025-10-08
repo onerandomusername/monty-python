@@ -47,6 +47,7 @@ dev = [
     {include-group = "typing"},
     {include-group = "docs"},
     {include-group = "mdformat"},
+    {include-group = "ruff"},
 ]
 devlibs = [
     "fakeredis<3.0.0,>=2.29.0",
@@ -56,8 +57,11 @@ devlibs = [
 tools = [
     "poethepoet>=0.37.0",
     "prek>=0.2.1,<0.3",
-    "ruff==0.13.3",
+    { include-group = "ruff" },
     { include-group = "nox" }
+]
+ruff = [
+    "ruff==0.14.0",
 ]
 nox = [
     "nox>=2025.5.1",

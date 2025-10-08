@@ -102,6 +102,7 @@ def setup() -> None:
     logging.getLogger("sqlalchemy.pool").setLevel(logging.INFO)
     logging.getLogger("gql.dsl").setLevel(logging.INFO)
     logging.getLogger("gql.transport.aiohttp").setLevel(logging.INFO)
+    logging.getLogger("watchfiles").setLevel(logging.INFO)
     _set_trace_loggers()
 
     root_logger.info("Logging initialization complete")
