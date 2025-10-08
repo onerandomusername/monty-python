@@ -41,7 +41,8 @@ extensions or modules for development.
     - Unload currently loaded extensions given their fully qualified or
         unqualified names.
 - `ext autoreload`
-    - Autoreload of modified extensions.
+    - Autoreload of modified extensions. This watches for file edits, and will
+        reload modified extensions automatically.
 
 > [!TIP]
 > The library that is required for the autoreload command is only installed for
@@ -58,10 +59,14 @@ only. This command runs within the event loop, and **within the bot context**.
 > to your bot and computer.
 
 This command is named `ieval`, short for internal evaluation. It processes with
-the same syntax rules as the `eval` command, which uses the snekbox backend, but
-is instead run within the bot. This is a developer-only command, as you can
-easily print the bot token or do other nefarious things.
+the same parsing rules as the `eval` command, which uses the snekbox backend,
+but this command is run within the bot. This is a developer-only command, as you
+can easily print the bot token or do other nefarious things.
 
 ```py
 -ieval await ctx.send("this is from the bot context!")
 ```
+
+This command was recently rewritten, and has a few known bugs, see
+<https://github.com/onerandomusername/monty-python/issues/621> for more details.
+If you'd like to fix these, please do!

@@ -84,7 +84,7 @@ Extension management commands.
 
 *Disable extension autoreload.*
 
-### `extensions autoreload enable`
+### `extensions autoreload enable [extra_paths...]`
 
 *Enable extension autoreload.*
 

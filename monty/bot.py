@@ -93,7 +93,7 @@ class Monty(commands.Bot):
         scheduling.create_task(self._create_features())
 
         self._autoreload_task: asyncio.Task | None = None
-        self._autoreload_log_channel: disnake.abc.Messageable | None = None
+        self._autoreload_args: dict[str, Any] | None = None
 
     @property
     def db(self) -> async_sessionmaker[AsyncSession]:

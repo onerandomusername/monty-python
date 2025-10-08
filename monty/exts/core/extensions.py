@@ -1,5 +1,8 @@
 import functools
+import importlib
 import importlib.util
+import pathlib
+import sys
 import typing as t
 from enum import Enum
 
@@ -58,21 +61,17 @@ class Extensions(commands.Cog):
 
     async def cog_load(self) -> None:
         """Resume autoreload if it is enabled."""
-        if self.bot._autoreload_log_channel and self.bot._autoreload_task:
+        if self.bot._autoreload_args and self.bot._autoreload_task:
             # remake the task
             if not self.bot._autoreload_task.done():
                 # don't immediately cancel so it has a moment to finish the request to the discord channel
                 self.bot.loop.call_later(1, self.bot._autoreload_task.cancel)
 
-            self.bot._autoreload_task = scheduling.create_task(
-                self._autoreload_worker(self.bot._autoreload_log_channel)
-            )
-        else:
-            log.error("didn't remake")
+            self.bot._autoreload_task = scheduling.create_task(self._autoreload_worker(**self.bot._autoreload_args))
 
     def cog_unload(self) -> None:
         """Cancel the coro on unload."""
-        if not self._unloading_through_autoreload and not self.bot._autoreload_log_channel:
+        if not self._unloading_through_autoreload and not self.bot._autoreload_args:
             if self.bot._autoreload_task and not self.bot._autoreload_task.done():
                 self.bot._autoreload_task.cancel()
 
@@ -283,17 +282,65 @@ class Extensions(commands.Cog):
 
         return msg, error_msg
 
-    async def _autoreload_worker(self, channel: disnake.abc.Messageable) -> None:
+    async def _autoreload_worker(self, channel: disnake.abc.Messageable, extra_paths: t.Sequence[str] = ()) -> None:
+        import subprocess  # noqa: F401
+
         import watchfiles
 
         ext_paths = {module.__file__: extension for extension, module in self.bot.extensions.items() if module.__file__}
 
-        self.bot._autoreload_log_channel = channel  # add for use in cog_unload
+        self.bot._autoreload_args = {"channel": channel, "extra_paths": extra_paths}  # add for use in cog_unload
 
-        async for changes in watchfiles.awatch(*ext_paths):
+        extra_mods_to_path = {}
+        if extra_paths:
+            extra_mods_to_path = {}
+            for path in extra_paths:
+                if pathlib.Path(path).is_dir():
+                    extra_mods_to_path.update(
+                        {
+                            str(p.resolve()): p.stem
+                            for p in pathlib.Path(path).rglob("*.py")
+                            if p.is_file() and p.stem != "__init__"
+                        }
+                    )
+                else:
+                    extra_mods_to_path.update({str(pathlib.Path(path).resolve()): pathlib.Path(path).stem})
+
+        async for changes in watchfiles.awatch(*ext_paths, *extra_mods_to_path):
             modified_extensions = set()
+            extra_path_message = ""
             for change in changes:
                 if change[1] not in ext_paths:
+                    for extra_path in extra_mods_to_path:
+                        if change[1].startswith(extra_path):
+                            relative_path = str(pathlib.Path(change[1]).relative_to(pathlib.Path.cwd()))
+                            extra_path_message += relative_path + "\n"
+
+                            break
+                    else:
+                        continue
+                    try:
+                        dependents = subprocess.run(
+                            ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],  # noqa: S607
+                            capture_output=True,
+                            encoding="utf-8",
+                            check=True,
+                            cwd=pathlib.Path.cwd(),
+                        )
+                    except Exception as e:
+                        log.error(f"Error running ruff analyze graph: {e}")
+                        continue
+                    jsondata = dependents.stdout
+                    data = disnake.utils._from_json(jsondata)
+                    for file in data.get(relative_path, []):
+                        file = str(pathlib.Path.cwd() / file)
+                        if file in ext_paths:
+                            modified_extensions.add(ext_paths[file])
+                        else:
+                            mod = extra_mods_to_path.get(file)
+                            if mod and mod in sys.modules:
+                                importlib.reload(sys.modules[mod])
+
                     continue
                 modified_extensions.add(ext_paths[change[1]])
 
@@ -301,9 +348,14 @@ class Extensions(commands.Cog):
                 # we bug out if we try to reload ourselves. It cancels the task
                 # this is utterly terrible code
                 self._unloading_through_autoreload = True
-                self.bot._autoreload_log_channel = channel  # readd in case it was removed
+                self.bot._autoreload_args = {
+                    "channel": channel,
+                    "extra_paths": extra_paths,
+                }  # readd in case it was removed
 
             msg = self.batch_manage(Action.RELOAD, *modified_extensions)
+            if extra_path_message:
+                msg += f"\nChanges detected in extra paths:\n```{extra_path_message}```"
 
             await channel.send("autoreload detected changes::\n" + msg)
 
@@ -314,23 +366,46 @@ class Extensions(commands.Cog):
         invoke_without_command=True,
     )
     async def autoreload(self, ctx: commands.Context) -> None:
-        """Autoreload of modified extensions."""
+        """
+        Autoreload of modified extensions.
+
+        This watches for file edits, and will reload modified extensions automatically.
+        """
         msg = "Autoreload is currently: "
         msg += "enabled" if self.bot._autoreload_task and not self.bot._autoreload_task.done() else "disabled"
         msg += "."
         await ctx.send(msg)
 
     @autoreload.command(name="enable")
-    async def enable_autoreload(self, ctx: commands.Context) -> None:
+    async def enable_autoreload(self, ctx: commands.Context, *extra_paths: str) -> None:
         """Enable extension autoreload."""
         if not importlib.util.find_spec("watchfiles"):
             raise RuntimeError("Watchfiles not installed. Command not usable.")
 
-        if self.bot._autoreload_task and not self.bot._autoreload_task.done():
-            raise commands.BadArgument("Autoreload task already exists")
+        if extra_paths:
+            for path in extra_paths:
+                if not pathlib.Path(path).is_file():
+                    raise commands.BadArgument(f"Extra path '{path}' is not a valid file.")
+        else:
+            extra_paths += (
+                "monty/utils",
+                "monty/metadata.py",
+                "monty/config",
+            )
 
-        self.bot._autoreload_task = scheduling.create_task(self._autoreload_worker(ctx.channel))
-        await ctx.send("Enabled autoreload task!")
+        msg = ""
+        if self.bot._autoreload_task:
+            self.bot._autoreload_task.cancel()
+            msg = "Cancelling previous autoreload task. Starting a new one."
+
+        self.bot._autoreload_task = scheduling.create_task(
+            self._autoreload_worker(ctx.channel, extra_paths=extra_paths)
+        )
+        if not msg:
+            msg += "\nEnabled autoreload task!"
+        if extra_paths:
+            msg += f" Watching extra paths: `{'`, `'.join(extra_paths)}`"
+        await ctx.send(msg)
 
     @autoreload.command(name="disable")
     async def disable_autoreload(self, ctx: commands.Context) -> None:
@@ -340,7 +415,7 @@ class Extensions(commands.Cog):
 
         if not self.bot._autoreload_task.done():
             self.bot._autoreload_task.cancel()
-        self.bot._autoreload_log_channel = None
+        self.bot._autoreload_args = None
         await ctx.send("Disabled autoreload task!")
 
     # This cannot be static (must have a __func__ attribute).
