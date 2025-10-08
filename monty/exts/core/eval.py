@@ -5,7 +5,6 @@ import asyncio
 import contextlib
 import enum
 import io
-import sys
 import types
 from dataclasses import dataclass, field
 from typing import Any, Sequence, Union
@@ -356,7 +355,7 @@ class InternalEval(commands.Cog):
                         "message",
                         check=lambda m: m.author == ctx.author
                         and m.channel == ctx.channel
-                        and (content := m.content.removeprefix(sys.ps1).strip())
+                        and (content := m.content.removeprefix(">>>").strip())
                         and (
                             bool(prepare_input(content, require_fenced=True))
                             or content.lower().removesuffix("()") in ("exit", "quit")
