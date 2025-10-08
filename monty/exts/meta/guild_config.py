@@ -398,6 +398,12 @@ class Configuration(
         """Handle dropdown interactions for configuration options."""
         if not inter.data.custom_id.startswith("config:v1:select:"):
             return
+        if not inter.guild_id:
+            await inter.response.send_message(
+                "Configuration can only be used in a guild.",
+                ephemeral=True,
+            )
+            return
         parts = inter.data.custom_id.removeprefix("config:v1:select:")
         if len(parts.split(":")) != 2:
             return
