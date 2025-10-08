@@ -10,15 +10,13 @@
 from __future__ import annotations
 
 import os
-from typing import (
-    Any,
-    Dict,
-    Final,
-    List,
-    Sequence,
-)
+from typing import TYPE_CHECKING, Any, Final
 
 import nox
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 nox.needs_version = ">=2025.5.1"
@@ -30,9 +28,9 @@ nox.options.default_venv_backend = "uv|virtualenv"
 
 PYPROJECT = nox.project.load_toml()
 
-SUPPORTED_PYTHONS: Final[List[str]] = ["3.10"]
-EXPERIMENTAL_PYTHON_VERSIONS: Final[List[str]] = ["3.11", "3.12", "3.13", "3.14"]
-ALL_PYTHONS: Final[List[str]] = [*SUPPORTED_PYTHONS, *EXPERIMENTAL_PYTHON_VERSIONS]
+SUPPORTED_PYTHONS: Final[list[str]] = ["3.10"]
+EXPERIMENTAL_PYTHON_VERSIONS: Final[list[str]] = ["3.11", "3.12", "3.13", "3.14"]
+ALL_PYTHONS: Final[list[str]] = [*SUPPORTED_PYTHONS, *EXPERIMENTAL_PYTHON_VERSIONS]
 MIN_PYTHON: Final[str] = SUPPORTED_PYTHONS[0]
 CI: Final[bool] = "CI" in os.environ
 
@@ -49,7 +47,7 @@ def install_deps(
     dependencies: Sequence[str] | None = None,
 ) -> None:
     """Helper to install dependencies from a group."""
-    command: List[str]
+    command: list[str]
 
     # If not using uv, install with pip
     if os.getenv("INSTALL_WITH_PIP") is not None:
@@ -76,7 +74,7 @@ def install_deps(
         "sync",
         "--no-default-groups",
     ]
-    env: Dict[str, Any] = {}
+    env: dict[str, Any] = {}
 
     if session.venv_backend != "none":
         command.append(f"--python={session.virtualenv.location}")

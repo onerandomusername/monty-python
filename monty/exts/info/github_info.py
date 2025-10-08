@@ -5,7 +5,7 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import timedelta, timezone
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import Any, NamedTuple, TypeVar
 from urllib.parse import quote, quote_plus
 
 import attrs
@@ -150,7 +150,7 @@ class RenderContext(NamedTuple):
     """Context provided to the rendering method."""
 
     user: str
-    repo: Optional[str] = None
+    repo: str | None = None
 
     @property
     def html_url(self) -> str:
@@ -171,13 +171,13 @@ class IssueSourceFormat(enum.IntEnum):
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
 
-    organisation: Optional[str]
+    organisation: str | None
     repository: str
     number: str
     source_format: IssueSourceFormat
     url_fragment: str = ""
-    user_url: Optional[str] = None
-    is_discussion: Optional[bool] = None  # `None` means uncertain
+    user_url: str | None = None
+    is_discussion: bool | None = None  # `None` means uncertain
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -201,7 +201,7 @@ class IssueState:
     url: str
     title: str
     emoji: str
-    raw_json: Optional[dict[str, Any]] = None
+    raw_json: dict[str, Any] | None = None
 
 
 class GithubInfo(
@@ -222,11 +222,11 @@ class GithubInfo(
         self.gql_client = gql.Client(transport=transport, fetch_schema_from_transport=True)
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
+        self.autolink_cache: cachingutils.MemoryCache[int, tuple[disnake.Message, list[FoundIssue]]] = (
             cachingutils.MemoryCache(timeout=600)
         )
 
-        self.guilds: Dict[str, str] = {}
+        self.guilds: dict[str, str] = {}
 
     async def cog_load(self) -> None:
         """
@@ -256,14 +256,14 @@ class GithubInfo(
 
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)  # type: ignore
 
-    async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
+    async def fetch_guild_to_org(self, guild_id: int) -> str | None:
         """Fetch the org that matches to a specific guild_id."""
         guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
 
     async def fetch_data(
         self, url: str, *, method: str = "GET", as_text: bool = False, **kw
-    ) -> Union[dict[str, Any], str, list[Any], Any]:
+    ) -> dict[str, Any] | str | list[Any] | Any:
         """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
         if "headers" in kw:
             og = kw["headers"]
@@ -341,9 +341,9 @@ class GithubInfo(
 
     async def fetch_user_and_repo(  # type: ignore
         self,
-        guild_id: Optional[int],
-        repo: Optional[str] = None,
-        user: Optional[str] = None,
+        guild_id: int | None,
+        repo: str | None = None,
+        user: str | None = None,
     ) -> RepoTarget:
         """
         Adds a user and repo parameter to all slash commands.
@@ -550,8 +550,8 @@ class GithubInfo(
         user: str,
         *,
         allow_discussions: bool = False,
-        is_discussion: Optional[bool] = None,
-    ) -> Union[IssueState, FetchError]:
+        is_discussion: bool | None = None,
+    ) -> IssueState | FetchError:
         """
         Retrieve an issue from a GitHub repository.
 
@@ -666,7 +666,7 @@ class GithubInfo(
         embed.timestamp = fromisoformat(json_data["created_at"])
         embed.set_footer(text="Created ", icon_url=constants.Icons.github_avatar_url)
 
-        body: Optional[str] = json_data["body"]
+        body: str | None = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
             embed.description = self.render_github_markdown(
@@ -678,7 +678,7 @@ class GithubInfo(
 
     def format_embed(
         self,
-        results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
+        results: list[IssueState | FetchError] | list[IssueState],
         *,
         expand_one_issue: bool = False,
         show_errors_inline: bool = True,
@@ -716,10 +716,10 @@ class GithubInfo(
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
         self,
-        ctx: Union[commands.Context, disnake.CommandInteraction],
+        ctx: commands.Context | disnake.CommandInteraction,
         numbers: commands.Greedy[int],
         repo: str,
-        user: Optional[str] = None,
+        user: str | None = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
         if not user or not repo:
@@ -791,7 +791,7 @@ class GithubInfo(
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
-    async def fetch_default_user(self, guild_id: int) -> Optional[str]:
+    async def fetch_default_user(self, guild_id: int) -> str | None:
         """
         Get the default GitHub user in the context of the provided Message.
 
@@ -809,10 +809,10 @@ class GithubInfo(
         *,
         guild_id: int = None,
         extract_full_links: bool = False,
-    ) -> List[FoundIssue]:
+    ) -> list[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
-        issues: List[FoundIssue] = []
-        default_user: Optional[str] = ""
+        issues: list[FoundIssue] = []
+        default_user: str | None = ""
         stripped_content = remove_codeblocks(content)
 
         if extract_full_links:
@@ -872,11 +872,11 @@ class GithubInfo(
 
     def get_expand_button(
         self,
-        issues: List[IssueState],
+        issues: list[IssueState],
         *,
         is_expanded: bool = False,
         user_id: int,
-    ) -> Optional[disnake.ui.Button]:
+    ) -> disnake.ui.Button | None:
         """Create a new expand button based on the provided issue, if there is only one issue."""
         if len(issues) != 1:
             return None
@@ -960,7 +960,7 @@ class GithubInfo(
         await inter.response.edit_message(embed=embed, components=rows)
 
     async def handle_issue_comment(
-        self, message: Union[disnake.Message, disnake.Interaction], issues: list[FoundIssue]
+        self, message: disnake.Message | disnake.Interaction, issues: list[FoundIssue]
     ) -> None:
         """Expand an issue or pull request comment."""
         comments = []
@@ -1133,7 +1133,7 @@ class GithubInfo(
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(
-        self, message: Union[disnake.Message, disnake.ApplicationCommandInteraction], content: str = None
+        self, message: disnake.Message | disnake.ApplicationCommandInteraction, content: str = None
     ) -> None:
         """
         Automatic issue linking.
@@ -1253,7 +1253,7 @@ class GithubInfo(
 
         embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
-        components: List[disnake.ui.Button] = [DeleteButton(message.author)]
+        components: list[disnake.ui.Button] = [DeleteButton(message.author)]
         if allow_expand:
             button = self.get_expand_button(
                 links,
@@ -1311,7 +1311,7 @@ class GithubInfo(
             # and we should continue to support that.
             return
 
-        links: List[IssueState] = []
+        links: list[IssueState] = []
         total_pre_expanded = 0
         for repo_issue in after_issues:
             if repo_issue.organisation is None:

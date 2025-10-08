@@ -1,6 +1,6 @@
 import itertools
 from collections import defaultdict
-from typing import Literal, Union
+from typing import Literal
 
 import disnake
 import sqlalchemy as sa
@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 
 
 def get_locale_from_dict(
-    locales: Union[disnake.Locale, list[disnake.Locale | Literal[None]]],
+    locales: disnake.Locale | list[disnake.Locale | Literal[None]],
     table: dict[disnake.Locale | Literal["_"], str],
 ) -> str:
     """Get the first string out of table that matches a locale. Defaults to en_GB if no locale can be found."""
@@ -110,7 +110,7 @@ class Configuration(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self._colours = itertools.cycle(
-            (disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue))
+            disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue)
         )
 
     @commands.Cog.listener("on_guild_remove")

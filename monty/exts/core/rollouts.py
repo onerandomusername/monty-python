@@ -2,7 +2,7 @@ import asyncio
 import functools
 import random
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import disnake
 import sqlalchemy as sa
@@ -81,8 +81,8 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         timeout: float = 30,
         confirm_button_text: str = "Confirm",
         deny_button_text: str = "Deny",
-        message_to_edit: Optional[disnake.Message] = None,
-    ) -> Union[tuple[bool, disnake.MessageInteraction, disnake.ui.MessageActionRow], tuple[None, None, None]]:
+        message_to_edit: disnake.Message | None = None,
+    ) -> tuple[bool, disnake.MessageInteraction, disnake.ui.MessageActionRow] | tuple[None, None, None]:
         """Wait for the user to provide confirmation, and handle expiration."""
         # ask the user if they want to add this feature
         components = disnake.ui.ActionRow.with_message_components()
@@ -233,7 +233,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             ),
         ]
 
-        message: Optional[disnake.Message] = None
+        message: disnake.Message | None = None
         for msg in texts:
             confirm, inter, components = await self.wait_for_confirmation(ctx.message, msg, message_to_edit=message)
             if confirm is None or inter is None:

@@ -5,7 +5,7 @@ import logging
 import logging.handlers
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -14,13 +14,15 @@ from monty import constants
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import Unpack
 
 
 TRACE = 5
 
 
-def get_logger(name: str) -> "MontyLogger":
+def get_logger(name: str) -> MontyLogger:
     """Stub method for logging.getLogger."""
     return cast("MontyLogger", logging.getLogger(name))
 

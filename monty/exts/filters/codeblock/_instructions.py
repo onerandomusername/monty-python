@@ -1,7 +1,5 @@
 """This module generates and formats instructional messages about fixing Markdown code blocks."""
 
-from typing import Optional
-
 from monty.exts.filters.codeblock import _parsing
 from monty.log import get_logger
 
@@ -29,7 +27,7 @@ def _get_example(language: str) -> str:
     return _EXAMPLE_CODE_BLOCKS.format(content=content)
 
 
-def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> Optional[str]:
+def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> str | None:
     """Return instructions on using the correct ticks for `code_block`."""
     log.trace("Creating instructions for incorrect code block ticks.")
 
@@ -63,7 +61,7 @@ def _get_bad_ticks_message(code_block: _parsing.CodeBlock) -> Optional[str]:
     return instructions
 
 
-def _get_no_ticks_message(content: str) -> Optional[str]:
+def _get_no_ticks_message(content: str) -> str | None:
     """If `content` is Python/REPL code, return instructions on using code blocks."""
     log.trace("Creating instructions for a missing code block.")
 
@@ -80,7 +78,7 @@ def _get_no_ticks_message(content: str) -> Optional[str]:
         log.trace("Aborting missing code block instructions: content is not Python code.")
 
 
-def _get_bad_lang_message(content: str) -> Optional[str]:
+def _get_bad_lang_message(content: str) -> str | None:
     """
     Return instructions on fixing the Python language specifier for a code block.
 
@@ -122,7 +120,7 @@ def _get_bad_lang_message(content: str) -> Optional[str]:
     )
 
 
-def _get_no_lang_message(content: str) -> Optional[str]:
+def _get_no_lang_message(content: str) -> str | None:
     """
     Return instructions on specifying a language for a code block.
 
@@ -144,7 +142,7 @@ def _get_no_lang_message(content: str) -> Optional[str]:
         log.trace("Aborting missing language instructions: content is not Python code.")
 
 
-def get_instructions(content: str) -> Optional[str]:
+def get_instructions(content: str) -> str | None:
     """
     Parse `content` and return code block formatting instructions if something is wrong.
 

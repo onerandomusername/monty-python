@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Final, List, cast
+from typing import TYPE_CHECKING, Final, cast
 from urllib.parse import urldefrag
 
 import disnake
@@ -26,7 +26,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        with open(CODE_FILE, "r") as f:
+        with open(CODE_FILE) as f:
             # this is declared as final as we should *not* be writing to it
             self.code: Final[str] = f.read()
 
@@ -99,7 +99,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
         else:
             text = "Something went wrong."
 
-        components: List[disnake.ui.action_row.Components] = []
+        components: list[disnake.ui.action_row.Components] = []
         if isinstance(ctx, commands.Context):
             components.append(DeleteButton(ctx.author, initial_message=ctx.message))
         else:
@@ -135,7 +135,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
         if modified <= self.last_modified:
             return
         self.last_modified = modified
-        with open(CODE_FILE, "r") as f:
+        with open(CODE_FILE) as f:
             self.code = f.read()  # type: ignore # this is the one time we can write to the code
             logger.debug("Updated global_source code")
 

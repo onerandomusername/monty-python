@@ -6,7 +6,7 @@ This provides a util for a feature in the database to be created representing a 
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import disnake
 from disnake.ext import commands
@@ -17,10 +17,12 @@ from monty.errors import FeatureDisabled
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from monty.bot import Monty
 
 
-AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context
 T = TypeVar("T")
 
 
@@ -35,7 +37,7 @@ def require_feature(name: Feature) -> Callable[[T], T]:
     async def predicate(ctx: AnyContext) -> bool:
         bot: Monty = ctx.bot  # type: ignore # this will be a Monty instance
 
-        guild_id: Optional[int] = getattr(ctx, "guild_id", None) or (ctx.guild and ctx.guild.id)
+        guild_id: int | None = getattr(ctx, "guild_id", None) or (ctx.guild and ctx.guild.id)
 
         is_enabled = await bot.guild_has_feature(guild_id, name)
         if is_enabled:

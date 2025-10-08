@@ -6,8 +6,9 @@ import contextlib
 import enum
 import io
 import types
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence, Union
+from typing import TYPE_CHECKING, Any
 
 import disnake
 import rich.console
@@ -16,23 +17,26 @@ import rich.text
 from disnake.ext import commands
 
 from monty import constants
-from monty.bot import Monty
 from monty.metadata import ExtMetadata
 from monty.utils.code import prepare_input
 from monty.utils.messages import DeleteButton
 
 
+if TYPE_CHECKING:
+    from monty.bot import Monty
+
+
 EXT_METADATA = ExtMetadata(core=True)
 
-MessageTopLevelComponent = Union[
-    "disnake.ui.Section",
-    "disnake.ui.TextDisplay",
-    "disnake.ui.MediaGallery",
-    "disnake.ui.File",
-    "disnake.ui.Separator",
-    "disnake.ui.Container",
-    "disnake.ui.ActionRow",
-]
+MessageTopLevelComponent = (
+    disnake.ui.Section
+    | disnake.ui.TextDisplay
+    | disnake.ui.MediaGallery
+    | disnake.ui.File
+    | disnake.ui.Separator
+    | disnake.ui.Container
+    | disnake.ui.ActionRow
+)
 
 
 class EvalRules(enum.IntFlag):
@@ -64,7 +68,7 @@ class Response:
 
 
 class InternalEval(commands.Cog):
-    def __init__(self, bot: Monty) -> None:
+    def __init__(self, bot: "Monty") -> None:
         self.bot = bot
         self._repl_session = asyncio.Lock()
 
@@ -400,6 +404,6 @@ class InternalEval(commands.Cog):
         return True
 
 
-def setup(bot: Monty) -> None:
+def setup(bot: "Monty") -> None:
     """Load the Internal cog."""
     bot.add_cog(cog=InternalEval(bot))

@@ -1,7 +1,6 @@
 import asyncio
 import random
-import typing
-from typing import TYPE_CHECKING, Optional, Union, overload
+from typing import TYPE_CHECKING, overload
 
 import disnake
 from disnake.ext import commands
@@ -18,15 +17,15 @@ if TYPE_CHECKING:
 else:
     from monty.utils.converters import WrappedMessageConverter
 
-MessageTopLevelComponent = Union[
-    "disnake.ui.Section",
-    "disnake.ui.TextDisplay",
-    "disnake.ui.MediaGallery",
-    "disnake.ui.File",
-    "disnake.ui.Separator",
-    "disnake.ui.Container",
-    "disnake.ui.ActionRow",
-]
+MessageTopLevelComponent = (
+    disnake.ui.Section
+    | disnake.ui.TextDisplay
+    | disnake.ui.MediaGallery
+    | disnake.ui.File
+    | disnake.ui.Separator
+    | disnake.ui.Container
+    | disnake.ui.ActionRow
+)
 
 log = get_logger(__name__)
 
@@ -132,7 +131,7 @@ class Bookmark(
         title: str,
         *,
         bypass_read_check: bool = False,
-    ) -> Union[disnake.Embed, disnake.Message]:
+    ) -> disnake.Embed | disnake.Message:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
         if not bypass_read_check and not self.check_perms(user, target_message):
             return disnake.Embed(
@@ -162,8 +161,8 @@ class Bookmark(
 
     @staticmethod
     async def send_embed(
-        ctx: typing.Union[commands.Context, disnake.Interaction], target_message: disnake.Message
-    ) -> Optional[disnake.Message]:
+        ctx: commands.Context | disnake.Interaction, target_message: disnake.Message
+    ) -> disnake.Message | None:
         """Sends an embed, with a button, so users can click to bookmark the message too."""
         content = f"Sent you a DM, {ctx.author.mention}"
 
@@ -236,7 +235,7 @@ class Bookmark(
         target_message: disnake.Message,
         *,
         title: str = "Bookmark",
-    ) -> Optional[disnake.Message]: ...
+    ) -> disnake.Message | None: ...
 
     async def _bookmark(
         self,
@@ -246,10 +245,10 @@ class Bookmark(
             | disnake.ApplicationCommandInteraction
             | disnake.MessageCommandInteraction
         ),
-        target_message: Optional[disnake.Message] = None,
+        target_message: disnake.Message | None = None,
         *,
         title: str = "Bookmark",
-    ) -> Optional[disnake.Message]:
+    ) -> disnake.Message | None:
         if not target_message:
             assert isinstance(ctx, commands.Context)
             if not ctx.message.reference or not isinstance(
@@ -296,7 +295,7 @@ class Bookmark(
     async def bookmark_prefix(
         self,
         ctx: commands.Context,
-        target_message: Optional[WrappedMessageConverter],
+        target_message: WrappedMessageConverter | None,
         *,
         title: str = "Bookmark",
     ) -> None:
@@ -356,7 +355,7 @@ class Bookmark(
 
     @commands.Cog.listener("on_button_click")
     # cursed.
-    async def bookmark_button(self, inter: Union[disnake.MessageInteraction, disnake.ModalInteraction]) -> None:
+    async def bookmark_button(self, inter: disnake.MessageInteraction | disnake.ModalInteraction) -> None:
         """Listen for bookmarked button events and respond to them."""
         custom_id: str = inter.data.custom_id
         if not custom_id.startswith(CUSTOM_ID):

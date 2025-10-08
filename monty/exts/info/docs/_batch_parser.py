@@ -3,7 +3,7 @@ import collections
 from collections import defaultdict
 from contextlib import suppress
 from operator import attrgetter
-from typing import TYPE_CHECKING, DefaultDict, List, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, NamedTuple
 
 import cachingutils.redis
 from bs4 import BeautifulSoup
@@ -62,7 +62,7 @@ class QueueItem(NamedTuple):
     doc_item: "_cog.DocItem"
     soup: BeautifulSoup
 
-    def __eq__(self, other: "Union[QueueItem, _cog.DocItem]") -> bool:
+    def __eq__(self, other: "QueueItem | _cog.DocItem") -> bool:
         if isinstance(other, _cog.DocItem):
             return self.doc_item == other
         return NamedTuple.__eq__(self, other)
@@ -72,7 +72,7 @@ class QueueItem(NamedTuple):
 if TYPE_CHECKING:
 
     class Deque(collections.deque[QueueItem]):
-        def index(self, value: Union[QueueItem, _cog.DocItem], start: int = 0, stop: Optional[int] = None) -> int: ...
+        def index(self, value: QueueItem | _cog.DocItem, start: int = 0, stop: int | None = None) -> int: ...
 
 else:
     Deque = collections.deque
@@ -103,13 +103,13 @@ class BatchParser:
     def __init__(self, bot: Monty) -> None:
         self._bot: Monty = bot
         self._queue: Deque = Deque()
-        self._page_doc_items: "DefaultDict[str, List[_cog.DocItem]]" = defaultdict(list)
-        self._item_futures: "DefaultDict[_cog.DocItem, ParseResultFuture]" = defaultdict(ParseResultFuture)
+        self._page_doc_items: defaultdict[str, list[_cog.DocItem]] = defaultdict(list)
+        self._item_futures: defaultdict[_cog.DocItem, ParseResultFuture] = defaultdict(ParseResultFuture)
         self._parse_task = None
 
         self.stale_inventory_notifier = StaleInventoryNotifier()
 
-    async def get_markdown(self, doc_item: "_cog.DocItem") -> Optional[str]:
+    async def get_markdown(self, doc_item: "_cog.DocItem") -> str | None:
         """
         Get the result Markdown of `doc_item`.
 
@@ -185,7 +185,7 @@ class BatchParser:
             self._parse_task = None
             log.trace("Finished parsing queue.")
 
-    def _move_to_front(self, item: "Union[QueueItem, _cog.DocItem]") -> None:
+    def _move_to_front(self, item: "QueueItem | _cog.DocItem") -> None:
         """Move `item` to the front of the parse queue."""
         # The parse queue stores soups along with the doc symbols in QueueItem objects,
         # in case we're moving a DocItem we have to get the associated QueueItem first and then move it.

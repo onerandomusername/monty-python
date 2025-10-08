@@ -4,7 +4,6 @@ import base64
 import contextlib
 import re
 import sys
-import typing as t
 
 import aiohttp
 import attr
@@ -62,7 +61,7 @@ class Token:
     hmac: str
 
     def __attrs_post_init__(self, *args, **kwargs) -> None:
-        self.application_id: t.Optional[int] = TokenRemover.extract_user_id(self.user_id)
+        self.application_id: int | None = TokenRemover.extract_user_id(self.user_id)
 
     def __str__(self) -> str:
         return f"{self.user_id}.{self.timestamp}.{self.hmac}"
@@ -138,9 +137,9 @@ class TokenRemover(commands.Cog, name="Token Remover"):
 
         await self.on_message(after)
 
-    async def check_valid(self, *tokens: Token) -> list[t.Optional[int]]:
+    async def check_valid(self, *tokens: Token) -> list[int | None]:
         """Check if the provided tokens were valid or not."""
-        statuses: list[t.Optional[int]] = []
+        statuses: list[int | None] = []
         headers = DISCORD_REQUEST_HEADERS.copy()
         for token in tokens:
             headers["Authorization"] = "Bot " + str(token)
@@ -152,7 +151,7 @@ class TokenRemover(commands.Cog, name="Token Remover"):
                     statuses.append(None)
         return statuses
 
-    async def invalidate_tokens(self, *tokens: Token) -> t.Optional[str]:
+    async def invalidate_tokens(self, *tokens: Token) -> str | None:
         """Post the provided tokens to github to invalidate it."""
         if not tokens:
             return None
@@ -230,7 +229,7 @@ class TokenRemover(commands.Cog, name="Token Remover"):
         )
 
     @classmethod
-    def find_token_in_message(cls, msg: disnake.Message) -> t.Optional[list[Token]]:
+    def find_token_in_message(cls, msg: disnake.Message) -> list[Token] | None:
         """Return a seemingly valid token found in `msg` or `None` if no token is found."""
         tokens = []
         for match in TOKEN_RE.finditer(msg.content):
@@ -248,7 +247,7 @@ class TokenRemover(commands.Cog, name="Token Remover"):
         return tokens or None
 
     @staticmethod
-    def extract_user_id(b64_content: str) -> t.Optional[int]:
+    def extract_user_id(b64_content: str) -> int | None:
         """Return a user ID integer from part of a potential token, or None if it couldn't be decoded."""
         b64_content = utils.pad_base64(b64_content)
 

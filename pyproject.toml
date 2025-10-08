@@ -100,6 +100,7 @@ select = [
     "W", # pycodestyle
     "S", # bandit
     "I", # isort
+    "UP", # pyupgrade
     # "RUF", # ruff specific exceptions
     "ANN",  # flake8-annotations
     "B",    # flake8-bugbear

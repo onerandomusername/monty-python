@@ -1,7 +1,8 @@
 import importlib
 import inspect
 import pkgutil
-from typing import TYPE_CHECKING, Generator, NoReturn, Tuple
+from collections.abc import Generator
+from typing import TYPE_CHECKING, NoReturn
 
 from disnake.ext import commands
 
@@ -20,7 +21,7 @@ def unqualify(name: str) -> str:
     return name.rsplit(".", maxsplit=1)[-1]
 
 
-def walk_extensions() -> Generator[Tuple[str, "ExtMetadata"], None, None]:
+def walk_extensions() -> Generator[tuple[str, "ExtMetadata"], None, None]:
     """Yield extension names from monty.exts subpackage."""
     from monty.metadata import ExtMetadata
 

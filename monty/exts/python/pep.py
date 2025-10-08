@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Optional, Tuple, cast
+from typing import cast
 from urllib.parse import urljoin
 
 import aiohttp
@@ -93,7 +93,7 @@ class PythonEnhancementProposals(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        self.peps: Dict[int, str] = {}
+        self.peps: dict[int, str] = {}
         self.autocomplete: dict[str, int] = {}
         # To avoid situations where we don't have last datetime, set this to now.
         self.last_refreshed_peps: datetime = utcnow()
@@ -139,7 +139,7 @@ class PythonEnhancementProposals(
 
         return None
 
-    def generate_pep_embed(self, pep_header: Dict, pep_nr: int) -> disnake.Embed:
+    def generate_pep_embed(self, pep_header: dict, pep_nr: int) -> disnake.Embed:
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed
         pep_embed = disnake.Embed(
@@ -160,7 +160,7 @@ class PythonEnhancementProposals(
         return pep_embed
 
     @async_cached(cache=LRUMemoryCache(20, timeout=int(timedelta(hours=2).total_seconds())))
-    async def fetch_pep_info(self, url: str, number: int) -> Tuple[dict[str, str], BeautifulSoup]:
+    async def fetch_pep_info(self, url: str, number: int) -> tuple[dict[str, str], BeautifulSoup]:
         """Fetch the pep information. This is extracted into a seperate function for future use."""
         async with self.bot.http_session.get(url) as response:
             response.raise_for_status()
@@ -197,7 +197,7 @@ class PythonEnhancementProposals(
 
         url = self.peps[number]
         metadata, soup = cast(
-            "Tuple[dict[str, str], BeautifulSoup]",
+            "tuple[dict[str, str], BeautifulSoup]",
             await self.fetch_pep_info(url, number),  # pyright: ignore[reportCallIssue]
         )
 
@@ -233,7 +233,7 @@ class PythonEnhancementProposals(
 
     @commands.slash_command(name="pep")
     async def pep_command(
-        self, inter: disnake.ApplicationCommandInteraction, number: int, header: Optional[str] = None
+        self, inter: disnake.ApplicationCommandInteraction, number: int, header: str | None = None
     ) -> None:
         """
         Fetch information about a PEP.

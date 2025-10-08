@@ -4,7 +4,7 @@ import json
 import random
 import re
 from functools import cache
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import attrs
 import disnake
@@ -123,7 +123,7 @@ class Ruff(
 
         self.rules: dict[str, Rule] = {}
 
-        self.last_fetched: Optional[datetime.datetime] = None
+        self.last_fetched: datetime.datetime | None = None
 
     async def cog_load(self) -> None:
         """Load the rules on cog load."""
@@ -144,7 +144,7 @@ class Ruff(
 
     @tasks.loop(minutes=10)
     # @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
-    async def update_rules(self) -> Optional[dict[str, Any]]:
+    async def update_rules(self) -> dict[str, Any] | None:
         """Fetch Ruff rules."""
         raw_rules = await self._fetch_rules()
         if not raw_rules:

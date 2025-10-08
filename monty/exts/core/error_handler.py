@@ -20,7 +20,7 @@ from monty.utils.messages import DeleteButton
 
 EXT_METADATA = ExtMetadata(core=True)
 
-AnyContext = typing.Union[commands.Context, disnake.ApplicationCommandInteraction]
+AnyContext = commands.Context | disnake.ApplicationCommandInteraction
 
 logger = get_logger(__name__)
 
@@ -47,7 +47,7 @@ class ErrorHandler(
         return disnake.Embed(title=title, description=message, colour=colour)
 
     @staticmethod
-    def get_title_from_name(error: typing.Union[Exception, str]) -> str:
+    def get_title_from_name(error: Exception | str) -> str:
         """
         Return a message dervived from the exception class name.
 
@@ -241,9 +241,7 @@ class ErrorHandler(
         else:
             logger.error(f"Unable to send an error message to channel {ctx.channel}")
 
-    async def handle_check_failure(
-        self, ctx: AnyContext, error: commands.CheckFailure
-    ) -> typing.Optional[disnake.Embed]:
+    async def handle_check_failure(self, ctx: AnyContext, error: commands.CheckFailure) -> disnake.Embed | None:
         """Handle CheckFailures seperately given that there are many of them."""
         title = "Check Failure"
         if isinstance(error, commands.CheckAnyFailure):
@@ -278,7 +276,7 @@ class ErrorHandler(
             # this will be modified in the future to support prefilled commands
             return
 
-        embed: typing.Optional[disnake.Embed] = None
+        embed: disnake.Embed | None = None
         should_respond = True
 
         self.bot.stats.incr("errors")

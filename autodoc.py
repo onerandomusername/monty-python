@@ -2,7 +2,8 @@ import functools
 import importlib
 import logging
 import textwrap
-from typing import Any, Iterable, List, Optional, Protocol, Sequence, Type, TypeGuard, cast
+from collections.abc import Iterable, Sequence
+from typing import Any, Protocol, TypeGuard, cast
 
 import disnake
 from disnake import ApplicationInstallTypes, InteractionContextTypes
@@ -28,15 +29,15 @@ class AppCommandLike(Protocol):
     """Simplified app command protocol."""
 
     qualified_name: str
-    description: Optional[str]
-    body: Optional[disnake.ApplicationCommand]
+    description: str | None
+    body: disnake.ApplicationCommand | None
     contexts: InteractionContextTypes
     install_types: ApplicationInstallTypes
-    cog: Optional[commands.Cog]
-    parent: Optional[Any]
+    cog: commands.Cog | None
+    parent: Any | None
 
 
-def pretty_print_options(options: Optional[Iterable[disnake.Option]], indent: int = 0) -> str:
+def pretty_print_options(options: Iterable[disnake.Option] | None, indent: int = 0) -> str:
     """
     Format slash command options into markdown.
 
@@ -65,7 +66,7 @@ def pretty_print_options(options: Optional[Iterable[disnake.Option]], indent: in
             choice_strs = [f"`{c.name}` (`{c.value}`)" for c in choices]
             lines.append(f"{prefix}  Choices: {', '.join(choice_strs)}")
 
-        constraints: List[str] = []
+        constraints: list[str] = []
         if opt.min_value is not None:
             constraints.append(f"Min: `{opt.min_value}`")
         if opt.max_value is not None:
@@ -121,7 +122,7 @@ def pretty_print_prefix_command(command: commands.Command) -> str:
     return "\n".join(lines) + "\n\n"
 
 
-def _extract_member_names(value: Any, enum_cls: Type) -> List[str]:
+def _extract_member_names(value: Any, enum_cls: type) -> list[str]:
     """
     Return the matching enum member names (lowercased) for a bitmask value.
 
@@ -131,7 +132,7 @@ def _extract_member_names(value: Any, enum_cls: Type) -> List[str]:
     if not isinstance(value, int):
         return []
 
-    names: List[str] = []
+    names: list[str] = []
     members = getattr(enum_cls, "__members__", None)
 
     if members is None:
@@ -155,7 +156,7 @@ def _extract_member_names(value: Any, enum_cls: Type) -> List[str]:
     return names or [str(getattr(value, "name", value)).lower()]
 
 
-def _format_enum_flags(value: Any, enum_cls: Type) -> List[str]:
+def _format_enum_flags(value: Any, enum_cls: type) -> list[str]:
     """Format enum/flag values into a list of canonical member strings."""
     if not isinstance(value, enum_cls):
         return []
@@ -173,7 +174,7 @@ def _format_enum_flags(value: Any, enum_cls: Type) -> List[str]:
     return names or [str(getattr(value, "name", value)).lower()]
 
 
-def _flag_names_from_value(value: Optional[disnake.flags.BaseFlags], enum_cls: Type) -> List[str]:
+def _flag_names_from_value(value: disnake.flags.BaseFlags | None, enum_cls: type) -> list[str]:
     """
     Convert a Disnake flag/enum value into human-friendly names.
 
@@ -184,7 +185,7 @@ def _flag_names_from_value(value: Optional[disnake.flags.BaseFlags], enum_cls: T
         return []
 
     if isinstance(value, (InteractionContextTypes, ApplicationInstallTypes)):
-        names: List[str] = []
+        names: list[str] = []
         if isinstance(value, InteractionContextTypes):
             if value.guild:
                 names.append("Guilds")
@@ -211,10 +212,10 @@ def _get_attr(command: Any, attr_name: str) -> Any:
 
 def _resolve_command_flags(
     command: Any,
-    enum_cls: Type,
+    enum_cls: type,
     attr_name: str,
-    cog_class: Type[commands.Cog],
-) -> List[str]:
+    cog_class: type[commands.Cog],
+) -> list[str]:
     """
     Resolve and format the human-friendly names for a command flag attribute.
 
@@ -259,7 +260,7 @@ def _resolve_command_flags(
 
 
 def pretty_print_app_command(
-    command: commands.InvokableApplicationCommand | AppCommandLike, cog_class: Type[commands.Cog]
+    command: commands.InvokableApplicationCommand | AppCommandLike, cog_class: type[commands.Cog]
 ) -> str:
     """Format an application (slash/user/message) command into markdown."""
     lines = [f"### `{command.qualified_name}`"]
@@ -284,9 +285,9 @@ def pretty_print_app_command(
     return "\n".join(lines) + "\n\n"
 
 
-def _find_cog_classes() -> List[tuple[str, str, Type[commands.Cog]]]:
+def _find_cog_classes() -> list[tuple[str, str, type[commands.Cog]]]:
     """Import extensions and return a list of (name, doc, class) tuples for cogs."""
-    cogs: List[tuple[str, str, Type[commands.Cog]]] = []
+    cogs: list[tuple[str, str, type[commands.Cog]]] = []
 
     EXTENSIONS.update(dict(walk_extensions()))
 
@@ -309,7 +310,7 @@ def _find_cog_classes() -> List[tuple[str, str, Type[commands.Cog]]]:
     return cogs
 
 
-def _gather_prefix_commands(cog_class: Type[commands.Cog]) -> List[commands.Command]:
+def _gather_prefix_commands(cog_class: type[commands.Cog]) -> list[commands.Command]:
     """Return visible prefix commands defined on a cog class, sorted."""
     try:
         commands_list = list(commands.Cog.walk_commands(cog_class))  # pyright: ignore[reportArgumentType]
@@ -361,7 +362,7 @@ def _build_subcommand(command: Any, option: Any) -> AppCommandLike:
     return cast("AppCommandLike", app)
 
 
-def _gather_app_commands(cog_class: Type[commands.Cog]) -> List[commands.InvokableApplicationCommand | AppCommandLike]:
+def _gather_app_commands(cog_class: type[commands.Cog]) -> list[commands.InvokableApplicationCommand | AppCommandLike]:
     """
     Return application commands defined on a cog, expanding subcommands.
 
@@ -370,7 +371,7 @@ def _gather_app_commands(cog_class: Type[commands.Cog]) -> List[commands.Invokab
     """
     try:
         commands_list = list(cog_class.get_application_commands(cog_class))  # pyright: ignore[reportArgumentType]
-        app_commands: List[commands.InvokableApplicationCommand | AppCommandLike] = []
+        app_commands: list[commands.InvokableApplicationCommand | AppCommandLike] = []
 
         for command in commands_list:
             if _contains_subcommands(command):

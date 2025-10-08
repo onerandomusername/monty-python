@@ -1,6 +1,7 @@
 import enum
+from collections.abc import Callable, Coroutine
 from dataclasses import InitVar, dataclass, field
-from typing import Callable, Coroutine, Literal, Optional, Type, Union
+from typing import Literal
 
 import disnake
 from disnake import Locale
@@ -8,7 +9,7 @@ from disnake import Locale
 from monty import constants
 
 
-Localised = Union[str, dict[Locale | Literal["_"], str]]
+Localised = str | dict[Locale | Literal["_"], str]
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -104,7 +105,7 @@ class FreeResponseMetadata:
     text_input_style: disnake.TextInputStyle = disnake.TextInputStyle.short
     min_length: int = 1
     max_length: int = 4000
-    placeholder: Optional[Localised] = None
+    placeholder: Localised | None = None
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -112,16 +113,16 @@ class ConfigAttrMetadata:
     name: Localised
     description: Localised
     nullable: bool = True
-    type: Union[Type[str], Type[int], Type[float], Type[bool]]
+    type: type[str] | type[int] | type[float] | type[bool]
     emoji: disnake.PartialEmoji | str | None = None
     category: InitVar[Category | None] = None
     categories: set[Category] | frozenset[Category] = field(default_factory=frozenset)
-    select_option: Optional[SelectOptionMetadata] = None
-    modal: Optional[FreeResponseMetadata] = None
+    select_option: SelectOptionMetadata | None = None
+    modal: FreeResponseMetadata | None = None
     requires_bot: bool = False
-    long_description: Optional[str] = None
-    depends_on_features: Optional[tuple[constants.Feature]] = None
-    validator: Optional[Union[Callable, Callable[..., Coroutine]]] = None
+    long_description: str | None = None
+    depends_on_features: tuple[constants.Feature] | None = None
+    validator: Callable | Callable[..., Coroutine] | None = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
     def __post_init__(self, category: Category | None) -> None:

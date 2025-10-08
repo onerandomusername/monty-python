@@ -5,7 +5,7 @@ import socket
 import sys
 from datetime import timedelta
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 from weakref import WeakValueDictionary
 
@@ -184,8 +184,9 @@ class Monty(commands.Bot):
                     await cache.set(cache_key, (etag, body, r.raw_headers))
                 return r
 
-        user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
-            sys.version_info, constants.Client.version, constants.Client.git_repo
+        user_agent = (
+            f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.version} "
+            f"({constants.Client.git_repo})"
         )
 
         self.http_session = aiohttp.ClientSession(
@@ -257,7 +258,7 @@ class Monty(commands.Bot):
 
         return config
 
-    async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
+    async def get_prefix(self, message: disnake.Message) -> list[str] | str | None:
         """Get the bot prefix."""
         prefixes = commands.when_mentioned(self, message)
         if message.guild:
@@ -303,7 +304,7 @@ class Monty(commands.Bot):
 
     async def guild_has_feature(
         self,
-        guild: Optional[Union[int, disnake.abc.Snowflake]],
+        guild: int | disnake.abc.Snowflake | None,
         feature: constants.Feature | str,
         *,
         include_feature_status: bool = True,
@@ -425,7 +426,7 @@ class Monty(commands.Bot):
         log.info(f"Cog loaded: {cog.qualified_name}")
         self.dispatch("cog_load", cog)
 
-    def remove_cog(self, name: str) -> Optional[commands.Cog]:
+    def remove_cog(self, name: str) -> commands.Cog | None:
         """Remove the cog from the bot and dispatch a cog_remove event."""
         cog = super().remove_cog(name)
         if cog is None:
@@ -439,7 +440,7 @@ class Monty(commands.Bot):
         self._add_root_aliases(command)
         self.dispatch("command_add", command)
 
-    def remove_command(self, name: str) -> Optional[commands.Command]:
+    def remove_command(self, name: str) -> commands.Command | None:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
 
@@ -462,7 +463,7 @@ class Monty(commands.Bot):
         super().add_slash_command(slash_command)
         self.dispatch("slash_command_add", slash_command)
 
-    def remove_slash_command(self, name: str) -> Optional[commands.InvokableSlashCommand]:
+    def remove_slash_command(self, name: str) -> commands.InvokableSlashCommand | None:
         """Remove the slash command from the bot and dispatch a slash_command_remove event."""
         slash_command = super().remove_slash_command(name)
         if slash_command is None:

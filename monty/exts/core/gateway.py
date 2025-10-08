@@ -48,7 +48,7 @@ class GatewayLog(commands.Cog):
             or "No events have been logged yet."
         )
         components = [
-            disnake.ui.TextDisplay((output)),
+            disnake.ui.TextDisplay(output),
             DeleteButton(
                 ctx.author.id,
                 allow_manage_messages=False,
