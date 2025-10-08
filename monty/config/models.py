@@ -98,21 +98,26 @@ class SelectOptionMetadata:
 
 
 @dataclass(kw_only=True, frozen=True)
-class ButtonMetadata:
-    label: Localised
-    style: Callable[..., disnake.ButtonStyle] = lambda _: disnake.ButtonStyle.green
+class FreeResponseMetadata:
+    button_label: Localised
+    button_style: Callable[..., disnake.ButtonStyle] = lambda _: disnake.ButtonStyle.green
+    text_input_style: disnake.TextInputStyle = disnake.TextInputStyle.short
+    min_length: int = 1
+    max_length: int = 4000
+    placeholder: Optional[Localised] = None
 
 
 @dataclass(kw_only=True, frozen=True)
 class ConfigAttrMetadata:
     name: Localised
     description: Localised
+    nullable: bool = True
     type: Union[Type[str], Type[int], Type[float], Type[bool]]
     emoji: disnake.PartialEmoji | str | None = None
     category: InitVar[Category | None] = None
     categories: set[Category] | frozenset[Category] = field(default_factory=frozenset)
     select_option: Optional[SelectOptionMetadata] = None
-    button: Optional[ButtonMetadata] = None
+    modal: Optional[FreeResponseMetadata] = None
     requires_bot: bool = False
     long_description: Optional[str] = None
     depends_on_features: Optional[tuple[constants.Feature]] = None
@@ -132,3 +137,65 @@ class ConfigAttrMetadata:
             raise ValueError("name must be less than 45 characters")
         if len(self.description) > 100:
             raise ValueError("description must be less than 100 characters")
+
+    def get_select_option(
+        self,
+        *,
+        locale: Locale | None = None,
+        attr: str,
+        default: bool = False,
+    ) -> disnake.SelectOption:
+        """Return a select option for this metadata, localised if needed."""
+        if not self.select_option:
+            raise ValueError("This ConfigAttrMetadata does not have select_option metadata")
+        description = self.select_option.description
+        key = locale or "_"
+        name = self.name
+        if isinstance(name, dict):
+            name = name.get(key) or name.get("_") or "Option"
+
+        if isinstance(description, dict):
+            description = description.get(key) or description.get("_") or None
+        return disnake.SelectOption(
+            label=name,
+            value=attr,
+            default=default,
+            emoji=self.emoji,
+            description=description,
+        )
+
+    def get_button(self, *, locale: Locale | None = None) -> disnake.ui.Button:
+        """Return the button for this metadata, localised if needed."""
+        if not self.modal:
+            raise ValueError("This ConfigAttrMetadata does not have modal metadata")
+        label = self.modal.button_label
+        key = locale or "_"
+        if isinstance(label, dict):
+            label = label.get(key) or label.get("_") or "Edit"
+        return disnake.ui.Button(label=label, style=self.modal.button_style(None))
+
+    def get_text_input(
+        self,
+        *,
+        locale: Locale | None = None,
+        current: str | None = None,
+        name: str,
+        custom_id: str,
+    ) -> disnake.ui.TextInput:
+        """Return the text input for this metadata, localised if needed."""
+        if not self.modal:
+            raise ValueError("This ConfigAttrMetadata does not have modal metadata")
+        placeholder = self.description
+        key = locale or "_"
+        if isinstance(placeholder, dict):
+            placeholder = placeholder.get(key) or placeholder.get("_") or None
+        return disnake.ui.TextInput(
+            label=name,
+            style=self.modal.text_input_style,
+            min_length=self.modal.min_length,
+            max_length=self.modal.max_length,
+            placeholder=placeholder,
+            value=current or None,
+            required=not self.nullable,
+            custom_id=custom_id,
+        )

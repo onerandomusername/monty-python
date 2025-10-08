@@ -40,7 +40,7 @@ def get_locale_from_dict(
 
 
 def get_localised_response(
-    inter: disnake.ApplicationCommandInteraction | disnake.ModalInteraction,
+    inter: disnake.ApplicationCommandInteraction | disnake.ModalInteraction | disnake.MessageInteraction,
     text: str,
     **kwargs: dict[disnake.Locale | Literal["_"], str] | str,
 ) -> str:
@@ -165,7 +165,7 @@ class Configuration(
                     label="Edit",
                     emoji=cat.value.emoji,
                     style=cat.value.button.style,
-                    custom_id=f"config:v1:category:{cat.name}:{inter.id}",
+                    custom_id=f"config:v1:category:{cat.name}:{inter.author.id}",
                 ),
             )
             for cat in Category
@@ -173,6 +173,14 @@ class Configuration(
 
         msg_components: list[disnake.ui.Container | disnake.ui.ActionRow | disnake.ui.TextDisplay] = [
             disnake.ui.Container(
+                disnake.ui.TextDisplay(
+                    get_localised_response(
+                        inter,
+                        "## Configuration\nSelect a category below to view and edit the configuration options in that"
+                        " category.",
+                    )
+                ),
+                disnake.ui.Separator(divider=False),
                 *sections,
                 accent_colour=next(self._colours),
             ),
@@ -184,7 +192,7 @@ class Configuration(
 
     async def _send_category_options(
         self,
-        inter: disnake.ApplicationCommandInteraction,
+        inter: disnake.ApplicationCommandInteraction | disnake.MessageInteraction | disnake.ModalInteraction,
         category: Category,
         current_config: GuildConfig | None = None,
     ) -> None:
@@ -194,15 +202,9 @@ class Configuration(
         for attr, meta in tuple(category_options.items()):
             if meta.select_option:
                 default = bool(current_config and getattr(current_config, attr))
+                name = get_localised_response(inter, "{data}", data=meta.name)
                 select_group_options[meta.select_option.group].append(
-                    disnake.SelectOption(
-                        label=get_localised_response(inter, "{data}", data=meta.name),
-                        value=attr,
-                        emoji=meta.emoji,
-                        default=default,
-                        description=get_localised_response(inter, "{data}", data=meta.select_option.description or "")
-                        or None,
-                    )
+                    meta.get_select_option(default=default, locale=inter.locale, attr=attr)
                 )
 
             if meta.select_option:
@@ -212,6 +214,7 @@ class Configuration(
                 positioning[attr] = 1
 
         components: list[disnake.ui.ActionRow | disnake.ui.TextDisplay] = []
+        modalable_components = []
         for attr_or_group in positioning:
             nested_components = []
             ## handle select groups
@@ -221,26 +224,28 @@ class Configuration(
                 if not options:
                     continue
                 preceding_text = ""
+                supertext = ""
                 if select_group.value.supertext:
-                    supertext = get_localised_response(inter, "### {data}", data=select_group.value.supertext)
-                    preceding_text += supertext + "\n"
+                    supertext = get_localised_response(inter, "{data}", data=select_group.value.supertext)
+                    preceding_text += "### " + supertext + "\n"
                 if select_group.value.description:
                     description = get_localised_response(inter, "{data}", data=select_group.value.description)
                     preceding_text += description + "\n"
                 if preceding_text:
                     nested_components.append(disnake.ui.TextDisplay(preceding_text.strip()))
                 placeholder = get_localised_response(inter, "{data}", data=select_group.value.placeholder)
-                nested_components.append(
-                    disnake.ui.ActionRow(
-                        disnake.ui.Select(
-                            placeholder=placeholder,
-                            options=options,
-                            min_values=0,
-                            max_values=len(options),
-                            custom_id=f"config:v1:github_expansions:{inter.id}",
-                        )
-                    )
+                select = disnake.ui.Select(
+                    placeholder=placeholder,
+                    options=options,
+                    min_values=0,
+                    max_values=len(options),
+                    custom_id=f"config:v1:github_expansions:{inter.author.id}",
+                    required=False,
                 )
+                modalable_components.append(
+                    disnake.ui.Label(get_localised_response(inter, "{data}", data=supertext), select)
+                )
+                nested_components.append(disnake.ui.ActionRow(select))
                 if select_group.value.subtext:
                     subtext = get_localised_response(inter, "{data}", data=select_group.value.subtext)
                     nested_components.append(disnake.ui.TextDisplay(subtext))
@@ -248,23 +253,27 @@ class Configuration(
             elif isinstance(attr_or_group, str):
                 attr = attr_or_group
                 meta = category_options[attr]
-                if not meta.button:
+                if not meta.modal:
                     continue
                 if current_config:
-                    current = bool(getattr(current_config, attr))
+                    current = getattr(current_config, attr)
                 else:
                     current = None
+                name = get_localised_response(inter, "{data}", data=meta.name)
+                modalable_components.append(
+                    meta.get_text_input(custom_id=attr, name=name, current=current, locale=inter.locale)
+                )
                 components.extend(
                     (
                         disnake.ui.TextDisplay(
-                            content=get_localised_response(inter, "### {data}", data=meta.name),
+                            content="### " + name,
                         ),
                         disnake.ui.ActionRow(
                             disnake.ui.Button(
-                                style=meta.button.style(current),
+                                style=meta.modal.button_style(current),
                                 emoji=meta.emoji,
-                                label=get_localised_response(inter, "{data}", data=meta.button.label),
-                                custom_id=f"config:v1:edit:{attr}:{inter.id}",
+                                label=get_localised_response(inter, "{data}", data=meta.modal.button_label),
+                                custom_id=f"config:v1:edit:{attr}:{inter.author.id}",
                             )
                         ),
                     )
@@ -276,6 +285,13 @@ class Configuration(
         if not components:
             raise RuntimeError("No configuration options found for this category.")
 
+        if len(modalable_components) <= 5:
+            await inter.response.send_modal(
+                title=f"Edit {category.value.name} Settings",
+                custom_id=f"config:v1:modal:{category.name}:{inter.author.id}",
+                components=modalable_components,
+            )
+            return
         msg_components: list[disnake.ui.Container | disnake.ui.ActionRow | disnake.ui.TextDisplay] = [
             disnake.ui.Container(
                 *components,
@@ -330,6 +346,30 @@ class Configuration(
             f"There is no set prefix, using the default prefix: ``{self.bot.command_prefix}``", components=components
         )
         return
+
+    @commands.Cog.listener(disnake.Event.button_click)
+    async def on_button_click(self, inter: disnake.MessageInteraction) -> None:
+        """Handle button clicks for configuration modals."""
+        if not inter.data.custom_id.startswith("config:v1:category:"):
+            return
+
+        parts = inter.data.custom_id.removeprefix("config:v1:category:")
+        if len(parts.split(":")) != 2:
+            return
+        category_name, author_id = parts.split(":")
+        if str(inter.author.id) != author_id:
+            await inter.response.send_message(
+                "You cannot interact with this button as you did not initiate this interaction.",
+                ephemeral=True,
+            )
+            return
+        try:
+            category = Category[category_name]
+        except KeyError:
+            await inter.response.send_message("This configuration category no longer exists.", ephemeral=True)
+            return
+        config = await self.bot.ensure_guild_config(inter.guild_id)  # type: ignore # checks prevent guild from being None
+        await self._send_category_options(inter, category, current_config=config)
 
 
 def setup(bot: Monty) -> None:

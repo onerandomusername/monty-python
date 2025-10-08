@@ -1,7 +1,7 @@
 from monty.config._validate_metadata import _check_config_metadata
 from monty.config.components import get_category_choices
 from monty.config.metadata import METADATA
-from monty.config.models import ButtonMetadata, Category, ConfigAttrMetadata, SelectGroup, SelectOptionMetadata
+from monty.config.models import Category, ConfigAttrMetadata, FreeResponseMetadata, SelectGroup, SelectOptionMetadata
 
 
 __all__ = (
@@ -9,7 +9,7 @@ __all__ = (
     "Category",
     "ConfigAttrMetadata",
     "SelectGroup",
-    "ButtonMetadata",
+    "FreeResponseMetadata",
     "SelectOptionMetadata",
     "get_category_choices",
 )

@@ -4,7 +4,7 @@ import disnake
 from disnake import Locale
 
 from monty.config import validators
-from monty.config.models import ButtonMetadata, Category, ConfigAttrMetadata, SelectGroup, SelectOptionMetadata
+from monty.config.models import Category, ConfigAttrMetadata, FreeResponseMetadata, SelectGroup, SelectOptionMetadata
 from monty.constants import Feature
 
 
@@ -18,7 +18,7 @@ METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
         description="The prefix used for text based commands.",
         requires_bot=True,
         categories={Category.General},
-        button=ButtonMetadata(label="Set Prefix", style=lambda x: disnake.ButtonStyle.green),
+        modal=FreeResponseMetadata(button_label="Set Prefix", button_style=lambda x: disnake.ButtonStyle.green),
     ),
     github_issues_org=ConfigAttrMetadata(
         type=str,
@@ -32,7 +32,11 @@ METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
         },
         validator=validators.validate_github_org,
         category=Category.GitHub,
-        button=ButtonMetadata(label="Edit Org"),
+        modal=FreeResponseMetadata(
+            button_label="Edit Org",
+            max_length=39,
+            min_length=2,
+        ),
     ),
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
