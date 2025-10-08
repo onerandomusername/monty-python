@@ -1,6 +1,5 @@
 import re
 import unicodedata
-from typing import Tuple
 
 import disnake
 from disnake.ext import commands
@@ -60,7 +59,7 @@ class Misc(
             await ctx.send(f"Too many characters ({len(characters)}/50)")
             return
 
-        def get_info(char: str) -> Tuple[str, str]:
+        def get_info(char: str) -> tuple[str, str]:
             digit = f"{ord(char):x}"
             if len(digit) <= 4:
                 u_code = f"\\u{digit:>04}"

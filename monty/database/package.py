@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from sqlalchemy.ext.mutable import MutableList
@@ -26,15 +26,15 @@ class PackageInfo(Base):
         primary_key=True,
     )
     inventory_url: Mapped[str] = mapped_column(sa.Text)
-    _base_url: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True, default=None, name="base_url")
+    _base_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True, default=None, name="base_url")
     hidden: Mapped[bool] = mapped_column(sa.Boolean, default=False, server_default="false", nullable=False)
-    guilds_whitelist: Mapped[Optional[List[int]]] = mapped_column(
+    guilds_whitelist: Mapped[list[int] | None] = mapped_column(
         MutableList.as_mutable(sa.ARRAY(sa.BigInteger)),
         nullable=True,
         default=[],
         server_default=sa.text("ARRAY[]::bigint[]"),
     )
-    guilds_blacklist: Mapped[Optional[List[int]]] = mapped_column(
+    guilds_blacklist: Mapped[list[int] | None] = mapped_column(
         MutableList.as_mutable(sa.ARRAY(sa.BigInteger)),
         nullable=True,
         default=[],
@@ -48,7 +48,7 @@ class PackageInfo(Base):
         return self.inventory_url.removesuffix("/").rsplit("/", maxsplit=1)[0] + "/"
 
     @base_url.setter
-    def base_url(self, value: Optional[str]) -> None:
+    def base_url(self, value: str | None) -> None:
         self._base_url = value
 
     @validates("name")

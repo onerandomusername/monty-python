@@ -2,7 +2,7 @@
 import asyncio
 import itertools
 from contextlib import suppress
-from typing import List, NamedTuple, NoReturn, Optional, Union
+from typing import NamedTuple, NoReturn
 
 import disnake
 from disnake.ext import commands
@@ -38,7 +38,7 @@ class Cog(NamedTuple):
 
     name: str
     description: str
-    commands: List[commands.Command]
+    commands: list[commands.Command]
 
 
 log = get_logger(__name__)
@@ -65,7 +65,7 @@ class HelpSession:
     Expected attributes include:
         * title: str
             The title of the help message.
-        * query: Union[disnake.ext.commands.Bot, disnake.ext.commands.Command]
+        * query: disnake.ext.commands.Bot | disnake.ext.commands.Command
         * description: str
             The description of the query.
         * pages: list[str]
@@ -122,7 +122,7 @@ class HelpSession:
         self._timeout_task = None
         self.reset_timeout()
 
-    def _get_query(self, query: str) -> Union[commands.Command, Cog]:
+    def _get_query(self, query: str) -> commands.Command | Cog:
         """Attempts to match the provided query with a valid command or cog."""
         command = self._bot.get_command(query)
         if command:
@@ -175,7 +175,7 @@ class HelpSession:
         await self.stop()
 
     @staticmethod
-    def strip_custom_id(custom_id: str) -> Optional[str]:
+    def strip_custom_id(custom_id: str) -> str | None:
         """Remove paginator custom id prefix."""
         if not custom_id.startswith(CUSTOM_ID_PREFIX):
             return None
@@ -347,7 +347,7 @@ class HelpSession:
             await self._format_command_category(paginator, category, list(cmds))
 
     async def _format_command_category(
-        self, paginator: LinePaginator, category: str, cmds: List[commands.Command]
+        self, paginator: LinePaginator, category: str, cmds: list[commands.Command]
     ) -> None:
         cmds = sorted(cmds, key=lambda c: c.name)
         cat_cmds = []
@@ -377,7 +377,7 @@ class HelpSession:
 
             paginator.add_line(details)
 
-    async def _format_command(self, command: commands.Command) -> List[str]:
+    async def _format_command(self, command: commands.Command) -> list[str]:
         # skip if hidden and hide if session is set to
         if command.hidden and not self._show_hidden:
             return []

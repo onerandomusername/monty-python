@@ -5,7 +5,7 @@ import itertools
 import random
 import re
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 import bs4
@@ -96,7 +96,7 @@ class PyPI(
         self.fetch_package_list.cancel()
 
     @staticmethod
-    def check_characters(package: str) -> Optional[re.Match]:
+    def check_characters(package: str) -> re.Match | None:
         """Check if the package is valid."""
         return re.search(ILLEGAL_CHARACTERS, package)
 
@@ -146,7 +146,7 @@ class PyPI(
         self.top_packages.extend(top_packages)
         log.info("Loaded list of all PyPI packages.")
 
-    async def fetch_package(self, package: str) -> Optional[dict[str, Any]]:
+    async def fetch_package(self, package: str) -> dict[str, Any] | None:
         """Fetch a package from PyPI."""
         async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:
             if response.status == 200 and response.content_type == "application/json":
@@ -156,7 +156,7 @@ class PyPI(
     @async_cached(cache=LRUMemoryCache(25, timeout=int(datetime.timedelta(hours=2).total_seconds())))
     async def fetch_description(
         self, package: str, description: str, description_content_type: str, max_length: int = 1000
-    ) -> Optional[str]:
+    ) -> str | None:
         """Fetch a description parsed into markdown from PyPI."""
         if description_content_type and description_content_type not in ("text/markdown", "text/x-rst", "text/plain"):
             return f"Unknown description content type {description_content_type!r}."

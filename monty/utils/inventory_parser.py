@@ -4,7 +4,7 @@ import re
 import zlib
 from collections import defaultdict
 from datetime import timedelta
-from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import aiohttp
 
@@ -14,6 +14,8 @@ from monty.utils.caching import redis_cache
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from monty.bot import Monty
 
 
@@ -22,7 +24,7 @@ log = get_logger(__name__)
 FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r"(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)")
 
-InventoryDict = DefaultDict[str, List[Tuple[str, str, str]]]
+InventoryDict = defaultdict[str, list[tuple[str, str, str]]]
 
 
 class InvalidHeaderError(Exception):
@@ -125,7 +127,7 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
     skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
     timeout=timedelta(hours=12),
 )
-async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Optional[InventoryDict]:
+async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> InventoryDict | None:
     """
     Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
 

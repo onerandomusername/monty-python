@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import urljoin
 
 import aiohttp
@@ -32,9 +32,9 @@ logger = get_logger(__name__)
 class DiscussionTopic:
     id: int
     url: str
-    reply_id: Optional[int] = None
+    reply_id: int | None = None
 
-    def __init__(self, id: Union[int, str], url: str, reply: Optional[Union[str, int]] = None) -> None:
+    def __init__(self, id: int | str, url: str, reply: str | int | None = None) -> None:
         self.id = int(id)
         self.url = url
         self.reply_id = int(reply) if reply is not None else None

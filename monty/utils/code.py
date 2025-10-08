@@ -1,6 +1,6 @@
 import re
 import textwrap
-from typing import Optional, overload
+from typing import overload
 
 from monty.log import get_logger
 
@@ -28,10 +28,10 @@ def prepare_input(code: str, *, require_fenced: bool = False) -> str: ...
 
 
 @overload
-def prepare_input(code: str, *, require_fenced: bool = True) -> Optional[str]: ...
+def prepare_input(code: str, *, require_fenced: bool = True) -> str | None: ...
 
 
-def prepare_input(code: str, *, require_fenced: bool = False) -> Optional[str]:
+def prepare_input(code: str, *, require_fenced: bool = False) -> str | None:
     """
     Extract code from the Markdown, format it, and insert it into the code template.
 

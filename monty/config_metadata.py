@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Coroutine, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 import aiohttp
 import disnake
@@ -11,19 +13,21 @@ from monty.constants import Feature
 
 
 if TYPE_CHECKING:
-    from monty.bot import Monty
+    from collections.abc import Callable, Coroutine
+
+    from monty.bot import Monty  # noqa: F401
 
 
 __all__ = ("METADATA",)
 
 GITHUB_ORG_REGEX = re.compile(r"[a-zA-Z0-9\-]{1,}")
 
-VALID_CONFIG_TYPES = Union[str, bool, float, int]
+VALID_CONFIG_TYPES = str | bool | float | int
 T = TypeVar("T", bound=VALID_CONFIG_TYPES)
-AnyContext = Union[disnake.ApplicationCommandInteraction, commands.Context["Monty"]]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context["Monty"]
 
 
-async def validate_github_org(ctx: AnyContext, arg: str) -> Optional[str]:
+async def validate_github_org(ctx: AnyContext, arg: str) -> str | None:
     """Validate all GitHub orgs meet GitHub's naming requirements."""
     if not arg:
         return None
@@ -57,13 +61,13 @@ class StatusMessages:
 
 @dataclass(kw_only=True)
 class ConfigAttrMetadata:
-    name: Union[str, dict[Locale, str]]
-    description: Union[str, dict[Locale, str]]
-    type: Union[Type[str], Type[int], Type[float], Type[bool]]
+    name: str | dict[Locale, str]
+    description: str | dict[Locale, str]
+    type: type[str] | type[int] | type[float] | type[bool]
     requires_bot: bool = True
-    long_description: Optional[str] = None
-    depends_on_features: Optional[tuple[str]] = None
-    validator: Optional[Union[Callable, Callable[..., Coroutine]]] = None
+    long_description: str | None = None
+    depends_on_features: tuple[str] | None = None
+    validator: Callable | Callable[..., Coroutine] | None = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
     def __post_init__(self) -> None:

@@ -4,8 +4,9 @@ import random
 import re
 import reprlib
 import types
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 from urllib.parse import urldefrag
 
 import disnake
@@ -119,7 +120,7 @@ class MetaSource(
     @commands.Cog.listener("on_slash_command_add")
     @commands.Cog.listener("on_slash_command_remove")
     async def refresh_cache(
-        self, obj: Optional[Union[commands.Command, commands.Cog, commands.InvokableSlashCommand]] = None
+        self, obj: commands.Command | commands.Cog | commands.InvokableSlashCommand | None = None
     ) -> None:
         """Refreshes the cache when a cog is added or removed."""
         # sleep for a second in the event that multiple cogs are reloaded or commands are added/removed
@@ -147,13 +148,13 @@ class MetaSource(
             self.all_extensions = self.bot.extensions
 
             # todo: this will need to be synced
-            self.all_prefix_commands: dict[str, Union[commands.Command, commands.Group]] = {}
+            self.all_prefix_commands: dict[str, commands.Command | commands.Group] = {}
             for cmd in self.bot.walk_commands():
                 self.all_prefix_commands[cmd.qualified_name] = cmd
 
             # also need to add children, hence why this is a copy
             self.all_slash_commands: dict[
-                str, Union[commands.InvokableSlashCommand, commands.SubCommand, commands.SubCommandGroup]
+                str, commands.InvokableSlashCommand | commands.SubCommand | commands.SubCommandGroup
             ] = {}
             self.all_slash_commands.update(self.bot.all_slash_commands)
 
@@ -208,7 +209,7 @@ class MetaSource(
     @commands.command(name="source", aliases=("src",))
     async def source_command(
         self,
-        ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],
+        ctx: commands.Context | disnake.ApplicationCommandInteraction,
         *,
         source_item: SourceConverterAnn = None,
     ) -> None:
@@ -290,7 +291,7 @@ class MetaSource(
         # make the completion
         return {key: value for value, score, key in fuzz_results}
 
-    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
+    def get_source_link(self, source_item: SourceType) -> tuple[str, str, int | None]:
         """
         Build GitHub link of source item, return this link, file location and first line number.
 
@@ -339,7 +340,7 @@ class MetaSource(
 
         return url, file_location, first_line_no or None
 
-    def build_embed(self, source_object: SourceType) -> Tuple[disnake.Embed, str]:
+    def build_embed(self, source_object: SourceType) -> tuple[disnake.Embed, str]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 

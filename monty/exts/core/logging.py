@@ -1,5 +1,5 @@
 import traceback
-from typing import Any, Optional
+from typing import Any
 
 import disnake
 from disnake.ext import commands
@@ -27,7 +27,7 @@ class InternalLogger(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command(
-        self, ctx: commands.Context, command: Optional[commands.Command] = None, content: str = None
+        self, ctx: commands.Context, command: commands.Command | None = None, content: str = None
     ) -> None:
         """Log a command invoke."""
         if not isinstance(content, str):

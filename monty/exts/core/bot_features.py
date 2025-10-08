@@ -45,7 +45,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self._colours = itertools.cycle(
-            (disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue))
+            disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue)
         )
 
     @property
@@ -66,7 +66,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         confirm_button_text: str = "Confirm",
         deny_button_text: str = "Deny",
         go_back_button: disnake.ui.Button | None = None,
-    ) -> Union[tuple[bool, disnake.MessageInteraction, list[disnake.ui.Container]], tuple[None, None, None]]:
+    ) -> tuple[bool, disnake.MessageInteraction, list[disnake.ui.Container]] | tuple[None, None, None]:
         """Wait for the user to provide confirmation, and handle expiration."""
         # ask the user if they want to add this feature
         if isinstance(message_or_inter, disnake.Message):
@@ -620,7 +620,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_add(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Add the features to the provided guilds, defaulting to the local guild."""
@@ -628,7 +628,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             guilds: list[disnake.Guild] = [ctx.guild]  # type:ignore
 
         # only give feature create option if there is only one feature
-        ctx_or_inter: Union[disnake.MessageInteraction, commands.Context[Monty]] = ctx
+        ctx_or_inter: disnake.MessageInteraction | commands.Context[Monty] = ctx
         async with self.bot.db.begin() as session:
             if len(names) == 1:
                 name = names[0]
@@ -706,7 +706,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_remove(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Remove the features from the provided guilds, defaulting to the local guild."""

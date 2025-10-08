@@ -1,7 +1,6 @@
 import importlib.metadata
 import random
 from datetime import datetime, timedelta
-from typing import Optional
 
 import disnake
 import psutil
@@ -87,7 +86,7 @@ class Meta(
         self.bot = bot
         self.process = psutil.Process()
 
-        self._app_info_last_fetched: Optional[datetime] = None
+        self._app_info_last_fetched: datetime | None = None
 
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
@@ -256,7 +255,7 @@ class Meta(
 
         await inter.send(
             "If you find yourself in need of support, please join the support server: "
-            "https://discord.gg/{invite}".format(invite=Client.support_server),
+            f"https://discord.gg/{Client.support_server}",
             ephemeral=ephemeral,
             components=components,
         )
