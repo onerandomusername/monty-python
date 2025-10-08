@@ -1,7 +1,5 @@
 """Evaluation features for Monty. These commands provide the ability to evaluate code within the bot context."""
 
-from __future__ import annotations
-
 import ast
 import asyncio
 import contextlib
@@ -70,7 +68,7 @@ class Response:
 
 
 class InternalEval(commands.Cog):
-    def __init__(self, bot: Monty) -> None:
+    def __init__(self, bot: "Monty") -> None:
         self.bot = bot
         self._repl_session = asyncio.Lock()
 
@@ -406,6 +404,6 @@ class InternalEval(commands.Cog):
         return True
 
 
-def setup(bot: Monty) -> None:
+def setup(bot: "Monty") -> None:
     """Load the Internal cog."""
     bot.add_cog(cog=InternalEval(bot))
