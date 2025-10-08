@@ -391,6 +391,7 @@ class ErrorHandler(
     @commands.Cog.listener(name="on_slash_command_error")
     @commands.Cog.listener(name="on_message_command_error")
     @commands.Cog.listener(name="on_modal_error")
+    @commands.Cog.listener(name="on_dropdown_error")
     async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         # add the support button
