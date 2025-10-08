@@ -83,3 +83,15 @@ METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
         emoji="💬",
     ),
 )
+
+
+def _populate_group_to_attr() -> dict[SelectGroup, list[str]]:
+    """Populate the GROUP_TO_ATTR mapping."""
+    result = {}
+    for attr, meta in METADATA.items():
+        if meta.select_option:
+            result.setdefault(meta.select_option.group, []).append(attr)
+    return result
+
+
+GROUP_TO_ATTR: Final[dict[SelectGroup, list[str]]] = _populate_group_to_attr()

@@ -9,6 +9,7 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.config import (
+    GROUP_TO_ATTR,
     METADATA,
     Category,
     ConfigAttrMetadata,
@@ -205,7 +206,7 @@ class Configuration(
                     options=options,
                     min_values=0,
                     max_values=len(options),
-                    custom_id=f"config:v1:github_expansions:{inter.author.id}",
+                    custom_id=f"config:v1:select:{attr_or_group.name}:{inter.author.id}",
                     required=False,
                 )
                 modalable_components.append(
@@ -337,10 +338,15 @@ class Configuration(
         config = await self.bot.ensure_guild_config(inter.guild_id)  # type: ignore # checks prevent guild from being None
         await self._send_category_options(inter, category, current_config=config)
 
-    @commands.Cog.listener(disnake.Event.modal_submit)
-    async def process_set_modal(self, inter: disnake.ModalInteraction) -> None:
+    async def _process_set_modal(self, inter: disnake.ModalInteraction) -> None:
         """Handle modal submissions for configuration options."""
         if not inter.data.custom_id.startswith("config:v1:modal:"):
+            return
+        if not inter.guild_id:
+            await inter.response.send_message(
+                "Configuration can only be used in a guild.",
+                ephemeral=True,
+            )
             return
 
         parts = inter.data.custom_id.removeprefix("config:v1:modal:")
@@ -348,71 +354,85 @@ class Configuration(
             return
         category_name, author_id = parts.split(":")
         if str(inter.author.id) != author_id:
-            await inter.response.send_message(
-                "You cannot interact with this modal as you did not initiate this interaction.",
-                ephemeral=True,
-            )
-            return
+            raise commands.CheckFailure("You cannot interact with this modal as you did not initiate this interaction.")
         try:
             category = Category[category_name]
         except KeyError:
-            await inter.response.send_message("This configuration category no longer exists.", ephemeral=True)
-            return
+            raise commands.UserInputError("This configuration category no longer exists.") from None
         config = await self.bot.ensure_guild_config(inter.guild_id)  # type: ignore # checks prevent guild from being None
 
         updates = {}
         for custom_id, value in inter.values.items():
             if custom_id not in METADATA:
+                if not custom_id.startswith("config:v1:select:"):
+                    continue
+                custom_id = custom_id.removeprefix("config:v1:select:")
+                try:
+                    group_name, _author = custom_id.split(":")
+                except ValueError:
+                    continue
+                if group_name not in SelectGroup.__members__:
+                    continue
+                groups = GROUP_TO_ATTR.get(SelectGroup[group_name], [])
+                if not groups:
+                    continue
+                for attr in groups:
+                    meta = METADATA[attr]
+                    if category not in meta.categories:
+                        continue
+                    parsed_value = bool(attr in value)
+                    if parsed_value and not await can_guild_set_config_option(
+                        self.bot, metadata=meta, guild_id=inter.guild_id
+                    ):  # type: ignore
+                        raise commands.CheckFailure(
+                            "You cannot set this configuration option as"
+                            " your guild does not have the required feature(s).",
+                        )
+                    updates[attr] = parsed_value
                 continue
             meta = METADATA[custom_id]
             if category not in meta.categories:
                 continue
             if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):  # type: ignore
-                await inter.response.send_message(
+                raise commands.CheckFailure(
                     "You cannot set this configuration option as your guild does not have the required feature(s).",
-                    ephemeral=True,
                 )
-                return
             parsed_value = value
             updates[custom_id] = parsed_value
             if meta.validator:
                 if not await meta.validator(inter, parsed_value):  # type: ignore
-                    await inter.response.send_message(
+                    raise commands.UserInputError(
                         get_localised_response(
                             inter,
                             "The value provided for **{option}** is not valid. Please check the value and try again.",
                             option=get_localised_response(inter, "{data}", data=meta.name),
-                        ),
-                        ephemeral=True,
+                        )
                     )
-                    return
-
         if not updates:
-            await inter.response.send_message("No valid configuration options were provided.", ephemeral=True)
-            return
+            raise commands.UserInputError("No valid configuration options were provided.")
 
         async with self.bot.db.begin() as session:
+            for attr, value in updates.items():
+                setattr(config, attr, value)
             await session.merge(config)
-            stmt = (
-                sa.update(GuildConfig)
-                .where(GuildConfig.id == inter.guild_id, GuildConfig.guild_id == inter.guild_id)
-                .values(**updates)
-                .returning(GuildConfig)
-            )
-            result = await session.execute(stmt)
-            updated_config = result.scalar_one_or_none()
-            if not updated_config:
-                await inter.response.send_message(
-                    "Failed to update the configuration. Please try again later.", ephemeral=True
-                )
-                return
             await session.commit()
-            # self.bot.guild_configs[inter.guild_id] = updated_config  # type: ignore
 
         await inter.response.send_message(
             f"Successfully updated the configuration for the **{category.value.name}** category.",
             ephemeral=True,
         )
+
+    @commands.Cog.listener(disnake.Event.modal_submit)
+    async def process_set_modal(self, inter: disnake.ModalInteraction) -> None:
+        """
+        Process a modal interaction for setting configuration options.
+
+        Catches errors and sends them to the error handler.
+        """
+        try:
+            await self._process_set_modal(inter)
+        except Exception as e:
+            self.bot.dispatch("modal_error", inter, e)
 
 
 def setup(bot: Monty) -> None:
