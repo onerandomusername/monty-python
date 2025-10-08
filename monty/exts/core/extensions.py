@@ -20,6 +20,10 @@ from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
 
 
+if t.TYPE_CHECKING:
+    import watchfiles
+
+
 EXT_METADATA = ExtMetadata(core=True, no_unload=True)
 
 log = get_logger(__name__)
@@ -49,6 +53,39 @@ class Action(Enum):
     LOAD = functools.partial(Monty.load_extension)
     UNLOAD = functools.partial(Monty.unload_extension)
     RELOAD = functools.partial(Monty.reload_extension)
+
+
+## determine dependents of a file and reload all dependencies accordingly
+RuffDependents = dict[str, list[str]]
+
+
+def _flatten_dependents(*, dependents: RuffDependents, paths: list[str]) -> list[str]:
+    """
+    Flatten a ruff dependents dict to a list of files.
+
+    Each file will only appear once, even if multiple files depend on it.
+    This is the list of files that need to be reloaded if `single` is changed.
+    """
+    to_process = paths.copy()
+    result = []
+
+    while to_process:
+        current_module = to_process.pop()
+        if current_module not in result:
+            result.append(current_module)
+        current_dependents = dependents.get(current_module, [])
+        for dependent in current_dependents:
+            if dependent in result:
+                result.remove(dependent)
+                to_process.append(dependent)
+                continue
+
+            to_process.append(dependent)
+            result.append(dependent)
+        if current_module not in result:
+            result.append(current_module)
+
+    return result
 
 
 class Extensions(commands.Cog):
@@ -282,9 +319,81 @@ class Extensions(commands.Cog):
 
         return msg, error_msg
 
-    async def _autoreload_worker(self, channel: disnake.abc.Messageable, extra_paths: t.Sequence[str] = ()) -> None:
+    async def _autoreload_action(
+        self,
+        *,
+        changes: "set[tuple[watchfiles.Change, str]]",
+        ext_paths: dict[str, str],
+        channel: disnake.abc.Messageable,
+        extra_mods_to_path: dict[str, str],
+    ) -> None:
         import subprocess  # noqa: F401
 
+        modified_extensions = set()
+        extra_path_message = ""
+        all_changes = []
+        for change in changes:
+            if change[1] not in ext_paths:
+                for extra_path in extra_mods_to_path:
+                    if change[1].startswith(extra_path):
+                        relative_path = str(pathlib.Path(change[1]).relative_to(pathlib.Path.cwd()))
+                        extra_path_message += relative_path + "\n"
+
+                        break
+                else:
+                    continue
+                try:
+                    dependent_process = subprocess.run(
+                        ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],  # noqa: S607
+                        capture_output=True,
+                        encoding="utf-8",
+                        check=True,
+                        cwd=pathlib.Path.cwd(),
+                    )
+                except Exception as e:
+                    log.error(f"Error running ruff analyze graph: {e}")
+                    continue
+                dependents: RuffDependents = disnake.utils._from_json(dependent_process.stdout)
+                res = str(pathlib.Path(extra_path).relative_to(pathlib.Path.cwd()))
+                all_changes = _flatten_dependents(
+                    dependents=dependents,
+                    paths=[res, *all_changes],
+                )
+                continue
+            modified_extensions.add(ext_paths[change[1]])
+
+        for path in all_changes:
+            modified_extensions.update(
+                ext
+                for ext, module in self.bot.extensions.items()
+                if module.__file__ and module.__file__.startswith(path)
+            )
+            # reload all of the modules from all changes
+            name = path.replace("/", ".").removesuffix(".py").removesuffix(".__init__")
+            if name in self.bot.extensions:
+                modified_extensions.add(name)
+                continue
+            old = sys.modules.pop(name)
+            importlib.invalidate_caches()
+            try:
+                importlib.import_module(name)
+            except Exception as e:
+                sys.modules[name] = old
+                log.exception(f"Error re-importing module {name}: {e}")
+                raise
+
+        if __name__ in modified_extensions:
+            # we bug out if we try to reload ourselves. It cancels the task
+            # this is utterly terrible code
+            self._unloading_through_autoreload = True
+
+        msg = self.batch_manage(Action.RELOAD, *modified_extensions)
+        if extra_path_message:
+            msg += f"\nChanges detected in extra paths:\n```{extra_path_message}```"
+
+        await channel.send("autoreload detected changes::\n" + msg)
+
+    async def _autoreload_worker(self, channel: disnake.abc.Messageable, extra_paths: t.Sequence[str] = ()) -> None:
         import watchfiles
 
         ext_paths = {module.__file__: extension for extension, module in self.bot.extensions.items() if module.__file__}
@@ -307,57 +416,16 @@ class Extensions(commands.Cog):
                     extra_mods_to_path.update({str(pathlib.Path(path).resolve()): pathlib.Path(path).stem})
 
         async for changes in watchfiles.awatch(*ext_paths, *extra_mods_to_path):
-            modified_extensions = set()
-            extra_path_message = ""
-            for change in changes:
-                if change[1] not in ext_paths:
-                    for extra_path in extra_mods_to_path:
-                        if change[1].startswith(extra_path):
-                            relative_path = str(pathlib.Path(change[1]).relative_to(pathlib.Path.cwd()))
-                            extra_path_message += relative_path + "\n"
-
-                            break
-                    else:
-                        continue
-                    try:
-                        dependents = subprocess.run(
-                            ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],  # noqa: S607
-                            capture_output=True,
-                            encoding="utf-8",
-                            check=True,
-                            cwd=pathlib.Path.cwd(),
-                        )
-                    except Exception as e:
-                        log.error(f"Error running ruff analyze graph: {e}")
-                        continue
-                    jsondata = dependents.stdout
-                    data = disnake.utils._from_json(jsondata)
-                    for file in data.get(relative_path, []):
-                        file = str(pathlib.Path.cwd() / file)
-                        if file in ext_paths:
-                            modified_extensions.add(ext_paths[file])
-                        else:
-                            mod = extra_mods_to_path.get(file)
-                            if mod and mod in sys.modules:
-                                importlib.reload(sys.modules[mod])
-
-                    continue
-                modified_extensions.add(ext_paths[change[1]])
-
-            if __name__ in modified_extensions:
-                # we bug out if we try to reload ourselves. It cancels the task
-                # this is utterly terrible code
-                self._unloading_through_autoreload = True
-                self.bot._autoreload_args = {
-                    "channel": channel,
-                    "extra_paths": extra_paths,
-                }  # readd in case it was removed
-
-            msg = self.batch_manage(Action.RELOAD, *modified_extensions)
-            if extra_path_message:
-                msg += f"\nChanges detected in extra paths:\n```{extra_path_message}```"
-
-            await channel.send("autoreload detected changes::\n" + msg)
+            try:
+                await self._autoreload_action(
+                    channel=channel,
+                    ext_paths=ext_paths,
+                    extra_mods_to_path=extra_mods_to_path,
+                    changes=changes,
+                )
+            except Exception as e:
+                log.exception(f"Error in autoreload action: {e}")
+                await channel.send(f"Error in autoreload action: {e}")
 
     # developer autoreloading
     @extensions_group.group(
