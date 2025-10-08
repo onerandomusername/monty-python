@@ -167,6 +167,13 @@ class Configuration(
         select_group_options: defaultdict[SelectGroup, list[disnake.SelectOption]] = defaultdict(list)
         positioning = {}
         for attr, meta in tuple(category_options.items()):
+            if not await can_guild_set_config_option(
+                self.bot,
+                metadata=category_options[attr],
+                guild_id=inter.guild_id,  # type: ignore
+            ):
+                continue
+
             if meta.select_option:
                 default = bool(current_config and getattr(current_config, attr))
                 name = get_localised_response(inter, "{data}", data=meta.name)
@@ -221,6 +228,12 @@ class Configuration(
                 attr = attr_or_group
                 meta = category_options[attr]
                 if not meta.modal:
+                    continue
+                if not await can_guild_set_config_option(
+                    self.bot,
+                    metadata=category_options[attr],
+                    guild_id=inter.guild_id,  # type: ignore
+                ):
                     continue
                 if current_config:
                     current = getattr(current_config, attr)
