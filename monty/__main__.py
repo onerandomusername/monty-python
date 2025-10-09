@@ -27,10 +27,6 @@ except ImportError:
 
 async def main() -> None:
     """Create and run the bot."""
-    disnake.Embed.set_default_colour(constants.Colours.python_yellow)
-    monkey_patches.patch_typing()
-    monkey_patches.patch_inter_send()
-
     # we make our redis session here and pass it to cachingutils
     if constants.Redis.use_fakeredis:
         try:
@@ -101,4 +97,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    disnake.Embed.set_default_colour(constants.Colours.python_yellow)
+    monkey_patches.patch_typing()
+    monkey_patches.patch_inter_send()
     sys.exit(asyncio.run(main()))
