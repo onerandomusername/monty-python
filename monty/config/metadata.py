@@ -8,7 +8,11 @@ from monty.config.models import Category, ConfigAttrMetadata, FreeResponseMetada
 from monty.constants import Feature
 
 
-__all__ = ("METADATA",)
+__all__ = (
+    "METADATA",
+    "CATEGORY_TO_ATTR",
+    "GROUP_TO_ATTR",
+)
 
 
 METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
@@ -95,3 +99,7 @@ def _populate_group_to_attr() -> dict[SelectGroup, list[str]]:
 
 
 GROUP_TO_ATTR: Final[dict[SelectGroup, list[str]]] = _populate_group_to_attr()
+
+CATEGORY_TO_ATTR: Final[dict[Category, list[str]]] = {
+    cat: [attr for attr, meta in METADATA.items() if cat in meta.categories] for cat in Category
+}

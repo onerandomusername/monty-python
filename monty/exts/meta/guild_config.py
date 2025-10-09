@@ -10,6 +10,7 @@ from disnake.ext import commands
 from monty import constants
 from monty.bot import Monty
 from monty.config import (
+    CATEGORY_TO_ATTR,
     GROUP_TO_ATTR,
     METADATA,
     Category,
@@ -56,12 +57,26 @@ def get_localised_response(
 
 
 async def can_guild_set_config_option(bot: Monty, *, metadata: ConfigAttrMetadata, guild_id: int | None) -> bool:
-    """Returns True if the configuration option is settable, False if a feature is required."""
+    """Returns True if the configuration option is settable in the provided guild."""
+    if metadata.requires_bot:
+        if not guild_id:
+            return False
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            return False
     if metadata.depends_on_features:
         for feature in metadata.depends_on_features:
             if not await bot.guild_has_feature(guild_id, feature, create_if_not_exists=False):
                 return False
     return True
+
+
+async def can_guild_set_category(bot: Monty, *, category: Category, guild_id: int | None) -> bool:
+    """Returns True if any option from the provided category is settable in the specified guild."""
+    for meta in CATEGORY_TO_ATTR[category]:
+        if await can_guild_set_config_option(bot, metadata=METADATA[meta], guild_id=guild_id):
+            return True
+    return False
 
 
 class Configuration(
@@ -137,6 +152,7 @@ class Configuration(
                 ),
             )
             for cat in Category
+            if await can_guild_set_category(self.bot, category=cat, guild_id=inter.guild_id)
         ]
 
         msg_components: list[disnake.ui.Container | disnake.ui.ActionRow | disnake.ui.TextDisplay] = [
@@ -269,7 +285,7 @@ class Configuration(
                 components.extend(nested_components)
 
         if not components:
-            raise RuntimeError("No configuration options found for this category.")
+            raise commands.CommandError("There are no configuration options you can set in this category.")
 
         if len(modalable_components) <= 5:
             await inter.response.send_modal(
