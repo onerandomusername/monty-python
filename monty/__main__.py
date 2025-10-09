@@ -1,55 +1,28 @@
 import asyncio
 import logging
-import os
 import signal
 import sys
 
-import alembic.command
-import alembic.config
 import cachingutils
 import cachingutils.redis
 import disnake
 import redis
 import redis.asyncio
-from disnake.ext import commands
-from sqlalchemy import Connection
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-import monty.alembic
 from monty import constants, monkey_patches
 from monty.bot import Monty
+from monty.migrations import run_alembic
 
 
 log = logging.getLogger(__name__)
-_intents = disnake.Intents.all()
-_intents.members = False
-_intents.presences = False
-_intents.bans = False
-_intents.integrations = False
-_intents.invites = False
-_intents.typing = False
-_intents.webhooks = False
-_intents.voice_states = False
 
+try:
+    import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
 
-def run_upgrade(connection: Connection, cfg: alembic.config.Config) -> None:
-    """Run alembic upgrades."""
-    cfg.attributes["connection"] = connection
-    alembic.command.upgrade(cfg, "head")
-
-
-async def run_async_upgrade(engine: AsyncEngine) -> None:
-    """Run alembic upgrades but async."""
-    alembic_cfg = alembic.config.Config()
-    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
-    async with engine.connect() as conn:
-        await conn.run_sync(run_upgrade, alembic_cfg)
-
-
-async def run_alembic() -> None:
-    """Run alembic migrations."""
-    engine = create_async_engine(constants.Database.postgres_bind)
-    await run_async_upgrade(engine)
+    uvloop.install()
+    log.info("Using uvloop as event loop.")
+except ImportError:
+    log.info("Using default asyncio event loop.")
 
 
 async def main() -> None:
@@ -88,14 +61,6 @@ async def main() -> None:
     # ping redis
     await redis_session.ping()
 
-    command_sync_flags = commands.CommandSyncFlags(
-        allow_command_deletion=False,
-        sync_guild_commands=True,
-        sync_global_commands=True,
-        sync_commands_debug=True,
-        sync_on_cog_actions=True,
-    )
-
     kwargs: dict[str, str] = {}
     if constants.Client.proxy is not None:
         kwargs["proxy"] = constants.Client.proxy
@@ -103,10 +68,10 @@ async def main() -> None:
     bot = Monty(
         redis_session=redis_session,
         command_prefix=constants.Client.default_command_prefix,
-        activity=disnake.Game(name=f"Commands: {constants.Client.default_command_prefix}help"),
-        allowed_mentions=disnake.AllowedMentions(everyone=False, roles=False, users=False, replied_user=True),
-        intents=_intents,
-        command_sync_flags=command_sync_flags,
+        activity=constants.Client.activity,
+        allowed_mentions=constants.Client.allowed_mentions,
+        intents=constants.Client.intents,
+        command_sync_flags=constants.Client.command_sync_flags,
         **kwargs,
     )
 
@@ -119,13 +84,7 @@ async def main() -> None:
     loop = asyncio.get_running_loop()
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
-    try:
-        import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
 
-        uvloop.install()
-        log.info("Using uvloop as event loop.")
-    except ImportError:
-        log.info("Using default asyncio event loop.")
     try:
         loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
         loop.add_signal_handler(signal.SIGTERM, lambda: future.cancel())
