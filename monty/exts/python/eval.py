@@ -422,7 +422,7 @@ class Snekbox(
             self.jobs[ctx.author.id] = utcnow()
             code = prepare_input(code)
             try:
-                response = await self.send_eval(ctx, code, return_result=False, original_source=True)
+                response = await self.send_eval(ctx, code, return_result=False)
             finally:
                 del self.jobs[ctx.author.id]
 
