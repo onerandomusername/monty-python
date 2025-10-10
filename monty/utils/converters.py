@@ -14,7 +14,7 @@ from disnake.ext import commands
 
 from monty import exts
 from monty.bot import Monty
-from monty.database import Feature, Rollout
+from monty.database.models import Feature, Rollout
 from monty.log import get_logger
 from monty.utils import helpers, inventory_parser
 from monty.utils.extensions import EXTENSIONS, unqualify

@@ -9,7 +9,7 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.config_metadata import METADATA, ConfigAttrMetadata
-from monty.database import GuildConfig
+from monty.database.models import GuildConfig
 from monty.errors import BotAccountRequired
 from monty.log import get_logger
 from monty.utils.messages import DeleteButton

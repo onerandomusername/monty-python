@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from disnake.ext import commands, tasks
 
 from monty.bot import Monty
-from monty.database import Feature, Rollout
+from monty.database.models import Feature, Rollout
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import rollouts, scheduling

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, TypeVar
 import disnake
 from disnake.ext import commands
 
-from monty.database.feature import NAME_REGEX
+from monty.database.models import NAME_REGEX
 from monty.errors import FeatureDisabled
 
 

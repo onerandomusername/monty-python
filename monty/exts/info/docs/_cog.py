@@ -21,7 +21,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
-from monty.database import PackageInfo
+from monty.database.models import PackageInfo
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling

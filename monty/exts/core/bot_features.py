@@ -8,8 +8,7 @@ from disnake.ext import commands
 
 from monty import constants
 from monty.bot import Monty
-from monty.database import Feature
-from monty.database.guild import Guild
+from monty.database.models import Feature, Guild
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton

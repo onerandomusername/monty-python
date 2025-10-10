@@ -7,7 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from monty import constants
-from monty.database.base import Base
+from monty.database.models.base import Base
 
 
 # this is the Alembic Config object, which provides

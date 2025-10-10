@@ -3,7 +3,7 @@ import hashlib
 import math
 import random
 
-from monty.database import Rollout
+from monty.database.models import Rollout
 
 
 def update_counts_to_time(rollout: Rollout, current_time: datetime.datetime) -> tuple[int, int]:
