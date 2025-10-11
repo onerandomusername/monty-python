@@ -11,7 +11,7 @@ class Guild(Base):
     __tablename__ = "guilds"
 
     id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=False)
-    # todo: this should be a many to many relationship
+    # TODO: this should be a many to many relationship
     feature_ids: Mapped[list[str]] = mapped_column(
         MutableList.as_mutable(sa.ARRAY(sa.String(length=50))),
         name="features",

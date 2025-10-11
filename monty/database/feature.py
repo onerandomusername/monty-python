@@ -26,6 +26,6 @@ class Feature(MappedAsDataclass, Base):
     def validate_name(self, key: str, name: str) -> str:
         """Validate the `name` attribute meets the regex requirement."""
         if not NAME_REGEX.fullmatch(name):
-            err = f"The provided feature name '{name}' does not match the name regex {str(NAME_REGEX)}"
+            err = f"The provided feature name '{name}' does not match the name regex {NAME_REGEX!s}"
             raise ValueError(err)
         return name

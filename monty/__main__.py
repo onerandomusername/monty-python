@@ -120,7 +120,7 @@ async def main() -> None:
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
     try:
-        import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
+        import uvloop  # pyright: ignore[reportMissingImports]
 
         uvloop.install()
         log.info("Using uvloop as event loop.")

@@ -145,7 +145,7 @@ class Monty(commands.Bot):
         ) -> aiohttp.ClientResponse:
             """Do the same thing as aiohttp does, but always cache the response."""
             method = method.upper().strip()
-            cache_key = f"{method}:{str(str_or_url)}"
+            cache_key = f"{method}:{str_or_url!s}"
             async with cache.lock(cache_key):
                 cached = await cache.get(cache_key)
                 if cached and use_cache:
@@ -277,17 +277,16 @@ class Monty(commands.Bot):
         """Update the database with all features defined immediately upon launch. No more lazy creation."""
         await self.wait_until_first_connect()
 
-        async with self._feature_db_lock:
-            async with self.db.begin() as session:
-                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
-                result = await session.scalars(stmt)
-                existing_feature_names = {feature.name for feature in result.all()}
-                for feature_name in dataclasses.asdict(constants.Feature()).values():
-                    if feature_name in existing_feature_names:
-                        continue
-                    feature_instance = Feature(feature_name)
-                    session.add(feature_instance)
-                await session.commit()  # this will error out if it cannot be made
+        async with self._feature_db_lock, self.db.begin() as session:
+            stmt = sa.select(Feature).options(selectinload(Feature.rollout))
+            result = await session.scalars(stmt)
+            existing_feature_names = {feature.name for feature in result.all()}
+            for feature_name in dataclasses.asdict(constants.Feature()).values():
+                if feature_name in existing_feature_names:
+                    continue
+                feature_instance = Feature(feature_name)
+                session.add(feature_instance)
+            await session.commit()  # this will error out if it cannot be made
 
         await self.refresh_features()
 
@@ -451,7 +450,7 @@ class Monty(commands.Bot):
         command = super().remove_command(name)
         if command is None:
             # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
-            return
+            return None
 
         self.dispatch("command_remove", command)
         self._remove_root_aliases(command)

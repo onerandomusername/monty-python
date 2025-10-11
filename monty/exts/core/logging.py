@@ -75,7 +75,7 @@ class InternalLogger(commands.Cog):
         """Log the start of an application command."""
         spl = str(inter.filled_options).replace("\n", " ")
         spl = spl.split("\n")
-        # todo: fix this in disnake
+        # TODO: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
             return
         qualname = inter.application_command.qualified_name

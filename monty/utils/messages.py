@@ -50,7 +50,7 @@ def sub_clyde(username: str | None) -> str | None:
         return match[1] + char
 
     if username:
-        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
+        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.IGNORECASE)
     else:
         return username  # Empty string or None
 

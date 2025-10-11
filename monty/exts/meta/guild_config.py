@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 
 
 def get_locale_from_dict(
-    locales: disnake.Locale | list[disnake.Locale | Literal[None]],
+    locales: disnake.Locale | list[disnake.Locale | None],
     table: dict[disnake.Locale | Literal["_"], str],
 ) -> str | None:
     """Get the first string out of table that matches a locale. Defaults to en_GB if no locale can be found."""
@@ -140,7 +140,6 @@ class Configuration(
     @commands.slash_command()
     async def config(self, inter: disnake.GuildCommandInteraction) -> None:
         """[BETA] Manage per-guild configuration for Monty."""
-        pass
 
     @config.sub_command("edit")
     async def set_command(
@@ -337,8 +336,8 @@ class Configuration(
         option: str,
     ) -> dict[str, str] | list[str]:
         """Provide autocomplete for config options."""
-        # todo: make this better and not like this
-        # todo: support non-nullable names (maybe a second autocomplete)
+        # TODO: make this better and not like this
+        # TODO: support non-nullable names (maybe a second autocomplete)
         # (the above are currently not implemented as there aren't many options yet
         # and all of them are nullable)
         options = {}
