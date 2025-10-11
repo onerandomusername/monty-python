@@ -4,6 +4,7 @@ from os import environ
 from typing import TYPE_CHECKING, Literal, cast
 
 import disnake
+from disnake.ext import commands
 
 
 if TYPE_CHECKING:
@@ -34,6 +35,21 @@ class Client:
     version = environ.get("GIT_SHA", "main")
     default_command_prefix = environ.get("PREFIX", "-")
     config_prefix = "monty-python"
+    intents = disnake.Intents.default() | disnake.Intents.message_content
+    command_sync_flags = commands.CommandSyncFlags(
+        allow_command_deletion=False,
+        sync_guild_commands=True,
+        sync_global_commands=True,
+        sync_commands_debug=True,
+        sync_on_cog_actions=True,
+    )
+    allowed_mentions = disnake.AllowedMentions(
+        everyone=False,
+        roles=False,
+        users=False,
+        replied_user=True,
+    )
+    activity = disnake.Game(name=f"Commands: {default_command_prefix}help")
 
     # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
