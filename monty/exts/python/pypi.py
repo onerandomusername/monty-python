@@ -83,7 +83,7 @@ class PyPI(
         # create the feature if it doesn't exist
         await self.bot.guild_has_feature(None, Feature.PYPI_AUTOCOMPLETE)
 
-        if self.bot.features[Feature.PYPI_AUTOCOMPLETE].enabled is not False:
+        if self.bot.features[Feature.PYPI_AUTOCOMPLETE.value].enabled is not False:
             # start the task
             self.fetch_package_list.start(use_cache=False)
             # pre-fill the autocomplete once
