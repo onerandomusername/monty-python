@@ -202,20 +202,19 @@ class Bookmark(
                 components=components,
                 **kwargs,
             )
+        elif (
+            ctx.context.private_channel
+            or not ctx.authorizing_integration_owners.guild_id
+            or (ctx.authorizing_integration_owners.guild_id and not ctx.permissions.send_messages)
+        ):
+            message = await ctx.response.send_message("Sent you a DM with the bookmark!", ephemeral=True)
         else:
-            if (
-                ctx.context.private_channel
-                or not ctx.authorizing_integration_owners.guild_id
-                or (ctx.authorizing_integration_owners.guild_id and not ctx.permissions.send_messages)
-            ):
-                message = await ctx.response.send_message("Sent you a DM with the bookmark!", ephemeral=True)
-            else:
-                message = await ctx.response.send_message(
-                    embed=embed,
-                    components=components,
-                    allowed_mentions=disnake.AllowedMentions.none(),
-                )
-                await ctx.followup.send(content=content, ephemeral=True)
+            message = await ctx.response.send_message(
+                embed=embed,
+                components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
+            await ctx.followup.send(content=content, ephemeral=True)
 
         return message
 

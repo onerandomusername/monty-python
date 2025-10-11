@@ -113,6 +113,8 @@ select = [
     "T203", # flake8-print
 ]
 ignore = [
+    # flake8-commas
+    "COM",
     # Missing Docstrings
     "D100",
     "D101",
@@ -150,12 +152,14 @@ ignore = [
     "ANN204",
     "ANN206",
     "ANN401",
+    "S110", # try-except-pass
+    "RET505", #	superfluous-else-return
+    "RET506", #	superfluous-else-raise
 
     # temporarily disabled
     "C901", # mccabe
     "G004", # Logging statement uses f-string
     "S101", # Use of `assert` detected
-    "S110", # try-except-pass
     "S311", # pseduo-random generators, random is used everywhere for random choices.
 ]
 

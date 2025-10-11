@@ -122,7 +122,6 @@ class Colour(
     @commands.slash_command(name=disnake.Localised("colour", data={disnake.Locale.en_US: "color"}))
     async def slash_colour(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Show information about a colour."""
-        pass
 
     @colour.command()
     async def rgb(self, ctx: commands.Context, red: int, green: int, blue: int) -> None:

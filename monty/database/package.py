@@ -55,6 +55,6 @@ class PackageInfo(Base):
     def validate_name(self, key: str, name: str) -> str:
         """Validate all names are of the format of valid python package names."""
         if not NAME_REGEX.fullmatch(name):
-            err = f"The provided package name '{name}' does not match the name regex {str(NAME_REGEX)}"
+            err = f"The provided package name '{name}' does not match the name regex {NAME_REGEX!s}"
             raise ValueError(err)
         return name

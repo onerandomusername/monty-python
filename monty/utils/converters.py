@@ -361,16 +361,14 @@ class SourceConverter(commands.Converter):
     @staticmethod
     async def convert(ctx: AnyContext, argument: str) -> SourceType:
         """Convert argument into source object."""
-        # todo: add support for specifying the type
+        # TODO: add support for specifying the type
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog
 
         cmd = ctx.bot.get_slash_command(argument)
         if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
+            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
                 return cmd
 
         cmd = ctx.bot.get_command(argument)
@@ -381,29 +379,25 @@ class SourceConverter(commands.Converter):
 
         cmd = ctx.bot.get_message_command(argument)
         if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
+            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
                 return cmd
 
         cmd = ctx.bot.get_user_command(argument)
         if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
+            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
                 return cmd
 
         raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, application command, or Cog.")
 
 
 if t.TYPE_CHECKING:
-    MaybeFeature = str  # type: ignore  # noqa: F811
-    Extension = str  # type: ignore  # noqa: F811
-    PackageName = str  # type: ignore  # noqa: F811
-    ValidURL = str  # type: ignore  # noqa: F811
-    Inventory = tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
-    Snowflake = int  # type: ignore  # noqa: F811
-    UnambiguousUser = disnake.User  # type: ignore  # noqa: F811
-    UnambiguousMember = disnake.Member  # type: ignore  # noqa: F811
-    WrappedMessageConverter = disnake.Message  # type: ignore  # noqa: F811
-    SourceConverter = SourceType  # type: ignore  # noqa: F811
+    MaybeFeature = str  # type: ignore
+    Extension = str  # type: ignore
+    PackageName = str  # type: ignore
+    ValidURL = str  # type: ignore
+    Inventory = tuple[str, inventory_parser.InventoryDict]  # type: ignore
+    Snowflake = int  # type: ignore
+    UnambiguousUser = disnake.User  # type: ignore
+    UnambiguousMember = disnake.Member  # type: ignore
+    WrappedMessageConverter = disnake.Message  # type: ignore
+    SourceConverter = SourceType  # type: ignore

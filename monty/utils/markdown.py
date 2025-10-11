@@ -10,9 +10,9 @@ from monty import constants
 
 
 __all__ = (
-    "remove_codeblocks",
-    "DocMarkdownConverter",
     "DiscordRenderer",
+    "DocMarkdownConverter",
+    "remove_codeblocks",
 )
 # taken from version 0.6.1 of markdownify
 WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
@@ -24,7 +24,7 @@ CODE_BLOCK_RE = re.compile(
 )
 
 # references should be preceded by a non-word character (or element start)
-GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.I)
+GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.IGNORECASE)
 
 
 def remove_codeblocks(content: str) -> str:
@@ -102,7 +102,7 @@ class DocMarkdownConverter(MarkdownConverter):
         return ""
 
 
-# todo: this will be expanded over time as necessary
+# TODO: this will be expanded over time as necessary
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
@@ -112,7 +112,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
     def text(self, text: str) -> str:
         """Replace GitHub links with their expanded versions."""
         if self._repo:
-            # todo: expand this to all different varieties of automatic links
+            # TODO: expand this to all different varieties of automatic links
             # if a repository is provided we replace all snippets with the correct thing
             def replacement(match: re.Match[str]) -> str:
                 return self.link(self._repo + "/issues/" + match[1], text=match[0])
@@ -213,7 +213,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
         """Return the unedited list."""
-        # todo: figure out how this should actually work
+        # TODO: figure out how this should actually work
         if level == 1:
             return text.lstrip("\n") + "\n"
         return text

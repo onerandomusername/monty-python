@@ -166,7 +166,6 @@ class Ruff(
     @commands.slash_command(name="ruff")
     async def ruff(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Ruff."""
-        pass
 
     @ruff.sub_command(name="rule")
     async def ruff_rules(self, inter: disnake.ApplicationCommandInteraction, rule: str) -> None:

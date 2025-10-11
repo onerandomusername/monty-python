@@ -218,7 +218,7 @@ class ErrorHandler(
     async def handle_bot_missing_perms(
         self, ctx: AnyContext, error: commands.BotMissingPermissions | disnake.Forbidden
     ) -> None:
-        """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""  # noqa: E501
+        """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""
         embed = self.error_embed("Permissions Failure", str(error))
         if isinstance(ctx, commands.Context):
             app_permissions = ctx.channel.permissions_for(ctx.me)  # pyright: ignore[reportArgumentType]
@@ -324,7 +324,6 @@ class ErrorHandler(
                         # two times is not the charm.
                         self.bot.dispatch("slash_command_error", ctx, exc)
                     should_respond = False
-            pass
 
         elif isinstance(error, (commands.CommandInvokeError, commands.ConversionError)):
             if isinstance(error.original, disnake.Forbidden):

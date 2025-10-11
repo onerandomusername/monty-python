@@ -82,7 +82,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
             continue
-        elif "key" in response_json:
+        if "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
             paste_link = constants.Endpoints.paste_service.format(key=f"?id={response_json['key']}")

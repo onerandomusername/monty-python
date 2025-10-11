@@ -29,7 +29,7 @@ class GlobalCheck(commands.Cog):
         if self._bot_invite_link:
             return
 
-        # todo: don't require a fake guild object
+        # TODO: don't require a fake guild object
         class FakeGuild:
             id: str = "{guild_id}"
 

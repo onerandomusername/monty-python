@@ -63,7 +63,7 @@ class StatusMessages:
 class ConfigAttrMetadata:
     name: str | dict[Locale, str]
     description: str | dict[Locale, str]
-    type: type[str] | type[int] | type[float] | type[bool]
+    type: type[str | int | float | bool]
     requires_bot: bool = True
     long_description: str | None = None
     depends_on_features: tuple[str] | None = None

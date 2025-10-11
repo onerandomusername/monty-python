@@ -83,14 +83,13 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
                 yield parameters_string[last_split:index]
                 last_split = index + 1
 
-        else:
-            if character == current_search.opening_bracket:
-                depth += 1
+        elif character == current_search.opening_bracket:
+            depth += 1
 
-            elif character == current_search.closing_bracket:
-                depth -= 1
-                if depth == 0:
-                    current_search = None
+        elif character == current_search.closing_bracket:
+            depth -= 1
+            if depth == 0:
+                current_search = None
 
     yield parameters_string[last_split:]
 

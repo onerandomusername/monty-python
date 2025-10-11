@@ -106,7 +106,7 @@ def decode_github_link(compressed: str) -> str:
     return urlunsplit(("https", "github.com", path, "", fragment))
 
 
-def maybe_defer(inter: disnake.Interaction, *, delay: float | int = 2.0, **options) -> asyncio.Task:
+def maybe_defer(inter: disnake.Interaction, *, delay: float = 2.0, **options) -> asyncio.Task:
     """Defer an interaction if it has not been responded to after ``delay`` seconds."""
     loop = inter.bot.loop
     if delay <= 0:

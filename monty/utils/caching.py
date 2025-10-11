@@ -84,7 +84,7 @@ def redis_cache(
     /,
     key_func: Any = None,
     skip_cache_func: Any = lambda *args, **kwargs: False,
-    timeout: int | float | datetime.timedelta | None = 60 * 60 * 24 * 7,
+    timeout: float | datetime.timedelta | None = 60 * 60 * 24 * 7,
     include_posargs: list[int] | None = None,
     include_kwargs: list[str] | None = None,
     allow_unset: bool = False,
@@ -162,7 +162,7 @@ class RedisCache:
         self,
         prefix: str,
         *,
-        timeout: datetime.timedelta = datetime.timedelta(days=1),  # noqa: B008
+        timeout: datetime.timedelta = datetime.timedelta(days=1),
     ) -> None:
         session = cachingutils.redis.async_session(constants.Redis.prefix)
         self._rediscache = cachingutils.redis.AsyncRedisCache(

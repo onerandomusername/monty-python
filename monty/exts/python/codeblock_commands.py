@@ -91,7 +91,7 @@ class CodeBlockActions(
         check_is_python: bool = False,
         file_exts: set = None,
         no_len_limit: bool = False,
-    ) -> tuple[Literal[False], Literal[None], Literal[None]] | tuple[Literal[True], str, bool]:
+    ) -> tuple[Literal[False], None, None] | tuple[Literal[True], str, bool]:
         """Extract code out of a message's content, attachments, or paste link within the message."""
         if file_exts is None:
             file_exts = {"py", "txt"}
@@ -162,7 +162,6 @@ class CodeBlockActions(
 
         msg = f"I've uploaded this message to paste, you can view it here: <{url}>"
         return True, msg, url
-        ...
 
     @commands.message_command(name="Upload to Workbin")
     async def message_command_workbin(self, inter: disnake.MessageCommandInteraction) -> None:

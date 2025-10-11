@@ -581,7 +581,6 @@ class DocCog(
     @commands.slash_command(name="docs")
     async def slash_docs(self, inter: disnake.AppCmdInter) -> None:
         """Search python package documentation."""
-        pass
 
     async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, str | None]:
         """Find the documentation url on PyPI for a given package."""
@@ -673,7 +672,7 @@ class DocCog(
                         allowed_mentions=disnake.AllowedMentions.none(),
                         components=DeleteButton(inter.author),
                     )
-                return
+                return None
 
             doc_embed, doc_item = res
             view = DocView(inter, self.bot, doc_item, doc_embed)
@@ -681,7 +680,7 @@ class DocCog(
             await view.wait()
             view.disable()
             if getattr(view, "deleted", False):
-                return
+                return None
             try:
                 if msg is not None:
                     await msg.edit(view=view)
@@ -727,7 +726,7 @@ class DocCog(
         if not query:
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
-        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        guild_id = (inter.guild and inter.guild.id) or inter.guild_id
         blacklist = BLACKLIST_MAPPING.get(guild_id or 0)
 
         query = query.strip()
@@ -785,7 +784,7 @@ class DocCog(
         query: search query
         """
         results = {}
-        guild_id = inter.guild and inter.guild.id or inter.guild_id
+        guild_id = (inter.guild and inter.guild.id) or inter.guild_id
         blacklist = BLACKLIST_MAPPING.get(guild_id)
 
         query = query.strip()
@@ -960,7 +959,7 @@ class DocCog(
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: PackageName | Literal["*"],  # noqa: F722
+        package_name: PackageName | Literal["*"],
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
@@ -1028,7 +1027,7 @@ class DocCog(
 
         await ctx.send(
             f"Successfully whitelisted `{package_name}` in the following guilds:"
-            f" {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
+            f" {', '.join([str(x) for x in guild_ids])}",
             components=components,
         )
 
@@ -1075,7 +1074,7 @@ class DocCog(
 
         await ctx.send(
             f"Successfully de-whitelisted `{package_name}` in the following guilds:"
-            f" {', '.join([str(x) for x in guild_ids])}",  # noqa: E501
+            f" {', '.join([str(x) for x in guild_ids])}",
             components=components,
         )
 

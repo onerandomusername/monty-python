@@ -42,7 +42,6 @@ class StaleInventoryNotifier:
 
     async def send_warning(self, doc_item: "_cog.DocItem") -> None:
         """Send a warning to dev log if one wasn't already sent for `item`'s url."""
-        pass
         # if doc_item.url not in self._warned_urls:
         #     # Only warn if the item got less than 3 warnings
         #     # or if it has been more than 3 weeks since the last warning
@@ -134,7 +133,7 @@ class BatchParser:
                     )
             except Exception:
                 # reset the object to not be user requested, since we cannot parse it.
-                # todo: handle this with the future waiting
+                # TODO: handle this with the future waiting
                 self._item_futures[doc_item].user_requested = False
                 raise
 

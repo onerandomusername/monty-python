@@ -91,7 +91,6 @@ class Meta(
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
-        pass
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
@@ -177,17 +176,16 @@ class Meta(
                     message += title + ": <" + url + ">\n"
             else:
                 message += f"\n{urls}"
+        elif isinstance(urls, dict):
+            for num, url in urls.items():
+                title = labels[num]
+                components.append(disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=title))
         else:
-            if isinstance(urls, dict):
-                for num, url in urls.items():
-                    title = labels[num]
-                    components.append(disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=title))
-            else:
-                components.append(
-                    disnake.ui.Button(
-                        url=urls, style=disnake.ButtonStyle.link, label=f"Click to invite {inter.bot.user.name}!"
-                    )
+            components.append(
+                disnake.ui.Button(
+                    url=urls, style=disnake.ButtonStyle.link, label=f"Click to invite {inter.bot.user.name}!"
                 )
+            )
 
         await inter.response.send_message(
             message,

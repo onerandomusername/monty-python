@@ -453,7 +453,6 @@ class Snekbox(
     @commands.is_owner()
     async def manage_snekbox(self, ctx: commands.Context) -> None:
         """Commands for managing the snekbox instance."""
-        pass
 
     @manage_snekbox.group("packages", aliases=("pack", "packs", "p"), invoke_without_command=True)
     async def manage_snekbox_packages(self, ctx: commands.Context) -> None:

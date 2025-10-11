@@ -67,12 +67,10 @@ class Discord(
     @commands.slash_command()
     async def discord(self, inter: disnake.CommandInteraction) -> None:
         """Commands that interact with discord."""
-        pass
 
     @discord.sub_command_group()
     async def api(self, inter: disnake.CommandInteraction) -> None:
         """Commands that interact with the discord api."""
-        pass
 
     @api.sub_command(name="app-info")
     async def info_app(self, inter: disnake.CommandInteraction, client_id: LargeInt, ephemeral: bool = True) -> None:
@@ -189,15 +187,14 @@ class Discord(
                 else:
                     components.append(disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=title))
 
+        elif raw_link:
+            message += f"\n{urls}"
         else:
-            if raw_link:
-                message += f"\n{urls}"
-            else:
-                components.append(
-                    disnake.ui.Button(
-                        url=str(urls), style=disnake.ButtonStyle.link, label=f"Click to invite {app_info.name}!"
-                    )
+            components.append(
+                disnake.ui.Button(
+                    url=str(urls), style=disnake.ButtonStyle.link, label=f"Click to invite {app_info.name}!"
                 )
+            )
 
         await inter.response.send_message(
             message,
