@@ -49,12 +49,10 @@ def walk_extensions() -> Generator[tuple[str, "ExtMetadata"], None, None]:
                 else:
                     log.error(
                         f"Extension {module.name!r} contains an invalid EXT_METADATA variable. "
-                        "Loading with metadata defaults. Please report this bug to the developers."
+                        "Loading with metadata defaults."
                     )
                 yield module.name, ExtMetadata()
                 continue
-
-            log.debug(f"{module.name!r} contains a EXT_METADATA variable. Loading it.")
 
             yield module.name, ext_metadata
             continue

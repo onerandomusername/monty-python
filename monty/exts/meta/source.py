@@ -123,12 +123,13 @@ class MetaSource(
         self, obj: commands.Command | commands.Cog | commands.InvokableSlashCommand | None = None
     ) -> None:
         """Refreshes the cache when a cog is added or removed."""
-        # sleep for a second in the event that multiple cogs are reloaded or commands are added/removed
         # do nothing if the cog is this cog
         if obj and (
             obj is self or (isinstance(obj, (commands.Command, commands.InvokableSlashCommand)) and obj.cog is self)
         ):
-            logger.debug("returning early as our own cog was acted upon")
+            logger.trace(
+                "Received an event to refresh the cache but the event was triggered by the source cog itself. Skipping."
+            )
             return
         if self.refresh_active.locked():
             logger.trace("Received an event to refresh the cache but cache refresh is already active.")

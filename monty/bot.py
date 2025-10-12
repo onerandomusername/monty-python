@@ -267,17 +267,27 @@ class Monty(commands.Bot):
         )
         return await super().login(token)
 
-    async def close(self) -> None:
+    async def close(self, *, unplanned: bool = False) -> None:
         """Close sessions when bot is shutting down."""
-        await super().close()
+        if not self.is_closed():
+            await super().close()
+        else:
+            log.debug("Bot is already closed; skipping super().close()")
 
+        if unplanned:
+            log.warning("Bot is shutting down; closing sessions.")
+        else:
+            log.info("Bot is shutting down; closing sessions.")
         if self.http_session:
             await self.http_session.close()
+            log.debug("HTTP session closed.")
         if self.db_engine:
             await self.db_engine.dispose()
+            log.debug("Database engine disposed.")
 
         if self.redis_session:
             await self.redis_session.aclose(close_connection_pool=True)
+            log.debug("Redis session closed.")
 
         await asyncio.sleep(0.6)
 
@@ -297,6 +307,10 @@ class Monty(commands.Bot):
                 continue
 
             if ext_metadata.core or ext in requested_extensions:
+                if ext_metadata.core:
+                    log.debug("Loading %r as it is a core extension.", ext)
+                if ext in requested_extensions:
+                    log.debug("Loading %r as it is a requested extension.", ext)
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
