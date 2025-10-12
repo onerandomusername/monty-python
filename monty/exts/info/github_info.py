@@ -130,6 +130,11 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
                     html_url: url
                     avatar_url: avatarUrl
                 }
+                discussion {
+                    repository {
+                        name
+                    }
+                }
             }
         }
     }
@@ -1073,6 +1078,12 @@ class GithubInfo(
 
                 comment = json_data["node"]
 
+                # The API returns the real `<org>/<repo>` slug here for comments in org discussions,
+                # while we'd expect `orgs/<org>` (which is what the UI would redirect to, as well).
+                if issue.organisation == "orgs":
+                    org_discussion_repo = comment["discussion"]["repository"]["name"]
+                    expected_url = re.sub(r"/orgs/([^/]+)", f"/\\1/{org_discussion_repo}", expected_url)
+
             else:
                 if frag.startswith("issuecomment-"):
                     endpoint = ISSUE_COMMENT_ENDPOINT.format(
@@ -1122,7 +1133,7 @@ class GithubInfo(
             if expected_url != (html_url := comment["html_url"]):
                 # this is a warning as its the best way I currently have to track how often the wrong url is used
                 log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
-                # continue  # FIXME: disabled for now, since it messes with `github.com/orgs/<org>/discussions`
+                continue
 
             body = self.render_github_markdown(comment["body"])
             e = disnake.Embed(
