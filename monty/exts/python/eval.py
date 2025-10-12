@@ -112,7 +112,7 @@ class Snekbox(
                 json=data,
                 raise_for_status=True,
                 headers=HEADERS,
-                timeout=10,
+                timeout=aiohttp.ClientTimeout(10),
             ) as resp:
                 return await resp.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -422,7 +422,7 @@ class Snekbox(
             self.jobs[ctx.author.id] = utcnow()
             code = prepare_input(code)
             try:
-                response = await self.send_eval(ctx, code, return_result=False, original_source=True)
+                response = await self.send_eval(ctx, code, return_result=False)
             finally:
                 del self.jobs[ctx.author.id]
 
