@@ -85,6 +85,8 @@ nav:
   - Getting Started: contributing/README.md
   - Design: contributing/design.md
   - Developer Commands: contributing/developer-commands.md
+- Privacy: privacy.md
+- Terms of Service: terms.md
 extra:
   social:
   - icon: fontawesome/brands/github
