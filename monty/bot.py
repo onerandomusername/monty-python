@@ -1,6 +1,5 @@
 import asyncio
 import collections
-import dataclasses
 from typing import Any
 from weakref import WeakValueDictionary
 
@@ -169,10 +168,10 @@ class Monty(commands.Bot):
                 stmt = sa.select(Feature).options(selectinload(Feature.rollout))
                 result = await session.scalars(stmt)
                 existing_feature_names = {feature.name for feature in result.all()}
-                for feature_name in dataclasses.asdict(constants.Feature()).values():
-                    if feature_name in existing_feature_names:
+                for feature_enum in constants.Feature:
+                    if feature_enum.value in existing_feature_names:
                         continue
-                    feature_instance = Feature(feature_name)
+                    feature_instance = Feature(feature_enum.value)
                     session.add(feature_instance)
                 await session.commit()  # this will error out if it cannot be made
 
@@ -193,7 +192,7 @@ class Monty(commands.Bot):
     async def guild_has_feature(
         self,
         guild: int | disnake.abc.Snowflake | None,
-        feature: str,
+        feature: constants.Feature | str,
         *,
         include_feature_status: bool = True,
         create_if_not_exists: bool = True,
@@ -204,6 +203,8 @@ class Monty(commands.Bot):
         By default, this considers the feature's enabled status,
         which can be disabled with `include_feature_status` set to False.
         """
+        if isinstance(feature, constants.Feature):
+            feature = feature.value
         # first create the feature if we are told to create it
         if feature in self.features:
             feature_instance = self.features[feature]

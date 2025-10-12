@@ -458,7 +458,7 @@ class Extensions(commands.Cog):
             extra_paths += (
                 "monty/utils",
                 "monty/metadata.py",
-                "monty/config_metadata.py",
+                "monty/config",
             )
 
         msg = ""
