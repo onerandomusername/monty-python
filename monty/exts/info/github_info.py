@@ -269,7 +269,7 @@ class GithubInfo(
             scheduling.create_task(self.gql_client_secondary.close_async(), name="gql client close")
 
     def _create_gql_client(self, headers: dict[str, str]) -> gql.Client:
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers, ssl=True)
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers)
         return gql.Client(transport=transport, fetch_schema_from_transport=True)
 
     async def _fetch_and_update_ratelimits(self) -> None:
