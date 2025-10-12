@@ -6,7 +6,7 @@ import socket
 import sys
 from datetime import timedelta
 from types import SimpleNamespace
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 from weakref import WeakValueDictionary
 
@@ -31,6 +31,10 @@ from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
 from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
+
+
+if TYPE_CHECKING:
+    from aiohttp.tracing import TraceConfig
 
 
 log = get_logger(__name__)
@@ -67,8 +71,8 @@ class Monty(commands.Bot):
         super().__init__(**kwargs)
 
         self.redis_session = redis_session
-        self.redis_cache = cachingutils.redis.async_session(constants.Client.redis_prefix, session=self.redis_session)
-        self.redis_cache_key = constants.Client.redis_prefix
+        self.redis_cache = cachingutils.redis.async_session(constants.Redis.prefix, session=self.redis_session)
+        self.redis_cache_key = constants.Redis.prefix
 
         self.create_http_session(proxy=proxy)
 
@@ -85,12 +89,12 @@ class Monty(commands.Bot):
         self.start_time: arrow.Arrow
         self.stats: AsyncStatsClient
         self.command_prefix: str
-        self.invite_permissions: disnake.Permissions = constants.Client.invite_permissions
+        self.invite_permissions: disnake.Permissions = constants.Client.default_invite_permissions
         scheduling.create_task(self.get_self_invite_perms())
         scheduling.create_task(self._create_features())
 
         self._autoreload_task: asyncio.Task | None = None
-        self._autoreload_log_channel: disnake.abc.Messageable | None = None
+        self._autoreload_args: dict[str, Any] | None = None
 
     @property
     def db(self) -> async_sessionmaker[AsyncSession]:
@@ -99,29 +103,29 @@ class Monty(commands.Bot):
 
     def create_http_session(self, proxy: str = None) -> None:
         """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs = []
+        trace_configs: list[TraceConfig] = []
 
-        aiohttp_log = get_logger(__package__ + ".http")
+        aiohttp_log = get_logger("monty.http")
 
         async def on_request_end(
             session: aiohttp.ClientSession,
-            ctx: SimpleNamespace,
-            end: aiohttp.TraceRequestEndParams,
+            trace_config_ctx: SimpleNamespace,
+            params: aiohttp.TraceRequestEndParams,
         ) -> None:
             """Log all aiohttp requests on request end."""
-            resp = end.response
+            resp = params.response
             aiohttp_log.info(
                 "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
                     status=resp.status,
-                    reason=resp.reason,
-                    method=end.method.upper(),
-                    url=end.url,
+                    reason=resp.reason or "None",
+                    method=params.method.upper(),
+                    url=params.url,
                     content_type=resp.content_type,
                 )
             )
 
         trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)
+        trace_config.on_request_end.append(on_request_end)  # pyright: ignore[reportArgumentType]
         trace_configs.append(trace_config)
 
         # dead simple ETag caching
@@ -160,14 +164,16 @@ class Monty(commands.Bot):
                     cache_logger.debug("HTTP Cache hit on %s", cache_key)
                     # decode the original headers
                     headers: CIMultiDict[str] = CIMultiDict()
-                    for key, value in resp_headers:
-                        headers[key.decode()] = value.decode()
+                    if resp_headers:
+                        for key, value in resp_headers:
+                            headers[key.decode()] = value.decode()
                     r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
                     r.content = reader = aiohttp.StreamReader(
                         protocol=Mock(_reading_paused=False),
-                        limit=len(body),
+                        limit=len(body) if body else 0,
                     )
-                    reader.feed_data(body)
+                    if body:
+                        reader.feed_data(body)
                     reader.feed_eof()
                     r.status = 200
                     return r
@@ -179,8 +185,9 @@ class Monty(commands.Bot):
                     await cache.set(cache_key, (etag, body, r.raw_headers))
                 return r
 
-        user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
-            sys.version_info, constants.Client.version, constants.Source.github
+        user_agent = (
+            f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.version} "
+            f"({constants.Client.git_repo})"
         )
 
         self.http_session = aiohttp.ClientSession(
@@ -205,7 +212,7 @@ class Monty(commands.Bot):
         if app_info.install_params:
             self.invite_permissions = app_info.install_params.permissions
         else:
-            self.invite_permissions = constants.Client.invite_permissions
+            self.invite_permissions = constants.Client.default_invite_permissions
         return self.invite_permissions
 
     async def ensure_guild(self, guild_id: int, *, session: AsyncSession = None) -> Guild:
@@ -252,7 +259,7 @@ class Monty(commands.Bot):
 
         return config
 
-    async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
+    async def get_prefix(self, message: disnake.Message) -> list[str] | str | None:
         """Get the bot prefix."""
         prefixes = commands.when_mentioned(self, message)
         if message.guild:
@@ -298,7 +305,7 @@ class Monty(commands.Bot):
 
     async def guild_has_feature(
         self,
-        guild: Optional[Union[int, disnake.abc.Snowflake]],
+        guild: int | disnake.abc.Snowflake | None,
         feature: str,
         *,
         include_feature_status: bool = True,
@@ -389,15 +396,20 @@ class Monty(commands.Bot):
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
-        if constants.Client.extensions:
+        partial_load = bool(constants.Client.extensions)
+        if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
         EXTENSIONS.update(walk_extensions())
+        requested_extensions = set()
+        if isinstance(constants.Client.extensions, set):
+            requested_extensions.update(constants.Client.extensions)
+
         for ext, ext_metadata in walk_extensions():
-            if not constants.Client.extensions:
+            if not partial_load:
                 self.load_extension(ext)
                 continue
 
-            if ext_metadata.core or ext in constants.Client.extensions:
+            if ext_metadata.core or ext in requested_extensions:
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
@@ -413,7 +425,7 @@ class Monty(commands.Bot):
         log.info(f"Cog loaded: {cog.qualified_name}")
         self.dispatch("cog_load", cog)
 
-    def remove_cog(self, name: str) -> Optional[commands.Cog]:
+    def remove_cog(self, name: str) -> commands.Cog | None:
         """Remove the cog from the bot and dispatch a cog_remove event."""
         cog = super().remove_cog(name)
         if cog is None:
@@ -427,7 +439,7 @@ class Monty(commands.Bot):
         self._add_root_aliases(command)
         self.dispatch("command_add", command)
 
-    def remove_command(self, name: str) -> Optional[commands.Command]:
+    def remove_command(self, name: str) -> commands.Command | None:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
 
@@ -450,7 +462,7 @@ class Monty(commands.Bot):
         super().add_slash_command(slash_command)
         self.dispatch("slash_command_add", slash_command)
 
-    def remove_slash_command(self, name: str) -> Optional[commands.InvokableSlashCommand]:
+    def remove_slash_command(self, name: str) -> commands.InvokableSlashCommand | None:
         """Remove the slash command from the bot and dispatch a slash_command_remove event."""
         slash_command = super().remove_slash_command(name)
         if slash_command is None:

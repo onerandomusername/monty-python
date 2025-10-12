@@ -1,7 +1,6 @@
 import asyncio
 import re
 import string
-from typing import List, Optional
 
 import disnake
 from disnake.ext import commands
@@ -20,12 +19,12 @@ __all__ = [
 
 async def disambiguate(
     ctx: commands.Context,
-    entries: List[str],
+    entries: list[str],
     *,
     timeout: float = 30,
     entries_per_page: int = 20,
     empty: bool = False,
-    embed: Optional[disnake.Embed] = None,
+    embed: disnake.Embed | None = None,
 ) -> str:
     """
     Has the user choose between multiple entries in case one could not be chosen automatically.

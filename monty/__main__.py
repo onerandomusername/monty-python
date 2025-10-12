@@ -12,7 +12,8 @@ import disnake
 import redis
 import redis.asyncio
 from disnake.ext import commands
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+from sqlalchemy import Connection
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 import monty.alembic
 from monty import constants, monkey_patches
@@ -31,7 +32,7 @@ _intents.webhooks = False
 _intents.voice_states = False
 
 
-def run_upgrade(connection: AsyncConnection, cfg: alembic.config.Config) -> None:
+def run_upgrade(connection: Connection, cfg: alembic.config.Config) -> None:
     """Run alembic upgrades."""
     cfg.attributes["connection"] = connection
     alembic.command.upgrade(cfg, "head")
@@ -58,23 +59,23 @@ async def main() -> None:
     monkey_patches.patch_inter_send()
 
     # we make our redis session here and pass it to cachingutils
-    if constants.RedisConfig.use_fakeredis:
+    if constants.Redis.use_fakeredis:
         try:
             import fakeredis
             import fakeredis.aioredis
         except ImportError as e:
             raise RuntimeError("fakeredis must be installed to use fake redis") from e
-        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.RedisConfig.uri)
+        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.Redis.uri)
     else:
         pool = redis.asyncio.BlockingConnectionPool.from_url(
-            constants.RedisConfig.uri,
+            constants.Redis.uri,
             max_connections=20,
             timeout=300,
         )
         redis_session = redis.asyncio.Redis(connection_pool=pool)
 
     cachingutils.redis.async_session(
-        constants.Client.config_prefix, session=redis_session, prefix=constants.RedisConfig.prefix
+        constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
     )
 
     # run alembic migrations
@@ -95,7 +96,7 @@ async def main() -> None:
         sync_on_cog_actions=True,
     )
 
-    kwargs = {}
+    kwargs: dict[str, str] = {}
     if constants.Client.proxy is not None:
         kwargs["proxy"] = constants.Client.proxy
 
@@ -119,7 +120,7 @@ async def main() -> None:
 
     future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
     try:
-        import uvloop
+        import uvloop  # noqa: F401 # pyright: ignore[reportMissingImports]
 
         uvloop.install()
         log.info("Using uvloop as event loop.")

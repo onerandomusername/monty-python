@@ -1,6 +1,7 @@
 import asyncio
 import re
-from typing import TYPE_CHECKING, Generator, Optional, Union
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import disnake
 import disnake.ext.commands
@@ -36,7 +37,7 @@ DISCORD_CLIENT_NAMED_URL_REGEX = re.compile(
 logger = get_logger(__name__)
 
 
-def sub_clyde(username: Optional[str]) -> Optional[str]:
+def sub_clyde(username: str | None) -> str | None:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
 
@@ -58,7 +59,7 @@ async def suppress_embeds(
     bot: "Monty",
     message: disnake.Message,
     *,
-    wait: Optional[float] = 6,
+    wait: float | None = 6,
     force_wait: bool = False,
 ) -> bool:
     """Suppress the embeds on the provided message, after waiting for an edit to add embeds if none exist."""
@@ -131,7 +132,7 @@ def extract_urls(content: str) -> Generator[str, None, None]:
     pos = 0
     while pos < len(content):
         for regex in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
-            match: re.Match[str] = regex.match(content, pos)
+            match: re.Match[str] | None = regex.match(content, pos)
             if match:
                 break
         else:
@@ -152,12 +153,12 @@ class DeleteButton(disnake.ui.Button):
 
     def __init__(
         self,
-        user: Union[int, disnake.User, disnake.Member],
+        user: int | disnake.User | disnake.Member,
         *,
         allow_manage_messages: bool = True,
-        initial_message: Optional[Union[int, disnake.Message]] = None,
-        style: Optional[disnake.ButtonStyle] = None,
-        emoji: Optional[Union[disnake.Emoji, disnake.PartialEmoji, str]] = None,
+        initial_message: int | disnake.Message | None = None,
+        style: disnake.ButtonStyle | None = None,
+        emoji: disnake.Emoji | disnake.PartialEmoji | str | None = None,
     ) -> None:
         if isinstance(user, (disnake.User, disnake.Member)):
             user_id = user.id
@@ -208,11 +209,11 @@ class DeleteView(disnake.ui.View):
 
     def __init__(
         self,
-        user: Union[int, disnake.User, disnake.Member],
+        user: int | disnake.User | disnake.Member,
         *,
         timeout: float = 1,
         allow_manage_messages: bool = True,
-        initial_message: Optional[Union[int, disnake.Message]] = None,
+        initial_message: int | disnake.Message | None = None,
     ) -> None:
         self.delete_button = DeleteButton(
             user=user, allow_manage_messages=allow_manage_messages, initial_message=initial_message

@@ -1,5 +1,4 @@
 import typing
-from typing import Dict, Optional
 
 from aiohttp import ClientConnectorError
 from attrs import define
@@ -17,7 +16,7 @@ log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
-PASTE_DISABLED = not constants.URLs.paste_service
+PASTE_DISABLED = not constants.Endpoints.paste_service
 
 GITHUB_REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
@@ -25,10 +24,10 @@ GITHUB_REQUEST_HEADERS = {
 }
 GITHUB_REQUEST_HEADERS_SECONDARY = GITHUB_REQUEST_HEADERS.copy()
 
-if constants.Tokens.github:
-    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Tokens.github}"
-if constants.Tokens.github_secondary:
-    GITHUB_REQUEST_HEADERS_SECONDARY["Authorization"] = f"token {constants.Tokens.github_secondary}"
+if constants.Auth.github:
+    GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Auth.github}"
+if constants.Auth.github_secondary:
+    GITHUB_REQUEST_HEADERS_SECONDARY["Authorization"] = f"token {constants.Auth.github_secondary}"
 
 
 @define()
@@ -42,7 +41,7 @@ class GitHubRateLimit:
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
-async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
+async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> str | None:
     """
     Upload `contents` to the paste service.
 
@@ -54,7 +53,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         return "Sorry, paste isn't configured!"
 
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")
-    paste_url = constants.URLs.paste_service.format(key="api/new")
+    paste_url = constants.Endpoints.paste_service.format(key="api/new")
     json: dict[str, str] = {
         "content": contents,
     }
@@ -90,7 +89,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
         elif "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
-            paste_link = constants.URLs.paste_service.format(key=f"?id={response_json['key']}")
+            paste_link = constants.Endpoints.paste_service.format(key=f"?id={response_json['key']}")
             if extension:
                 paste_link += f"&language={extension}"
 
@@ -122,7 +121,7 @@ def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
 # https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
 def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
     """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
-    ratelimits: Dict[str, Dict[str, int]] = json["resources"]
+    ratelimits: dict[str, dict[str, int]] = json["resources"]
     for name, resource in ratelimits.items():
         GITHUB_RATELIMITS[name] = GitHubRateLimit(
             limit=resource["limit"],

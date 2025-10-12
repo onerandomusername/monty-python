@@ -26,7 +26,7 @@ log = get_logger(__name__)
 DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
-AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context[Monty]]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context[Monty]
 
 TIMEDELTA_REGEX = re.compile(
     r"^"
@@ -41,7 +41,7 @@ TIMEDELTA_REGEX = re.compile(
 )
 
 
-def str_timedelta_from_now(human: str, /) -> t.Optional[timedelta]:
+def str_timedelta_from_now(human: str, /) -> timedelta | None:
     """Convert a string to a timedelta relative to the current time."""
     match = TIMEDELTA_REGEX.fullmatch(human)
     if not match:
@@ -227,7 +227,7 @@ class Inventory(commands.Converter):
     """
 
     @staticmethod
-    async def convert(ctx: commands.Context, url: str) -> t.Tuple[str, inventory_parser.InventoryDict]:
+    async def convert(ctx: commands.Context, url: str) -> tuple[str, inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         try:
@@ -284,7 +284,7 @@ class Snowflake(commands.IDConverter):
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
-    has_id_or_mention = bool(commands.IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
+    has_id_or_mention = bool(commands.IDConverter._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
     # Check to see if the author passed a username (a discriminator exists)
     argument = argument.removeprefix("@")
@@ -344,15 +344,15 @@ class WrappedMessageConverter(commands.MessageConverter):
         return await super().convert(ctx, argument)
 
 
-SourceType = t.Union[
-    commands.Command,
-    commands.Cog,
-    commands.InvokableSlashCommand,
-    commands.InvokableMessageCommand,
-    commands.InvokableUserCommand,
-    commands.SubCommand,
-    commands.SubCommandGroup,
-]
+SourceType = (
+    commands.Command
+    | commands.Cog
+    | commands.InvokableSlashCommand
+    | commands.InvokableMessageCommand
+    | commands.InvokableUserCommand
+    | commands.SubCommand
+    | commands.SubCommandGroup
+)
 
 
 class SourceConverter(commands.Converter):
@@ -401,7 +401,7 @@ if t.TYPE_CHECKING:
     Extension = str  # type: ignore  # noqa: F811
     PackageName = str  # type: ignore  # noqa: F811
     ValidURL = str  # type: ignore  # noqa: F811
-    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
+    Inventory = tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
     Snowflake = int  # type: ignore  # noqa: F811
     UnambiguousUser = disnake.User  # type: ignore  # noqa: F811
     UnambiguousMember = disnake.Member  # type: ignore  # noqa: F811

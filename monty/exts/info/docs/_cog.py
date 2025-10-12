@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import copy
 import dataclasses
@@ -11,7 +9,7 @@ import typing
 from collections import ChainMap, defaultdict
 from functools import cached_property
 from types import SimpleNamespace
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import aiohttp
 import disnake
@@ -27,7 +25,6 @@ from monty.database import PackageInfo
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.converters import Inventory, PackageName, ValidURL
 from monty.utils.helpers import maybe_defer
 from monty.utils.inventory_parser import InvalidHeaderError, InventoryDict, fetch_inventory
 from monty.utils.lock import SharedEvent, lock
@@ -37,6 +34,16 @@ from monty.utils.scheduling import Scheduler
 
 from . import NAMESPACE, PRIORITY_PACKAGES, _batch_parser, doc_cache
 
+
+if TYPE_CHECKING:
+    from collections.abc import MutableMapping
+
+    ValidURL = str
+    Inventory = tuple[str, InventoryDict]
+    PackageName = str
+    from monty.exts.python.pypi import PyPI
+else:
+    from monty.utils.converters import Inventory, PackageName, ValidURL
 
 log = get_logger(__name__)
 
@@ -73,7 +80,7 @@ class DocItem:
     relative_url_path: str  # Relative path to the page where the symbol is located
     symbol_id: str  # Fragment id used to locate the symbol on the page
     symbol_name: str  # The key in the dictionary where this is found
-    attributes: list[DocItem] = dataclasses.field(default_factory=list, hash=False, repr=False)
+    attributes: "list[DocItem]" = dataclasses.field(default_factory=list, hash=False, repr=False)
 
     @property
     def url(self) -> str:
@@ -90,7 +97,7 @@ class DocView(DeleteView):
     """View for documentation objects."""
 
     def __init__(
-        self, inter: Union[disnake.Interaction, commands.Context], bot: Monty, docitem: DocItem, og_embed: disnake.Embed
+        self, inter: disnake.Interaction | commands.Context, bot: Monty, docitem: DocItem, og_embed: disnake.Embed
     ) -> None:
         super().__init__(user=inter.author, timeout=300)
         self.user_ids = [inter.author.id]
@@ -149,7 +156,13 @@ class DocView(DeleteView):
         """Allow selecting an attribute of the initial view."""
         if not await self.doc_check(inter):
             return
-        new_embed: disnake.Embed = (await self.bot.get_cog("Documentation").create_symbol_embed(select.values[0]))[0]
+        cog = cast("DocCog | None", self.bot.get_cog("Documentation"))
+        if not cog:
+            raise MontyCommandError("The Documentation cog is not loaded.")
+        result = await cog.create_symbol_embed(select.values[0])
+        if not result:
+            raise MontyCommandError("An error occurred fetching the selected attribute.")
+        new_embed, _ = result
         self.set_link_button(new_embed.url)
         self.sync_attribute_dropdown(select.values[0])
         if inter.response.is_done():
@@ -169,7 +182,9 @@ class DocView(DeleteView):
     def disable(self) -> None:
         """Disable all attributes in this view."""
         for c in self.children:
-            if hasattr(c, "disabled") and c.is_dispatchable() and c is not self.delete_button:
+            if c is not self.delete_button and (
+                isinstance(c, (disnake.ui.Select, disnake.ui.Button)) and c.is_dispatchable()
+            ):
                 c.disabled = True
 
 
@@ -189,11 +204,11 @@ class DocCog(
         self.base_urls = {}
         self.bot = bot
         # the new doc_symbols that collects each package in their own dict and uses a chainmap
-        self.doc_symbols_new: Dict[str, Dict[str, DocItem]] = {}
+        self.doc_symbols_new: dict[str, dict[str, DocItem]] = {}
         self.item_fetcher = _batch_parser.BatchParser(self.bot)
         # Maps a conflicting symbol name to a list of the new, disambiguated names created from conflicts with the name.
         self.renamed_symbols = defaultdict(list)
-        self.whitelist: Dict[int, Set[str]] = {}
+        self.whitelist: dict[int, set[str]] = {}
         self.inventory_scheduler = Scheduler(self.__class__.__name__)
 
         self.refresh_event = asyncio.Event()
@@ -216,7 +231,7 @@ class DocCog(
         for packages in self.whitelist.values():
             to_exclude |= packages
 
-        res = []
+        res: list[MutableMapping[str, DocItem]] = []
         for k, v in self.doc_symbols_new.items():
             if k in to_exclude:
                 continue
@@ -474,7 +489,7 @@ class DocCog(
         _ = self.doc_symbols
         self.refresh_event.set()
 
-    def get_symbol_item(self, symbol_name: str) -> Tuple[str, Optional[DocItem]]:
+    def get_symbol_item(self, symbol_name: str) -> tuple[str, DocItem | None]:
         """
         Get the `DocItem` and the symbol name used to fetch it from the `doc_symbols` dict.
 
@@ -517,7 +532,7 @@ class DocCog(
     async def create_symbol_embed(
         self,
         symbol_name: str,
-    ) -> Optional[tuple[disnake.Embed, DocItem]]:
+    ) -> tuple[disnake.Embed, DocItem] | None:
         """
         Attempt to scrape and fetch the data for the given `symbol_name`, and build an embed from its contents.
 
@@ -552,14 +567,14 @@ class DocCog(
             embed.set_footer(text=footer_text)
             return embed, doc_item
 
-    def _get_link_from_inventories(self, package: str) -> Optional[str]:
+    def _get_link_from_inventories(self, package: str) -> str | None:
         if package in self.base_urls:
             return self.base_urls[package]
 
         return None
 
     @commands.group(name="docs", aliases=("doc", "d"), invoke_without_command=True)
-    async def docs_group(self, ctx: commands.Context, *, search: Optional[str]) -> None:
+    async def docs_group(self, ctx: commands.Context, *, search: str | None) -> None:
         """Look up documentation for Python symbols."""
         await self._docs_get_command(ctx, search=search)
 
@@ -568,9 +583,10 @@ class DocCog(
         """Search python package documentation."""
         pass
 
-    async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, Optional[str]]:
+    async def maybe_pypi_docs(self, package: str, strip: bool = True) -> tuple[bool, str | None]:
         """Find the documentation url on PyPI for a given package."""
-        if (pypi := self.bot.get_cog("PyPI")) is None:
+        pypi: PyPI | None
+        if (pypi := cast("PyPI | None", self.bot.get_cog("PyPI"))) is None:
             return False, None
         if pypi.check_characters(package):
             return False, None
@@ -590,8 +606,8 @@ class DocCog(
 
     async def _docs_get_command(
         self,
-        inter: Union[disnake.ApplicationCommandInteraction, commands.Context],
-        search: Optional[str],
+        inter: disnake.ApplicationCommandInteraction | commands.Context,
+        search: str | None,
         maybe_start: bool = True,
         *,
         return_embed: bool = False,
@@ -599,6 +615,8 @@ class DocCog(
         scorer: Any = None,
     ) -> None:
         if not search:
+            if isinstance(inter, disnake.Message):
+                raise RuntimeError("if inter is a Message, search must be provided")
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
             )
@@ -673,7 +691,7 @@ class DocCog(
                 pass
 
     @slash_docs.sub_command("view")
-    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: Optional[str]) -> None:
+    async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: str | None) -> None:
         """
         Gives you a documentation link for a provided entry.
 
@@ -710,7 +728,7 @@ class DocCog(
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
         guild_id = inter.guild and inter.guild.id or inter.guild_id
-        blacklist = BLACKLIST_MAPPING.get(guild_id)
+        blacklist = BLACKLIST_MAPPING.get(guild_id or 0)
 
         query = query.strip()
 
@@ -746,7 +764,7 @@ class DocCog(
 
         tweak = sorted(tweak, key=lambda v: v[1], reverse=True)
 
-        res = []
+        res: list[str] = []
         if include_query:
             res.append(query)
         for name, score in tweak:
@@ -942,7 +960,7 @@ class DocCog(
     async def clear_cache_command(
         self,
         ctx: commands.Context,
-        package_name: Union[PackageName, Literal["*"]],  # noqa: F722
+        package_name: PackageName | Literal["*"],  # noqa: F722
     ) -> None:
         """Clear the persistent redis cache for `package`."""
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
@@ -996,7 +1014,7 @@ class DocCog(
 
             guild_ids = [g.id for g in guilds]
 
-            whitelist: List[int] = package.guilds_whitelist or []
+            whitelist: list[int] = package.guilds_whitelist or []
             for guild_id in guild_ids:
                 if guild_id in whitelist:
                     log.debug(f"{package_name} is already whitelisted in {guild_id}")
@@ -1043,7 +1061,7 @@ class DocCog(
                 return
 
             guild_ids = [g.id for g in guilds]
-            whitelist: List[int] = package.guilds_whitelist
+            whitelist: list[int] = package.guilds_whitelist
             for guild_id in guild_ids:
                 if guild_id not in whitelist:
                     log.debug(f"{package_name} is not whitelisted in {guild_id}")

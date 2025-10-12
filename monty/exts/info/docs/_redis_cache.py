@@ -1,20 +1,20 @@
-from __future__ import annotations
-
 import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 import cachingutils
 import cachingutils.redis
-import redis.asyncio
 
 
 if TYPE_CHECKING:
+    import redis.asyncio
+
     from ._cog import DocItem
+
 
 WEEK_SECONDS = datetime.timedelta(weeks=1)
 
 
-def item_key(item: DocItem) -> str:
+def item_key(item: "DocItem") -> str:
     """Get the redis redis key string from `item`."""
     return f"{item.package}:{item.relative_url_path.removesuffix('.html')}"
 
@@ -28,7 +28,7 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
         self.namespace = self._prefix
         self._redis: redis.asyncio.Redis
 
-    async def set(self, item: DocItem, value: str) -> None:
+    async def set(self, item: "DocItem", value: str) -> None:
         """
         Set the Markdown `value` for the symbol `item`.
 
@@ -43,13 +43,13 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
             self._set_expires.add(redis_key)
             needs_expire = not await self._redis.exists(redis_key)
 
-        await self._redis.hset(redis_key, item.symbol_id, value)
+        await self._redis.hset(redis_key, item.symbol_id, value)  # pyright: ignore[reportGeneralTypeIssues]
         if needs_expire:
             await self._redis.expire(redis_key, WEEK_SECONDS)
 
-    async def get(self, item: DocItem, default: Any = None) -> Optional[str]:
+    async def get(self, item: "DocItem", default: Any = None) -> str | None:
         """Return the Markdown content of the symbol `item` if it exists."""
-        res = await self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)
+        res = await self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)  # pyright: ignore[reportGeneralTypeIssues]
         if res:
             return res.decode()
         return default
@@ -67,9 +67,9 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
 
 
 class StaleItemCounter(DocRedisCache):
-    """Manage increment counters for stale `DocItem`s."""
+    """Manage increment counters for stale `"DocItem"`s."""
 
-    async def increment_for(self, item: DocItem) -> int:
+    async def increment_for(self, item: "DocItem") -> int:
         """
         Increment the counter for `item` by 1, set it to expire in 3 weeks and return the new value.
 

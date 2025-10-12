@@ -1,0 +1,93 @@
+site_name: Monty Python
+site_url: https://monty.arielle.codes/
+site_description: A Python and GitHub focused Discord bot to make collaborating on Python projects through Discord easier than ever.
+repo_name: onerandomusername/monty-python
+repo_url: https://github.com/onerandomusername/monty-python/
+edit_uri: edit/main/docs/
+copyright: >
+  Copyright &copy; 2025+ onerandomusername ·
+  <a href="/terms">Terms of Service</a> ·
+  <a href="/privacy">Privacy Policy</a>
+theme:
+  name: material
+  logo: assets/images/logo.png
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+      primary: blue
+      accent: yellow
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: blue
+      accent: yellow
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+      primary: blue
+      accent: yellow
+  features:
+  - navigation.instant
+  - navigation.instant.progress
+  - navigation.indexes
+  - navigation.sections
+  - navigation.tracking
+  - toc.follow
+  - navigation.top
+  - search
+  - search.suggest
+  - search.highlight
+  - content.action.edit
+  - content.action.view
+  - content.code.copy
+  - content.code.annotate
+
+
+plugins:
+- privacy
+- git-revision-date-localized
+
+markdown_extensions:
+- admonition
+- pymdownx.details
+- pymdownx.tasklist:
+    custom_checkbox: true
+- pymdownx.superfences
+- markdown_gfm_admonition
+- pymdownx.highlight:
+    anchor_linenums: true
+    line_spans: __span
+    pygments_lang_class: true
+- pymdownx.inlinehilite
+- pymdownx.snippets
+- pymdownx.superfences
+- pymdownx.betterem
+- tables
+- toc:
+    permalink: true
+
+extra_css:
+- assets/css/extra_admonitions.css
+
+nav:
+- Home: README.md
+- Future Plans: future-plans.md
+- Commands:
+  - App Commands: commands/app-commands.md
+  - Prefix Commands: commands/prefix-commands.md
+- Contributing:
+  - Getting Started: contributing/README.md
+  - Design: contributing/design.md
+  - Developer Commands: contributing/developer-commands.md
+extra:
+  social:
+  - icon: fontawesome/brands/github
+    link: https://github.com/onerandomusername/monty-python
+  - icon: fontawesome/brands/discord
+    link: https://discord.gg/mPscM4FjWB

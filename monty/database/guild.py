@@ -1,5 +1,3 @@
-from typing import List
-
 import sqlalchemy as sa
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,12 +12,12 @@ class Guild(Base):
 
     id: Mapped[int] = mapped_column(sa.BigInteger, primary_key=True, autoincrement=False)
     # todo: this should be a many to many relationship
-    feature_ids: Mapped[List[str]] = mapped_column(
+    feature_ids: Mapped[list[str]] = mapped_column(
         MutableList.as_mutable(sa.ARRAY(sa.String(length=50))),
         name="features",
         nullable=False,
         default=[],
-        server_default=r"{}",  # noqa: P103
+        server_default=r"{}",
     )
 
     # features: Mapped[List[Feature]] = relationship(Feature)

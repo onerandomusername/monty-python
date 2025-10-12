@@ -5,7 +5,7 @@ import random
 import re
 from dataclasses import dataclass
 from datetime import timedelta, timezone
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import Any, NamedTuple, TypeVar
 from urllib.parse import quote, quote_plus
 
 import attrs
@@ -27,7 +27,7 @@ from monty.bot import Monty
 from monty.constants import Feature
 from monty.errors import MontyCommandError
 from monty.log import get_logger
-from monty.utils import scheduling
+from monty.utils import responses, scheduling
 from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
@@ -60,10 +60,6 @@ PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/
 
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
-
-# webhooks owned by this application that aren't the following
-# id (as that would be an interaction response) will relay autolinkers
-CROSSCHAT_BOT = 931285254319247400
 
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
@@ -165,7 +161,7 @@ class RenderContext(NamedTuple):
     """Context provided to the rendering method."""
 
     user: str
-    repo: Optional[str] = None
+    repo: str | None = None
 
     @property
     def html_url(self) -> str:
@@ -186,13 +182,13 @@ class IssueSourceFormat(enum.IntEnum):
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
 
-    organisation: Optional[str]
+    organisation: str | None
     repository: str
     number: str
     source_format: IssueSourceFormat
     url_fragment: str = ""
-    user_url: Optional[str] = None
-    is_discussion: Optional[bool] = None  # `None` means uncertain
+    user_url: str | None = None
+    is_discussion: bool | None = None  # `None` means uncertain
 
     def __hash__(self) -> int:
         return hash((self.organisation, self.repository, self.number))
@@ -216,7 +212,7 @@ class IssueState:
     url: str
     title: str
     emoji: str
-    raw_json: Optional[dict[str, Any]] = None
+    raw_json: dict[str, Any] | None = None
 
 
 class GithubInfo(
@@ -232,18 +228,20 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        self.gql = self._create_gql_client(GITHUB_REQUEST_HEADERS)
-        if constants.Tokens.github_secondary:
-            self.gql_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
+        self.gql_client = self._create_gql_client(GITHUB_REQUEST_HEADERS)
+        if constants.Auth.github_secondary:
+            self.gql_client_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
+            # session will be created in cog_load
         else:
+            self.gql_client_secondary = None
             self.gql_secondary = None
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
-        self.autolink_cache: cachingutils.MemoryCache[int, Tuple[disnake.Message, List[FoundIssue]]] = (
+        self.autolink_cache: cachingutils.MemoryCache[int, tuple[disnake.Message, list[FoundIssue]]] = (
             cachingutils.MemoryCache(timeout=600)
         )
 
-        self.guilds: Dict[str, str] = {}
+        self.guilds: dict[str, str] = {}
 
     async def cog_load(self) -> None:
         """
@@ -255,13 +253,17 @@ class GithubInfo(
         await self._fetch_and_update_ratelimits()
 
         # todo: cache the schema in redis and load from there
-        async with self.gql:
-            pass
-        if self.gql_secondary:
-            async with self.gql_secondary:
-                pass
+        self.gql = await self.gql_client.connect_async(reconnecting=True)
+        if self.gql_client_secondary:
+            self.gql_secondary = await self.gql_client_secondary.connect_async(reconnecting=True)
 
-    def _create_gql_client(self, headers: Dict[str, str]) -> gql.Client:
+    def cog_unload(self) -> None:
+        """Close gql session upon unloading cog."""
+        scheduling.create_task(self.gql_client.close_async(), name="gql client close")
+        if self.gql_client_secondary:
+            scheduling.create_task(self.gql_client_secondary.close_async(), name="gql client close")
+
+    def _create_gql_client(self, headers: dict[str, str]) -> gql.Client:
         transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers, ssl=True)
         return gql.Client(transport=transport, fetch_schema_from_transport=True)
 
@@ -277,14 +279,14 @@ class GithubInfo(
 
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)  # type: ignore
 
-    async def fetch_guild_to_org(self, guild_id: int) -> Optional[str]:
+    async def fetch_guild_to_org(self, guild_id: int) -> str | None:
         """Fetch the org that matches to a specific guild_id."""
         guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
 
     async def fetch_data(
         self, url: str, *, method: str = "GET", as_text: bool = False, **kw
-    ) -> Union[dict[str, Any], str, list[Any], Any]:
+    ) -> dict[str, Any] | str | list[Any] | Any:
         """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
         if "headers" in kw:
             og = kw["headers"]
@@ -362,9 +364,9 @@ class GithubInfo(
 
     async def fetch_user_and_repo(  # type: ignore
         self,
-        guild_id: Optional[int],
-        repo: Optional[str] = None,
-        user: Optional[str] = None,
+        guild_id: int | None,
+        repo: str | None = None,
+        user: str | None = None,
     ) -> RepoTarget:
         """
         Adds a user and repo parameter to all slash commands.
@@ -475,22 +477,22 @@ class GithubInfo(
         await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="repository", aliases=("repo",), root_aliases=("repo",))
-    async def github_repo_info(self, ctx: commands.Context, *repo: str) -> None:
+    async def github_repo_info(self, ctx: commands.Context, *repository: str) -> None:
         """
         Fetches a repositories' GitHub information.
 
         The repository should look like `user/reponame` or `user reponame`.
         """
-        original_args = repo
-        if repo[0].count("/"):
-            repo: str = repo[0]
-        elif len(repo) >= 2:
-            repo: str = "/".join(repo[:2])
+        repo_name: str
+        if repository[0].count("/"):
+            repo_name = repository[0]
+        elif len(repository) >= 2:
+            repo_name = "/".join(repository[:2])
         else:
-            repo: str = ""
+            repo_name = ""
 
-        if not repo or repo.count("/") > 1:
-            args = " ".join(original_args[:2])
+        if not repo_name or repo_name.count("/") > 1:
+            args = " ".join(repository[:2])
 
             raise commands.BadArgument(
                 "The repository should look like `user/reponame` or `user reponame`"
@@ -500,16 +502,16 @@ class GithubInfo(
 
         async with ctx.typing():
             repo_data: dict[str, Any] = await self.fetch_data(
-                f"{GITHUB_API_URL}/repos/{quote(repo)}",
+                f"{GITHUB_API_URL}/repos/{quote(repo_name)}",
                 headers=GITHUB_REQUEST_HEADERS,
             )  # type: ignore
 
             # There won't be a message key if this repo exists
             if "message" in repo_data:
                 embed = disnake.Embed(
-                    title=random.choice(constants.NEGATIVE_REPLIES),
+                    title=random.choice(responses.FAILURE_HEADERS),
                     description="The requested repository was not found.",
-                    colour=constants.Colours.soft_red,
+                    colour=responses.DEFAULT_FAILURE_COLOUR,
                 )
                 components = DeleteButton(ctx.author, initial_message=ctx.message)
                 await ctx.send(embed=embed, components=components)
@@ -571,8 +573,8 @@ class GithubInfo(
         user: str,
         *,
         allow_discussions: bool = False,
-        is_discussion: Optional[bool] = None,
-    ) -> Union[IssueState, FetchError]:
+        is_discussion: bool | None = None,
+    ) -> IssueState | FetchError:
         """
         Retrieve an issue from a GitHub repository.
 
@@ -602,11 +604,13 @@ class GithubInfo(
                 # in this case, the url is "github.com/orgs/<org>/discussions/..."
                 user = repository
                 try:
-                    json_data = await self.gql_secondary.execute_async(
-                        ORG_DISCUSSION_REPO_GRAPHQL_QUERY,
-                        variable_values={
-                            "org": user,
-                        },
+                    json_data = await self.gql_secondary.execute(
+                        gql.GraphQLRequest(
+                            ORG_DISCUSSION_REPO_GRAPHQL_QUERY,
+                            variable_values={
+                                "org": user,
+                            },
+                        )
                     )
                 except (TransportError, TransportQueryError):
                     return FetchError(-1, "Issue not found.")
@@ -617,13 +621,15 @@ class GithubInfo(
                 repository = json_repo["name"]
 
             try:
-                json_data = await self.gql.execute_async(
-                    DISCUSSION_GRAPHQL_QUERY,
-                    variable_values={
-                        "user": user,
-                        "repository": repository,
-                        "number": number,
-                    },
+                json_data = await self.gql.execute(
+                    gql.GraphQLRequest(
+                        DISCUSSION_GRAPHQL_QUERY,
+                        variable_values={
+                            "user": user,
+                            "repository": repository,
+                            "number": number,
+                        },
+                    )
                 )
             except (TransportError, TransportQueryError):
                 return FetchError(-1, "Issue not found.")
@@ -708,9 +714,9 @@ class GithubInfo(
 
         embed.url = issue.url
         embed.timestamp = fromisoformat(json_data["created_at"])
-        embed.set_footer(text="Created ", icon_url=constants.Source.github_avatar_url)
+        embed.set_footer(text="Created ", icon_url=constants.Icons.github_avatar_url)
 
-        body: Optional[str] = json_data["body"]
+        body: str | None = json_data["body"]
         if body and not body.isspace():
             # escape wack stuff from the markdown
             embed.description = self.render_github_markdown(
@@ -722,7 +728,7 @@ class GithubInfo(
 
     def format_embed(
         self,
-        results: Union[list[Union[IssueState, FetchError]], list[IssueState]],
+        results: list[IssueState | FetchError] | list[IssueState],
         *,
         expand_one_issue: bool = False,
         show_errors_inline: bool = True,
@@ -760,10 +766,10 @@ class GithubInfo(
     @github_group.group(name="issue", aliases=("pr", "pull"), invoke_without_command=True, case_insensitive=True)
     async def github_issue(
         self,
-        ctx: Union[commands.Context, disnake.CommandInteraction],
+        ctx: commands.Context | disnake.CommandInteraction,
         numbers: commands.Greedy[int],
         repo: str,
-        user: Optional[str] = None,
+        user: str | None = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
         if not user or not repo:
@@ -781,11 +787,12 @@ class GithubInfo(
                     raise commands.CommandError("No user provided, a user must be provided.")
                 # repo is non-existant
                 raise commands.CommandError("No repo provided, a repo must be provided.")
-        # Remove duplicates and sort
-        numbers = dict.fromkeys(numbers)
+        # Remove duplicates while maintaining order
+        issue_numbers = list(dict.fromkeys(numbers))
 
         # check if its empty, send help if it is
-        if len(numbers) == 0:
+        if len(issue_numbers) == 0:
+            assert isinstance(ctx, commands.Context)
             await invoke_help_command(ctx)
             return
 
@@ -793,10 +800,10 @@ class GithubInfo(
             ctx.author, initial_message=ctx.message if isinstance(ctx, commands.Context) else None
         )
 
-        if len(numbers) > MAXIMUM_ISSUES:
+        if len(issue_numbers) > MAXIMUM_ISSUES:
             embed = disnake.Embed(
-                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
             await ctx.send(embed=embed, components=components)
@@ -804,7 +811,7 @@ class GithubInfo(
                 await invoke_help_command(ctx)
             return
 
-        results = [await self.fetch_issues(number, repo, user) for number in numbers]
+        results = [await self.fetch_issues(number, repo, user) for number in issue_numbers]
         expand_one_issue = await self.bot.guild_has_feature(ctx.guild, constants.Feature.GITHUB_ISSUE_EXPAND)
         await ctx.send(embed=self.format_embed(results, expand_one_issue=expand_one_issue)[0], components=components)
 
@@ -834,7 +841,7 @@ class GithubInfo(
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
-    async def fetch_default_user(self, guild_id: int) -> Optional[str]:
+    async def fetch_default_user(self, guild_id: int) -> str | None:
         """
         Get the default GitHub user in the context of the provided Message.
 
@@ -852,10 +859,10 @@ class GithubInfo(
         *,
         guild_id: int = None,
         extract_full_links: bool = False,
-    ) -> List[FoundIssue]:
+    ) -> list[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
-        issues: List[FoundIssue] = []
-        default_user: Optional[str] = ""
+        issues: list[FoundIssue] = []
+        default_user: str | None = ""
         stripped_content = remove_codeblocks(content)
 
         if extract_full_links:
@@ -915,11 +922,11 @@ class GithubInfo(
 
     def get_expand_button(
         self,
-        issues: List[IssueState],
+        issues: list[IssueState],
         *,
         is_expanded: bool = False,
         user_id: int,
-    ) -> Optional[disnake.ui.Button]:
+    ) -> disnake.ui.Button | None:
         """Create a new expand button based on the provided issue, if there is only one issue."""
         if len(issues) != 1:
             return None
@@ -1003,7 +1010,7 @@ class GithubInfo(
         await inter.response.edit_message(embed=embed, components=rows)
 
     async def handle_issue_comment(
-        self, message: Union[disnake.Message, disnake.Interaction], issues: list[FoundIssue]
+        self, message: disnake.Message | disnake.Interaction, issues: list[FoundIssue]
     ) -> None:
         """Expand an issue or pull request comment."""
         comments = []
@@ -1052,11 +1059,13 @@ class GithubInfo(
                 )
 
                 try:
-                    json_data = await self.gql.execute_async(
-                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
-                        variable_values={
-                            "id": global_id,
-                        },
+                    json_data = await self.gql.execute(
+                        gql.GraphQLRequest(
+                            DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                            variable_values={
+                                "id": global_id,
+                            },
+                        )
                     )
                 except (TransportError, TransportQueryError) as e:
                     log.warning("encountered error fetching discussion comment: %s", e)
@@ -1138,13 +1147,15 @@ class GithubInfo(
         if not comments:
             return
 
-        if len(comments) > 4:
-            if isinstance(message, disnake.Message):
-                method = message.reply
-            else:
-                method = message.send
+        if isinstance(message, disnake.Message):
+            reply_method = message.reply
+        elif isinstance(message, disnake.Interaction):
+            reply_method = message.send
+        else:
+            raise RuntimeError("unreachable")
 
-            await method(
+        if len(comments) > 4:
+            await reply_method(
                 "Only 4 comments can be expanded at a time. Please send with only four comments if you would like"
                 " them to be expanded!",
                 components=DeleteButton(message.author),
@@ -1153,7 +1164,7 @@ class GithubInfo(
             return
 
         if isinstance(message, disnake.Message):
-            if message.guild.me and message.channel.permissions_for(message.guild.me).manage_messages:
+            if message.guild and message.channel.permissions_for(message.guild.me).manage_messages:
                 scheduling.create_task(suppress_embeds(self.bot, message))
 
         if len(comments) > 1:
@@ -1164,7 +1175,6 @@ class GithubInfo(
                 component.label = f"View {num}{suffix} comment"
 
         components.insert(0, DeleteButton(message.author))
-        reply_method = message.reply if isinstance(message, disnake.Message) else message.send
         await reply_method(
             embeds=comments,
             components=components,
@@ -1173,19 +1183,14 @@ class GithubInfo(
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(
-        self, message: Union[disnake.Message, disnake.ApplicationCommandInteraction], content: str = None
+        self, message: disnake.Message | disnake.ApplicationCommandInteraction, content: str = None
     ) -> None:
         """
         Automatic issue linking.
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        # Ignore bots but NOT webhooks owned by crosschat which also aren't the application id
-        # this allows webhooks that are owned by crosschat but aren't application responses
-        # interaction commands cannot be sent by bots so the typing here doesn't matter
-        if message.author.bot and not (
-            message.webhook_id and message.application_id == CROSSCHAT_BOT and message.webhook_id != CROSSCHAT_BOT
-        ):
+        if message.author.bot:
             return
 
         if isinstance(message, disnake.Message):
@@ -1215,7 +1220,7 @@ class GithubInfo(
                 guild_id=guild_id,
                 extract_full_links=extract_full_links,
             )
-        else:
+        elif isinstance(message, disnake.ApplicationCommandInteraction):
             # HACK
             guild_id = message.guild_id  # type: ignore
             perms = message.app_permissions
@@ -1227,6 +1232,8 @@ class GithubInfo(
                 guild_id=guild_id,
                 extract_full_links=extract_full_links,
             )
+        else:
+            raise RuntimeError("unreachable")
 
         # no issues found, return early
         if not issues:
@@ -1248,8 +1255,8 @@ class GithubInfo(
         if len(issues) > MAXIMUM_ISSUES:
             # must be handled here due to local side-effect, for now
             embed = disnake.Embed(
-                title=random.choice(constants.USER_INPUT_ERROR_REPLIES),
-                color=constants.Colours.soft_red,
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
 
@@ -1257,7 +1264,7 @@ class GithubInfo(
             if isinstance(message, disnake.Message):
                 response = await message.channel.send(embed=embed, components=components)
                 self.autolink_cache.set(message.id, (response, issues))
-            else:
+            elif isinstance(message, disnake.ApplicationCommandInteraction):
                 await message.send(embed=embed, ephemeral=True)
             return
 
@@ -1296,7 +1303,7 @@ class GithubInfo(
 
         embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
-        components: List[disnake.ui.Button] = [DeleteButton(message.author)]
+        components: list[disnake.ui.Button] = [DeleteButton(message.author)]
         if allow_expand:
             button = self.get_expand_button(
                 links,
@@ -1354,7 +1361,7 @@ class GithubInfo(
             # and we should continue to support that.
             return
 
-        links: List[IssueState] = []
+        links: list[IssueState] = []
         total_pre_expanded = 0
         for repo_issue in after_issues:
             if repo_issue.organisation is None:
@@ -1385,7 +1392,7 @@ class GithubInfo(
         if allow_expand:
             for row in rows:
                 for comp in row:
-                    if comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
+                    if comp.custom_id and comp.custom_id.startswith(EXPAND_ISSUE_CUSTOM_ID_PREFIX):
                         # get the current state if its already expanded
                         is_expanded = self.get_current_button_expansion_state(comp.custom_id)
                         row.remove_item(comp)

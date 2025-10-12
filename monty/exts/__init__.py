@@ -1,5 +1,5 @@
 import pkgutil
-from typing import Iterator
+from collections.abc import Iterator
 
 from monty.log import get_logger
 

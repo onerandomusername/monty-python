@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, Coroutine, List, Tuple
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -21,9 +21,11 @@ from monty.utils.services import GITHUB_REQUEST_HEADERS as DEFAULT_GITHUB_REQUES
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from typing import NoReturn
 
     from monty.exts.info.github_info import GithubInfo
+
 
 log = get_logger(__name__)
 
@@ -70,20 +72,27 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         """Initializes the cog's bot."""
         self.bot = bot
 
-        self.pattern_handlers: List[Tuple[re.Pattern, Coroutine]] = [
+        self.pattern_handlers: list[tuple[re.Pattern, Callable[..., Awaitable[str]]]] = [
             (GITHUB_RE, self._fetch_github_snippet),
             (GITHUB_GIST_RE, self._fetch_github_gist_snippet),
             (GITLAB_RE, self._fetch_gitlab_snippet),
             (BITBUCKET_RE, self._fetch_bitbucket_snippet),
         ]
 
-        self.request_cache: cachingutils.MemoryCache[str, Any] = cachingutils.MemoryCache(timeout=timedelta(minutes=6))
+        self.request_cache: cachingutils.MemoryCache[tuple[str, str], Any] = cachingutils.MemoryCache(
+            timeout=timedelta(minutes=6)
+        )
+
+    def get_github_cog(self) -> "GithubInfo | None":
+        """Return the GitHub Information cog if it is loaded."""
+        if cog := cast("GithubInfo | None", self.bot.get_cog("GitHub Information")):
+            return cog
+        return None
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
         # make the request with the github_info cog if it is loaded
-        if url.startswith("https://api.github.com/") and (cog := self.bot.get_cog("GitHub Information")):
-            cog: GithubInfo
+        if url.startswith("https://api.github.com/") and (cog := self.get_github_cog()):
             return await cog.fetch_data(
                 url,
                 as_text=True if response_format == "text" else False,
@@ -228,7 +237,13 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)
 
-    def _snippet_to_codeblock(self, file_contents: str, file_path: str, start_line: str, end_line: str) -> str:
+    def _snippet_to_codeblock(
+        self,
+        file_contents: str,
+        file_path: str,
+        start_line: str | int,
+        end_line: str | int | None,
+    ) -> str:
         """
         Given the entire file contents and target lines, creates a code block.
 
@@ -308,7 +323,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
                     snippet = await handler(**match.groupdict())
                     all_snippets.append((match.start(), snippet))
                 except ClientResponseError as error:
-                    error_message = error.message  # noqa: B306
+                    error_message = error.message
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
                         f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
@@ -358,17 +373,17 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
         Listener to send expanded links for a given issue/pull request.
         """
-        if not inter.component.custom_id.startswith(EXPAND_BUTTON_PREFIX):
+        if not inter.data.custom_id.startswith(EXPAND_BUTTON_PREFIX):
             return
 
-        custom_id = inter.component.custom_id[len(EXPAND_BUTTON_PREFIX) :]
+        custom_id = inter.data.custom_id[len(EXPAND_BUTTON_PREFIX) :]
         link = decode_github_link(custom_id)
         snippet = await self._parse_snippets(link)
 
         def disable_button() -> disnake.ui.View:
             view = disnake.ui.View.from_message(inter.message)
             for comp in view.children:
-                if custom_id in (getattr(comp, "custom_id", None) or ""):
+                if isinstance(comp, disnake.ui.Button) and comp.custom_id == inter.data.custom_id:
                     comp.disabled = True
                     break
             return view

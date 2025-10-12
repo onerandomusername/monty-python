@@ -1,13 +1,19 @@
 import re
+from collections.abc import Callable, Container, Iterable
 from functools import partial
-from typing import Callable, Container, Iterable, List, Union
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
-from bs4.element import NavigableString, PageElement, SoupStrainer, Tag
+from bs4.element import NavigableString, PageElement, Tag
+from bs4.filter import SoupStrainer
 
 from monty.log import get_logger
 
 from . import MAX_SIGNATURE_AMOUNT
+
+
+if TYPE_CHECKING:
+    from markupsafe import Markup
 
 
 log = get_logger(__name__)
@@ -35,9 +41,9 @@ class Strainer(SoupStrainer):
             log.warning("`text` is not a supported kwarg in the custom strainer.")
         super().__init__(**kwargs)
 
-    Markup = Union[PageElement, List["Markup"]]
+    Markup = PageElement | list["Markup"]
 
-    def search(self, markup: Markup) -> Union[PageElement, str]:
+    def search(self, markup: Markup) -> PageElement | str | None:
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""
         if isinstance(markup, str):
             # Let everything through the text filter if we're including strings and tags.
@@ -49,12 +55,12 @@ class Strainer(SoupStrainer):
 
 def _find_elements_until_tag(
     start_element: PageElement,
-    end_tag_filter: Union[Container[str], Callable[[Tag], bool]],
+    end_tag_filter: Container[str] | Callable[[Tag], bool],
     *,
     func: Callable,
     include_strings: bool = False,
     limit: int = None,
-) -> List[Union[Tag, NavigableString]]:
+) -> list[Tag | NavigableString]:
     """
     Get all elements up to `limit` or until a tag matching `end_tag_filter` is found.
 
@@ -99,7 +105,7 @@ def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
     return match_tag
 
 
-def get_general_description(start_element: PageElement) -> List[Union[Tag, NavigableString]]:
+def get_general_description(start_element: PageElement) -> list[Tag | NavigableString]:
     """
     Get page content to a table or a tag with its class in `SEARCH_END_TAG_ATTRS`.
 
@@ -107,25 +113,26 @@ def get_general_description(start_element: PageElement) -> List[Union[Tag, Navig
     If it's found it's used as the tag to start the search from instead of the `start_element`.
     """
     child_tags = _find_recursive_children_until_tag(start_element, _class_filter_factory(["section"]), limit=100)
-    header = next(filter(_class_filter_factory(["headerlink"]), child_tags), None)
+    tag_children = [el for el in child_tags if isinstance(el, Tag)]
+    header = next(filter(_class_filter_factory(["headerlink"]), tag_children), None)
     start_tag = header.parent if header is not None else start_element
     return _find_next_siblings_until_tag(start_tag, _class_filter_factory(_SEARCH_END_TAG_ATTRS), include_strings=True)
 
 
-def get_dd_description(symbol: PageElement) -> List[Union[Tag, NavigableString]]:
+def get_dd_description(symbol: PageElement) -> list[Tag | NavigableString]:
     """Get the contents of the next dd tag, up to a dt or a dl tag."""
     description_tag = symbol.find_next("dd")
     return _find_next_children_until_tag(description_tag, ("dt", "dl"), include_strings=True)
 
 
-def get_signatures(start_signature: PageElement) -> List[str]:
+def get_signatures(start_signature: PageElement) -> list[str]:
     """
     Collect up to `_MAX_SIGNATURE_AMOUNT` signatures from dt tags around the `start_signature` dt tag.
 
     First the signatures under the `start_signature` are included;
     if less than 2 are found, tags above the start signature are added to the result if any are present.
     """
-    signatures = []
+    signatures: list[str] = []
     for element in (
         *reversed(_find_previous_siblings_until_tag(start_signature, ("dd",), limit=2)),
         start_signature,

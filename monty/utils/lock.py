@@ -3,22 +3,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import defaultdict
-from functools import partial
-from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Coroutine,
-    Hashable,
-    Literal,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import Awaitable, Callable, Coroutine, Hashable
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 from weakref import WeakValueDictionary
 
 from monty.errors import LockedResourceError
@@ -28,6 +14,8 @@ from monty.utils.function import command_wraps
 
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")
@@ -38,9 +26,9 @@ if TYPE_CHECKING:
 log = get_logger(__name__)
 __lock_dicts = defaultdict(WeakValueDictionary)
 
-_IdCallableReturn = Union[Hashable, Awaitable[Hashable]]
+_IdCallableReturn = Hashable | Awaitable[Hashable]
 _IdCallable = Callable[[function.BoundArgs], _IdCallableReturn]
-ResourceId = Union[Hashable, _IdCallable]
+ResourceId = Hashable | _IdCallable
 
 
 class SharedEvent:
@@ -63,9 +51,9 @@ class SharedEvent:
 
     def __exit__(
         self,
-        _exc_type: Optional[Type[BaseException]],
-        _exc_val: Optional[BaseException],
-        _exc_tb: Optional[TracebackType],
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: TracebackType | None,
     ) -> None:  # noqa: ANN001
         """Decrement the count of the active holders; if 0 is reached set the internal event."""
         self._active_count -= 1
@@ -164,21 +152,3 @@ def lock(
         return wrapper
 
     return decorator
-
-
-def lock_arg(
-    namespace: Hashable,
-    name_or_pos: function.Argument,
-    func: Callable[[Any], _IdCallableReturn] = None,
-    *,
-    raise_error: bool = False,
-    wait: bool = False,
-) -> Callable:
-    """
-    Apply the `lock` decorator using the value of the arg at the given name/position as the ID.
-
-    `func` is an optional callable or awaitable which will return the ID given the argument value.
-    See `lock` docs for more information.
-    """
-    decorator_func = partial(lock, namespace, raise_error=raise_error, wait=wait)
-    return function.get_arg_value_wrapper(decorator_func, name_or_pos, func)
