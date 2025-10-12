@@ -74,7 +74,7 @@ class Category(enum.Enum):
 
 @dataclass(kw_only=True, frozen=True)
 class SelectMetadata:
-    supertext: Localised | None = None
+    supertext: Localised
     description: Localised
     placeholder: Localised
     subtext: Localised | None = None

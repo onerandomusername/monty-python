@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal
 
 import disnake
 import sqlalchemy as sa
@@ -133,6 +133,36 @@ class Configuration(
         )
         raise BotAccountRequired(msg)
 
+    def _get_select_texts(
+        self,
+        select_group: SelectGroup,
+        inter: disnake.ApplicationCommandInteraction | disnake.ModalInteraction | disnake.MessageInteraction,
+    ) -> tuple[str, str, str | None]:
+        """Get the localised texts for a select group."""
+        value = select_group.value
+        supertext = get_localised_response(inter, "{data}", data=value.supertext)
+        description = get_localised_response(inter, "{data}", data=value.description)
+        subtext = get_localised_response(inter, "{data}", data=value.subtext) if value.subtext else None
+        return supertext, description, subtext
+
+    def _create_select(
+        self,
+        select_group: SelectGroup,
+        options: list[disnake.SelectOption],
+        author_id: int,
+        inter: disnake.ApplicationCommandInteraction | disnake.ModalInteraction | disnake.MessageInteraction,
+    ) -> disnake.ui.Select:
+        """Create a select component for a select group."""
+        placeholder = get_localised_response(inter, "{data}", data=select_group.value.placeholder)
+        return disnake.ui.Select(
+            placeholder=placeholder,
+            options=options,
+            min_values=0,
+            max_values=len(options),
+            custom_id=f"config:v1:select:{select_group.name}:{author_id}",
+            required=False,
+        )
+
     async def _send_categories(self, inter: disnake.ApplicationCommandInteraction) -> None:
         sections = [
             disnake.ui.Section(
@@ -178,6 +208,7 @@ class Configuration(
         self,
         inter: disnake.ApplicationCommandInteraction | disnake.MessageInteraction | disnake.ModalInteraction,
         category: Category,
+        *,
         current_config: GuildConfig | None = None,
         attr: str | None = None,
     ) -> None:
@@ -219,31 +250,16 @@ class Configuration(
                 options = select_group_options.get(select_group, [])
                 if not options:
                     continue
+                supertext, description, subtext = self._get_select_texts(select_group, inter)
                 preceding_text = ""
-                supertext = ""
-                if select_group.value.supertext:
-                    supertext = get_localised_response(inter, "{data}", data=select_group.value.supertext)
-                    preceding_text += "### " + supertext + "\n"
-                if select_group.value.description:
-                    description = get_localised_response(inter, "{data}", data=select_group.value.description)
-                    preceding_text += description + "\n"
-                if preceding_text:
-                    nested_components.append(disnake.ui.TextDisplay(preceding_text.strip()))
-                placeholder = get_localised_response(inter, "{data}", data=select_group.value.placeholder)
-                select = disnake.ui.Select(
-                    placeholder=placeholder,
-                    options=options,
-                    min_values=0,
-                    max_values=len(options),
-                    custom_id=f"config:v1:select:{attr_or_group.name}:{inter.author.id}",
-                    required=False,
-                )
-                modalable_components.append(
-                    disnake.ui.Label(get_localised_response(inter, "{data}", data=supertext), select)
-                )
+
+                preceding_text += "### " + supertext + "\n"
+                preceding_text += description + "\n"
+                nested_components.append(disnake.ui.TextDisplay(preceding_text.strip()))
+                select = self._create_select(select_group, options, inter.author.id, inter)
+                modalable_components.append(disnake.ui.Label(supertext, select))
                 nested_components.append(disnake.ui.ActionRow(select))
-                if select_group.value.subtext:
-                    subtext = get_localised_response(inter, "{data}", data=select_group.value.subtext)
+                if subtext:
                     nested_components.append(disnake.ui.TextDisplay(subtext))
             ## handle button for modal
             elif isinstance(attr_or_group, str):
@@ -349,6 +365,15 @@ class Configuration(
         )
         return
 
+    async def _update_config(self, config: GuildConfig, updates: dict[str, Any]) -> GuildConfig:
+        """Update the config with the provided updates."""
+        async with self.bot.db.begin() as session:
+            for attr, value in updates.items():
+                setattr(config, attr, value)
+            config = await session.merge(config)
+            await session.commit()
+        return config
+
     async def _handle_merged_select(
         self,
         inter: disnake.MessageInteraction | disnake.ModalInteraction,
@@ -372,10 +397,13 @@ class Configuration(
         for attr in groups:
             meta = METADATA[attr]
             parsed_value = bool(attr in values)
-            if parsed_value and not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):
-                raise commands.CheckFailure(
-                    "You cannot set this configuration option as your guild does not have the required feature(s).",
-                )
+            if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):
+                if parsed_value:
+                    raise commands.CheckFailure(
+                        "You cannot set this configuration option as your guild does not have the required feature(s).",
+                    )
+                continue  # IGNORE the value and do not change its current state
+
             selected[attr] = parsed_value
         return selected
 
@@ -437,11 +465,7 @@ class Configuration(
         if not updates:
             raise commands.UserInputError("No valid configuration options were provided.")
 
-        async with self.bot.db.begin() as session:
-            for attr, value in updates.items():
-                setattr(config, attr, value)
-            await session.merge(config)
-            await session.commit()
+        await self._update_config(config, updates)
 
         await inter.response.send_message(
             f"Successfully updated the configuration for the **{group.name}** options.",
@@ -498,11 +522,7 @@ class Configuration(
         if not updates:
             raise commands.UserInputError("No valid configuration options were provided.")
 
-        async with self.bot.db.begin() as session:
-            for attr, value in updates.items():
-                setattr(config, attr, value)
-            await session.merge(config)
-            await session.commit()
+        await self._update_config(config, updates)
 
         await inter.response.send_message(
             f"Successfully updated the configuration for the **{category.value.name}** category.",
