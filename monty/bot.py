@@ -296,12 +296,12 @@ class Monty(commands.Bot):
         partial_load = bool(constants.Client.extensions)
         if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
-        EXTENSIONS.update(walk_extensions())
         requested_extensions = set()
         if isinstance(constants.Client.extensions, set):
             requested_extensions.update(constants.Client.extensions)
 
         for ext, ext_metadata in walk_extensions():
+            EXTENSIONS[ext] = ext_metadata
             if not partial_load:
                 self.load_extension(ext)
                 continue
