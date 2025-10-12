@@ -25,10 +25,9 @@ except ImportError:
     log.info("Using default asyncio event loop.")
 
 
-async def main() -> None:
-    """Create and run the bot."""
-    # we make our redis session here and pass it to cachingutils
-    if constants.Redis.use_fakeredis:
+def get_redis_session(*, use_fakeredis: bool = False) -> redis.asyncio.Redis:
+    """Create the redis session, either fakeredis or a real one based on env vars."""
+    if use_fakeredis:
         try:
             import fakeredis
             import fakeredis.aioredis
@@ -42,6 +41,15 @@ async def main() -> None:
             timeout=300,
         )
         redis_session = redis.asyncio.Redis(connection_pool=pool)
+    return redis_session
+
+
+async def main() -> None:
+    """Create and run the bot."""
+    # we make our redis session here and pass it to cachingutils
+    if constants.Redis.use_fakeredis:
+        log.warning("Using fakeredis for Redis session. This is not suitable for production use.")
+    redis_session = get_redis_session(use_fakeredis=constants.Redis.use_fakeredis)
 
     cachingutils.redis.async_session(
         constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
@@ -52,14 +60,11 @@ async def main() -> None:
         log.info(f"Running database migrations to target {constants.Database.migration_target}")
         await run_alembic()
     else:
-        log.warning("Not running database migrations per environment settings.")
+        log.info("Skipping database migrations per environment settings.")
 
     # ping redis
     await redis_session.ping()
-
-    kwargs: dict[str, str] = {}
-    if constants.Client.proxy is not None:
-        kwargs["proxy"] = constants.Client.proxy
+    log.debug("Successfully pinged redis server.")
 
     bot = Monty(
         redis_session=redis_session,
@@ -68,12 +73,13 @@ async def main() -> None:
         allowed_mentions=constants.Client.allowed_mentions,
         intents=constants.Client.intents,
         command_sync_flags=constants.Client.command_sync_flags,
-        **kwargs,
+        proxy=constants.Client.proxy,
     )
 
     try:
         bot.load_extensions()
     except Exception:
+        log.exception("Failed to load extensions. Shutting down.")
         await bot.close()
         raise
 

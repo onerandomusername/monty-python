@@ -15,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import selectinload
 
 from monty import constants
+from monty.aiohttp_session import CachingClientSession
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
-from monty.http import CachingClientSession
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
