@@ -1,40 +1,27 @@
 import asyncio
 import collections
 import dataclasses
-import functools
-import socket
-import sys
-from datetime import timedelta
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
-from unittest.mock import Mock
+from typing import Any
 from weakref import WeakValueDictionary
 
-import aiohttp
 import arrow
 import cachingutils.redis
 import disnake
-import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
-from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
 from monty import constants
+from monty.aiohttp_session import CachingClientSession
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
-from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
-
-
-if TYPE_CHECKING:
-    from aiohttp.tracing import TraceConfig
 
 
 log = get_logger(__name__)
@@ -102,108 +89,8 @@ class Monty(commands.Bot):
         return self.db_session
 
     def create_http_session(self, proxy: str = None) -> None:
-        """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs: list[TraceConfig] = []
-
-        aiohttp_log = get_logger("monty.http")
-
-        async def on_request_end(
-            session: aiohttp.ClientSession,
-            trace_config_ctx: SimpleNamespace,
-            params: aiohttp.TraceRequestEndParams,
-        ) -> None:
-            """Log all aiohttp requests on request end."""
-            resp = params.response
-            aiohttp_log.info(
-                "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
-                    status=resp.status,
-                    reason=resp.reason or "None",
-                    method=params.method.upper(),
-                    url=params.url,
-                    content_type=resp.content_type,
-                )
-            )
-
-        trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)  # pyright: ignore[reportArgumentType]
-        trace_configs.append(trace_config)
-
-        # dead simple ETag caching
-        cache = RedisCache(
-            "aiohttp_requests",
-            timeout=timedelta(days=5),
-        )
-        _og_request = aiohttp.ClientSession._request
-        cache_logger = get_logger("monty.utils.caching.http")
-
-        async def _request(
-            self: aiohttp.ClientSession,
-            method: str,
-            str_or_url: Any,
-            use_cache: bool = True,
-            **kwargs,
-        ) -> aiohttp.ClientResponse:
-            """Do the same thing as aiohttp does, but always cache the response."""
-            method = method.upper().strip()
-            cache_key = f"{method}:{str(str_or_url)}"
-            async with cache.lock(cache_key):
-                cached = await cache.get(cache_key)
-                if cached and use_cache:
-                    etag, body, resp_headers = cached
-                    if etag:
-                        kwargs.setdefault("headers", {})["If-None-Match"] = etag
-                else:
-                    etag = None
-                    body = None
-                    resp_headers = None
-
-                r = await _og_request(self, method, str_or_url, **kwargs)
-                if not use_cache:
-                    return r
-                if r.status == 304:
-                    cache_logger.debug("HTTP Cache hit on %s", cache_key)
-                    # decode the original headers
-                    headers: CIMultiDict[str] = CIMultiDict()
-                    if resp_headers:
-                        for key, value in resp_headers:
-                            headers[key.decode()] = value.decode()
-                    r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
-                    r.content = reader = aiohttp.StreamReader(
-                        protocol=Mock(_reading_paused=False),
-                        limit=len(body) if body else 0,
-                    )
-                    if body:
-                        reader.feed_data(body)
-                    reader.feed_eof()
-                    r.status = 200
-                    return r
-
-                etag = r.headers.get("ETag")
-                # only cache if etag is provided and the request was in the 200
-                if etag and 200 <= r.status < 300:
-                    body = await r.read()
-                    await cache.set(cache_key, (etag, body, r.raw_headers))
-                return r
-
-        user_agent = (
-            f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.version} "
-            f"({constants.Client.git_repo})"
-        )
-
-        self.http_session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(
-                resolver=aiohttp.AsyncResolver(),
-                family=socket.AF_INET,
-                verify_ssl=not bool(proxy and proxy.startswith("http://")),
-            ),
-            trace_configs=trace_configs,
-            headers=multidict.CIMultiDict({"User-agent": user_agent}),
-        )
-        if proxy:
-            partial_request = functools.partial(_request, self.http_session, proxy=proxy)
-        else:
-            partial_request = functools.partial(_request, self.http_session)
-        self.http_session._request = partial_request
+        """Create the bot's aiohttp session."""
+        self.http_session = CachingClientSession(proxy=proxy)
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
