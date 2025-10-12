@@ -357,29 +357,26 @@ class Configuration(
         values: Sequence[str] | str,
     ) -> dict[str, bool]:
         selected = {}
-        if custom_id not in METADATA:
-            if not custom_id.startswith("config:v1:select:"):
-                raise RuntimeError("Select custom_id is not valid.")
-            custom_id = custom_id.removeprefix("config:v1:select:")
-            try:
-                group_name, _author = custom_id.split(":")
-            except ValueError:
-                raise RuntimeError("Select custom_id is not valid.") from None
-            if group_name not in SelectGroup.__members__:
-                raise RuntimeError("Select custom_id is not valid.")
-            groups = GROUP_TO_ATTR.get(SelectGroup[group_name], [])
-            if not groups:
-                raise RuntimeError("Select custom_id is not valid.")
-            for attr in groups:
-                meta = METADATA[attr]
-                parsed_value = bool(attr in values)
-                if parsed_value and not await can_guild_set_config_option(
-                    self.bot, metadata=meta, guild_id=inter.guild_id
-                ):
-                    raise commands.CheckFailure(
-                        "You cannot set this configuration option as your guild does not have the required feature(s).",
-                    )
-                selected[attr] = parsed_value
+        if not custom_id.startswith("config:v1:select:"):
+            raise RuntimeError("Select custom_id is not valid.")
+        custom_id = custom_id.removeprefix("config:v1:select:")
+        try:
+            group_name, _author = custom_id.split(":")
+        except ValueError:
+            raise RuntimeError("Select custom_id is not valid.") from None
+        if group_name not in SelectGroup.__members__:
+            raise RuntimeError("Select custom_id is not valid.")
+        groups = GROUP_TO_ATTR.get(SelectGroup[group_name], [])
+        if not groups:
+            raise RuntimeError("Select custom_id is not valid.")
+        for attr in groups:
+            meta = METADATA[attr]
+            parsed_value = bool(attr in values)
+            if parsed_value and not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):
+                raise commands.CheckFailure(
+                    "You cannot set this configuration option as your guild does not have the required feature(s).",
+                )
+            selected[attr] = parsed_value
         return selected
 
     @commands.Cog.listener(disnake.Event.button_click)
@@ -478,7 +475,7 @@ class Configuration(
         updates = {}
         for custom_id, value in inter.values.items():
             if custom_id not in METADATA:
-                await self._handle_merged_select(inter, custom_id=custom_id, values=value)
+                updates.update(await self._handle_merged_select(inter, custom_id=custom_id, values=value))
                 continue
             meta = METADATA[custom_id]
             if category not in meta.categories:
