@@ -141,7 +141,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_features(
         self,
         ctx: commands.Context,
-        arg: disnake.Guild | disnake.Object | FeatureConverter = None,
+        arg: disnake.Guild | disnake.Object | FeatureConverter | None = None,
         show_all: Literal["all"] | None = None,
     ) -> None:
         """Manage features."""

@@ -123,8 +123,8 @@ class Discord(
         self,
         inter: disnake.ApplicationCommandInteraction,
         client_id: LargeInt,
-        permissions: Range[int, 0, disnake.Permissions.all().value] = None,
-        guild_id: LargeInt = None,
+        permissions: Range[int, 0, disnake.Permissions.all().value] | None = None,
+        guild_id: LargeInt | None = None,
         raw_link: bool = False,
         ephemeral: bool = True,
     ) -> None:

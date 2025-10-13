@@ -120,7 +120,7 @@ class DocView(DeleteView):
             self.children.pop(i)
             return
 
-    def sync_attribute_dropdown(self, current_attribute: str = None) -> None:
+    def sync_attribute_dropdown(self, current_attribute: str | None = None) -> None:
         """Set up the attribute select menu."""
         self.attribute_select.options.clear()
         for attr in self.attributes[:25]:
@@ -134,7 +134,7 @@ class DocView(DeleteView):
                 default=default,
             )
 
-    def set_link_button(self, url: str = None) -> None:
+    def set_link_button(self, url: str | None = None) -> None:
         """Set the link button to the provided url, or the default url."""
         if not hasattr(self, "go_to_doc"):
             self.go_to_doc = disnake.ui.Button(style=disnake.ButtonStyle.url, url="", label="Open docs")
@@ -245,7 +245,7 @@ class DocCog(
         """Returns all doc symbols, even whitelisted and blacklisted ones."""
         return ChainMap(*self.doc_symbols_new.values())
 
-    def get_packages_for_guild(self, guild_id: int = None) -> typing.ChainMap[str, DocItem]:
+    def get_packages_for_guild(self, guild_id: int | None = None) -> typing.ChainMap[str, DocItem]:
         """Gets packages whitelisted in the specific guild."""
         if guild_id in self.whitelist:
             return ChainMap(*[self.doc_symbols_new[pkg] for pkg in self.whitelist[guild_id]], self.doc_symbols)
@@ -254,7 +254,7 @@ class DocCog(
     def _get_default_completion(
         self,
         inter: disnake.ApplicationCommandInteraction | commands.Context | disnake.Message,
-        guild: disnake.Guild = None,
+        guild: disnake.Guild | None = None,
     ) -> list[str]:
         if guild:
             if guild.id == constants.Guilds.disnake:

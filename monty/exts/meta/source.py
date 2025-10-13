@@ -85,7 +85,7 @@ class FrozenChainMap(Mapping[K, V]):
         """Create a ChainMap with a single dict created from the iterable."""
         return cls(dict.fromkeys(iterable, *args))
 
-    def new_child(self, m: Mapping[K, Any] = None) -> "FrozenChainMap[K, V]":  # like Django's Context.push()
+    def new_child(self, m: Mapping[K, Any] | None = None) -> "FrozenChainMap[K, V]":  # like Django's Context.push()
         """
         New ChainMap with a new map followed by all previous maps.
 
@@ -212,11 +212,11 @@ class MetaSource(
         self,
         ctx: commands.Context | disnake.ApplicationCommandInteraction,
         *,
-        source_item: SourceConverterAnn = None,
+        source_item: SourceConverterAnn | None = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command or cog."""
 
-        async def send_message(embed: disnake.Embed, components: list = None) -> None:
+        async def send_message(embed: disnake.Embed, components: list | None = None) -> None:
             components = components or []
             if isinstance(ctx, commands.Context):
                 components.insert(0, DeleteButton(ctx.author, initial_message=ctx.message))

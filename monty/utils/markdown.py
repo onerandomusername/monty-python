@@ -106,7 +106,7 @@ class DocMarkdownConverter(MarkdownConverter):
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
-    def __init__(self, repo: str = None) -> None:
+    def __init__(self, repo: str | None = None) -> None:
         self._repo = (repo or "").rstrip("/")
 
     def text(self, text: str) -> str:
@@ -177,7 +177,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """Return text in lists as-is."""
         return text + "\n"
 
-    def block_code(self, code: str, info: str = None) -> str:
+    def block_code(self, code: str, info: str | None = None) -> str:
         """Put the code in a codeblock."""
         md = "```"
         if info is not None:
