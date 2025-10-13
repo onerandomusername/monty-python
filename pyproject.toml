@@ -130,7 +130,6 @@ ignore = [
     "S101", # Use of `assert` detected
     "S311", # pseduo-random generators, random is used everywhere for random choices.
 
-    "A00",
     "ARG",
     "ASYNC",
     "BLE",
@@ -161,6 +160,9 @@ ignore = [
 "monty/alembic/*" = ["D"]
 "_global_source_snekcode.py" = ["T201"]
 
+[tool.ruff.lint.flake8-builtins]
+ignorelist = ["id"]
+
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 known-first-party = ["monty"]
@@ -170,6 +172,7 @@ convention = "numpy"
 
 [tool.ruff.lint.mccabe]
 max-complexity = 20
+
 
 [tool.poe.tasks]
 lint = { cmd = "prek run --all-files", help = "Lint the source code" }

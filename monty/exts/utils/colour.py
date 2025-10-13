@@ -284,16 +284,16 @@ class Colour(
         await self.send_colour_response(ctx, hex_tuple, input_colour=hex_code)
 
     @slash_colour.sub_command(name="hex")
-    async def slash_hex(self, inter: disnake.ApplicationCommandInteraction, hex: str) -> None:
+    async def slash_hex(self, inter: disnake.ApplicationCommandInteraction, hex_code: str) -> None:
         """
         HEX Format.
 
         Parameters
         ----------
-        hex: Hex colour code.
+        hex_code: Hex colour code.
         """
-        hex, hex_tuple = self._hex(hex)
-        await self.send_colour_response(inter, hex_tuple, input_colour=hex)
+        hex_code, hex_tuple = self._hex(hex_code)
+        await self.send_colour_response(inter, hex_tuple, input_colour=hex_code)
 
     def _name(self, name: str) -> tuple[str, tuple[int, int, int]]:
         """Convert colour name to RGB tuple."""

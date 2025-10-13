@@ -44,9 +44,9 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     @require_feature(constants.Feature.GLOBAL_SOURCE)
     @commands.command(name="globalsource", aliases=("gs",), hidden=True)
-    async def globalsource(self, ctx: commands.Context, object: str) -> None:
+    async def globalsource(self, ctx: commands.Context, object: str) -> None:  # noqa: A002
         """Get the source of a python object."""
-        object = object.strip("`")
+        object = object.strip("`")  # noqa: A001
         async with ctx.typing():
             result = await self.snekbox.post_eval(
                 self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object),

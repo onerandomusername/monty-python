@@ -87,8 +87,8 @@ def is_rolled_out_to(id: int, *, rollout: Rollout, include_rollout_id: bool = Tr
     if include_rollout_id:
         to_hash = str(rollout.id) + ":" + to_hash
 
-    hash = hashlib.sha256(to_hash.encode()).hexdigest()
-    hash_int = int(hash, 16)
+    rollout_hash = hashlib.sha256(to_hash.encode()).hexdigest()
+    hash_int = int(rollout_hash, 16)
     is_enabled = (hash_int % 10_000) in range(rollout.rollout_hash_low, rollout.rollout_hash_high)
 
     return is_enabled
