@@ -264,10 +264,7 @@ class PythonEnhancementProposals(
         if not query:
             # return some interesting peps
             interesting_peps = [0, 8, 257, 517, 619, 660, 664]
-            resp = {}
-            for title, pep in self.autocomplete.items():
-                if pep in interesting_peps:
-                    resp[title] = pep
+            resp = {title: pep for title, pep in self.autocomplete.items() if pep in interesting_peps}
             return dict(sorted(resp.items(), key=lambda x: int(x[1])))
 
         peps: dict[str, int] = {}

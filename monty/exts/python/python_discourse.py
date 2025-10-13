@@ -114,16 +114,14 @@ class PythonDiscourse(commands.Cog):
 
     def extract_topic_urls(self, content: str) -> list[DiscussionTopic]:
         """Extract python discourse urls from the provided content."""
-        posts: list[DiscussionTopic] = []
-        for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content))):
-            posts.append(
-                DiscussionTopic(
-                    id=match.group("num"),
-                    url=match[0],
-                    reply=match.group("reply"),
-                )
+        return [
+            DiscussionTopic(
+                id=match.group("num"),
+                url=match[0],
+                reply=match.group("reply"),
             )
-        return posts
+            for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content)))
+        ]
 
     @commands.Cog.listener("on_message")
     async def on_message(self, message: disnake.Message) -> None:

@@ -177,14 +177,13 @@ class LinePaginator(commands.Paginator):
             log.debug("No lines to add to paginator, adding '(nothing to display)' message")
             lines = ("(nothing to display)",)
 
-        for line in lines:
-            try:
+        try:
+            for line in lines:
                 paginator.add_line(line, empty=empty)
-            except Exception:
-                log.exception(f"Failed to add line to paginator: '{line}'")
-                raise  # Should propagate
-            else:
                 log.trace(f"Added line to paginator: '{line}'")
+        except Exception:
+            log.exception(f"Failed to add line to paginator: '{line}'")
+            raise  # Should propagate
 
         log.debug(f"Paginator created with {len(paginator.pages)} pages")
 

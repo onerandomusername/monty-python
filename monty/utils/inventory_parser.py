@@ -141,7 +141,7 @@ async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> In
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
             inventory = await _fetch_inventory(bot, url)
-        except aiohttp.ClientConnectorError:
+        except aiohttp.ClientConnectorError:  # noqa: PERF203
             log.warning(
                 f"Failed to connect to inventory url at {url}; trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )

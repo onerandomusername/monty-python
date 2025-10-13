@@ -506,15 +506,15 @@ class Snekbox(
         """Uninstall the provided package from snekbox."""
         resp = None
         async with ctx.typing():
-            for package in packages:
-                try:
+            try:
+                for package in packages:
                     async with self.bot.http_session.delete(
                         self.url / "packages" / package, headers=HEADERS, raise_for_status=True
                     ) as resp:
                         pass
-                except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                    msg = "Snekbox backend is offline or misconfigured."
-                    raise APIError(msg, status_code=0, api="snekbox") from e
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                msg = "Snekbox backend is offline or misconfigured."
+                raise APIError(msg, status_code=0, api="snekbox") from e
         status = resp.status if resp else "N/A"
         await ctx.reply(
             f"[{status}] Deleted the package" + ("s." if len(packages) > 1 else "."),

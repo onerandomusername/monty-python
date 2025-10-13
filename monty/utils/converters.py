@@ -155,10 +155,7 @@ class Extension(commands.Converter):
         elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
             return qualified_arg
 
-        matches = []
-        for ext in EXTENSIONS:
-            if argument == unqualify(ext):
-                matches.append(ext)
+        matches = [ext for ext in EXTENSIONS if argument == unqualify(ext)]
 
         if len(matches) > 1:
             matches.sort()

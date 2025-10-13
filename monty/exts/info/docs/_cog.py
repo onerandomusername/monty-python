@@ -1149,17 +1149,16 @@ class DocCog(
         if not matches:
             return
 
-        tasks = []
-        for match in matches:
-            tasks.append(
-                self._docs_get_command(
-                    message,
-                    match,
-                    return_embed=True,
-                    threshold=100,
-                    scorer=rapidfuzz.fuzz.partial_ratio,
-                )
+        tasks = [
+            self._docs_get_command(
+                message,
+                match,
+                return_embed=True,
+                threshold=100,
+                scorer=rapidfuzz.fuzz.partial_ratio,
             )
+            for match in matches
+        ]
 
         embeds = [e for e in await asyncio.gather(*tasks) if isinstance(e, disnake.Embed)]
         if not embeds:

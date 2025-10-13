@@ -53,7 +53,7 @@ class FrozenChainMap(Mapping[K, V]):
         for mapping in self.maps:
             try:
                 return mapping[key]  # can't use 'key in mapping' with defaultdict
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 pass
         return self.__missing__(key)  # support subclasses that define __missing__
 

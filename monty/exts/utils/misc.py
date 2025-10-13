@@ -94,9 +94,7 @@ class Misc(
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
-        lines: list[str] = []
-        for snowflake in snowflakes:
-            lines.append(self._format_snowflake(snowflake))
+        lines: list[str] = [self._format_snowflake(snowflake) for snowflake in snowflakes]
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 

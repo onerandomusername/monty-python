@@ -67,8 +67,7 @@ def _get_sig(
     if include_posargs is not None:
         _extend_posargs(signature, include_posargs, *args)
     else:
-        for arg in args:
-            signature.append(hash(arg))
+        signature.extend([hash(arg) for arg in args])
 
     if include_kwargs is not None:
         _extend_kwargs(signature, include_kwargs, allow_unset, **kwargs)
