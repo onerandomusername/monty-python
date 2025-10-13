@@ -20,7 +20,9 @@ from monty.utils.messages import DeleteButton
 
 EXT_METADATA = ExtMetadata(core=True)
 
-AnyContext = commands.Context | disnake.ApplicationCommandInteraction
+AnyContext = (
+    commands.Context | disnake.ApplicationCommandInteraction | disnake.ModalInteraction | disnake.MessageInteraction
+)
 
 logger = get_logger(__name__)
 
@@ -181,6 +183,7 @@ class ErrorHandler(
         commands.Command
         | commands.InvokableApplicationCommand
         | disnake.Message
+        | disnake.ModalInteraction
         | disnake.ApplicationCommandInteraction
         | disnake.ModalInteraction
         | disnake.MessageInteraction
@@ -195,7 +198,7 @@ class ErrorHandler(
             command = ctx.message
         elif isinstance(ctx, disnake.ModalInteraction):
             # TODO: this should also consider the app command if possible
-            command = ctx.message
+            command = ctx.message or ctx
         else:
             command = None
         return command
@@ -386,6 +389,8 @@ class ErrorHandler(
     @commands.Cog.listener(name="on_command_error")
     @commands.Cog.listener(name="on_slash_command_error")
     @commands.Cog.listener(name="on_message_command_error")
+    @commands.Cog.listener(name="on_modal_error")
+    @commands.Cog.listener(name="on_dropdown_error")
     async def on_any_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Handle all errors with one mega error handler."""
         # add the support button

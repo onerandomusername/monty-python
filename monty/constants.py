@@ -1,9 +1,10 @@
-import dataclasses
+import enum
 import logging
 from os import environ
 from typing import TYPE_CHECKING, Literal, cast
 
 import disnake
+from disnake.ext import commands
 
 
 if TYPE_CHECKING:
@@ -34,6 +35,21 @@ class Client:
     version = environ.get("GIT_SHA", "main")
     default_command_prefix = environ.get("PREFIX", "-")
     config_prefix = "monty-python"
+    intents = disnake.Intents.default() | disnake.Intents.message_content
+    command_sync_flags = commands.CommandSyncFlags(
+        allow_command_deletion=False,
+        sync_guild_commands=True,
+        sync_global_commands=True,
+        sync_commands_debug=True,
+        sync_on_cog_actions=True,
+    )
+    allowed_mentions = disnake.AllowedMentions(
+        everyone=False,
+        roles=False,
+        users=False,
+        replied_user=True,
+    )
+    activity = disnake.Game(name=f"Commands: {default_command_prefix}help")
 
     # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
@@ -67,7 +83,7 @@ class Client:
 
 class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
-    run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
+    run_migrations: bool = environ.get("DB_RUN_MIGRATIONS", "true").lower() != "false"
     migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
 
 
@@ -217,22 +233,21 @@ class Endpoints:
 
 
 ## Feature Management
-@dataclasses.dataclass()
-class Feature:
-    CODEBLOCK_RECOMMENDATIONS: str = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
-    DISCORD_TOKEN_REMOVER: str = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
-    DISCORD_WEBHOOK_REMOVER: str = "DISCORD_WEBHOOK_FILTER"
-    GITHUB_COMMENT_LINKS: str = "GITHUB_EXPAND_COMMENT_LINKS"
-    GITHUB_DISCUSSIONS: str = "GITHUB_AUTOLINK_DISCUSSIONS"
-    GITHUB_ISSUE_EXPAND: str = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
-    GITHUB_ISSUE_LINKS: str = "GITHUB_EXPAND_ISSUE_LINKS"
-    GLOBAL_SOURCE: str = "GLOBAL_SOURCE_COMMAND"
-    INLINE_DOCS: str = "INLINE_DOCUMENTATION"
-    INLINE_EVALULATION: str = "INLINE_EVALULATION"
-    PYPI_AUTOCOMPLETE: str = "PYPI_PACKAGE_AUTOCOMPLETE"
-    PYTHON_DISCOURSE_AUTOLINK: str = "PYTHON_DISCOURSE_AUTOLINK"
-    RUFF_RULE_V2: str = "RUFF_RULE_V2"
-    SOURCE_AUTOCOMPLETE: str = "META_SOURCE_COMMAND_AUTOCOMPLETE"
+class Feature(enum.Enum):
+    CODEBLOCK_RECOMMENDATIONS = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
+    DISCORD_TOKEN_REMOVER = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
+    DISCORD_WEBHOOK_REMOVER = "DISCORD_WEBHOOK_FILTER"
+    GITHUB_COMMENT_LINKS = "GITHUB_EXPAND_COMMENT_LINKS"
+    GITHUB_DISCUSSIONS = "GITHUB_AUTOLINK_DISCUSSIONS"
+    GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+    GITHUB_ISSUE_LINKS = "GITHUB_EXPAND_ISSUE_LINKS"
+    GLOBAL_SOURCE = "GLOBAL_SOURCE_COMMAND"
+    INLINE_DOCS = "INLINE_DOCUMENTATION"
+    INLINE_EVALULATION = "INLINE_EVALULATION"
+    PYPI_AUTOCOMPLETE = "PYPI_PACKAGE_AUTOCOMPLETE"
+    PYTHON_DISCOURSE_AUTOLINK = "PYTHON_DISCOURSE_AUTOLINK"
+    RUFF_RULE_V2 = "RUFF_RULE_V2"
+    SOURCE_AUTOCOMPLETE = "META_SOURCE_COMMAND_AUTOCOMPLETE"
 
 
 # legacy implementation of features, will be removed in the future

@@ -1,40 +1,26 @@
 import asyncio
 import collections
-import dataclasses
-import functools
-import socket
-import sys
-from datetime import timedelta
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
-from unittest.mock import Mock
+from typing import Any
 from weakref import WeakValueDictionary
 
-import aiohttp
 import arrow
 import cachingutils.redis
 import disnake
-import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
-from multidict import CIMultiDict, CIMultiDictProxy
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
 from monty import constants
+from monty.aiohttp_session import CachingClientSession
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
-from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
-
-
-if TYPE_CHECKING:
-    from aiohttp.tracing import TraceConfig
 
 
 log = get_logger(__name__)
@@ -64,7 +50,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str = None, **kwargs) -> None:
+    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str | None = None, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
@@ -101,109 +87,9 @@ class Monty(commands.Bot):
         """Alias of `bot.db_session`."""
         return self.db_session
 
-    def create_http_session(self, proxy: str = None) -> None:
-        """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs: list[TraceConfig] = []
-
-        aiohttp_log = get_logger("monty.http")
-
-        async def on_request_end(
-            session: aiohttp.ClientSession,
-            trace_config_ctx: SimpleNamespace,
-            params: aiohttp.TraceRequestEndParams,
-        ) -> None:
-            """Log all aiohttp requests on request end."""
-            resp = params.response
-            aiohttp_log.info(
-                "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
-                    status=resp.status,
-                    reason=resp.reason or "None",
-                    method=params.method.upper(),
-                    url=params.url,
-                    content_type=resp.content_type,
-                )
-            )
-
-        trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)  # pyright: ignore[reportArgumentType]
-        trace_configs.append(trace_config)
-
-        # dead simple ETag caching
-        cache = RedisCache(
-            "aiohttp_requests",
-            timeout=timedelta(days=5),
-        )
-        _og_request = aiohttp.ClientSession._request
-        cache_logger = get_logger("monty.utils.caching.http")
-
-        async def _request(
-            self: aiohttp.ClientSession,
-            method: str,
-            str_or_url: Any,
-            use_cache: bool = True,
-            **kwargs,
-        ) -> aiohttp.ClientResponse:
-            """Do the same thing as aiohttp does, but always cache the response."""
-            method = method.upper().strip()
-            cache_key = f"{method}:{str_or_url!s}"
-            async with cache.lock(cache_key):
-                cached = await cache.get(cache_key)
-                if cached and use_cache:
-                    etag, body, resp_headers = cached
-                    if etag:
-                        kwargs.setdefault("headers", {})["If-None-Match"] = etag
-                else:
-                    etag = None
-                    body = None
-                    resp_headers = None
-
-                r = await _og_request(self, method, str_or_url, **kwargs)
-                if not use_cache:
-                    return r
-                if r.status == 304:
-                    cache_logger.debug("HTTP Cache hit on %s", cache_key)
-                    # decode the original headers
-                    headers: CIMultiDict[str] = CIMultiDict()
-                    if resp_headers:
-                        for key, value in resp_headers:
-                            headers[key.decode()] = value.decode()
-                    r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
-                    r.content = reader = aiohttp.StreamReader(
-                        protocol=Mock(_reading_paused=False),
-                        limit=len(body) if body else 0,
-                    )
-                    if body:
-                        reader.feed_data(body)
-                    reader.feed_eof()
-                    r.status = 200
-                    return r
-
-                etag = r.headers.get("ETag")
-                # only cache if etag is provided and the request was in the 200
-                if etag and 200 <= r.status < 300:
-                    body = await r.read()
-                    await cache.set(cache_key, (etag, body, r.raw_headers))
-                return r
-
-        user_agent = (
-            f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.version} "
-            f"({constants.Client.git_repo})"
-        )
-
-        self.http_session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(
-                resolver=aiohttp.AsyncResolver(),
-                family=socket.AF_INET,
-                verify_ssl=not bool(proxy and proxy.startswith("http://")),
-            ),
-            trace_configs=trace_configs,
-            headers=multidict.CIMultiDict({"User-agent": user_agent}),
-        )
-        if proxy:
-            partial_request = functools.partial(_request, self.http_session, proxy=proxy)
-        else:
-            partial_request = functools.partial(_request, self.http_session)
-        self.http_session._request = partial_request
+    def create_http_session(self, proxy: str | None = None) -> None:
+        """Create the bot's aiohttp session."""
+        self.http_session = CachingClientSession(proxy=proxy)
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
@@ -281,10 +167,10 @@ class Monty(commands.Bot):
             stmt = sa.select(Feature).options(selectinload(Feature.rollout))
             result = await session.scalars(stmt)
             existing_feature_names = {feature.name for feature in result.all()}
-            for feature_name in dataclasses.asdict(constants.Feature()).values():
-                if feature_name in existing_feature_names:
+            for feature_enum in constants.Feature:
+                if feature_enum.value in existing_feature_names:
                     continue
-                feature_instance = Feature(feature_name)
+                feature_instance = Feature(feature_enum.value)
                 session.add(feature_instance)
             await session.commit()  # this will error out if it cannot be made
 
@@ -305,7 +191,7 @@ class Monty(commands.Bot):
     async def guild_has_feature(
         self,
         guild: int | disnake.abc.Snowflake | None,
-        feature: str,
+        feature: constants.Feature | str,
         *,
         include_feature_status: bool = True,
         create_if_not_exists: bool = True,
@@ -316,6 +202,8 @@ class Monty(commands.Bot):
         By default, this considers the feature's enabled status,
         which can be disabled with `include_feature_status` set to False.
         """
+        if isinstance(feature, constants.Feature):
+            feature = feature.value
         # first create the feature if we are told to create it
         if feature in self.features:
             feature_instance = self.features[feature]
@@ -339,9 +227,8 @@ class Monty(commands.Bot):
                             self.features[feature] = feature_instance
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
-        if include_feature_status and feature_instance:
-            if feature_instance.enabled is not None:
-                return feature_instance.enabled
+        if include_feature_status and feature_instance and feature_instance.enabled is not None:
+            return feature_instance.enabled
 
         # the feature's enabled status is None, so we should check the guild
         # support the guild being None to make it easier to use
@@ -379,17 +266,27 @@ class Monty(commands.Bot):
         )
         return await super().login(token)
 
-    async def close(self) -> None:
+    async def close(self, *, unplanned: bool = False) -> None:
         """Close sessions when bot is shutting down."""
-        await super().close()
+        if not self.is_closed():
+            await super().close()
+        else:
+            log.debug("Bot is already closed; skipping super().close()")
 
+        if unplanned:
+            log.warning("Bot is shutting down; closing sessions.")
+        else:
+            log.info("Bot is shutting down; closing sessions.")
         if self.http_session:
             await self.http_session.close()
+            log.debug("HTTP session closed.")
         if self.db_engine:
             await self.db_engine.dispose()
+            log.debug("Database engine disposed.")
 
         if self.redis_session:
             await self.redis_session.aclose(close_connection_pool=True)
+            log.debug("Redis session closed.")
 
         await asyncio.sleep(0.6)
 
@@ -398,17 +295,21 @@ class Monty(commands.Bot):
         partial_load = bool(constants.Client.extensions)
         if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
-        EXTENSIONS.update(walk_extensions())
         requested_extensions = set()
         if isinstance(constants.Client.extensions, set):
             requested_extensions.update(constants.Client.extensions)
 
         for ext, ext_metadata in walk_extensions():
+            EXTENSIONS[ext] = ext_metadata
             if not partial_load:
                 self.load_extension(ext)
                 continue
 
             if ext_metadata.core or ext in requested_extensions:
+                if ext_metadata.core:
+                    log.debug("Loading %r as it is a core extension.", ext)
+                if ext in requested_extensions:
+                    log.debug("Loading %r as it is a requested extension.", ext)
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
