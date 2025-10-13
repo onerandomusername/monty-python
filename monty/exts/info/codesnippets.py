@@ -8,6 +8,7 @@ from urllib.parse import unquote as urlunquote
 
 import cachingutils
 import disnake
+import yarl
 from aiohttp import ClientResponseError
 from disnake.ext import commands
 
@@ -319,10 +320,16 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
+                unsanitized = match.group(0)
+                normalised = str(yarl.URL(unsanitized))
+                if normalised != unsanitized:
+                    match = pattern.fullmatch(normalised)
+                    if not match:
+                        continue
                 try:
                     snippet = await handler(**match.groupdict())
                     all_snippets.append((match.start(), snippet))
-                except ClientResponseError as error:  # noqa: PERF203
+                except ClientResponseError as error:
                     error_message = error.message
                     log.log(
                         logging.DEBUG if error.status == 404 else logging.ERROR,
