@@ -77,7 +77,7 @@ class DeleteManager(commands.Cog):
         # get the button from the view
         components = disnake.ui.components_from_message(inter.message)
         for comp in disnake.ui.walk_components(components):
-            if VIEW_DELETE_ID_V1 == getattr(comp, "custom_id", None) and isinstance(comp, disnake.ui.Button):
+            if getattr(comp, "custom_id", None) == VIEW_DELETE_ID_V1 and isinstance(comp, disnake.ui.Button):
                 break
         else:
             raise RuntimeError("view doesn't contain the button that was clicked.")

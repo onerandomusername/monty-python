@@ -5,13 +5,13 @@ from monty.config.models import Category, ConfigAttrMetadata, FreeResponseMetada
 
 
 __all__ = (
-    "METADATA",
-    "GROUP_TO_ATTR",
     "CATEGORY_TO_ATTR",
+    "GROUP_TO_ATTR",
+    "METADATA",
     "Category",
     "ConfigAttrMetadata",
-    "SelectGroup",
     "FreeResponseMetadata",
+    "SelectGroup",
     "SelectOptionMetadata",
     "get_category_choices",
 )

@@ -50,7 +50,7 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str = None, **kwargs) -> None:
+    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str | None = None, **kwargs) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
@@ -87,7 +87,7 @@ class Monty(commands.Bot):
         """Alias of `bot.db_session`."""
         return self.db_session
 
-    def create_http_session(self, proxy: str = None) -> None:
+    def create_http_session(self, proxy: str | None = None) -> None:
         """Create the bot's aiohttp session."""
         self.http_session = CachingClientSession(proxy=proxy)
 
@@ -163,17 +163,16 @@ class Monty(commands.Bot):
         """Update the database with all features defined immediately upon launch. No more lazy creation."""
         await self.wait_until_first_connect()
 
-        async with self._feature_db_lock:
-            async with self.db.begin() as session:
-                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
-                result = await session.scalars(stmt)
-                existing_feature_names = {feature.name for feature in result.all()}
-                for feature_enum in constants.Feature:
-                    if feature_enum.value in existing_feature_names:
-                        continue
-                    feature_instance = Feature(feature_enum.value)
-                    session.add(feature_instance)
-                await session.commit()  # this will error out if it cannot be made
+        async with self._feature_db_lock, self.db.begin() as session:
+            stmt = sa.select(Feature).options(selectinload(Feature.rollout))
+            result = await session.scalars(stmt)
+            existing_feature_names = {feature.name for feature in result.all()}
+            for feature_enum in constants.Feature:
+                if feature_enum.value in existing_feature_names:
+                    continue
+                feature_instance = Feature(feature_enum.value)
+                session.add(feature_instance)
+            await session.commit()  # this will error out if it cannot be made
 
         await self.refresh_features()
 
@@ -228,9 +227,8 @@ class Monty(commands.Bot):
                             self.features[feature] = feature_instance
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
-        if include_feature_status and feature_instance:
-            if feature_instance.enabled is not None:
-                return feature_instance.enabled
+        if include_feature_status and feature_instance and feature_instance.enabled is not None:
+            return feature_instance.enabled
 
         # the feature's enabled status is None, so we should check the guild
         # support the guild being None to make it easier to use
@@ -353,7 +351,7 @@ class Monty(commands.Bot):
         command = super().remove_command(name)
         if command is None:
             # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
-            return
+            return None
 
         self.dispatch("command_remove", command)
         self._remove_root_aliases(command)

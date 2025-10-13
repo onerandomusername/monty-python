@@ -237,7 +237,7 @@ class GithubInfo(
         """
         await self._fetch_and_update_ratelimits()
 
-        # todo: cache the schema in redis and load from there
+        # TODO: cache the schema in redis and load from there
         self.gql = await self.gql_client.connect_async(reconnecting=True)
 
     def cog_unload(self) -> None:
@@ -353,7 +353,7 @@ class GithubInfo(
         user: The user to get repositories for.
         repo: The repository to fetch.
         """
-        # todo: get from the database
+        # TODO: get from the database
         if guild_id:
             user = user or await self.fetch_guild_to_org(guild_id)
 
@@ -1363,7 +1363,7 @@ class GithubInfo(
     @commands.Cog.listener("on_message_delete")
     async def on_message_delete(self, message: disnake.Message) -> None:
         """Clear the message from the cache."""
-        # todo: refactor the cache to prune itself *somehow*
+        # TODO: refactor the cache to prune itself *somehow*
         try:
             del self.autolink_cache[message.id]
         except KeyError:

@@ -54,7 +54,7 @@ class SharedEvent:
         _exc_type: type[BaseException] | None,
         _exc_val: BaseException | None,
         _exc_tb: TracebackType | None,
-    ) -> None:  # noqa: ANN001
+    ) -> None:
         """Decrement the count of the active holders; if 0 is reached set the internal event."""
         self._active_count -= 1
         if not self._active_count:

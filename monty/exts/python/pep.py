@@ -137,8 +137,6 @@ class PythonEnhancementProposals(
                 message=f"PEP {pep_nr} does not exist.",
             )
 
-        return None
-
     def generate_pep_embed(self, pep_header: dict, pep_nr: int) -> disnake.Embed:
         """Generate PEP embed based on PEP headers data."""
         # Assemble the embed

@@ -66,7 +66,6 @@ def patch_typing() -> None:
         except disnake.Forbidden:
             last_403 = utcnow()
             log.warning("Got a 403 from typing event!")
-            pass
 
     disnake.http.HTTPClient.send_typing = honeybadger_type  # type: ignore
 

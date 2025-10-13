@@ -82,7 +82,7 @@ class Scheduler:
 
         self.schedule(task_id, coroutine)
 
-    def schedule_later(self, delay: int | float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    def schedule_later(self, delay: float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """
         Schedule `coroutine` to be executed after the given `delay` number of seconds.
 
@@ -111,7 +111,7 @@ class Scheduler:
         for task_id in self._scheduled_tasks.copy():
             self.cancel(task_id)
 
-    async def _await_later(self, delay: int | float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
+    async def _await_later(self, delay: float, task_id: t.Hashable, coroutine: t.Coroutine) -> None:
         """Await `coroutine` after the given `delay` number of seconds."""
         try:
             self._log.trace(f"Waiting {delay} seconds before awaiting coroutine for #{task_id}.")

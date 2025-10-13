@@ -80,7 +80,7 @@ class CachingClientSession(aiohttp.ClientSession):
     ) -> aiohttp.ClientResponse:
         """Do the same thing as aiohttp does, but always cache the response."""
         method = method.upper().strip()
-        cache_key = f"{method}:{str(str_or_url)}"
+        cache_key = f"{method}:{str_or_url!s}"
         async with self.cache.lock(cache_key):
             cached = await self.cache.get(cache_key)
             if cached and use_cache:

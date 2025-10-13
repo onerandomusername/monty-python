@@ -9,9 +9,9 @@ from monty.constants import Feature
 
 
 __all__ = (
-    "METADATA",
     "CATEGORY_TO_ATTR",
     "GROUP_TO_ATTR",
+    "METADATA",
 )
 
 

@@ -486,13 +486,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                     )
                 )
         # we are here because there are no features
+        elif guild_to_check:
+            components[-1].children.append(disnake.ui.TextDisplay(f"No features are overridden for {guild_to_check}"))
         else:
-            if guild_to_check:
-                components[-1].children.append(
-                    disnake.ui.TextDisplay(f"No features are overridden for {guild_to_check}")
-                )
-            else:
-                components[-1].children.append(disnake.ui.TextDisplay("No features are overridden."))
+            components[-1].children.append(disnake.ui.TextDisplay("No features are overridden."))
 
         # Paginator buttons
         if total >= FEATURES_PER_PAGE:
@@ -830,9 +827,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             if not guild_has_feature:
                 if feature.name not in guild_db.feature_ids:
                     guild_db.feature_ids.append(feature.name)
-            else:
-                if feature.name in guild_db.feature_ids:
-                    guild_db.feature_ids.remove(feature.name)
+            elif feature.name in guild_db.feature_ids:
+                guild_db.feature_ids.remove(feature.name)
             guild_db = await session.merge(guild_db)
             self.bot.guild_db[guild.id] = guild_db
             await session.commit()

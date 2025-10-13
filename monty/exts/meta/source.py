@@ -34,7 +34,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-# todo: move to utils
+# TODO: move to utils
 COG_NAME_REGEX = re.compile(r"((?<=[a-z])[A-Z]|(?<=[a-zA-Z])[A-Z](?=[a-z]))")
 
 logger = get_logger(__name__)
@@ -108,7 +108,7 @@ class MetaSource(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        # todo: add more features to the values, typed as object for now
+        # TODO: add more features to the values, typed as object for now
         self.objects: dict[str, object] = {}
         self.refresh_active = asyncio.Lock()
         self._cog_ready = asyncio.Event()
@@ -148,7 +148,7 @@ class MetaSource(
             self.all_cogs = self.bot.cogs
             self.all_extensions = self.bot.extensions
 
-            # todo: this will need to be synced
+            # TODO: this will need to be synced
             self.all_prefix_commands: dict[str, commands.Command | commands.Group] = {}
             for cmd in self.bot.walk_commands():
                 self.all_prefix_commands[cmd.qualified_name] = cmd
@@ -223,7 +223,6 @@ class MetaSource(
             else:
                 components.insert(0, DeleteButton(ctx.author))
             await ctx.send(embed=embed, components=components)
-            return
 
         if not source_item:
             embed = disnake.Embed(title=f"{Client.name}'s GitHub Repository")
@@ -274,7 +273,7 @@ class MetaSource(
             return {query: query} if query else {}
 
         await self._cog_ready.wait()
-        # todo: weight the first results based on usage
+        # TODO: weight the first results based on usage
         scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
 
         if not query:

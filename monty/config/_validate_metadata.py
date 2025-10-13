@@ -13,10 +13,12 @@ def _check_config_metadata(metadata: dict[str, ConfigAttrMetadata]) -> None:
             assert isinstance(m.select_option, SelectOptionMetadata)
             assert m.type is bool
         if m.modal:
-            assert m.description and len(m.description) <= 45
+            assert m.description
+            assert len(m.description) <= 45
         if m.depends_on_features:
             for feature in m.depends_on_features:
                 assert feature in constants.Feature
     for c in Category:
         if not any(c in m.categories for m in metadata.values()):
-            raise ValueError(f"Category {c} has no associated config attributes")
+            msg = f"Category {c} has no associated config attributes"
+            raise ValueError(msg)

@@ -249,7 +249,6 @@ class PyPI(
     @commands.slash_command(name="pypi")
     async def pypi(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Useful commands for info about packages on PyPI."""
-        pass
 
     @pypi.sub_command(name="package")
     async def pypi_package(
@@ -336,7 +335,7 @@ class PyPI(
         async with self.fetch_lock:
             params = {"q": query}
 
-            # todo: cache with redis
+            # TODO: cache with redis
             async with self.bot.http_session.get(SEARCH_URL, params=params, headers=PYPI_API_HEADERS) as resp:
                 txt = await resp.text()
 
@@ -353,7 +352,7 @@ class PyPI(
         self,
         inter: disnake.ApplicationCommandInteraction,
         query: str,
-        max_results: int = commands.Param(  # noqa: B008
+        max_results: int = commands.Param(
             default=5,
             name="max-results",
             description="Max number of results shown.",
@@ -371,7 +370,7 @@ class PyPI(
         """
         defer_task = maybe_defer(inter, delay=2)
 
-        # todo: fix typing for async_cached
+        # TODO: fix typing for async_cached
         result: tuple[list[Package], yarl.URL] = await self.fetch_pypi_search(query)  # pyright: ignore[reportCallIssue]
         packages, query_url = result
 

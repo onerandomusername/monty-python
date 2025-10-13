@@ -83,7 +83,7 @@ class Client:
 
 class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
-    run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
+    run_migrations: bool = environ.get("DB_RUN_MIGRATIONS", "true").lower() != "false"
     migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
 
 
@@ -97,7 +97,7 @@ class Monitoring:
     debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
     sentry_enabled = bool(environ.get("SENTRY_DSN"))
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
-    log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
+    log_mode: Literal["daily", "dev"] = "daily" if environ.get("BOT_LOG_MODE", "dev").lower() == "daily" else "dev"
 
     public_status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
     ping_url: str = environ.get("UPTIME_URL", "")
@@ -207,7 +207,7 @@ class Icons:
         "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
     )
     github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
-    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"  # noqa: E501
+    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"
 
 
 ## Authentication and Endpoint management for external services

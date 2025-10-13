@@ -30,7 +30,7 @@ logger = get_logger(__name__)
 
 
 def get_locale_from_dict(
-    locales: disnake.Locale | list[disnake.Locale | Literal[None]],
+    locales: disnake.Locale | list[disnake.Locale | None],
     table: dict[disnake.Locale | Literal["_"], str],
 ) -> str:
     """Get the first string out of table that matches a locale. Defaults to en_GB if no locale can be found."""
@@ -118,7 +118,7 @@ class Configuration(
             return True
 
         if not inter.guild_id:
-            raise commands.NoPrivateMessage()
+            raise commands.NoPrivateMessage
 
         invite = disnake.utils.oauth_url(
             self.bot.user.id,
@@ -273,10 +273,7 @@ class Configuration(
                     guild_id=inter.guild_id,  # type: ignore
                 ):
                     continue
-                if current_config:
-                    current = getattr(current_config, attr)
-                else:
-                    current = None
+                current = getattr(current_config, attr) if current_config else None
                 name = get_localised_response(inter, "{data}", data=meta.name)
                 modalable_components.append(
                     meta.get_text_input(custom_id=attr, name=name, current=current, locale=inter.locale)
@@ -329,7 +326,7 @@ class Configuration(
         inter: disnake.GuildCommandInteraction,
         category_name: str | None = commands.Param(
             default=None,
-            name="category",  # noqa: B008
+            name="category",
             description="Choose a configuration category to view the options in that category.",
             choices=_get_category_choices(),
         ),
@@ -509,15 +506,14 @@ class Configuration(
                     "You cannot set this configuration option as your guild does not have the required feature(s).",
                 )
             parsed_value = value
-            if meta.validator:
-                if not await meta.validator(inter, parsed_value):  # type: ignore
-                    raise commands.UserInputError(
-                        get_localised_response(
-                            inter,
-                            "The value provided for **{option}** is not valid. Please check the value and try again.",
-                            option=get_localised_response(inter, "{data}", data=meta.name),
-                        )
+            if meta.validator and not await meta.validator(inter, parsed_value):  # type: ignore
+                raise commands.UserInputError(
+                    get_localised_response(
+                        inter,
+                        "The value provided for **{option}** is not valid. Please check the value and try again.",
+                        option=get_localised_response(inter, "{data}", data=meta.name),
                     )
+                )
             updates[custom_id] = parsed_value
         if not updates:
             raise commands.UserInputError("No valid configuration options were provided.")
