@@ -1,33 +1,39 @@
 FROM python:3.10-slim
+COPY --from=ghcr.io/astral-sh/uv:0.8.19 /uv /uvx /bin/
 
-# Set pip to have cleaner logs and no saved cache
-ENV PIP_NO_CACHE_DIR=false
-
-# Create the working directory
 WORKDIR /bot
 
-# Install project dependencies
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# as we have a git dep, install git
-RUN apt update && apt install git -y
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
-RUN pip install -U pip wheel setuptools
-RUN pip install poetry==1.7.1 poetry-plugin-export==1.6.0
-
-# export requirements after copying req files
-COPY pyproject.toml poetry.lock ./
-RUN poetry export --without-hashes > requirements.txt
-RUN pip uninstall poetry -y
-RUN pip install -Ur requirements.txt
+# Ensure installed tools can be executed out of the box
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
 
 # Set SHA build argument
 ARG git_sha="main"
 ENV GIT_SHA=$git_sha
 
-# Copy the source code in next to last to optimize rebuilding the image
-COPY . .
+# as we have a git dep, install git
+RUN apt update && apt install git -y
 
-# install the package using pep 517
-RUN pip install . --no-deps
+
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
+
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+COPY . /bot
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
+
+# Place executables in the environment at the front of the path
+ENV PATH="/bot/.venv/bin:$PATH"
+
 
 ENTRYPOINT ["python3", "-m", "monty"]

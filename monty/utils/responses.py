@@ -8,22 +8,24 @@ response if a command raises a disnake.ext.commands.CommandError exception.
 """
 
 import random
-from typing import Any, List, Literal
+from typing import Any, Literal
 
 import disnake
 from disnake.ext import commands
 
+from monty import constants
 from monty.log import get_logger
 
 
 __all__ = (
-    "DEFAULT_SUCCESS_COLOUR",
-    "SUCCESS_HEADERS",
     "DEFAULT_FAILURE_COLOUR",
+    "DEFAULT_SUCCESS_COLOUR",
     "FAILURE_HEADERS",
+    "SUCCESS_HEADERS",
+    "USER_INPUT_ERROR_REPLIES",
     "send_general_response",
-    "send_positive_response",
     "send_negatory_response",
+    "send_positive_response",
 )
 
 _UNSET: Any = object()
@@ -31,8 +33,8 @@ _UNSET: Any = object()
 logger = get_logger(__name__)
 
 
-DEFAULT_SUCCESS_COLOUR = disnake.Colour.green()
-SUCCESS_HEADERS: List[str] = [
+DEFAULT_SUCCESS_COLOUR = disnake.Colour(constants.Colours.soft_green)
+SUCCESS_HEADERS: tuple[str, ...] = (
     "Affirmative",
     "As you wish",
     "Done",
@@ -42,10 +44,27 @@ SUCCESS_HEADERS: List[str] = [
     "Okay",
     "You got it",
     "Your wish is my command",
-]
+    "Yep.",
+    "Absolutely!",
+    "Can do!",
+    "Affirmative!",
+    "Yeah okay.",
+    "Sure.",
+    "Sure thing!",
+    "You're the boss!",
+    "Okay.",
+    "No problem.",
+    "I got you.",
+    "Alright.",
+    "You got it!",
+    "ROGER THAT",
+    "Of course!",
+    "Aye aye, cap'n!",
+    "I'll allow it.",
+)
 
-DEFAULT_FAILURE_COLOUR = disnake.Colour.red()
-FAILURE_HEADERS: List[str] = [
+DEFAULT_FAILURE_COLOUR = disnake.Colour(constants.Colours.soft_red)
+FAILURE_HEADERS: tuple[str, ...] = (
     "Abort!",
     "I cannot do that",
     "Hold up!",
@@ -55,17 +74,40 @@ FAILURE_HEADERS: List[str] = [
     "Something went wrong",
     "\U0001f914",
     "Unable to complete your command",
-]
+    "I'm afraid that's not doable",
+    "That is not possible.",
+    "No can do.",
+    "Sorry, I can't",
+    "Ow",
+    "Try again?",
+    "That's not something I was programmed to do.",
+    "Error: ",
+    "Error? Error.",
+    "Oof.",
+    "-_-",
+    "I may have made a mistake.",
+)
+
+# Bot replies
+USER_INPUT_ERROR_REPLIES: tuple[str, ...] = (
+    "That input was invalid.",
+    "Proper input not received.",
+    "Please check your arguments.",
+    "Your input was invalid.",
+    "User input invalid. Requesting backup.",
+    "Arguments not found, 404",
+    "Bad Argument",
+)
 
 
 async def send_general_response(
     channel: disnake.abc.Messageable,
     response: str,
     *,
-    message: disnake.Message = None,
+    message: disnake.Message | None = None,
     embed: disnake.Embed = _UNSET,
-    colour: disnake.Colour = None,
-    title: str = None,
+    colour: disnake.Colour | None = None,
+    title: str | None = None,
     tag_as: Literal["general", "affirmative", "negatory"] = "general",
     **kwargs,
 ) -> disnake.Message:

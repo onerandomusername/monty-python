@@ -1,42 +1,33 @@
 # Monty Python
 
-Based off of multiple open source projects, Monty is a development tool for Discord servers. See [third party licensing](./LICENSE_THIRD_PARTY) for the original projects.
+_A Python and GitHub focused Discord bot to make collaborating on Python
+projects through Discord easier than ever._
 
-### Primary features
-`/docs` View Python documentation from discord \
-`/pep` View PEPs directly within discord \
-`-eval` Evaluate Python code \
-`-black` Blacken Python code
+## How to use Monty
 
-### Additional features
-- Automatic GitHub issue linking
-- Inline Python Docs and Python Code evaluation
-- Automatic leaked Discord Webhook deletion
-- Missing python codebloc detection
-- PyPI commands to interface with packages on the Python Package Index
+While Monty Python is open source, I'd appreciate it if you use the public
+instance rather than host your own. If you're looking for something that Monty
+doesn't have, consider contributing!
 
-Click [here](https://discord.com/oauth2/authorize?client_id=872576125384147005&scope=bot+applications.commands&permissions=395204488384) to invite the public instance of Monty to your Discord server.
+Invites to the public instances are below.
 
-## Running Locally
+Monty Python#1635:
+<https://discord.com/oauth2/authorize?client_id=872576125384147005>\
+Monty Python Beta#8789:
+<https://discord.com/oauth2/authorize?client_id=1082552330836246528>
 
-Monty uses quite a few services to run. However, these have been consolidated into the [docker-compose.yaml](./docker-compose.yaml) file.
+You can also use `/monty invite` in any server with Monty Python, which will
+provide an invite.
 
-To deploy, first clone this repo.
+## Contributing
 
-Minimally, Monty can run with just a bot token, but a few more variables are recommended for a more full experience.
-
-```sh
-# required
-BOT_TOKEN=
-
-# optional but recommended
-GITHUB_TOKEN= # Generate this in github's api token settings. This does not need any special permissions
-```
-
-From this point, just run `docker compose up` to start all of the services. Snekbox is optional, and the bot will function without snekbox.
-
-Some services will not work, but the majority will.
+Thank you for expressing an interest in contributing. Instructions to set up a
+developer environment, along with a list of bot owner commands and how to get
+running are documented in the
+[Contributing guide](https://monty.arielle.codes/contributing/).
 
 ## Contact
 
-For support or to contact the developer, please join the [Support Server](https://discord.gg/mPscM4FjWB).
+For support or to contact the developer, please join the
+[Support Server](https://discord.gg/mPscM4FjWB) or
+[create an issue](https://github.com/onerandomusername/monty-python/issues/new/choose).

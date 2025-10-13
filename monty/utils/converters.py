@@ -26,7 +26,7 @@ log = get_logger(__name__)
 DISCORD_EPOCH_DT = disnake.utils.snowflake_time(0)
 RE_USER_MENTION = re.compile(r"<@!?([0-9]+)>$")
 
-AnyContext = t.Union[disnake.ApplicationCommandInteraction, commands.Context[Monty]]
+AnyContext = disnake.ApplicationCommandInteraction | commands.Context[Monty]
 
 TIMEDELTA_REGEX = re.compile(
     r"^"
@@ -41,7 +41,7 @@ TIMEDELTA_REGEX = re.compile(
 )
 
 
-def str_timedelta_from_now(human: str, /) -> t.Optional[timedelta]:
+def str_timedelta_from_now(human: str, /) -> timedelta | None:
     """Convert a string to a timedelta relative to the current time."""
     match = TIMEDELTA_REGEX.fullmatch(human)
     if not match:
@@ -80,7 +80,8 @@ class ArrowConverter(commands.Converter):
         try:
             return arrow.get(argument)
         except Exception as e:
-            raise commands.BadArgument(f"{argument} could not be converted into a valid datetime.") from e
+            msg = f"{argument} could not be converted into a valid datetime."
+            raise commands.BadArgument(msg) from e
 
 
 class RolloutConverter(commands.Converter):
@@ -94,7 +95,8 @@ class RolloutConverter(commands.Converter):
             try:
                 return result.one()
             except sqlalchemy.exc.NoResultFound:
-                raise commands.BadArgument(f"`{argument}` is not a valid rollout name.") from None
+                msg = f"`{argument}` is not a valid rollout name."
+                raise commands.BadArgument(msg) from None
 
 
 class MaybeFeature(commands.Converter):
@@ -110,7 +112,8 @@ class MaybeFeature(commands.Converter):
         argument = argument.upper().replace("-", "_")
         match = FEATURE_NAME_REGEX.fullmatch(argument)
         if not match:
-            raise commands.BadArgument(f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``.")
+            msg = f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``."
+            raise commands.BadArgument(msg)
         return argument
 
 
@@ -128,7 +131,8 @@ class FeatureConverter(MaybeFeature):
         try:
             return ctx.bot.features[argument]
         except KeyError:
-            raise commands.BadArgument(f"No feature with name `{argument}` exists.") from None
+            msg = f"No feature with name `{argument}` exists."
+            raise commands.BadArgument(msg) from None
 
 
 class Extension(commands.Converter):
@@ -151,22 +155,21 @@ class Extension(commands.Converter):
         elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
             return qualified_arg
 
-        matches = []
-        for ext in EXTENSIONS:
-            if argument == unqualify(ext):
-                matches.append(ext)
+        matches = [ext for ext in EXTENSIONS if argument == unqualify(ext)]
 
         if len(matches) > 1:
             matches.sort()
             names = "\n".join(matches)
-            raise commands.BadArgument(
+            msg = (
                 f":x: `{argument}` is an ambiguous extension name. "
                 f"Please use one of the following fully-qualified names.```\n{names}```"
             )
+            raise commands.BadArgument(msg)
         elif matches:
             return matches[0]
         else:
-            raise commands.BadArgument(f":x: Could not find the extension `{argument}`.")
+            msg = f":x: Could not find the extension `{argument}`."
+            raise commands.BadArgument(msg)
 
 
 class PackageName(commands.Converter):
@@ -182,9 +185,8 @@ class PackageName(commands.Converter):
     async def convert(cls, ctx: commands.Context, argument: str) -> str:
         """Checks whether the given string is a valid package name."""
         if cls.PACKAGE_NAME_RE.search(argument):
-            raise commands.BadArgument(
-                "The provided package name is not valid; please only use the _, 0-9, and a-z characters."
-            )
+            msg = "The provided package name is not valid; please only use the _, 0-9, and a-z characters."
+            raise commands.BadArgument(msg)
         return argument
 
 
@@ -204,15 +206,20 @@ class ValidURL(commands.Converter):
         try:
             async with ctx.bot.http_session.get(url, ssl=helpers.ssl_create_default_context()) as resp:
                 if resp.status != 200:
-                    raise commands.BadArgument(f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200")
+                    msg = f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
+                    raise commands.BadArgument(msg)
         except CertificateError as e:
             if url.startswith("https"):
-                raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?") from e
-            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.") from e
+                msg = f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
+                raise commands.BadArgument(msg) from e
+            msg = f"Got a `CertificateError` for URL `{url}`."
+            raise commands.BadArgument(msg) from e
         except ValueError as e:
-            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.") from e
+            msg = f"`{url}` doesn't look like a valid hostname to me."
+            raise commands.BadArgument(msg) from e
         except ClientConnectorError as e:
-            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.") from e
+            msg = f"Cannot connect to host with URL `{url}`."
+            raise commands.BadArgument(msg) from e
         return url
 
 
@@ -227,20 +234,18 @@ class Inventory(commands.Converter):
     """
 
     @staticmethod
-    async def convert(ctx: commands.Context, url: str) -> t.Tuple[str, inventory_parser.InventoryDict]:
+    async def convert(ctx: commands.Context, url: str) -> tuple[str, inventory_parser.InventoryDict]:
         """Convert url to Intersphinx inventory URL."""
         await ctx.trigger_typing()
         try:
             inventory = await inventory_parser.fetch_inventory(ctx.bot, url)
         except inventory_parser.InvalidHeaderError as e:
-            raise commands.BadArgument(
-                "Unable to parse inventory because of invalid header, check if URL is correct."
-            ) from e
+            msg = "Unable to parse inventory because of invalid header, check if URL is correct."
+            raise commands.BadArgument(msg) from e
         else:
             if inventory is None:
-                raise commands.BadArgument(
-                    f"Failed to fetch inventory file after {inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-                )
+                msg = f"Failed to fetch inventory file after {inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                raise commands.BadArgument(msg)
             return url, inventory
 
 
@@ -272,19 +277,22 @@ class Snowflake(commands.IDConverter):
             time = disnake.utils.snowflake_time(snowflake)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
-            raise commands.BadArgument(f"{error}: {e}") from e
+            msg = f"{error}: {e}"
+            raise commands.BadArgument(msg) from e
 
         if time < DISCORD_EPOCH_DT:
-            raise commands.BadArgument(f"{error}: timestamp is before the Discord epoch.")
+            msg = f"{error}: timestamp is before the Discord epoch."
+            raise commands.BadArgument(msg)
         elif (datetime.now(timezone.utc) - time).days < -1:
-            raise commands.BadArgument(f"{error}: timestamp is too far into the future.")
+            msg = f"{error}: timestamp is too far into the future."
+            raise commands.BadArgument(msg)
 
         return snowflake
 
 
 def _is_an_unambiguous_user_argument(argument: str) -> bool:
     """Check if the provided argument is a user mention, user id, or username (name#discrim)."""
-    has_id_or_mention = bool(commands.IDConverter()._get_id_match(argument) or RE_USER_MENTION.match(argument))
+    has_id_or_mention = bool(commands.IDConverter._get_id_match(argument) or RE_USER_MENTION.match(argument))
 
     # Check to see if the author passed a username (a discriminator exists)
     argument = argument.removeprefix("@")
@@ -344,15 +352,15 @@ class WrappedMessageConverter(commands.MessageConverter):
         return await super().convert(ctx, argument)
 
 
-SourceType = t.Union[
-    commands.Command,
-    commands.Cog,
-    commands.InvokableSlashCommand,
-    commands.InvokableMessageCommand,
-    commands.InvokableUserCommand,
-    commands.SubCommand,
-    commands.SubCommandGroup,
-]
+SourceType = (
+    commands.Command
+    | commands.Cog
+    | commands.InvokableSlashCommand
+    | commands.InvokableMessageCommand
+    | commands.InvokableUserCommand
+    | commands.SubCommand
+    | commands.SubCommandGroup
+)
 
 
 class SourceConverter(commands.Converter):
@@ -361,17 +369,14 @@ class SourceConverter(commands.Converter):
     @staticmethod
     async def convert(ctx: AnyContext, argument: str) -> SourceType:
         """Convert argument into source object."""
-        # todo: add support for specifying the type
+        # TODO: add support for specifying the type
         cog = ctx.bot.get_cog(argument)
         if cog:
             return cog
 
         cmd = ctx.bot.get_slash_command(argument)
-        if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
@@ -380,30 +385,25 @@ class SourceConverter(commands.Converter):
         # attempt to get the context menu command
 
         cmd = ctx.bot.get_message_command(argument)
-        if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_user_command(argument)
-        if cmd:
-            if not cmd.guild_ids:
-                return cmd
-            elif ctx.guild and ctx.guild.id in cmd.guild_ids:
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, application command, or Cog.")
+        msg = f"Unable to convert `{argument}` to valid command, application command, or Cog."
+        raise commands.BadArgument(msg)
 
 
 if t.TYPE_CHECKING:
-    MaybeFeature = str  # type: ignore  # noqa: F811
-    Extension = str  # type: ignore  # noqa: F811
-    PackageName = str  # type: ignore  # noqa: F811
-    ValidURL = str  # type: ignore  # noqa: F811
-    Inventory = t.Tuple[str, inventory_parser.InventoryDict]  # type: ignore  # noqa: F811
-    Snowflake = int  # type: ignore  # noqa: F811
-    UnambiguousUser = disnake.User  # type: ignore  # noqa: F811
-    UnambiguousMember = disnake.Member  # type: ignore  # noqa: F811
-    WrappedMessageConverter = disnake.Message  # type: ignore  # noqa: F811
-    SourceConverter = SourceType  # type: ignore  # noqa: F811
+    MaybeFeature = str  # type: ignore
+    Extension = str  # type: ignore
+    PackageName = str  # type: ignore
+    ValidURL = str  # type: ignore
+    Inventory = tuple[str, inventory_parser.InventoryDict]  # type: ignore
+    Snowflake = int  # type: ignore
+    UnambiguousUser = disnake.User  # type: ignore
+    UnambiguousMember = disnake.Member  # type: ignore
+    WrappedMessageConverter = disnake.Message  # type: ignore
+    SourceConverter = SourceType  # type: ignore

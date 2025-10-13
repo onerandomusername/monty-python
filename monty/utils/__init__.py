@@ -1,7 +1,6 @@
 import asyncio
 import re
 import string
-from typing import List, Optional
 
 import disnake
 from disnake.ext import commands
@@ -13,19 +12,19 @@ from .helpers import pad_base64
 
 __all__ = [
     "disambiguate",
-    "replace_many",
     "pad_base64",
+    "replace_many",
 ]
 
 
 async def disambiguate(
     ctx: commands.Context,
-    entries: List[str],
+    entries: list[str],
     *,
     timeout: float = 30,
     entries_per_page: int = 20,
     empty: bool = False,
-    embed: Optional[disnake.Embed] = None,
+    embed: disnake.Embed | None = None,
 ) -> str:
     """
     Has the user choose between multiple entries in case one could not be chosen automatically.
@@ -36,7 +35,8 @@ async def disambiguate(
     or if the user makes an invalid choice.
     """
     if len(entries) == 0:
-        raise commands.BadArgument("No matches found.")
+        msg = "No matches found."
+        raise commands.BadArgument(msg)
 
     if len(entries) == 1:
         return entries[0]
@@ -66,24 +66,26 @@ async def disambiguate(
         done, pending = await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
 
         # :yert:
-        result = list(done)[0].result()
+        result = next(iter(done)).result()
 
         # Pagination was canceled - result is None
         if result is None:
             for coro in pending:
                 coro.cancel()
-            raise commands.BadArgument("Canceled.")
+            msg = "Canceled."
+            raise commands.BadArgument(msg)
 
         # Pagination was not initiated, only one page
         if result.author == ctx.bot.user:
             # Continue the wait_for
-            result = await list(pending)[0]
+            result = await next(iter(pending))
 
         # Love that duplicate code
         for coro in pending:
             coro.cancel()
     except asyncio.TimeoutError:
-        raise commands.BadArgument("Timed out.") from None
+        msg = "Timed out."
+        raise commands.BadArgument(msg) from None
 
     # Guaranteed to not error because of isdecimal() in check
     index = int(result.content)
@@ -91,7 +93,8 @@ async def disambiguate(
     try:
         return entries[index - 1]
     except IndexError:
-        raise commands.BadArgument("Invalid choice.") from None
+        msg = "Invalid choice."
+        raise commands.BadArgument(msg) from None
 
 
 def replace_many(
@@ -128,7 +131,7 @@ def replace_many(
 
     # Join and compile words to replace into a regex
     pattern = "|".join(re.escape(word) for word in words_to_replace)
-    regex = re.compile(pattern, re.I if ignore_case else 0)
+    regex = re.compile(pattern, re.IGNORECASE if ignore_case else 0)
 
     def _repl(match: re.Match) -> str:
         """Returns replacement depending on `ignore_case` and `match_case`."""

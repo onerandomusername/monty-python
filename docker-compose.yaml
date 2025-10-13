@@ -72,7 +72,7 @@ services:
       - .env
 
     volumes:
-      - .:/bot
+      - ./monty:/bot/monty
 
 volumes:
   user-base:

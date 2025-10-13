@@ -1,141 +1,184 @@
-[tool.poetry]
-name = "monty"
-version = "1.0.0"
-description = "Helpful bot for python, github, and discord things."
-authors = ["aru <genericusername414@gmail.com>"]
-license = "MIT"
-
-[tool.poetry.dependencies]
-python = "~=3.10"
-aiodns = "~=3.2"
-aiohttp = { version = "~=3.10.5", extras = ['speedups'] }
-yarl = "^1.12.1" # transitive dependency of aiohttp
-arrow = "~=1.3.0"
-attrs = "^24.2.0"
-base65536 = "^0.1.1"
-beautifulsoup4 = "^4.12.3"
-cachingutils = { git = "https://github.com/onerandomusername/cachingutils.git", rev='vcokltfre/feat/v2' }
-colorama = { version = "~=0.4.5", markers = "sys_platform == 'win32'" }
-coloredlogs = "~=15.0"
-disnake = { version = '~=2.9.2' }
-orjson = "^3.10.7"
-fakeredis = "^2.24.1"
-gql = "^3.5.0"
-lxml = "^4.9.1"
-markdownify = "==0.11.6"
-mistune = "^2.0.4"
-msgpack = "^1.1.0"
-redis = { version = "^5.0.8", extras = ['hiredis'] }
-Pillow = "^10.4"
-psutil = "^5.9.8"
-python-dateutil = "^2.9.0"
-rapidfuzz = "^2.13.2"
-sentry-sdk = "^2.14.0"
-statsd = "^3.3.0"
-# database dependencies
-alembic = "^1.13.3"
-asyncpg = "^0.29.0"
-SQLAlchemy = { version = "~=2.0.35", extras = ['asyncio'] }
-
-[tool.poetry.extras]
-fakeredis = ['fakeredis']
-
-[tool.poetry.dev-dependencies]
-black = "^24.8.0"
-ruff = "==0.6.5"
-isort = "^5.13.2"
-pre-commit = "^3.8.0"
-taskipy = "~=1.13.0"
-python-dotenv = "^1.0.1"
-pyright = "==1.1.278"
-msgpack-types = "^0.5.0"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["flit_core >=3.11,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.black]
-line-length = 120
-target-version = ['py38']
-include = '\.pyi?$'
-preview = true
+[project]
+authors = [{ name = "aru", email = "me@arielle.codes" }]
+license = "MIT"
+license-files = ["LICENSE", "LICENSE_THIRD_PARTY"]
+requires-python = ">=3.10"
+name = "monty"
+version = "0.0.1"
+description = "Helpful bot for python, github, and discord things."
+dependencies = [
+    "aiodns~=3.4",
+    "aiohttp[speedups]~=3.13.0",
+    "yarl<2.0.0,>=1.17.2",
+    "arrow~=1.3.0",
+    "attrs<25.0.0,>=24.2.0",
+    "base65536~=0.1.1",
+    "beautifulsoup4<5.0.0,>=4.13.4",
+    "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
+    "colorama~=0.4.5; sys_platform == \"win32\"",
+    "disnake @ git+https://github.com/DisnakeDev/disnake.git@master",
+    "orjson<4.0.0,>=3.10.18",
+    "gql~=4.0",
+    "lxml<6.0.0,>=5.4.0",
+    "markdownify==0.11.6",
+    "mistune<3.0.0,>=2.0.4",
+    "msgpack<2.0.0,>=1.1.0",
+    "redis[hiredis]<6.0.0,>=5.2.0",
+    "Pillow<12.0,>=11.2",
+    "psutil<6.0.0,>=5.9.8",
+    "python-dateutil<3.0.0,>=2.9.0",
+    "rapidfuzz<4.0.0,>=3.13.0",
+    "sentry-sdk<3.0.0,>=2.28.0",
+    "statsd<4.0.0,>=3.3.0",
+    "alembic<2.0.0,>=1.15.2",
+    "asyncpg~=0.30.0",
+    "SQLAlchemy[asyncio]~=2.0.41",
+    "readme-renderer[md] (>=44.0,<45.0)",
+    "rich>=14.1.0,<15.0.0",
+]
 
-[tool.isort]
-profile = "black"
-atomic = true
-ensure_newline_before_comments = true
-force_grid_wrap = 0
-include_trailing_comma = true
-line_length = 120
-lines_after_imports = 2
-multi_line_output = 3
-use_parentheses = true
-known_first_party = ["monty"]
+[dependency-groups]
+dev = [
+    {include-group = "tools"},
+    {include-group = "typing"},
+    {include-group = "docs"},
+    {include-group = "mdformat"},
+    {include-group = "ruff"},
+]
+devlibs = [
+    "fakeredis<3.0.0,>=2.29.0",
+    "watchfiles<2.0.0,>=1.0.5",
+    "python-dotenv<2.0.0,>=1.1.0",
+]
+tools = [
+    "poethepoet>=0.37.0",
+    "prek>=0.2.1,<0.3",
+    { include-group = "ruff" },
+    { include-group = "nox" }
+]
+ruff = [
+    "ruff==0.14.0",
+]
+nox = [
+    "nox>=2025.5.1",
+]
+typing = [
+    "basedpyright>=1.31.6",
+    "msgpack-types<1.0.0,>=0.5.0",
+]
+docs = [
+    "mkdocs<2.0.0,>=1.6.1",
+    "mkdocs-material[imaging]<10.0.0,>=9.6.20",
+    "mkdocs-git-revision-date-localized-plugin<2.0.0,>=1.4.7",
+    "markdown-gfm-admonition<1.0.0,>=0.1.1",
+]
+mdformat = [
+    "mdformat<1.0.0,>=0.7.22",
+    "mdformat-ruff<1.0.0,>=0.1.3",
+    "mdformat-gfm<1.0.0,>=0.4.1",
+    "mdformat-gfm-alerts<3.0.0,>=2.0.0",
+    "mdformat-mkdocs<5.0.0,>=4.4.1",
+    "mdformat-pyproject<1.0.0,>=0.0.2",
+    "mdformat-simple-breaks<1.0.0,>=0.0.1",
+    "mdformat-tables<2.0.0,>=1.0.0",
+    "mdformat-frontmatter<3.0.0,>=2.0.8",
+]
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
-
-[tool.ruff.lint.isort]
-known-first-party = ["monty"]
-
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    "E", # pycodestyle
-    "F", # pyflakes
-    "W", # pycodestyle
-    "S", # bandit
-    # "RUF", # ruff specific exceptions
-    "ANN", # flake8-annotations
-    "B", # flake8-bugbear
-    "C", # flake8-comprehensions
-    "D", # flake-docstrings
-    "DTZ", # flake8-datetimez
-    "Q", # flake8-quotes
-    "T201", "T203" # flake8-print
+"ALL"
 ]
 ignore = [
+    # flake8-commas
+    "COM",
     # Missing Docstrings
-    "D100","D101","D104","D105","D106","D107",
+    "D100",
+    "D101",
+    "D104",
+    "D105",
+    "D107",
     # Docstring Whitespace
-    "D203","D212","D214","D215",
+    "D212",
     # Docstring Content
-    "D400","D402","D404","D405","D406","D407","D408","D409","D410","D411","D412","D413","D414","D416","D417",
-
-    # ignore imperative mood for now
     "D401",
+    "D404",
+    "D406",
+    "D407",
+    "D410",
+    "D411",
+    "D416",
+
     # Type Annotations
-    "ANN002","ANN003","ANN101","ANN102","ANN204","ANN206","ANN401",
+    "ANN002",
+    "ANN003",
+    "ANN204",
+    "ANN206",
+    "ANN401",
+    "S110", # try-except-pass
 
     # temporarily disabled
     "C901", # mccabe
+    "G004", # Logging statement uses f-string
     "S101", # Use of `assert` detected
-    "S110", # try-except-pass
     "S311", # pseduo-random generators, random is used everywhere for random choices.
+
+    "ARG",
+    "BLE",
+    "ERA",
+    "FBT",
+    "FIX",
+    "FURB",
+    "PGH",
+    "PLC",
+    "PLR",
+    "PLW",
+    "RET505", "RET506",
+    "RUF012",
+    "SIM105", "SIM108",
+    "SLF",
+    "TD",
+    "TRY",
 ]
+
+
 
 [tool.ruff.lint.per-file-ignores]
 "monty/alembic/*" = ["D"]
 "_global_source_snekcode.py" = ["T201"]
 
+[tool.ruff.lint.flake8-builtins]
+ignorelist = ["id"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+known-first-party = ["monty"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
 [tool.ruff.lint.mccabe]
 max-complexity = 20
 
-[tool.taskipy.tasks]
-export = 'poetry export --without-hashes -o requirements.txt'
-start = "python -m monty"
-lint = "pre-commit run --all-files"
-precommit = "pre-commit install"
+
+[tool.poe.tasks]
+lint = { cmd = "prek run --all-files", help = "Lint the source code" }
+prek = { cmd = "prek install", help = "Install the git pre-commit hooks" }
 pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
-html = "coverage html"
-report = "coverage report"
+sync = { cmd = "uv sync --all-groups --all-extras", help = "Sync all groups and extras to a local environment" }
 
-[tool.pyright]
+[tool.basedpyright]
 typeCheckingMode = "basic"
-include = [
-    "monty",
-    "*.py",
-]
+include = ["monty", "*.py"]
 
-strictParameterNoneValue = false
+strictParameterNoneValue = true
+
+[tool.mdformat]
+wrap = 80

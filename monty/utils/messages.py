@@ -1,6 +1,7 @@
 import asyncio
 import re
-from typing import TYPE_CHECKING, Generator, Optional, Union
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 import disnake
 import disnake.ext.commands
@@ -36,20 +37,20 @@ DISCORD_CLIENT_NAMED_URL_REGEX = re.compile(
 logger = get_logger(__name__)
 
 
-def sub_clyde(username: Optional[str]) -> Optional[str]:
+def sub_clyde(username: str | None) -> str | None:
     """
     Replace "e"/"E" in any "clyde" in `username` with a Cyrillic "е"/"E" and return the new string.
 
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
-    """
+    """  # noqa: RUF002
 
     def replace_e(match: re.Match) -> str:
-        char = "е" if match[2] == "e" else "Е"
+        char = "\u0435" if match[2] == "e" else "\u0415"
         return match[1] + char
 
     if username:
-        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.I)
+        return re.sub(r"(clyd)(e)", replace_e, username, flags=re.IGNORECASE)
     else:
         return username  # Empty string or None
 
@@ -58,19 +59,18 @@ async def suppress_embeds(
     bot: "Monty",
     message: disnake.Message,
     *,
-    wait: Optional[float] = 6,
+    wait: float | None = 6,
     force_wait: bool = False,
 ) -> bool:
     """Suppress the embeds on the provided message, after waiting for an edit to add embeds if none exist."""
-    if not message.embeds or force_wait:
-        if wait is not None:
-            try:
-                _, message = await bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=wait)
-            except asyncio.TimeoutError:
-                pass
-            if not message.embeds:
-                return False
-            await asyncio.sleep(0.2)
+    if (not message.embeds or force_wait) and wait is not None:
+        try:
+            _, message = await bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=wait)
+        except asyncio.TimeoutError:
+            pass
+        if not message.embeds:
+            return False
+        await asyncio.sleep(0.2)
     try:
         await message.edit(suppress_embeds=True)
     except disnake.NotFound:
@@ -131,7 +131,7 @@ def extract_urls(content: str) -> Generator[str, None, None]:
     pos = 0
     while pos < len(content):
         for regex in (DISCORD_CLIENT_NAMED_URL_REGEX, DISCORD_CLIENT_URL_REGEX):
-            match: re.Match[str] = regex.match(content, pos)
+            match: re.Match[str] | None = regex.match(content, pos)
             if match:
                 break
         else:
@@ -152,12 +152,12 @@ class DeleteButton(disnake.ui.Button):
 
     def __init__(
         self,
-        user: Union[int, disnake.User, disnake.Member],
+        user: int | disnake.User | disnake.Member,
         *,
         allow_manage_messages: bool = True,
-        initial_message: Optional[Union[int, disnake.Message]] = None,
-        style: Optional[disnake.ButtonStyle] = None,
-        emoji: Optional[Union[disnake.Emoji, disnake.PartialEmoji, str]] = None,
+        initial_message: int | disnake.Message | None = None,
+        style: disnake.ButtonStyle | None = None,
+        emoji: disnake.Emoji | disnake.PartialEmoji | str | None = None,
     ) -> None:
         if isinstance(user, (disnake.User, disnake.Member)):
             user_id = user.id
@@ -208,11 +208,11 @@ class DeleteView(disnake.ui.View):
 
     def __init__(
         self,
-        user: Union[int, disnake.User, disnake.Member],
+        user: int | disnake.User | disnake.Member,
         *,
         timeout: float = 1,
         allow_manage_messages: bool = True,
-        initial_message: Optional[Union[int, disnake.Message]] = None,
+        initial_message: int | disnake.Message | None = None,
     ) -> None:
         self.delete_button = DeleteButton(
             user=user, allow_manage_messages=allow_manage_messages, initial_message=initial_message

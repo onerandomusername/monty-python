@@ -2,7 +2,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: check-case-conflict
       - id: check-json
@@ -11,6 +11,7 @@ repos:
       # - id: pretty-format-json
       #   args: [--indent=4, --autofix]
       - id: end-of-file-fixer
+        exclude: ^(\.basedpyright/baseline\.json)$
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: trailing-whitespace
@@ -22,18 +23,14 @@ repos:
       - id: python-check-blanket-noqa
       - id: python-use-type-annotations
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.8.19
     hooks:
-      - id: isort
-
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
-    hooks:
-      - id: black
-        language_version: python3
+      - id: uv-lock
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.6.5
+    rev: v0.13.3
     hooks:
-      - id: ruff
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

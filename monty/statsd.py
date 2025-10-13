@@ -10,7 +10,7 @@ from monty.utils import scheduling
 class AsyncStatsClient(StatsClientBase):
     """An async transport method for statsd communication."""
 
-    def __init__(self, *, host: str, port: int, prefix: str = None) -> None:
+    def __init__(self, *, host: str, port: int, prefix: str | None = None) -> None:
         """Create a new client."""
         self._addr = (socket.gethostbyname(host), port)
         self._prefix = prefix
@@ -23,7 +23,7 @@ class AsyncStatsClient(StatsClientBase):
         transport, _ = await self._loop.create_datagram_endpoint(
             asyncio.DatagramProtocol, family=socket.AF_INET, remote_addr=self._addr
         )
-        self._transport = cast(asyncio.DatagramTransport, transport)
+        self._transport = cast("asyncio.DatagramTransport", transport)
 
     def _send(self, data: str) -> None:
         """Start an async task to send data to statsd."""
