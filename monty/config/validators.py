@@ -10,10 +10,10 @@ AnyContext = disnake.ApplicationCommandInteraction | commands.Context
 GITHUB_ORG_REGEX = re.compile(r"[a-zA-Z0-9\-]{1,}")
 
 
-async def validate_github_org(ctx: AnyContext, arg: str) -> str | None:
+async def validate_github_org(ctx: AnyContext, arg: str) -> bool:
     """Validate all GitHub orgs meet GitHub's naming requirements."""
     if not arg:
-        return None
+        return True  # optional support
     if not GITHUB_ORG_REGEX.fullmatch(arg):
         err = f"The GitHub org '{arg}' is not a valid GitHub organisation name."
         raise ValueError(err)
@@ -30,4 +30,4 @@ async def validate_github_org(ctx: AnyContext, arg: str) -> str | None:
         raise commands.UserInputError(msg) from None
     else:
         r.close()
-    return arg
+    return True
