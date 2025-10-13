@@ -48,7 +48,7 @@ class GlobalCheck(commands.Cog):
             return True
         if await self.bot.is_owner(ctx.author):
             return True
-        raise commands.NoPrivateMessage()
+        raise commands.NoPrivateMessage
 
 
 def setup(bot: Monty) -> None:

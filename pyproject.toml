@@ -145,7 +145,6 @@ ignore = [
     "PLW",
     "PTH",
     "RET",
-    "RSE",
     "RUF",
     "SIM",
     "SLF",

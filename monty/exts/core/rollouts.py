@@ -369,7 +369,7 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Require all commands in this cog are by the bot author and are in guilds."""
         if await self.bot.is_owner(ctx.author):
             if not ctx.guild:
-                raise commands.NoPrivateMessage()
+                raise commands.NoPrivateMessage
             return True
 
         msg = "You do not own this bot."

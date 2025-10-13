@@ -44,6 +44,6 @@ def require_feature(name: Feature) -> Callable[[T], T]:
         if is_enabled:
             return True
 
-        raise FeatureDisabled()
+        raise FeatureDisabled
 
     return commands.check(predicate)
