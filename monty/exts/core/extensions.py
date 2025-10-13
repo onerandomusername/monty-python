@@ -343,12 +343,16 @@ class Extensions(commands.Cog):
                 else:
                     continue
                 try:
-                    dependent_process = subprocess.run(
-                        ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],  # noqa: S607
-                        capture_output=True,
-                        encoding="utf-8",
-                        check=True,
-                        cwd=pathlib.Path.cwd(),
+                    dependent_process = await self.bot.loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            subprocess.run,
+                            ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],
+                            capture_output=True,
+                            encoding="utf-8",
+                            check=True,
+                            cwd=pathlib.Path.cwd(),
+                        ),
                     )
                 except Exception as e:
                     log.error(f"Error running ruff analyze graph: {e}")

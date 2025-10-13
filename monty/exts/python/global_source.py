@@ -137,7 +137,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
         if modified <= self.last_modified:
             return
         self.last_modified = modified
-        with open(CODE_FILE) as f:
+        with open(CODE_FILE) as f:  # noqa: ASYNC230
             self.code = f.read()  # type: ignore # this is the one time we can write to the code
             logger.debug("Updated global_source code")
 

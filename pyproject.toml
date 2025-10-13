@@ -131,7 +131,6 @@ ignore = [
     "S311", # pseduo-random generators, random is used everywhere for random choices.
 
     "ARG",
-    "ASYNC",
     "BLE",
     "ERA",
     "FBT",
