@@ -59,7 +59,7 @@ class FrozenChainMap(Mapping[K, V]):
 
     def get(self, key: K, default: V = None) -> V | None:
         """Get the object at the provided key."""
-        return self[key] if key in self else default
+        return self.get(key, default)
 
     def __len__(self) -> int:
         return len(set().union(*self.maps))  # reuses stored hash values if possible

@@ -234,15 +234,14 @@ class PyPI(
             )
         )
 
-        if with_description and (description := info["description"]):
-            if description != "UNKNOWN":
-                # there's likely a description here, so we're going to fetch the html project page,
-                # and parse the html to get the rendered description
-                # this means that we don't have to parse the rst or markdown or whatever is the
-                # project's description content type
-                description = await self.fetch_description(package, description, info["description_content_type"] or "")  # pyright: ignore[reportCallIssue]
-                if description:
-                    components[0].children.append(disnake.ui.TextDisplay(description))
+        if with_description and (description := info["description"]) and description != "UNKNOWN":
+            # there's likely a description here, so we're going to fetch the html project page,
+            # and parse the html to get the rendered description
+            # this means that we don't have to parse the rst or markdown or whatever is the
+            # project's description content type
+            description = await self.fetch_description(package, description, info["description_content_type"] or "")  # pyright: ignore[reportCallIssue]
+            if description:
+                components[0].children.append(disnake.ui.TextDisplay(description))
 
         return list(components), info["package_url"]
 

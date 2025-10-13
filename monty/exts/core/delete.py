@@ -34,9 +34,8 @@ class DeleteManager(commands.Cog):
 
         perms, user_id, *extra = custom_id.split(":")
         delete_msg = None
-        if extra:
-            if extra[0]:
-                delete_msg = int(extra[0])
+        if extra and extra[0]:
+            delete_msg = int(extra[0])
 
         perms, user_id = int(perms), int(user_id)
 

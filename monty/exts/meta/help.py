@@ -187,9 +187,8 @@ class HelpSession:
     def reset_timeout(self) -> None:
         """Cancels the original timeout task and sets it again from the start."""
         # cancel original if it exists
-        if self._timeout_task:
-            if not self._timeout_task.cancelled():
-                self._timeout_task.cancel()
+        if self._timeout_task and not self._timeout_task.cancelled():
+            self._timeout_task.cancel()
 
         # recreate the timeout task
         self._timeout_task = scheduling.create_task(self.timeout())

@@ -95,7 +95,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         if url.startswith("https://api.github.com/") and (cog := self.get_github_cog()):
             return await cog.fetch_data(
                 url,
-                as_text=True if response_format == "text" else False,
+                as_text=response_format == "text",
                 raise_for_status=True,
                 **kwargs,
             )

@@ -378,9 +378,8 @@ class SourceConverter(commands.Converter):
             return cog
 
         cmd = ctx.bot.get_slash_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
@@ -389,14 +388,12 @@ class SourceConverter(commands.Converter):
         # attempt to get the context menu command
 
         cmd = ctx.bot.get_message_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_user_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         msg = f"Unable to convert `{argument}` to valid command, application command, or Cog."
         raise commands.BadArgument(msg)

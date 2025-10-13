@@ -247,10 +247,9 @@ class GithubInfo(
     async def _fetch_and_update_ratelimits(self) -> None:
         # this is NOT using fetch_data because we need to check the status code.
         async with self.bot.http_session.get(RATE_LIMIT_ENDPOINT, headers=GITHUB_REQUEST_HEADERS) as r:
-            if r.status != 200:
-                # the Rate_limit endpoint is not ratelimited
-                if r.status == 403:
-                    return
+            # the Rate_limit endpoint is not ratelimited
+            if r.status == 403 or r.status >= 500 or r.status == 401:
+                return
 
             data = await r.json()
 
@@ -1121,9 +1120,12 @@ class GithubInfo(
             )
             return
 
-        if isinstance(message, disnake.Message):
-            if message.guild and message.channel.permissions_for(message.guild.me).manage_messages:
-                scheduling.create_task(suppress_embeds(self.bot, message))
+        if (
+            isinstance(message, disnake.Message)
+            and message.guild
+            and message.channel.permissions_for(message.guild.me).manage_messages
+        ):
+            scheduling.create_task(suppress_embeds(self.bot, message))
 
         if len(comments) > 1:
             for num, component in enumerate(components, 1):

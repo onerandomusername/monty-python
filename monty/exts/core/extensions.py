@@ -108,9 +108,13 @@ class Extensions(commands.Cog):
 
     def cog_unload(self) -> None:
         """Cancel the coro on unload."""
-        if not self._unloading_through_autoreload and not self.bot._autoreload_args:
-            if self.bot._autoreload_task and not self.bot._autoreload_task.done():
-                self.bot._autoreload_task.cancel()
+        if (
+            not self._unloading_through_autoreload
+            and not self.bot._autoreload_args
+            and self.bot._autoreload_task
+            and not self.bot._autoreload_task.done()
+        ):
+            self.bot._autoreload_task.cancel()
 
     @commands.group(
         name="extensions",
