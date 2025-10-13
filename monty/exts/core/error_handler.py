@@ -186,7 +186,6 @@ class ErrorHandler(
         | disnake.Message
         | disnake.ModalInteraction
         | disnake.ApplicationCommandInteraction
-        | disnake.ModalInteraction
         | disnake.MessageInteraction
         | None
     ):

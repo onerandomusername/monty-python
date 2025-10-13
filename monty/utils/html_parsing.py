@@ -3,8 +3,7 @@ from __future__ import annotations
 import re
 import string
 import textwrap
-from collections import namedtuple
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from bs4.element import NavigableString, PageElement, Tag
 
@@ -42,7 +41,12 @@ _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * MAX_SIGNATURE_AMO
 _MAX_DESCRIPTION_LENGTH = 4096 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
 
-BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])
+
+class BracketPair(NamedTuple):
+    opening_bracket: str
+    closing_bracket: str
+
+
 _BRACKET_PAIRS = {
     "{": BracketPair("{", "}"),
     "(": BracketPair("(", ")"),
