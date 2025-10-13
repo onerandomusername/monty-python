@@ -665,7 +665,7 @@ class DocCog(
                 inventory_embed.description = "Hmmm, seems like there's nothing here yet."
                 await inter.send(embed=inventory_embed)
 
-            return
+            return None
 
         symbol = search.strip("`")
         tries = [symbol]

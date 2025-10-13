@@ -264,8 +264,7 @@ class ErrorHandler(
             return None
         else:
             title = self.get_title_from_name(error)
-        embed = self.error_embed(title, str(error))
-        return embed
+        return self.error_embed(title, str(error))
 
     async def on_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Activates when a command raises an error."""

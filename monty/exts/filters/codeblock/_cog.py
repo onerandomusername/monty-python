@@ -125,10 +125,9 @@ class CodeBlockCog(
         log.trace(f"Checking if #{channel} qualifies for code block detection.")
         if not isinstance(channel, GuildMessageable):
             return False
-        res = channel.guild and await self.bot.guild_has_feature(
+        return channel.guild and await self.bot.guild_has_feature(
             channel.guild, constants.Feature.CODEBLOCK_RECOMMENDATIONS
         )
-        return res
 
     async def send_instructions(self, message: disnake.Message, instructions: str) -> None:
         """

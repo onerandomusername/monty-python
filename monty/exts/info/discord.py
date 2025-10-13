@@ -62,8 +62,7 @@ class Discord(
         # we are not using the user, we just need it to serialize, so we're loading with fake data of itself
         data["owner"] = self.bot.user._to_minimal_user_json()
 
-        appinfo = disnake.AppInfo(self.bot._connection, data)
-        return appinfo
+        return disnake.AppInfo(self.bot._connection, data)
 
     @commands.slash_command()
     async def discord(self, inter: disnake.CommandInteraction) -> None:

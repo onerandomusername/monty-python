@@ -154,12 +154,11 @@ def command_wraps(
         ignored_conflict_names = frozenset()
 
     def decorator(wrapper: FuncT) -> FuncT:
-        result = functools.update_wrapper(
+        return functools.update_wrapper(  # pyright: ignore[reportReturnType]
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
             wrapped,
             assigned,
             updated,
         )
-        return result  # type: ignore
 
     return decorator

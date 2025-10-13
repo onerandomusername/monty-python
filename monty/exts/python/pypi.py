@@ -185,8 +185,7 @@ class PyPI(
             max_length=max_length,
             max_lines=21,
         )
-        text = "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
-        return text
+        return "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
 
     async def make_pypi_components(
         self, package: str, json: dict, *, with_description: bool = False

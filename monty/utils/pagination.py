@@ -316,6 +316,7 @@ class LinePaginator(commands.Paginator):
 
         log.debug("Ending pagination and clearing reactions...")
         await message.edit(view=None)
+        return None
 
 
 class ImagePaginator(commands.Paginator):
@@ -490,3 +491,4 @@ class ImagePaginator(commands.Paginator):
 
         log.debug("Ending pagination and clearing reactions...")
         await message.clear_reactions()
+        return None

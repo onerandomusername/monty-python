@@ -47,6 +47,7 @@ class Strainer(SoupStrainer):
                 return markup
         else:
             return super().search(markup)  # pyright: ignore[reportArgumentType]
+        return None
 
 
 def _find_elements_until_tag(

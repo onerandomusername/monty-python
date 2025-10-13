@@ -153,8 +153,7 @@ class Bookmark(
         try:
             message = await user.send(embed=embed, components=components)
         except disnake.Forbidden:
-            error_embed = self.build_error_embed(user)
-            return error_embed
+            return self.build_error_embed(user)
         else:
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
         return message

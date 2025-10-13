@@ -155,6 +155,7 @@ class HelpSession:
             )
 
         self._handle_not_found(query)
+        return None
 
     def _handle_not_found(self, query: str) -> NoReturn:
         """

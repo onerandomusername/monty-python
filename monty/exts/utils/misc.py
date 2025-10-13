@@ -28,12 +28,11 @@ class Misc(
     def _format_snowflake(self, snowflake: disnake.Object) -> str:
         """Return a formatted Snowflake form."""
         timestamp = int(snowflake.created_at.timestamp())
-        out = (
+        return (
             f"**{snowflake.id}** ({timestamp})\n"
             f"<t:{timestamp}:f> (<t:{timestamp}:R>)."
             f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
         )
-        return out
 
     @commands.slash_command(name="char-info")
     async def charinfo(

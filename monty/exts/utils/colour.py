@@ -360,16 +360,14 @@ class Colour(
         """Convert RGB values to HSV values."""
         rgb_list = [val / 255 for val in rgb]
         h, s, v = colorsys.rgb_to_hsv(*rgb_list)
-        hsv = (round(h * 360), round(s * 100), round(v * 100))
-        return hsv
+        return (round(h * 360), round(s * 100), round(v * 100))
 
     @staticmethod
     def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
         """Convert RGB values to HSL values."""
         rgb_list = [val / 255.0 for val in rgb]
         h, l, s = colorsys.rgb_to_hls(*rgb_list)  # noqa: E741
-        hsl = (round(h * 360), round(s * 100), round(l * 100))
-        return hsl
+        return (round(h * 360), round(s * 100), round(l * 100))
 
     @staticmethod
     def _rgb_to_cmyk(rgb: tuple[int, int, int]) -> tuple[int, int, int, int]:
@@ -381,15 +379,13 @@ class Colour(
         c = round((1 - rgb_list[0] - k) * 100 / (1 - k))
         m = round((1 - rgb_list[1] - k) * 100 / (1 - k))
         y = round((1 - rgb_list[2] - k) * 100 / (1 - k))
-        cmyk = (c, m, y, round(k * 100))
-        return cmyk
+        return (c, m, y, round(k * 100))
 
     @staticmethod
     def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
         """Convert RGB values to HEX code."""
         hex_ = "".join([hex(val)[2:].zfill(2) for val in rgb])
-        hex_code = f"#{hex_}".upper()
-        return hex_code
+        return f"#{hex_}".upper()
 
     def _rgb_to_name(self, rgb: tuple[int, int, int]) -> str | None:
         """Convert RGB values to a fuzzy matched name."""
