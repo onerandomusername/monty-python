@@ -40,13 +40,12 @@ class RealPython(commands.Cog, name="Real Python"):
         async with self.bot.http_session.get(url=API_ROOT, params=params) as response:
             if response.status != 200:
                 logger.error(f"Unexpected status code {response.status} from Real Python")
-                raise APIError(
-                    "Real Python",
-                    response.status,
-                    "Sorry, there was en error while trying to fetch data from the Stackoverflow website. "
+                msg = (
+                    "Sorry, there was an error while trying to fetch data from the Real Python website. "
                     "Please try again in some time. "
-                    "If this issue persists, please report this issue in our support server, see link below.",
+                    "If this issue persists, please report this issue in our support server, see link below."
                 )
+                raise APIError(msg, status_code=response.status, api="Real Python")
 
             data = await response.json()
 

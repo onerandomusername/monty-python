@@ -141,6 +141,7 @@ def _get_no_lang_message(content: str) -> str | None:
         )
     else:
         log.trace("Aborting missing language instructions: content is not Python code.")
+    return None
 
 
 def get_instructions(content: str) -> str | None:

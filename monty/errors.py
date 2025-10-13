@@ -15,7 +15,13 @@ if TYPE_CHECKING:
 class APIError(commands.CommandError):
     """Raised when an external API (eg. Wikipedia) returns an error response."""
 
-    def __init__(self, api: str, status_code: int, error_msg: str | None = None) -> None:
+    def __init__(
+        self,
+        error_msg: str | None = None,
+        *,
+        api: str,
+        status_code: int,
+    ) -> None:
         super().__init__(error_msg)
         self.api = api
         self.status_code = status_code

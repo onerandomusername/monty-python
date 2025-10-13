@@ -43,10 +43,10 @@ def sub_clyde(username: str | None) -> str | None:
 
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
-    """
+    """  # noqa: RUF002
 
     def replace_e(match: re.Match) -> str:
-        char = "е" if match[2] == "e" else "Е"
+        char = "\u0435" if match[2] == "e" else "\u0415"
         return match[1] + char
 
     if username:
@@ -63,15 +63,14 @@ async def suppress_embeds(
     force_wait: bool = False,
 ) -> bool:
     """Suppress the embeds on the provided message, after waiting for an edit to add embeds if none exist."""
-    if not message.embeds or force_wait:
-        if wait is not None:
-            try:
-                _, message = await bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=wait)
-            except asyncio.TimeoutError:
-                pass
-            if not message.embeds:
-                return False
-            await asyncio.sleep(0.2)
+    if (not message.embeds or force_wait) and wait is not None:
+        try:
+            _, message = await bot.wait_for("message_edit", check=lambda b, m: m.id == message.id, timeout=wait)
+        except asyncio.TimeoutError:
+            pass
+        if not message.embeds:
+            return False
+        await asyncio.sleep(0.2)
     try:
         await message.edit(suppress_embeds=True)
     except disnake.NotFound:

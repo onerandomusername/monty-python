@@ -70,11 +70,14 @@ class XKCD(
         embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
         if comic and (match := re.match(COMIC_FORMAT, comic)) is None:
-            raise commands.BadArgument("Comic parameter should either be an integer or 'latest'.")
+            msg = "Comic parameter should either be an integer or 'latest'."
+            raise commands.BadArgument(msg)
 
         if not comic or match.group(0) == "latest":
             if self.latest_comic_info is None:
-                raise APIError("xkcd", 500, "Could not fetch the latest comic from XKCD. Please try again later.")
+                msg = "xkcd"
+                msg = "Could not fetch the latest comic from XKCD. Please try again later."
+                raise APIError(msg, status_code=500, api="XKCD")
             info = self.latest_comic_info
         else:
             async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
@@ -83,7 +86,8 @@ class XKCD(
                 elif resp.status == 404:
                     # 404 was avoided as an easter egg. We should show an embed for it
                     if comic != "404":
-                        raise commands.BadArgument("That comic doesn't exist.")
+                        msg = "That comic doesn't exist."
+                        raise commands.BadArgument(msg)
                     embed.title = f"XKCD comic #{comic}"
                     embed.description = f"{resp.status}: Could not retrieve xkcd comic #{comic}."
                     await inter.send(embed=embed, components=DeleteButton(inter.user))
@@ -92,7 +96,13 @@ class XKCD(
                 else:
                     log.error(f"XKCD comic could not be fetched. Something went wrong fetching {comic}")
 
-                    raise APIError("xkcd", resp.status, "Could not fetch that comic from XKCD. Please try again later.")
+                    msg = "xkcd"
+                    msg = "Could not fetch that comic from XKCD. Please try again later."
+                    raise APIError(
+                        msg,
+                        api="XKCD",
+                        status_code=resp.status,
+                    )
 
         embed.title = f"XKCD comic #{info['num']}"
         embed.description = info["alt"]

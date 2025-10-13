@@ -130,14 +130,16 @@ class CodeBlockActions(
         """Get the Snekbox cog. This method serves for typechecking."""
         snekbox = cast("Snekbox | None", self.bot.get_cog("Snekbox"))
         if not snekbox:
-            raise ValueError("Snekbox cog is not available.")
+            msg = "Snekbox cog is not available."
+            raise ValueError(msg)
         return snekbox
 
     def get_codeblock_cog(self) -> "CodeBlockCog":
         """Get the Codeblock cog. This method serves for typechecking."""
         codeblock = cast("CodeBlockCog | None", self.bot.get_cog("Code Block"))
         if not codeblock:
-            raise ValueError("Code Block cog is not available.")
+            msg = "Code Block cog is not available."
+            raise ValueError(msg)
         return codeblock
 
     async def _upload_to_workbin(
@@ -186,13 +188,14 @@ class CodeBlockActions(
         """Paste the contents of the provided message on workbin."""
         if not message:
             if not ctx.message.reference or not isinstance(ctx.message.reference.resolved, disnake.Message):
-                raise commands.UserInputError(
+                msg = (
                     "You must either provide a valid message to paste, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
+                raise commands.UserInputError(msg)
             message = ctx.message.reference.resolved
 
         mentions = disnake.AllowedMentions.none()
@@ -252,7 +255,8 @@ class CodeBlockActions(
     ) -> tuple[bool, str, str | None]:
         # success, string, link
         if not self.black_endpoint:
-            raise RuntimeError("Black endpoint is not configured.")
+            msg = "Black endpoint is not configured."
+            raise RuntimeError(msg)
 
         success, code, _ = await self.parse_code(
             message,
@@ -317,13 +321,14 @@ class CodeBlockActions(
             if not ctx.message.reference or not isinstance(
                 resolved_message := ctx.message.reference.resolved, disnake.Message
             ):
-                raise commands.UserInputError(
+                msg = (
                     "You must either provide a valid message to format with black, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
+                raise commands.UserInputError(msg)
             message = resolved_message
 
         mentions = disnake.AllowedMentions.none()
@@ -359,7 +364,8 @@ class CodeBlockActions(
             check_is_python=False,
         )
         if not success or not code:
-            raise MontyCommandError("This message does not have any code to extract.")
+            msg = "This message does not have any code to extract."
+            raise MontyCommandError(msg)
 
         target = inter.target
         original_source = False

@@ -247,10 +247,9 @@ class GithubInfo(
     async def _fetch_and_update_ratelimits(self) -> None:
         # this is NOT using fetch_data because we need to check the status code.
         async with self.bot.http_session.get(RATE_LIMIT_ENDPOINT, headers=GITHUB_REQUEST_HEADERS) as r:
-            if r.status != 200:
-                # the Rate_limit endpoint is not ratelimited
-                if r.status == 403:
-                    return
+            # the Rate_limit endpoint is not ratelimited
+            if r.status == 403 or r.status >= 500 or r.status == 401:
+                return
 
             data = await r.json()
 
@@ -388,7 +387,8 @@ class GithubInfo(
 
             # User_data will not have a message key if the user exists
             if "message" in user_data:
-                raise MontyCommandError(f"The profile for `{username}` was not found.")
+                msg = f"The profile for `{username}` was not found."
+                raise MontyCommandError(msg)
 
             org_data: list[dict[str, Any]] = await self.fetch_data(
                 user_data["organizations_url"],
@@ -643,7 +643,8 @@ class GithubInfo(
             err = f"issue must be an instance of IssueState, not {type(issue)}"
             raise TypeError(err)
         if not issue.raw_json:
-            raise ValueError("the provided issue does not have its raw json payload")
+            msg = "the provided issue does not have its raw json payload"
+            raise ValueError(msg)
 
         # NOTE: the fields used here should be available in `DISCUSSION_GRAPHQL_QUERY` as well
 
@@ -706,7 +707,8 @@ class GithubInfo(
                     description_list.append("Something internal went wrong.")
 
         if not description_list:
-            raise ValueError("must have at least one IssueState if show_errors_inline is enabled")
+            msg = "must have at least one IssueState if show_errors_inline is enabled"
+            raise ValueError(msg)
 
         resp = disnake.Embed(colour=constants.Colours.bright_green, description="\n".join(description_list))
 
@@ -732,11 +734,14 @@ class GithubInfo(
                 if not user:
                     if not repo:
                         # both are non-existant
-                        raise commands.CommandError("Both a user and repo must be provided.")
+                        msg = "Both a user and repo must be provided."
+                        raise commands.CommandError(msg)
                     # user is non-existant
-                    raise commands.CommandError("No user provided, a user must be provided.")
+                    msg = "No user provided, a user must be provided."
+                    raise commands.CommandError(msg)
                 # repo is non-existant
-                raise commands.CommandError("No repo provided, a repo must be provided.")
+                msg = "No repo provided, a repo must be provided."
+                raise commands.CommandError(msg)
         # Remove duplicates while maintaining order
         issue_numbers = list(dict.fromkeys(numbers))
 
@@ -867,7 +872,8 @@ class GithubInfo(
         """Get whether the issue is currently expanded or collapsed."""
         match = EXPAND_ISSUE_CUSTOM_ID_REGEX.fullmatch(custom_id)
         if not match:
-            raise ValueError("Invalid custom_id provided.")
+            msg = "Invalid custom_id provided."
+            raise ValueError(msg)
         return match.group("current_state") == "1"
 
     def get_expand_button(
@@ -1102,7 +1108,8 @@ class GithubInfo(
         elif isinstance(message, disnake.Interaction):
             reply_method = message.send
         else:
-            raise RuntimeError("unreachable")
+            msg = "unreachable"
+            raise RuntimeError(msg)
 
         if len(comments) > 4:
             await reply_method(
@@ -1113,9 +1120,12 @@ class GithubInfo(
             )
             return
 
-        if isinstance(message, disnake.Message):
-            if message.guild and message.channel.permissions_for(message.guild.me).manage_messages:
-                scheduling.create_task(suppress_embeds(self.bot, message))
+        if (
+            isinstance(message, disnake.Message)
+            and message.guild
+            and message.channel.permissions_for(message.guild.me).manage_messages
+        ):
+            scheduling.create_task(suppress_embeds(self.bot, message))
 
         if len(comments) > 1:
             for num, component in enumerate(components, 1):
@@ -1183,7 +1193,8 @@ class GithubInfo(
                 extract_full_links=extract_full_links,
             )
         else:
-            raise RuntimeError("unreachable")
+            msg = "unreachable"
+            raise RuntimeError(msg)
 
         # no issues found, return early
         if not issues:
@@ -1251,7 +1262,7 @@ class GithubInfo(
             allow_expand = await self.bot.guild_has_feature(guild_id, Feature.GITHUB_ISSUE_EXPAND)
             allow_pre_expanded = False
 
-        embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
+        embed, _issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: list[disnake.ui.Button] = [DeleteButton(message.author)]
         if allow_expand:
@@ -1380,10 +1391,11 @@ class GithubInfo(
         """
         await self.on_message_automatic_issue_link(inter, content=arg)
         if not inter.response.is_done():
-            raise commands.BadArgument(
+            msg = (
                 f"{arg} could not be converted to a user, repo, combination, or link to a comment, pull, issue, or"
                 " other type"
             )
+            raise commands.BadArgument(msg)
 
 
 def setup(bot: Monty) -> None:

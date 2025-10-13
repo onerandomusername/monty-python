@@ -53,13 +53,13 @@ class FrozenChainMap(Mapping[K, V]):
         for mapping in self.maps:
             try:
                 return mapping[key]  # can't use 'key in mapping' with defaultdict
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 pass
         return self.__missing__(key)  # support subclasses that define __missing__
 
     def get(self, key: K, default: V = None) -> V | None:
         """Get the object at the provided key."""
-        return self[key] if key in self else default
+        return self.get(key, default)
 
     def __len__(self) -> int:
         return len(set().union(*self.maps))  # reuses stored hash values if possible
@@ -321,13 +321,15 @@ class MetaSource(
             except TypeError:
                 filename = None
             if filename is None:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg)
 
         if not isinstance(source_item, str):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.") from None
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg) from None
 
             lines_extension = f"#L{first_line_no}-L{first_line_no + len(lines) - 1}"
         else:

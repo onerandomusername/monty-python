@@ -32,7 +32,8 @@ def get_redis_session(*, use_fakeredis: bool = False) -> redis.asyncio.Redis:
             import fakeredis
             import fakeredis.aioredis
         except ImportError as e:
-            raise RuntimeError("fakeredis must be installed to use fake redis") from e
+            msg = "fakeredis must be installed to use fake redis"
+            raise RuntimeError(msg) from e
         redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.Redis.uri)
     else:
         pool = redis.asyncio.BlockingConnectionPool.from_url(

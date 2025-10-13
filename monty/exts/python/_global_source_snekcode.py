@@ -82,7 +82,7 @@ if __name__ == "__main__":
                 parents_str, name = name.rsplit(".", 1)
                 parents = parents_str.split(".")
         try:
-            with open(filename) as f:
+            with open(filename) as f:  # noqa: PTH123
                 sourcecode = f.read()
         except FileNotFoundError:
             sys.exit(5)

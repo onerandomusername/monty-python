@@ -25,7 +25,8 @@ class Command(commands.Command):
         self.root_aliases = kwargs.get("root_aliases", [])
 
         if not isinstance(self.root_aliases, (list, tuple)):
-            raise TypeError("Root aliases of a command must be a list or a tuple of strings.")
+            msg = "Root aliases of a command must be a list or a tuple of strings."
+            raise TypeError(msg)
 
 
 class Group(commands.Group):
@@ -42,7 +43,8 @@ class Group(commands.Group):
         self.root_aliases = kwargs.get("root_aliases", [])
 
         if not isinstance(self.root_aliases, (list, tuple)):
-            raise TypeError("Root aliases of a group must be a list or a tuple of strings.")
+            msg = "Root aliases of a group must be a list or a tuple of strings."
+            raise TypeError(msg)
 
 
 def patch_typing() -> None:

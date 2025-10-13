@@ -9,7 +9,8 @@ from monty.database import Rollout
 def update_counts_to_time(rollout: Rollout, current_time: datetime.datetime) -> tuple[int, int]:
     """Calculate the new rollout hash levels for the current time, in relation the scheduled time."""
     if rollout.rollout_by is None:
-        raise RuntimeError("rollout must have rollout_by set.")
+        msg = "rollout must have rollout_by set."
+        raise RuntimeError(msg)
 
     # if the current time is after rollout_by, return the current values
     if rollout.rollout_by < current_time:
@@ -45,7 +46,8 @@ def find_new_hash_levels(rollout: Rollout, goal_percent: float) -> tuple[int, in
     current_difference = high - low
 
     if current_difference > needed_difference:
-        raise RuntimeError("the current percent is above the new goal percent.")
+        msg = "the current percent is above the new goal percent."
+        raise RuntimeError(msg)
 
     if current_difference == needed_difference:
         # shortcut and return the existing values
@@ -85,8 +87,6 @@ def is_rolled_out_to(id: int, *, rollout: Rollout, include_rollout_id: bool = Tr
     if include_rollout_id:
         to_hash = str(rollout.id) + ":" + to_hash
 
-    hash = hashlib.sha256(to_hash.encode()).hexdigest()
-    hash_int = int(hash, 16)
-    is_enabled = (hash_int % 10_000) in range(rollout.rollout_hash_low, rollout.rollout_hash_high)
-
-    return is_enabled
+    rollout_hash = hashlib.sha256(to_hash.encode()).hexdigest()
+    hash_int = int(rollout_hash, 16)
+    return (hash_int % 10_000) in range(rollout.rollout_hash_low, rollout.rollout_hash_high)

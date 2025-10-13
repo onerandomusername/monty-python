@@ -127,17 +127,22 @@ class ConfigAttrMetadata:
 
     def __post_init__(self, category: Category | None) -> None:
         if not category and not self.categories:
-            raise ValueError("Either category or categories must be provided")
+            msg = "Either category or categories must be provided"
+            raise ValueError(msg)
         if category and self.categories:
-            raise ValueError("Only one of category or categories can be provided")
+            msg = "Only one of category or categories can be provided"
+            raise ValueError(msg)
         object.__setattr__(self, "categories", self.categories or frozenset({category}))
 
         if self.type not in (str, int, float, bool):
-            raise ValueError("type must be one of str, int, float, or bool")
+            msg = "type must be one of str, int, float, or bool"
+            raise ValueError(msg)
         if len(self.name) > 45:
-            raise ValueError("name must be less than 45 characters")
+            msg = "name must be less than 45 characters"
+            raise ValueError(msg)
         if len(self.description) > 100:
-            raise ValueError("description must be less than 100 characters")
+            msg = "description must be less than 100 characters"
+            raise ValueError(msg)
 
     def get_select_option(
         self,
@@ -148,7 +153,8 @@ class ConfigAttrMetadata:
     ) -> disnake.SelectOption:
         """Return a select option for this metadata, localised if needed."""
         if not self.select_option:
-            raise ValueError("This ConfigAttrMetadata does not have select_option metadata")
+            msg = "This ConfigAttrMetadata does not have select_option metadata"
+            raise ValueError(msg)
         description = self.select_option.description
         key = locale or "_"
         name = self.name
@@ -168,7 +174,8 @@ class ConfigAttrMetadata:
     def get_button(self, *, locale: Locale | None = None) -> disnake.ui.Button:
         """Return the button for this metadata, localised if needed."""
         if not self.modal:
-            raise ValueError("This ConfigAttrMetadata does not have modal metadata")
+            msg = "This ConfigAttrMetadata does not have modal metadata"
+            raise ValueError(msg)
         label = self.modal.button_label
         key = locale or "_"
         if isinstance(label, dict):
@@ -185,7 +192,8 @@ class ConfigAttrMetadata:
     ) -> disnake.ui.TextInput:
         """Return the text input for this metadata, localised if needed."""
         if not self.modal:
-            raise ValueError("This ConfigAttrMetadata does not have modal metadata")
+            msg = "This ConfigAttrMetadata does not have modal metadata"
+            raise ValueError(msg)
         placeholder = self.description
         key = locale or "_"
         if isinstance(placeholder, dict):

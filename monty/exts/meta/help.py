@@ -44,7 +44,7 @@ class Cog(NamedTuple):
 log = get_logger(__name__)
 
 
-class HelpQueryNotFound(ValueError):
+class HelpQueryNotFoundError(ValueError):
     """
     Raised when a HelpSession Query doesn't match a command or cog.
 
@@ -155,19 +155,21 @@ class HelpSession:
             )
 
         self._handle_not_found(query)
+        return None
 
     def _handle_not_found(self, query: str) -> NoReturn:
         """
         Handles when a query does not match a valid command or cog.
 
-        Will pass on possible close matches along with the `HelpQueryNotFound` exception.
+        Will pass on possible close matches along with the `HelpQueryNotFoundError` exception.
         """
         # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
 
         result = process.extract(query, choices, score_cutoff=60, scorer=fuzz.ratio)
 
-        raise HelpQueryNotFound(f'Query "{query}" not found.', {choice: score for choice, score, pos in result})
+        msg = f'Query "{query}" not found.'
+        raise HelpQueryNotFoundError(msg, {choice: score for choice, score, pos in result})
 
     async def timeout(self, seconds: int = TIMEOUT) -> None:
         """Waits for a set number of seconds, then stops the help session."""
@@ -185,9 +187,8 @@ class HelpSession:
     def reset_timeout(self) -> None:
         """Cancels the original timeout task and sets it again from the start."""
         # cancel original if it exists
-        if self._timeout_task:
-            if not self._timeout_task.cancelled():
-                self._timeout_task.cancel()
+        if self._timeout_task and not self._timeout_task.cancelled():
+            self._timeout_task.cancel()
 
         # recreate the timeout task
         self._timeout_task = scheduling.create_task(self.timeout())
@@ -524,7 +525,7 @@ class Help(commands.Cog):
         """Shows Command Help."""
         try:
             await HelpSession.start(ctx, *commands)
-        except HelpQueryNotFound as error:
+        except HelpQueryNotFoundError as error:
             embed = disnake.Embed()
             embed.colour = disnake.Colour.red()
             embed.title = str(error)
@@ -558,6 +559,7 @@ def setup(bot: Monty) -> None:
     If an exception is raised during the loading of the cog, `unload` will be called in order to
     reinstate the original help command.
     """
+    global _OLD_HELP
     _OLD_HELP = bot.get_command("help")
     bot.remove_command("help")
 

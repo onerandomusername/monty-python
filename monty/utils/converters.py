@@ -80,7 +80,8 @@ class ArrowConverter(commands.Converter):
         try:
             return arrow.get(argument)
         except Exception as e:
-            raise commands.BadArgument(f"{argument} could not be converted into a valid datetime.") from e
+            msg = f"{argument} could not be converted into a valid datetime."
+            raise commands.BadArgument(msg) from e
 
 
 class RolloutConverter(commands.Converter):
@@ -94,7 +95,8 @@ class RolloutConverter(commands.Converter):
             try:
                 return result.one()
             except sqlalchemy.exc.NoResultFound:
-                raise commands.BadArgument(f"`{argument}` is not a valid rollout name.") from None
+                msg = f"`{argument}` is not a valid rollout name."
+                raise commands.BadArgument(msg) from None
 
 
 class MaybeFeature(commands.Converter):
@@ -110,7 +112,8 @@ class MaybeFeature(commands.Converter):
         argument = argument.upper().replace("-", "_")
         match = FEATURE_NAME_REGEX.fullmatch(argument)
         if not match:
-            raise commands.BadArgument(f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``.")
+            msg = f"Feature name must match regex ``{FEATURE_NAME_REGEX.pattern}``."
+            raise commands.BadArgument(msg)
         return argument
 
 
@@ -128,7 +131,8 @@ class FeatureConverter(MaybeFeature):
         try:
             return ctx.bot.features[argument]
         except KeyError:
-            raise commands.BadArgument(f"No feature with name `{argument}` exists.") from None
+            msg = f"No feature with name `{argument}` exists."
+            raise commands.BadArgument(msg) from None
 
 
 class Extension(commands.Converter):
@@ -151,22 +155,21 @@ class Extension(commands.Converter):
         elif (qualified_arg := f"{exts.__name__}.{argument}") in EXTENSIONS:
             return qualified_arg
 
-        matches = []
-        for ext in EXTENSIONS:
-            if argument == unqualify(ext):
-                matches.append(ext)
+        matches = [ext for ext in EXTENSIONS if argument == unqualify(ext)]
 
         if len(matches) > 1:
             matches.sort()
             names = "\n".join(matches)
-            raise commands.BadArgument(
+            msg = (
                 f":x: `{argument}` is an ambiguous extension name. "
                 f"Please use one of the following fully-qualified names.```\n{names}```"
             )
+            raise commands.BadArgument(msg)
         elif matches:
             return matches[0]
         else:
-            raise commands.BadArgument(f":x: Could not find the extension `{argument}`.")
+            msg = f":x: Could not find the extension `{argument}`."
+            raise commands.BadArgument(msg)
 
 
 class PackageName(commands.Converter):
@@ -182,9 +185,8 @@ class PackageName(commands.Converter):
     async def convert(cls, ctx: commands.Context, argument: str) -> str:
         """Checks whether the given string is a valid package name."""
         if cls.PACKAGE_NAME_RE.search(argument):
-            raise commands.BadArgument(
-                "The provided package name is not valid; please only use the _, 0-9, and a-z characters."
-            )
+            msg = "The provided package name is not valid; please only use the _, 0-9, and a-z characters."
+            raise commands.BadArgument(msg)
         return argument
 
 
@@ -204,15 +206,20 @@ class ValidURL(commands.Converter):
         try:
             async with ctx.bot.http_session.get(url, ssl=helpers.ssl_create_default_context()) as resp:
                 if resp.status != 200:
-                    raise commands.BadArgument(f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200")
+                    msg = f"HTTP GET on `{url}` returned status `{resp.status}`, expected 200"
+                    raise commands.BadArgument(msg)
         except CertificateError as e:
             if url.startswith("https"):
-                raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?") from e
-            raise commands.BadArgument(f"Got a `CertificateError` for URL `{url}`.") from e
+                msg = f"Got a `CertificateError` for URL `{url}`. Does it support HTTPS?"
+                raise commands.BadArgument(msg) from e
+            msg = f"Got a `CertificateError` for URL `{url}`."
+            raise commands.BadArgument(msg) from e
         except ValueError as e:
-            raise commands.BadArgument(f"`{url}` doesn't look like a valid hostname to me.") from e
+            msg = f"`{url}` doesn't look like a valid hostname to me."
+            raise commands.BadArgument(msg) from e
         except ClientConnectorError as e:
-            raise commands.BadArgument(f"Cannot connect to host with URL `{url}`.") from e
+            msg = f"Cannot connect to host with URL `{url}`."
+            raise commands.BadArgument(msg) from e
         return url
 
 
@@ -233,14 +240,12 @@ class Inventory(commands.Converter):
         try:
             inventory = await inventory_parser.fetch_inventory(ctx.bot, url)
         except inventory_parser.InvalidHeaderError as e:
-            raise commands.BadArgument(
-                "Unable to parse inventory because of invalid header, check if URL is correct."
-            ) from e
+            msg = "Unable to parse inventory because of invalid header, check if URL is correct."
+            raise commands.BadArgument(msg) from e
         else:
             if inventory is None:
-                raise commands.BadArgument(
-                    f"Failed to fetch inventory file after {inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
-                )
+                msg = f"Failed to fetch inventory file after {inventory_parser.FAILED_REQUEST_ATTEMPTS} attempts."
+                raise commands.BadArgument(msg)
             return url, inventory
 
 
@@ -272,12 +277,15 @@ class Snowflake(commands.IDConverter):
             time = disnake.utils.snowflake_time(snowflake)
         except (OverflowError, OSError) as e:
             # Not sure if this can ever even happen, but let's be safe.
-            raise commands.BadArgument(f"{error}: {e}") from e
+            msg = f"{error}: {e}"
+            raise commands.BadArgument(msg) from e
 
         if time < DISCORD_EPOCH_DT:
-            raise commands.BadArgument(f"{error}: timestamp is before the Discord epoch.")
+            msg = f"{error}: timestamp is before the Discord epoch."
+            raise commands.BadArgument(msg)
         elif (datetime.now(timezone.utc) - time).days < -1:
-            raise commands.BadArgument(f"{error}: timestamp is too far into the future.")
+            msg = f"{error}: timestamp is too far into the future."
+            raise commands.BadArgument(msg)
 
         return snowflake
 
@@ -367,9 +375,8 @@ class SourceConverter(commands.Converter):
             return cog
 
         cmd = ctx.bot.get_slash_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_command(argument)
         if cmd:
@@ -378,16 +385,15 @@ class SourceConverter(commands.Converter):
         # attempt to get the context menu command
 
         cmd = ctx.bot.get_message_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
         cmd = ctx.bot.get_user_command(argument)
-        if cmd:
-            if not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids):
-                return cmd
+        if cmd and (not cmd.guild_ids or (ctx.guild and ctx.guild.id in cmd.guild_ids)):
+            return cmd
 
-        raise commands.BadArgument(f"Unable to convert `{argument}` to valid command, application command, or Cog.")
+        msg = f"Unable to convert `{argument}` to valid command, application command, or Cog."
+        raise commands.BadArgument(msg)
 
 
 if t.TYPE_CHECKING:

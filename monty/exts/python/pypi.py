@@ -173,10 +173,11 @@ class PyPI(
         else:
             html = None
         if not html:
-            raise RuntimeError(
+            msg = (
                 "Unreachable code reached in description parsing. HTML is None."
                 " Content type was {description_content_type!r}"
             )
+            raise RuntimeError(msg)
         parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
         text = _get_truncated_description(
             parsed.find("body") or parsed,
@@ -184,8 +185,7 @@ class PyPI(
             max_length=max_length,
             max_lines=21,
         )
-        text = "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
-        return text
+        return "\n".join([line.rstrip() for line in text.splitlines() if line and not line.isspace()])
 
     async def make_pypi_components(
         self, package: str, json: dict, *, with_description: bool = False
@@ -234,15 +234,14 @@ class PyPI(
             )
         )
 
-        if with_description and (description := info["description"]):
-            if description != "UNKNOWN":
-                # there's likely a description here, so we're going to fetch the html project page,
-                # and parse the html to get the rendered description
-                # this means that we don't have to parse the rst or markdown or whatever is the
-                # project's description content type
-                description = await self.fetch_description(package, description, info["description_content_type"] or "")  # pyright: ignore[reportCallIssue]
-                if description:
-                    components[0].children.append(disnake.ui.TextDisplay(description))
+        if with_description and (description := info["description"]) and description != "UNKNOWN":
+            # there's likely a description here, so we're going to fetch the html project page,
+            # and parse the html to get the rendered description
+            # this means that we don't have to parse the rst or markdown or whatever is the
+            # project's description content type
+            description = await self.fetch_description(package, description, info["description_content_type"] or "")  # pyright: ignore[reportCallIssue]
+            if description:
+                components[0].children.append(disnake.ui.TextDisplay(description))
 
         return list(components), info["package_url"]
 
@@ -267,13 +266,13 @@ class PyPI(
 
         defer_task = None
         if characters := self.check_characters(package):
-            raise MontyCommandError(
-                f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
-            )
+            msg = f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
+            raise MontyCommandError(msg)
 
         response_json = await self.fetch_package(package)
         if not response_json:
-            raise MontyCommandError("Package could not be found.")
+            msg = "Package could not be found."
+            raise MontyCommandError(msg)
             # error
         if with_description:
             defer_task = maybe_defer(inter)

@@ -105,7 +105,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             )
             sent_msg = message_or_inter.message
         else:
-            raise TypeError("message_or_inter must be a Message or MessageInteraction")
+            msg = "message_or_inter must be a Message or MessageInteraction"
+            raise TypeError(msg)
 
         try:
             inter: disnake.MessageInteraction = await self.bot.wait_for(
@@ -158,7 +159,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def set_feature(self, feature: Feature, status: bool | None) -> Feature:
         """Enable the specified feature globally."""
         if not feature:
-            raise commands.UserInputError("That feature does not exist.")
+            msg = "That feature does not exist."
+            raise commands.UserInputError(msg)
         if feature.enabled is status:
             # already set, return early
             return feature
@@ -679,7 +681,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 for name in feature_names:
                     if name in guild_db.feature_ids:
                         if len(guilds) == 1:
-                            raise commands.UserInputError(f"That feature is already enabled in guild ID `{guild.id}`.")
+                            msg = f"That feature is already enabled in guild ID `{guild.id}`."
+                            raise commands.UserInputError(msg)
                         else:
                             continue
                     more_features.append(name)
@@ -733,7 +736,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 for name in feature_names:
                     if name not in guild_db.feature_ids:
                         if len(guilds) == 1:
-                            raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
+                            msg = f"That feature is not enabled in guild ID `{guild.id}`."
+                            raise commands.UserInputError(msg)
                         else:
                             continue
                     remove_features.append(name)
@@ -750,7 +754,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         )
 
     @commands.Cog.listener(disnake.Event.dropdown)
-    async def FEATURES_GLOBAL_TOGGLE_listener(self, inter: disnake.MessageInteraction) -> None:
+    async def features_global_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for guild feature toggle select."""
         if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GLOBAL_TOGGLE):
             return
@@ -772,7 +776,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # Ask for confirmation
         action_map = {"True": "globally enable", "False": "globally disable", "None": "switch to guild overrides"}
-        confirm, conf_inter, components = await self.wait_for_confirmation(
+        confirm, conf_inter, _components = await self.wait_for_confirmation(
             inter,
             f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation Required\nAre you"
             f" sure you want to **{action_map[selected_value]}** feature `{feature_name}`?\n\u200b",
@@ -846,7 +850,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if await self.bot.is_owner(ctx.author):
             return True
 
-        raise commands.NotOwner("You do not own this bot.")
+        msg = "You do not own this bot."
+        raise commands.NotOwner(msg)
 
 
 def setup(bot: Monty) -> None:

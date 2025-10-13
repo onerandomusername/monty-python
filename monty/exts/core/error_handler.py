@@ -131,7 +131,8 @@ class ErrorHandler(
     async def send_error(self, ctx: AnyContext, content: str | None = None, **kwargs) -> None:
         """Send an error message to the context."""
         if kwargs.get("components") is not None:
-            raise ValueError("Cannot pass components to send_error, they are added automatically.")
+            msg = "Cannot pass components to send_error, they are added automatically."
+            raise ValueError(msg)
 
         if content:
             kwargs["content"] = content
@@ -185,7 +186,6 @@ class ErrorHandler(
         | disnake.Message
         | disnake.ModalInteraction
         | disnake.ApplicationCommandInteraction
-        | disnake.ModalInteraction
         | disnake.MessageInteraction
         | None
     ):
@@ -264,14 +264,13 @@ class ErrorHandler(
             return None
         else:
             title = self.get_title_from_name(error)
-        embed = self.error_embed(title, str(error))
-        return embed
+        return self.error_embed(title, str(error))
 
     async def on_command_error(self, ctx: AnyContext, error: Exception) -> None:
         """Activates when a command raises an error."""
         if getattr(error, "handled", False):
             command = self.get_command(ctx)
-            logging.debug("Command %s had its error already handled locally, ignoring.", command)
+            logger.debug("Command %s had its error already handled locally, ignoring.", command)
             return
 
         if isinstance(error, commands.CommandNotFound):

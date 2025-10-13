@@ -84,7 +84,7 @@ CMYK Format.
 
 ### `colour hex`
 
-- `hex` (`string`) (required) Hex colour code.
+- `hex_code` (`string`) (required) Hex colour code.
 
 HEX Format.
 

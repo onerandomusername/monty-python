@@ -148,6 +148,7 @@ def lock(
                 log.info(f"{name}: aborted because resource {namespace!r}:{id_!r} is locked")
                 if raise_error:
                     raise LockedResourceError(str(namespace), id_)
+            return None
 
         return wrapper
 

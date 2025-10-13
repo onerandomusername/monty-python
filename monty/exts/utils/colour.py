@@ -30,7 +30,7 @@ class Colour(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        with open(pathlib.Path("monty/resources/ryanzec_colours.json")) as f:
+        with pathlib.Path("monty/resources/ryanzec_colours.json").open() as f:
             self.colour_mapping = json.load(f)
             del self.colour_mapping["_"]  # Delete source credit entry
 
@@ -284,22 +284,23 @@ class Colour(
         await self.send_colour_response(ctx, hex_tuple, input_colour=hex_code)
 
     @slash_colour.sub_command(name="hex")
-    async def slash_hex(self, inter: disnake.ApplicationCommandInteraction, hex: str) -> None:
+    async def slash_hex(self, inter: disnake.ApplicationCommandInteraction, hex_code: str) -> None:
         """
         HEX Format.
 
         Parameters
         ----------
-        hex: Hex colour code.
+        hex_code: Hex colour code.
         """
-        hex, hex_tuple = self._hex(hex)
-        await self.send_colour_response(inter, hex_tuple, input_colour=hex)
+        hex_code, hex_tuple = self._hex(hex_code)
+        await self.send_colour_response(inter, hex_tuple, input_colour=hex_code)
 
     def _name(self, name: str) -> tuple[str, tuple[int, int, int]]:
         """Convert colour name to RGB tuple."""
         matched_hex = self.match_colour_name(name)
         if matched_hex is None:
-            raise MontyCommandError(f"Could not find a close match for the colour name `{name}`.")
+            msg = f"Could not find a close match for the colour name `{name}`."
+            raise MontyCommandError(msg)
         return name, ImageColor.getrgb(matched_hex)[:3]
 
     @colour.command()
@@ -359,16 +360,14 @@ class Colour(
         """Convert RGB values to HSV values."""
         rgb_list = [val / 255 for val in rgb]
         h, s, v = colorsys.rgb_to_hsv(*rgb_list)
-        hsv = (round(h * 360), round(s * 100), round(v * 100))
-        return hsv
+        return (round(h * 360), round(s * 100), round(v * 100))
 
     @staticmethod
     def _rgb_to_hsl(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
         """Convert RGB values to HSL values."""
         rgb_list = [val / 255.0 for val in rgb]
         h, l, s = colorsys.rgb_to_hls(*rgb_list)  # noqa: E741
-        hsl = (round(h * 360), round(s * 100), round(l * 100))
-        return hsl
+        return (round(h * 360), round(s * 100), round(l * 100))
 
     @staticmethod
     def _rgb_to_cmyk(rgb: tuple[int, int, int]) -> tuple[int, int, int, int]:
@@ -380,15 +379,13 @@ class Colour(
         c = round((1 - rgb_list[0] - k) * 100 / (1 - k))
         m = round((1 - rgb_list[1] - k) * 100 / (1 - k))
         y = round((1 - rgb_list[2] - k) * 100 / (1 - k))
-        cmyk = (c, m, y, round(k * 100))
-        return cmyk
+        return (c, m, y, round(k * 100))
 
     @staticmethod
     def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
         """Convert RGB values to HEX code."""
         hex_ = "".join([hex(val)[2:].zfill(2) for val in rgb])
-        hex_code = f"#{hex_}".upper()
-        return hex_code
+        return f"#{hex_}".upper()
 
     def _rgb_to_name(self, rgb: tuple[int, int, int]) -> str | None:
         """Convert RGB values to a fuzzy matched name."""
@@ -398,8 +395,8 @@ class Colour(
                 query=input_hex_colour, choices=self.colour_mapping.values(), score_cutoff=80
             )
             if result:
-                match, certainty, _ = result
-                return [name for name, hex_code in self.colour_mapping.items() if hex_code == match][0]
+                match, _certainty, _ = result
+                return next(name for name, hex_code in self.colour_mapping.items() if hex_code == match)
         except (TypeError, ValueError):
             pass
         return None
@@ -411,7 +408,7 @@ class Colour(
                 query=input_colour_name, choices=self.colour_mapping.keys(), score_cutoff=80
             )
             if result:
-                match, certainty, _ = result
+                match, _certainty, _ = result
                 return f"#{self.colour_mapping[match]}"
         except (ValueError, TypeError):
             pass

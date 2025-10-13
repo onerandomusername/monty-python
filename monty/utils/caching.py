@@ -67,8 +67,7 @@ def _get_sig(
     if include_posargs is not None:
         _extend_posargs(signature, include_posargs, *args)
     else:
-        for arg in args:
-            signature.append(hash(arg))
+        signature.extend([hash(arg) for arg in args])
 
     if include_kwargs is not None:
         _extend_kwargs(signature, include_kwargs, allow_unset, **kwargs)
@@ -96,7 +95,8 @@ def redis_cache(
     if cache_cls:
         # we actually want to do it this way, as it is important that they are *actually* the same class
         if cache and type(cache_cls) is not type(cache):
-            raise TypeError("cache cannot be provided if cache_cls is provided and cache and cache_cls are different")
+            msg = "cache cannot be provided if cache_cls is provided and cache and cache_cls are different"
+            raise TypeError(msg)
         _cache: cachingutils.redis.AsyncRedisCache = cache_cls(session=redis_cache._redis)  # type: ignore
     else:
         _cache = redis_cache

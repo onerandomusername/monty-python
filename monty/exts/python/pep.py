@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import ClassVar, cast
 from urllib.parse import urljoin
 
 import aiohttp
@@ -39,28 +39,30 @@ class HeaderParser:
         dl = soup.find("dl")
         if not dl:
             log.error("Failed to find descriptor list in PEP HTML. `dl` could not be found.")
-            raise MontyCommandError("Failed to parse PEP headers. Please report this issue in the support server.")
+            msg = "Failed to parse PEP headers. Please report this issue in the support server."
+            raise MontyCommandError(msg)
         results = {}
         # all headers should be in dt/dd pairs
         try:
             for dt in dl.find_all("dt"):
                 next_sibling = dt.find_next_sibling("dd")
                 if not next_sibling:
-                    raise ValueError("Failed to find matching dd for dt in PEP headers.")
+                    msg = "Failed to find matching dd for dt in PEP headers."
+                    raise ValueError(msg)
                 results[dt.text] = next_sibling.text
         except Exception as e:
             log.error("Failed to parse PEP headers.", exc_info=e)
-            raise MontyCommandError(
-                "Failed to parse PEP headers. Please report this issue in the support server."
-            ) from None
+            msg = "Failed to parse PEP headers. Please report this issue in the support server."
+            raise MontyCommandError(msg) from None
 
         # readd title to headers
         # this was removed from the headers in python/peps#2532
         h1 = soup.find("h1", attrs={"class": "page-title"})
         if not h1:
             log.error("Failed to find PEP title in PEP HTML. `h1.page-title` could not be found.")
-            raise MontyCommandError("Failed to parse PEP title. Please report this issue in the support server.")
-        results["title"] = h1.text.split("–", 1)[-1]
+            msg = "Failed to parse PEP title. Please report this issue in the support server."
+            raise MontyCommandError(msg)
+        results["title"] = h1.text.split("\u2013", 1)[-1]
 
         return results
 
@@ -68,7 +70,7 @@ class HeaderParser:
 class PEPHeaders:
     """Parser for getting the headers from the HTML of a pep page."""
 
-    header_tags = ["h2", "h3", "h4", "h5", "h6"]
+    header_tags: ClassVar[list[str]] = ["h2", "h3", "h4", "h5", "h6"]
 
     def parse(self, soup: BeautifulSoup) -> dict[str, str]:
         """Parse the provided BeautifulSoup object and return a dict of PEP header to body."""
@@ -202,12 +204,14 @@ class PythonEnhancementProposals(
         tag: bs4.element.Tag | None = soup.find(PEPHeaders.header_tags, text=header)
 
         if tag is None or not tag.parent:
-            raise MontyCommandError("Could not find the requested header in the PEP.")
+            msg = "Could not find the requested header in the PEP."
+            raise MontyCommandError(msg)
 
         text = _get_truncated_description(tag.parent, DocMarkdownConverter(page_url=url), max_length=750, max_lines=14)
         text = (text.lstrip() + "\n").split("\n", 1)[-1].strip()
         if not text:
-            raise MontyCommandError("No text found for that header.")
+            msg = "No text found for that header."
+            raise MontyCommandError(msg)
 
         embed = disnake.Embed(
             title=header,
@@ -260,10 +264,7 @@ class PythonEnhancementProposals(
         if not query:
             # return some interesting peps
             interesting_peps = [0, 8, 257, 517, 619, 660, 664]
-            resp = {}
-            for title, pep in self.autocomplete.items():
-                if pep in interesting_peps:
-                    resp[title] = pep
+            resp = {title: pep for title, pep in self.autocomplete.items() if pep in interesting_peps}
             return dict(sorted(resp.items(), key=lambda x: int(x[1])))
 
         peps: dict[str, int] = {}

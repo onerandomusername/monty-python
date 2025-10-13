@@ -225,6 +225,4 @@ def _fix_indentation(content: str) -> str:
     first_indent = max(first_indent, second_indent)
 
     # Dedent the rest of the lines and join them together with the first line.
-    content = first_line + "".join(line[first_indent:] for line in lines[1:])
-
-    return content
+    return first_line + "".join(line[first_indent:] for line in lines[1:])

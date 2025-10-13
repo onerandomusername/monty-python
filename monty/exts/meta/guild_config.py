@@ -218,7 +218,8 @@ class Configuration(
         attrs = [attr] if attr else category_options.keys()
         for attr in attrs:
             if attr not in category_options:
-                raise commands.UserInputError("This configuration option does not exist in this category.")
+                msg = "This configuration option does not exist in this category."
+                raise commands.UserInputError(msg)
             meta = category_options[attr]
             if not await can_guild_set_config_option(
                 self.bot,
@@ -298,7 +299,8 @@ class Configuration(
                 components.extend(nested_components)
 
         if not components:
-            raise commands.CommandError("There are no configuration options you can set in this category.")
+            msg = "There are no configuration options you can set in this category."
+            raise commands.CommandError(msg)
 
         if len(modalable_components) <= 5:
             await inter.response.send_modal(
@@ -380,24 +382,31 @@ class Configuration(
     ) -> dict[str, bool]:
         selected = {}
         if not custom_id.startswith("config:v1:select:"):
-            raise RuntimeError("Select custom_id is not valid.")
+            msg = "Select custom_id is not valid."
+            raise RuntimeError(msg)
         custom_id = custom_id.removeprefix("config:v1:select:")
         try:
             group_name, _author = custom_id.split(":")
         except ValueError:
-            raise RuntimeError("Select custom_id is not valid.") from None
+            msg = "Select custom_id is not valid."
+            raise RuntimeError(msg) from None
         if group_name not in SelectGroup.__members__:
-            raise RuntimeError("Select custom_id is not valid.")
+            msg = "Select custom_id is not valid."
+            raise RuntimeError(msg)
         groups = GROUP_TO_ATTR.get(SelectGroup[group_name], [])
         if not groups:
-            raise RuntimeError("Select custom_id is not valid.")
+            msg = "Select custom_id is not valid."
+            raise RuntimeError(msg)
         for attr in groups:
             meta = METADATA[attr]
             parsed_value = bool(attr in values)
             if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):
                 if parsed_value:
+                    msg = (
+                        "You cannot set this configuration option as your guild does not have the required feature(s)."
+                    )
                     raise commands.CheckFailure(
-                        "You cannot set this configuration option as your guild does not have the required feature(s).",
+                        msg,
                     )
                 continue  # IGNORE the value and do not change its current state
 
@@ -447,11 +456,11 @@ class Configuration(
             return
         group_name, author_id = parts.split(":")
         if str(inter.author.id) != author_id:
-            raise commands.CheckFailure(
-                "You cannot interact with this select as you did not initiate this interaction."
-            )
+            msg = "You cannot interact with this select as you did not initiate this interaction."
+            raise commands.CheckFailure(msg)
         if group_name not in SelectGroup.__members__:
-            raise commands.UserInputError("This configuration option no longer exists.")
+            msg = "This configuration option no longer exists."
+            raise commands.UserInputError(msg)
         group = SelectGroup[group_name]
         config = await self.bot.ensure_guild_config(inter.guild_id)
         updates = await self._handle_merged_select(
@@ -460,7 +469,8 @@ class Configuration(
             values=inter.data.values or [],
         )
         if not updates:
-            raise commands.UserInputError("No valid configuration options were provided.")
+            msg = "No valid configuration options were provided."
+            raise commands.UserInputError(msg)
 
         await self._update_config(config, updates)
 
@@ -486,11 +496,13 @@ class Configuration(
         category_name, author_id = parts.split(":")
 
         if str(inter.author.id) != author_id:
-            raise commands.CheckFailure("You cannot interact with this modal as you did not initiate this interaction.")
+            msg = "You cannot interact with this modal as you did not initiate this interaction."
+            raise commands.CheckFailure(msg)
         try:
             category = Category[category_name]
         except KeyError:
-            raise commands.UserInputError("This configuration category no longer exists.") from None
+            msg = "This configuration category no longer exists."
+            raise commands.UserInputError(msg) from None
         config = await self.bot.ensure_guild_config(inter.guild_id)  # type: ignore # checks prevent guild from being None
 
         updates = {}
@@ -502,8 +514,9 @@ class Configuration(
             if category not in meta.categories:
                 continue
             if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):  # type: ignore
+                msg = "You cannot set this configuration option as your guild does not have the required feature(s)."
                 raise commands.CheckFailure(
-                    "You cannot set this configuration option as your guild does not have the required feature(s).",
+                    msg,
                 )
             parsed_value = value
             if meta.validator and not await meta.validator(inter, parsed_value):  # type: ignore
@@ -516,7 +529,8 @@ class Configuration(
                 )
             updates[custom_id] = parsed_value
         if not updates:
-            raise commands.UserInputError("No valid configuration options were provided.")
+            msg = "No valid configuration options were provided."
+            raise commands.UserInputError(msg)
 
         await self._update_config(config, updates)
 

@@ -10,7 +10,7 @@ from disnake.ext import commands
 if TYPE_CHECKING:
     from monty.log import MontyLogger
 
-__all__ = (
+__all__ = (  # noqa: RUF022
     "Client",
     "Monitoring",
     "Database",

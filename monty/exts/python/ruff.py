@@ -176,32 +176,33 @@ class Ruff(
         ----------
         rule: The rule to get information about
         """
-        ruleCheck = rule.upper().strip()
-        if ruleCheck not in self.rules:
-            raise commands.BadArgument(f"'rule' must be a valid ruff rule. The rule {rule} does not exist.")
-        rule = ruleCheck
-        del ruleCheck
+        normalised_rule = rule.upper().strip()
+        if normalised_rule not in self.rules:
+            msg = f"'rule' must be a valid ruff rule. The rule {rule} does not exist."
+            raise commands.BadArgument(msg)
+        rule = normalised_rule
+        del normalised_rule
 
-        ruleObj = self.rules[rule]
+        rule_obj = self.rules[rule]
         if not await self.bot.guild_has_feature(inter.guild_id, constants.Feature.RUFF_RULE_V2):
-            await self._legacy_embed(inter, ruleObj)
+            await self._legacy_embed(inter, rule_obj)
             return
 
         # Build components v2 layout
         container = disnake.ui.Container(
-            disnake.ui.TextDisplay(f"-# ruff » rules » {ruleObj.code}"),
+            disnake.ui.TextDisplay(f"-# ruff » rules » {rule_obj.code}"),
             accent_colour=next(RUFF_COLOUR_CYCLE),
         )
-        description = f"## [{ruleObj.title}]({ruleObj.url})\n"
-        if ruleObj.linter != "ruff":
-            description += f"Derived from the {ruleObj.linter} linter.\n"
-        if ruleObj.fix != "Fix is not available.":
-            description += f"{ruleObj.fix}\n"
+        description = f"## [{rule_obj.title}]({rule_obj.url})\n"
+        if rule_obj.linter != "ruff":
+            description += f"Derived from the {rule_obj.linter} linter.\n"
+        if rule_obj.fix != "Fix is not available.":
+            description += f"{rule_obj.fix}\n"
 
         if description:
             container.children.append(disnake.ui.TextDisplay(description))
 
-        for name, section in ruleObj.all_sections():
+        for name, section in rule_obj.all_sections():
             container.children.append(disnake.ui.TextDisplay(f"### {name}\n{section}"))
 
         # Add Delete and View More buttons
@@ -210,7 +211,7 @@ class Ruff(
             disnake.ui.Button(
                 label="See on docs.astral.sh",
                 style=disnake.ButtonStyle.url,
-                url=ruleObj.url,
+                url=rule_obj.url,
                 emoji=disnake.PartialEmoji(name="bolt", id=1122704443117424722),
             ),
         )
@@ -219,12 +220,12 @@ class Ruff(
             components=[container, action_row],
         )
 
-    async def _legacy_embed(self, inter: disnake.ApplicationCommandInteraction, ruleObj: Rule) -> None:
+    async def _legacy_embed(self, inter: disnake.ApplicationCommandInteraction, rule_obj: Rule) -> None:
         """Create an embed for a rule."""
         embed = disnake.Embed(colour=next(RUFF_COLOUR_CYCLE))
 
         embed.set_footer(
-            text=f"original linter: {ruleObj.linter}",
+            text=f"original linter: {rule_obj.linter}",
             icon_url="https://avatars.githubusercontent.com/u/115962839?s=200&v=4",
         )
         embed.set_author(
@@ -232,34 +233,34 @@ class Ruff(
         )
         # embed.timestamp = self.last_fetched
         embed.title = ""
-        if ruleObj.preview:
+        if rule_obj.preview:
             embed.title = "🧪 "
-        embed.title += ruleObj.title
+        embed.title += rule_obj.title
 
         try:
-            embed.description = ruleObj.explanation.split("## What it does\n", 1)[-1].split("## Why is this bad?")[0]
+            embed.description = rule_obj.explanation.split("## What it does\n", 1)[-1].split("## Why is this bad?")[0]
         except Exception as err:
             logger.error("Something went wrong trying to get the summary from the description", exc_info=err)
 
-        url = f"{RUFF_RULES_BASE_URL}/{ruleObj.name}/"
+        url = f"{RUFF_RULES_BASE_URL}/{rule_obj.name}/"
         embed.url = url
 
-        if ruleObj.fix in {"Fix is sometimes available.", "Fix is always available."}:
+        if rule_obj.fix in {"Fix is sometimes available.", "Fix is always available."}:
             embed.add_field(
                 "Fixable status",
-                ruleObj.fix,
+                rule_obj.fix,
                 inline=False,
             )
 
         # check if rule has been deprecated
-        if "deprecated" in ruleObj.explanation.split("/n")[0].lower():
+        if "deprecated" in rule_obj.explanation.split("/n")[0].lower():
             embed.add_field(
                 "WARNING",
                 "This rule may have been deprecated. Please check the docs for more information.",
                 inline=False,
             )
 
-        if ruleObj.preview:
+        if rule_obj.preview:
             embed.add_field(
                 "Preview",
                 "This rule is still in preview, and may be subject to change.",
@@ -320,7 +321,8 @@ class Ruff(
     def check_ruff_rules_loaded(self, inter: disnake.ApplicationCommandInteraction) -> bool:
         """A check for all commands in this cog."""
         if not self.rules:
-            raise commands.CommandError("Ruff rules have not been loaded yet, please try again later.")
+            msg = "Ruff rules have not been loaded yet, please try again later."
+            raise commands.CommandError(msg)
         return True
 
     def cog_slash_command_check(self, inter: disnake.ApplicationCommandInteraction) -> bool:

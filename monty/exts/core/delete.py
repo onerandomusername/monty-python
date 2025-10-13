@@ -34,9 +34,8 @@ class DeleteManager(commands.Cog):
 
         perms, user_id, *extra = custom_id.split(":")
         delete_msg = None
-        if extra:
-            if extra[0]:
-                delete_msg = int(extra[0])
+        if extra and extra[0]:
+            delete_msg = int(extra[0])
 
         perms, user_id = int(perms), int(user_id)
 
@@ -80,7 +79,8 @@ class DeleteManager(commands.Cog):
             if getattr(comp, "custom_id", None) == VIEW_DELETE_ID_V1 and isinstance(comp, disnake.ui.Button):
                 break
         else:
-            raise RuntimeError("view doesn't contain the button that was clicked.")
+            msg = "view doesn't contain the button that was clicked."
+            raise RuntimeError(msg)
 
         comp.disabled = True
         await inter.response.edit_message(components=components)

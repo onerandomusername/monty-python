@@ -335,7 +335,7 @@ class InternalEval(commands.Cog):
             await ctx.send("A REPL session is already running. Please cancel it before starting a new one.")
             return
 
-        vars = {
+        local_vars = {
             "author": ctx.author,
             "bot": self.bot,
             "channel": ctx.channel,
@@ -373,7 +373,7 @@ class InternalEval(commands.Cog):
                     break
                 body = prepare_input(msg.content, require_fenced=True)
                 try:
-                    result = await self.run_code(body, vars, rules=rules)
+                    result = await self.run_code(body, local_vars, rules=rules)
                 except SystemExit:
                     break
 
@@ -394,12 +394,13 @@ class InternalEval(commands.Cog):
                     components=response.components,
                     files=response.files,
                 )
-                vars = result.local_vars
+                local_vars = result.local_vars
 
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Ensure only the owner can run commands in this extension."""
         if not await self.bot.is_owner(ctx.author):
-            raise commands.NotOwner("Only the bot owner can use this command.")
+            msg = "Only the bot owner can use this command."
+            raise commands.NotOwner(msg)
 
         return True
 

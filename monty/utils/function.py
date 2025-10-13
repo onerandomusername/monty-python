@@ -42,15 +42,18 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
             _, value = arg_values[arg_pos]
             return value
         except IndexError:
-            raise ValueError(f"Argument position {arg_pos} is out of bounds.") from None
+            msg = f"Argument position {arg_pos} is out of bounds."
+            raise ValueError(msg) from None
     elif isinstance(name_or_pos, str):
         arg_name = name_or_pos
         try:
             return arguments[arg_name]
         except KeyError:
-            raise ValueError(f"Argument {arg_name!r} doesn't exist.") from None
+            msg = f"Argument {arg_name!r} doesn't exist."
+            raise ValueError(msg) from None
     else:
-        raise TypeError("'arg' must either be an int (positional index) or a str (keyword).")
+        msg = "'arg' must either be an int (positional index) or a str (keyword)."
+        raise TypeError(msg)
 
 
 def get_arg_value_wrapper(
@@ -121,11 +124,12 @@ def update_wrapper_globals(
     shared_globals = set(wrapper.__code__.co_names) & set(annotation_global_names)
     shared_globals &= set(wrapped.__globals__) & set(wrapper.__globals__) - ignored_conflict_names
     if shared_globals:
-        raise GlobalNameConflictError(
+        msg = (
             "wrapper and the wrapped function share the following "
             f"global names used by annotations: {', '.join(shared_globals)}. Resolve the conflicts or add "
             "the name to the `ignored_conflict_names` set to suppress this error if this is intentional."
         )
+        raise GlobalNameConflictError(msg)
 
     new_globals = wrapper.__globals__.copy()
     new_globals.update((k, v) for k, v in wrapped.__globals__.items() if k not in wrapper.__code__.co_names)
@@ -150,12 +154,11 @@ def command_wraps(
         ignored_conflict_names = frozenset()
 
     def decorator(wrapper: FuncT) -> FuncT:
-        result = functools.update_wrapper(
+        return functools.update_wrapper(  # pyright: ignore[reportReturnType]
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
             wrapped,
             assigned,
             updated,
         )
-        return result  # type: ignore
 
     return decorator

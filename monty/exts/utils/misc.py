@@ -28,12 +28,11 @@ class Misc(
     def _format_snowflake(self, snowflake: disnake.Object) -> str:
         """Return a formatted Snowflake form."""
         timestamp = int(snowflake.created_at.timestamp())
-        out = (
+        return (
             f"**{snowflake.id}** ({timestamp})\n"
             f"<t:{timestamp}:f> (<t:{timestamp}:R>)."
             f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
         )
-        return out
 
     @commands.slash_command(name="char-info")
     async def charinfo(
@@ -83,7 +82,8 @@ class Misc(
     async def snowflake(self, ctx: commands.Context[Monty], *snowflakes: disnake.Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
-            raise commands.BadArgument("At least one snowflake must be provided.")
+            msg = "At least one snowflake must be provided."
+            raise commands.BadArgument(msg)
 
         # clear any duplicated keys
         snowflakes = tuple(set(snowflakes))
@@ -94,9 +94,7 @@ class Misc(
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
-        lines: list[str] = []
-        for snowflake in snowflakes:
-            lines.append(self._format_snowflake(snowflake))
+        lines: list[str] = [self._format_snowflake(snowflake) for snowflake in snowflakes]
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 

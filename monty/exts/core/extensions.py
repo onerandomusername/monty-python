@@ -108,9 +108,13 @@ class Extensions(commands.Cog):
 
     def cog_unload(self) -> None:
         """Cancel the coro on unload."""
-        if not self._unloading_through_autoreload and not self.bot._autoreload_args:
-            if self.bot._autoreload_task and not self.bot._autoreload_task.done():
-                self.bot._autoreload_task.cancel()
+        if (
+            not self._unloading_through_autoreload
+            and not self.bot._autoreload_args
+            and self.bot._autoreload_task
+            and not self.bot._autoreload_task.done()
+        ):
+            self.bot._autoreload_task.cancel()
 
     @commands.group(
         name="extensions",
@@ -343,12 +347,16 @@ class Extensions(commands.Cog):
                 else:
                     continue
                 try:
-                    dependent_process = subprocess.run(
-                        ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],  # noqa: S607
-                        capture_output=True,
-                        encoding="utf-8",
-                        check=True,
-                        cwd=pathlib.Path.cwd(),
+                    dependent_process = await self.bot.loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            subprocess.run,
+                            ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],
+                            capture_output=True,
+                            encoding="utf-8",
+                            check=True,
+                            cwd=pathlib.Path.cwd(),
+                        ),
                     )
                 except Exception as e:
                     log.error(f"Error running ruff analyze graph: {e}")
@@ -448,12 +456,14 @@ class Extensions(commands.Cog):
     async def enable_autoreload(self, ctx: commands.Context, *extra_paths: str) -> None:
         """Enable extension autoreload."""
         if not importlib.util.find_spec("watchfiles"):
-            raise RuntimeError("Watchfiles not installed. Command not usable.")
+            msg = "Watchfiles not installed. Command not usable."
+            raise RuntimeError(msg)
 
         if extra_paths:
             for path in extra_paths:
                 if not pathlib.Path(path).is_file():
-                    raise commands.BadArgument(f"Extra path '{path}' is not a valid file.")
+                    msg = f"Extra path '{path}' is not a valid file."
+                    raise commands.BadArgument(msg)
         else:
             extra_paths += (
                 "monty/utils",
@@ -479,7 +489,8 @@ class Extensions(commands.Cog):
     async def disable_autoreload(self, ctx: commands.Context) -> None:
         """Disable extension autoreload."""
         if not self.bot._autoreload_task:
-            raise commands.BadArgument("Reload was already off.")
+            msg = "Reload was already off."
+            raise commands.BadArgument(msg)
 
         if not self.bot._autoreload_task.done():
             self.bot._autoreload_task.cancel()
