@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from monty import constants
 from monty.bot import Monty
 from monty.log import get_logger
-from monty.utils import helpers, scheduling
+from monty.utils import scheduling
 from monty.utils.html_parsing import get_symbol_markdown
 
 from . import _cog, doc_cache
@@ -122,9 +122,7 @@ class BatchParser:
 
             # providing a context is workaround for cloudflare issues
             try:
-                async with self._bot.http_session.get(
-                    doc_item.url, raise_for_status=True, ssl=helpers.ssl_create_default_context()
-                ) as response:
+                async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
                     soup = await self._bot.loop.run_in_executor(
                         None,
                         BeautifulSoup,

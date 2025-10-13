@@ -144,11 +144,21 @@ def fromisoformat(timestamp: str) -> datetime.datetime:
     return dt
 
 
-def ssl_create_default_context() -> ssl.SSLContext:
-    """Return an ssl context that CloudFlare shouldn't flag."""
-    ssl_context = ssl.create_default_context()
-    ssl_context.post_handshake_auth = True
-    return ssl_context
+def _create_ssl_context(*, verify: bool) -> ssl.SSLContext:
+    if verify:
+        ctx = ssl.create_default_context()
+    else:
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+    ctx.set_alpn_protocols(["http/1.1"])
+    # change tls fingerprint to avoid being flagged by cloudflare
+    ctx.post_handshake_auth = True
+    return ctx
+
+
+_SSL_CONTEXT_VERIFIED = _create_ssl_context(verify=True)
+_SSL_CONTEXT_UNVERIFIED = _create_ssl_context(verify=False)
 
 
 @overload

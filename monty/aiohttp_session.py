@@ -11,6 +11,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 
 from monty import constants
 from monty.log import get_logger
+from monty.utils import helpers
 from monty.utils.caching import RedisCache
 
 
@@ -55,7 +56,11 @@ def session_args_for_proxy(proxy: str | None) -> SessionArgs:
     connector = aiohttp.TCPConnector(
         resolver=aiohttp.AsyncResolver(),
         family=socket.AF_INET,
-        ssl=not (proxy and proxy.startswith("http://")),
+        ssl=(
+            helpers._SSL_CONTEXT_UNVERIFIED
+            if (proxy and proxy.startswith("http://"))
+            else helpers._SSL_CONTEXT_VERIFIED
+        ),
     )
     return {"proxy": proxy or None, "connector": connector}
 
