@@ -131,7 +131,8 @@ class ErrorHandler(
     async def send_error(self, ctx: AnyContext, content: str | None = None, **kwargs) -> None:
         """Send an error message to the context."""
         if kwargs.get("components") is not None:
-            raise ValueError("Cannot pass components to send_error, they are added automatically.")
+            msg = "Cannot pass components to send_error, they are added automatically."
+            raise ValueError(msg)
 
         if content:
             kwargs["content"] = content

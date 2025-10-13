@@ -34,12 +34,15 @@ class Stackoverflow(commands.Cog, name="Stack Overflow"):
                     data = await response.json()
                 else:
                     logger.error(f"Status code is not 200, it is {response.status}")
-                    raise APIError(
-                        "Stack Overflow",
-                        response.status,
+                    msg = (
                         "Sorry, there was an error while trying to fetch data from the StackOverflow website. "
                         "Please try again in some time. "
-                        "If this issue persists, please report this issue in our support server, see link below.",
+                        "If this issue persists, please report this issue in our support server, see link below."
+                    )
+                    raise APIError(
+                        msg,
+                        status_code=response.status,
+                        api="Stack Overflow",
                     )
             if not data["items"]:
                 raise MontyCommandError(

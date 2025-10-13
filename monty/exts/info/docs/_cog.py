@@ -159,10 +159,12 @@ class DocView(DeleteView):
             return
         cog = cast("DocCog | None", self.bot.get_cog("Documentation"))
         if not cog:
-            raise MontyCommandError("The Documentation cog is not loaded.")
+            msg = "The Documentation cog is not loaded."
+            raise MontyCommandError(msg)
         result = await cog.create_symbol_embed(select.values[0])
         if not result:
-            raise MontyCommandError("An error occurred fetching the selected attribute.")
+            msg = "An error occurred fetching the selected attribute."
+            raise MontyCommandError(msg)
         new_embed, _ = result
         self.set_link_button(new_embed.url)
         self.sync_attribute_dropdown(select.values[0])
@@ -649,7 +651,8 @@ class DocCog(
     ) -> disnake.Embed | None:
         if not search:
             if not isinstance(inter, (disnake.Interaction, commands.Context)):
-                raise RuntimeError("if inter is a Message, search must be provided")
+                msg = "if inter is a Message, search must be provided"
+                raise RuntimeError(msg)
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
             )
@@ -721,7 +724,8 @@ class DocCog(
             elif isinstance(inter, disnake.Interaction):
                 await inter.edit_original_message(view=view)
             else:
-                raise RuntimeError("Interaction/message not found to edit the view in.")
+                msg = "Interaction/message not found to edit the view in."
+                raise RuntimeError(msg)
         except disnake.HTTPException:
             pass
 
@@ -839,7 +843,8 @@ class DocCog(
                 break
         # if no results
         if not results:
-            raise MontyCommandError(f"No documentation results found for `{query}`.")
+            msg = f"No documentation results found for `{query}`."
+            raise MontyCommandError(msg)
         # construct embed
         results = dict(sorted(results.items(), key=lambda x: x[0]))
 
@@ -916,7 +921,8 @@ class DocCog(
                     https://docs.python.org/3/objects.inv
         """
         if base_url and not base_url.endswith("/"):
-            raise commands.BadArgument("The base url must end with a slash.")
+            msg = "The base url must end with a slash."
+            raise commands.BadArgument(msg)
 
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
 

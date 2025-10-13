@@ -62,7 +62,8 @@ class GatewayLog(commands.Cog):
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Enforce only the bot owner can use these commands."""
         if not await self.bot.is_owner(ctx.author):
-            raise commands.NotOwner("This command can only be used by the bot owner(s).")
+            msg = "This command can only be used by the bot owner(s)."
+            raise commands.NotOwner(msg)
         return True
 
 

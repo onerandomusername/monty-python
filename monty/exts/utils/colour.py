@@ -299,7 +299,8 @@ class Colour(
         """Convert colour name to RGB tuple."""
         matched_hex = self.match_colour_name(name)
         if matched_hex is None:
-            raise MontyCommandError(f"Could not find a close match for the colour name `{name}`.")
+            msg = f"Could not find a close match for the colour name `{name}`."
+            raise MontyCommandError(msg)
         return name, ImageColor.getrgb(matched_hex)[:3]
 
     @colour.command()

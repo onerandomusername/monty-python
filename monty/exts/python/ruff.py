@@ -178,7 +178,8 @@ class Ruff(
         """
         ruleCheck = rule.upper().strip()
         if ruleCheck not in self.rules:
-            raise commands.BadArgument(f"'rule' must be a valid ruff rule. The rule {rule} does not exist.")
+            msg = f"'rule' must be a valid ruff rule. The rule {rule} does not exist."
+            raise commands.BadArgument(msg)
         rule = ruleCheck
         del ruleCheck
 
@@ -320,7 +321,8 @@ class Ruff(
     def check_ruff_rules_loaded(self, inter: disnake.ApplicationCommandInteraction) -> bool:
         """A check for all commands in this cog."""
         if not self.rules:
-            raise commands.CommandError("Ruff rules have not been loaded yet, please try again later.")
+            msg = "Ruff rules have not been loaded yet, please try again later."
+            raise commands.CommandError(msg)
         return True
 
     def cog_slash_command_check(self, inter: disnake.ApplicationCommandInteraction) -> bool:

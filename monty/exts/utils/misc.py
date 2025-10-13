@@ -83,7 +83,8 @@ class Misc(
     async def snowflake(self, ctx: commands.Context[Monty], *snowflakes: disnake.Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
-            raise commands.BadArgument("At least one snowflake must be provided.")
+            msg = "At least one snowflake must be provided."
+            raise commands.BadArgument(msg)
 
         # clear any duplicated keys
         snowflakes = tuple(set(snowflakes))

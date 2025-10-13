@@ -321,13 +321,15 @@ class MetaSource(
             except TypeError:
                 filename = None
             if filename is None:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg)
 
         if not isinstance(source_item, str):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.") from None
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg) from None
 
             lines_extension = f"#L{first_line_no}-L{first_line_no + len(lines) - 1}"
         else:

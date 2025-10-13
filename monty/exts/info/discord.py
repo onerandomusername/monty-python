@@ -47,7 +47,8 @@ class Discord(
     async def fetch_app_info_for_client(self, client_id: int) -> disnake.AppInfo:
         """Given a client ID, fetch the user."""
         if not Endpoints.app_info:
-            raise commands.UserInputError("The application info endpoint is not configured.")
+            msg = "The application info endpoint is not configured."
+            raise commands.UserInputError(msg)
         async with self.bot.http_session.get(Endpoints.app_info.format(application_id=client_id)) as resp:
             if resp.status != 200:
                 content = "Could not get application info."
@@ -221,11 +222,14 @@ class Discord(
         with_features: Whether or not to include the features of the guild.
         """
         if not invite.guild:
-            raise commands.BadArgument("Group dm invites are not supported.")
+            msg = "Group dm invites are not supported."
+            raise commands.BadArgument(msg)
         if not isinstance(invite.guild, disnake.Guild | disnake.PartialInviteGuild):
-            raise commands.BadArgument("Could not get guild information from that invite.")
+            msg = "Could not get guild information from that invite."
+            raise commands.BadArgument(msg)
         if invite.guild.nsfw_level not in (disnake.NSFWLevel.default, disnake.NSFWLevel.safe):
-            raise commands.BadArgument(f"Refusing to process invite for the nsfw guild, {invite.guild.name}.")
+            msg = f"Refusing to process invite for the nsfw guild, {invite.guild.name}."
+            raise commands.BadArgument(msg)
             return
 
         embed = disnake.Embed(title=f"Invite for {invite.guild.name}")

@@ -173,10 +173,11 @@ class PyPI(
         else:
             html = None
         if not html:
-            raise RuntimeError(
+            msg = (
                 "Unreachable code reached in description parsing. HTML is None."
                 " Content type was {description_content_type!r}"
             )
+            raise RuntimeError(msg)
         parsed = await self.bot.loop.run_in_executor(None, bs4.BeautifulSoup, html, "lxml")
         text = _get_truncated_description(
             parsed.find("body") or parsed,
@@ -267,13 +268,13 @@ class PyPI(
 
         defer_task = None
         if characters := self.check_characters(package):
-            raise MontyCommandError(
-                f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
-            )
+            msg = f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
+            raise MontyCommandError(msg)
 
         response_json = await self.fetch_package(package)
         if not response_json:
-            raise MontyCommandError("Package could not be found.")
+            msg = "Package could not be found."
+            raise MontyCommandError(msg)
             # error
         if with_description:
             defer_task = maybe_defer(inter)

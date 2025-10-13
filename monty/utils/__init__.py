@@ -35,7 +35,8 @@ async def disambiguate(
     or if the user makes an invalid choice.
     """
     if len(entries) == 0:
-        raise commands.BadArgument("No matches found.")
+        msg = "No matches found."
+        raise commands.BadArgument(msg)
 
     if len(entries) == 1:
         return entries[0]
@@ -71,7 +72,8 @@ async def disambiguate(
         if result is None:
             for coro in pending:
                 coro.cancel()
-            raise commands.BadArgument("Canceled.")
+            msg = "Canceled."
+            raise commands.BadArgument(msg)
 
         # Pagination was not initiated, only one page
         if result.author == ctx.bot.user:
@@ -82,7 +84,8 @@ async def disambiguate(
         for coro in pending:
             coro.cancel()
     except asyncio.TimeoutError:
-        raise commands.BadArgument("Timed out.") from None
+        msg = "Timed out."
+        raise commands.BadArgument(msg) from None
 
     # Guaranteed to not error because of isdecimal() in check
     index = int(result.content)
@@ -90,7 +93,8 @@ async def disambiguate(
     try:
         return entries[index - 1]
     except IndexError:
-        raise commands.BadArgument("Invalid choice.") from None
+        msg = "Invalid choice."
+        raise commands.BadArgument(msg) from None
 
 
 def replace_many(

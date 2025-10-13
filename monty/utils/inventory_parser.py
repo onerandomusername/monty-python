@@ -102,22 +102,26 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
         try:
             inventory_version = int(inventory_header[-1:])
         except ValueError as e:
-            raise InvalidHeaderError("Unable to convert inventory version header.") from e
+            msg = "Unable to convert inventory version header."
+            raise InvalidHeaderError(msg) from e
 
         has_project_header = (await stream.readline()).startswith(b"# Project")
         has_version_header = (await stream.readline()).startswith(b"# Version")
         if not (has_project_header and has_version_header):
-            raise InvalidHeaderError("Inventory missing project or version header.")
+            msg = "Inventory missing project or version header."
+            raise InvalidHeaderError(msg)
 
         if inventory_version == 1:
             return await _load_v1(stream)
 
         elif inventory_version == 2:
             if b"zlib" not in await stream.readline():
-                raise InvalidHeaderError("'zlib' not found in header of compressed inventory.")
+                msg = "'zlib' not found in header of compressed inventory."
+                raise InvalidHeaderError(msg)
             return await _load_v2(stream)
 
-    raise InvalidHeaderError("Incompatible inventory version.")
+    msg = "Incompatible inventory version."
+    raise InvalidHeaderError(msg)
 
 
 @redis_cache(

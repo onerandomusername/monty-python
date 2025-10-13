@@ -39,7 +39,8 @@ class GlobalSource(commands.Cog, name="Global Source"):
         """Return the snekbox cog where the code is ran."""
         if snekbox := cast("Snekbox | None", self.bot.get_cog("Snekbox")):  # this will always be a Snekbox instance
             return snekbox
-        raise RuntimeError("Snekbox is not loaded")
+        msg = "Snekbox is not loaded"
+        raise RuntimeError(msg)
 
     @require_feature(constants.Feature.GLOBAL_SOURCE)
     @commands.command(name="globalsource", aliases=("gs",), hidden=True)
@@ -76,7 +77,8 @@ class GlobalSource(commands.Cog, name="Global Source"):
         elif returncode == 1:
             # generic exception occured
             logger.exception(result["stdout"])
-            raise Exception("Snekbox returned an error.")
+            msg = "Snekbox returned an error."
+            raise Exception(msg)
         elif returncode == 2:
             text = "The module you provided was not resolvable to an installed module."
         elif returncode == 3:

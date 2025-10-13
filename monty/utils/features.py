@@ -32,7 +32,8 @@ def require_feature(name: Feature) -> Callable[[T], T]:
     assert name in Feature
     match = NAME_REGEX.fullmatch(name.value)
     if not match:
-        raise RuntimeError(f"Feature value must match regex '{NAME_REGEX.pattern}'")
+        msg = f"Feature value must match regex '{NAME_REGEX.pattern}'"
+        raise RuntimeError(msg)
 
     async def predicate(ctx: AnyContext) -> bool:
         bot: Monty = ctx.bot  # type: ignore # this will be a Monty instance

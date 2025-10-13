@@ -399,7 +399,8 @@ class InternalEval(commands.Cog):
     async def cog_check(self, ctx: commands.Context) -> bool:
         """Ensure only the owner can run commands in this extension."""
         if not await self.bot.is_owner(ctx.author):
-            raise commands.NotOwner("Only the bot owner can use this command.")
+            msg = "Only the bot owner can use this command."
+            raise commands.NotOwner(msg)
 
         return True
 

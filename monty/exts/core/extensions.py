@@ -448,12 +448,14 @@ class Extensions(commands.Cog):
     async def enable_autoreload(self, ctx: commands.Context, *extra_paths: str) -> None:
         """Enable extension autoreload."""
         if not importlib.util.find_spec("watchfiles"):
-            raise RuntimeError("Watchfiles not installed. Command not usable.")
+            msg = "Watchfiles not installed. Command not usable."
+            raise RuntimeError(msg)
 
         if extra_paths:
             for path in extra_paths:
                 if not pathlib.Path(path).is_file():
-                    raise commands.BadArgument(f"Extra path '{path}' is not a valid file.")
+                    msg = f"Extra path '{path}' is not a valid file."
+                    raise commands.BadArgument(msg)
         else:
             extra_paths += (
                 "monty/utils",
@@ -479,7 +481,8 @@ class Extensions(commands.Cog):
     async def disable_autoreload(self, ctx: commands.Context) -> None:
         """Disable extension autoreload."""
         if not self.bot._autoreload_task:
-            raise commands.BadArgument("Reload was already off.")
+            msg = "Reload was already off."
+            raise commands.BadArgument(msg)
 
         if not self.bot._autoreload_task.done():
             self.bot._autoreload_task.cancel()

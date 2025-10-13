@@ -167,7 +167,8 @@ class HelpSession:
 
         result = process.extract(query, choices, score_cutoff=60, scorer=fuzz.ratio)
 
-        raise HelpQueryNotFound(f'Query "{query}" not found.', {choice: score for choice, score, pos in result})
+        msg = f'Query "{query}" not found.'
+        raise HelpQueryNotFound(msg, {choice: score for choice, score, pos in result})
 
     async def timeout(self, seconds: int = TIMEOUT) -> None:
         """Waits for a set number of seconds, then stops the help session."""

@@ -134,7 +134,6 @@ ignore = [
     "ARG",
     "ASYNC",
     "BLE",
-    "EM",
     "ERA",
     "FBT",
     "FIX",

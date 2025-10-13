@@ -62,7 +62,8 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             async with bot.http_session.post(paste_url, json=json) as response:
                 response_json = await response.json()
                 if not 200 <= response.status < 300 and attempt == FAILED_REQUEST_ATTEMPTS:
-                    raise APIError("workbin", response.status, "The paste service could not be used at this time.")
+                    msg = "The paste service could not be used at this time."
+                    raise APIError(api="workbin", status_code=response.status)  # noqa: EM101
         except ClientConnectorError:
             log.warning(
                 f"Failed to connect to paste service at url {paste_url}, "
@@ -96,7 +97,12 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
 
-    raise APIError("workbin", response.status if response else 0, "The paste service could not be used at this time.")
+    msg = "The paste service could not be used at this time."
+    raise APIError(
+        msg,
+        api="Workbin",
+        status_code=response.status if response else 0,
+    )
 
 
 # https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#checking-the-status-of-your-rate-limit

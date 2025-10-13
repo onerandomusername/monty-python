@@ -168,10 +168,12 @@ class RolloutCog(commands.Cog, name="Rollouts"):
             stmt = sa.select(Rollout).where(Rollout.name == name)
             result = await session.scalars(stmt)
             if result.one_or_none():
-                raise commands.BadArgument("A rollout with that name already exists.")
+                msg = "A rollout with that name already exists."
+                raise commands.BadArgument(msg)
 
             if percent_goal not in range(100 + 1):
-                raise commands.BadArgument("percent_goal must be within 0 to 100 inclusive.")
+                msg = "percent_goal must be within 0 to 100 inclusive."
+                raise commands.BadArgument(msg)
 
             # pick a random starting number divisible by 100
             # this means the rollout is effectively not enabled, as both limits are the same value
@@ -203,11 +205,13 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Configure an existing rollout."""
         current_percent = rollouts.compute_current_percent(rollout) * 100
         if new_percent < current_percent:
-            raise commands.BadArgument(
+            msg = (
                 f"The new rollout percentage cannot be less than the current rollout percent of `{new_percent:6.3f}%`."
             )
+            raise commands.BadArgument(msg)
         if new_percent == current_percent:
-            raise commands.CommandError(f"The rollout percentage is already at `{new_percent:6.3f}%`.")
+            msg = f"The rollout percentage is already at `{new_percent:6.3f}%`."
+            raise commands.CommandError(msg)
 
         # calculate the new values
         low, high = rollouts.find_new_hash_levels(rollout, new_percent)
@@ -266,10 +270,12 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         """Start a rollout now to end at the specified time."""
         now = utcnow()
         if now > dt:
-            raise commands.BadArgument("A rollout must end in the future.")
+            msg = "A rollout must end in the future."
+            raise commands.BadArgument(msg)
 
         if rollout.rollout_by is not None:
-            raise commands.CommandError("That rollout already has a time set.")
+            msg = "That rollout already has a time set."
+            raise commands.CommandError(msg)
 
         async with self.bot.db.begin() as session:
             rollout = await session.merge(rollout)
@@ -331,7 +337,8 @@ class RolloutCog(commands.Cog, name="Rollouts"):
         msg = None
         if add_or_remove:
             if feature.rollout:
-                raise commands.BadArgument(f"This feature is already linked to a rollout: `{feature.rollout.name}`.")
+                msg = f"This feature is already linked to a rollout: `{feature.rollout.name}`."
+                raise commands.BadArgument(msg)
             async with self.bot.db.begin() as session:
                 feature.rollout_id = rollout.id
                 feature = await session.merge(feature)
@@ -341,9 +348,11 @@ class RolloutCog(commands.Cog, name="Rollouts"):
 
         else:
             if not feature.rollout:
-                raise commands.BadArgument("This feature is not linked to any rollout.")
+                msg = "This feature is not linked to any rollout."
+                raise commands.BadArgument(msg)
             elif feature.rollout.id != rollout.id:
-                raise commands.BadArgument("This feature is linked to a different rollout.")
+                msg = "This feature is linked to a different rollout."
+                raise commands.BadArgument(msg)
             # this is a workaround to https://github.com/collerek/ormar/issues/720
             async with self.bot.db.begin() as session:
                 stmt = sa.update(Feature).where(Feature.name == feature.name).values(rollout_id=None).returning(Feature)
@@ -363,7 +372,8 @@ class RolloutCog(commands.Cog, name="Rollouts"):
                 raise commands.NoPrivateMessage()
             return True
 
-        raise commands.NotOwner("You do not own this bot.")
+        msg = "You do not own this bot."
+        raise commands.NotOwner(msg)
 
 
 def setup(bot: Monty) -> None:

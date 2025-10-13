@@ -80,7 +80,8 @@ class DeleteManager(commands.Cog):
             if getattr(comp, "custom_id", None) == VIEW_DELETE_ID_V1 and isinstance(comp, disnake.ui.Button):
                 break
         else:
-            raise RuntimeError("view doesn't contain the button that was clicked.")
+            msg = "view doesn't contain the button that was clicked."
+            raise RuntimeError(msg)
 
         comp.disabled = True
         await inter.response.edit_message(components=components)

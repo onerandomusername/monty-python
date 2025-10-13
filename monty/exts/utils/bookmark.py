@@ -253,18 +253,20 @@ class Bookmark(
             if not ctx.message.reference or not isinstance(
                 referenced_message := ctx.message.reference.resolved, disnake.Message
             ):
-                raise commands.UserInputError(
+                msg = (
                     "You must either provide a valid message to bookmark, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
+                raise commands.UserInputError(msg)
             target_message = referenced_message
         if not target_message.guild and not isinstance(
             ctx, (disnake.ModalInteraction, disnake.MessageCommandInteraction)
         ):
-            raise commands.NoPrivateMessage("You may only bookmark messages that aren't in DMs.")
+            msg = "You may only bookmark messages that aren't in DMs."
+            raise commands.NoPrivateMessage(msg)
 
         result = await self.action_bookmark(
             ctx.channel,
