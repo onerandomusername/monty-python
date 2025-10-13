@@ -1,6 +1,7 @@
 import functools
 import importlib
 import logging
+import pathlib
 import textwrap
 from collections.abc import Iterable, Sequence
 from typing import Any, Protocol, TypeGuard, cast
@@ -400,7 +401,7 @@ def _gather_app_commands(cog_class: type[commands.Cog]) -> list[commands.Invokab
 
 def _save_markdown(content: str, filepath: str) -> None:
     """Save markdown to disk and log errors."""
-    with open(filepath, "w", encoding="utf-8") as fh:
+    with pathlib.Path(filepath).open("w", encoding="utf-8") as fh:
         fh.write(content)
 
 

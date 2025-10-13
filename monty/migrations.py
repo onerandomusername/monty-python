@@ -18,7 +18,7 @@ def run_upgrade(connection: Connection, cfg: alembic.config.Config) -> None:
 async def run_async_upgrade(engine: AsyncEngine) -> None:
     """Run alembic upgrades but async."""
     alembic_cfg = alembic.config.Config()
-    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))
+    alembic_cfg.set_main_option("script_location", os.path.dirname(monty.alembic.__file__))  # noqa: PTH120
     async with engine.connect() as conn:
         await conn.run_sync(run_upgrade, alembic_cfg)
 

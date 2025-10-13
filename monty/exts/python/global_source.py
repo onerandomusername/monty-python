@@ -1,4 +1,4 @@
-import os
+import pathlib
 from typing import TYPE_CHECKING, Final, cast
 from urllib.parse import urldefrag
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
+CODE_FILE = pathlib.Path(__file__).parent / "_global_source_snekcode.py"
 
 
 class GlobalSource(commands.Cog, name="Global Source"):
@@ -26,7 +26,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        with open(CODE_FILE) as f:
+        with CODE_FILE.open() as f:
             # this is declared as final as we should *not* be writing to it
             self.code: Final[str] = f.read()
 
@@ -133,11 +133,11 @@ class GlobalSource(commands.Cog, name="Global Source"):
     @tasks.loop(seconds=1)
     async def refresh_code(self, ctx: commands.Context, query: str) -> None:
         """Refresh the internal code every second."""
-        modified = os.stat(CODE_FILE).st_mtime
+        modified = CODE_FILE.stat().st_mtime
         if modified <= self.last_modified:
             return
         self.last_modified = modified
-        with open(CODE_FILE) as f:  # noqa: ASYNC230
+        with CODE_FILE.open() as f:
             self.code = f.read()  # type: ignore # this is the one time we can write to the code
             logger.debug("Updated global_source code")
 

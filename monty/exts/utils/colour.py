@@ -30,7 +30,7 @@ class Colour(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        with open(pathlib.Path("monty/resources/ryanzec_colours.json")) as f:
+        with pathlib.Path("monty/resources/ryanzec_colours.json").open() as f:
             self.colour_mapping = json.load(f)
             del self.colour_mapping["_"]  # Delete source credit entry
 
