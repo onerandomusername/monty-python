@@ -139,7 +139,6 @@ ignore = [
     "FBT",
     "FIX",
     "FURB",
-    "LOG",
     "N",
     "PERF",
     "PGH",

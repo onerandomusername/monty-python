@@ -271,7 +271,7 @@ class ErrorHandler(
         """Activates when a command raises an error."""
         if getattr(error, "handled", False):
             command = self.get_command(ctx)
-            logging.debug("Command %s had its error already handled locally, ignoring.", command)
+            logger.debug("Command %s had its error already handled locally, ignoring.", command)
             return
 
         if isinstance(error, commands.CommandNotFound):
