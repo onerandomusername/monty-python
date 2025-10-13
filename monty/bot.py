@@ -1,23 +1,20 @@
 import asyncio
 import collections
-import socket
 from typing import Any
 from weakref import WeakValueDictionary
 
-import aiohttp
 import arrow
 import cachingutils.redis
 import disnake
 import redis
 import redis.asyncio
 import sqlalchemy as sa
-import yarl
 from disnake.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
 from monty import constants
-from monty.aiohttp_session import CachingClientSession
+from monty.aiohttp_session import CachingClientSession, session_args_for_proxy
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
@@ -58,10 +55,8 @@ class Monty(commands.Bot):
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
 
-        if proxy:
-            kwargs["proxy"] = proxy  # pass proxy to disnake client
-            if "connector" not in kwargs:
-                kwargs["connector"] = self.create_connector(proxy=proxy)
+        # pass proxy and connector to disnake client
+        kwargs.update(session_args_for_proxy(proxy))
 
         super().__init__(**kwargs)
 
@@ -95,30 +90,6 @@ class Monty(commands.Bot):
     def db(self) -> async_sessionmaker[AsyncSession]:
         """Alias of `bot.db_session`."""
         return self.db_session
-
-    def create_connector(self, proxy: str | None = None) -> aiohttp.BaseConnector:
-        """Create a TCPConnector, changing the ssl setting based on the proxy value."""
-        return aiohttp.TCPConnector(
-            resolver=aiohttp.AsyncResolver(),
-            family=socket.AF_INET,
-            ssl=not (proxy and proxy.startswith("http://")),
-        )
-
-    def _create_http_request_class(self, proxy: str | None = None) -> type[aiohttp.ClientRequest]:
-        """Create a ClientRequest type, which inserts the proxy into every request's args (if set)."""
-        if not proxy:
-            return aiohttp.ClientRequest  # default
-
-        proxy_url = yarl.URL(proxy)
-        verify_ssl = not proxy.startswith("http://")
-
-        class ProxyClientRequest(aiohttp.ClientRequest):
-            def __init__(self, *args: Any, **kwargs: Any):
-                kwargs["proxy"] = proxy_url
-                kwargs["ssl"] = verify_ssl
-                super().__init__(*args, **kwargs)
-
-        return ProxyClientRequest
 
     def create_http_session(self, proxy: str | None = None) -> None:
         """Create the bot's aiohttp session."""
