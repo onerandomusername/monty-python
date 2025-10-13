@@ -94,24 +94,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    "E", # pycodestyle
-    "F", # pyflakes
-    "W", # pycodestyle
-    "S", # bandit
-    "I", # isort
-    "UP", # pyupgrade
-    # "RUF", # ruff specific exceptions
-    "ANN",  # flake8-annotations
-    "B",    # flake8-bugbear
-    "C",    # flake8-comprehensions
-    "D",    # flake-docstrings
-    "DTZ",  # flake8-datetimez
-    "G",    # flake8-logging-format
-    "Q",    # flake8-quotes
-    "TC",  # flake8-typechecking
-    "T201",
-    "T203", # flake8-print
-    "RUF013",
+"ALL"
 ]
 ignore = [
     # flake8-commas
@@ -162,6 +145,32 @@ ignore = [
     "G004", # Logging statement uses f-string
     "S101", # Use of `assert` detected
     "S311", # pseduo-random generators, random is used everywhere for random choices.
+
+    "A00",
+    "ARG",
+    "ASYNC",
+    "BLE",
+    "EM",
+    "ERA",
+    "FBT",
+    "FIX",
+    "FURB",
+    "LOG",
+    "N",
+    "PERF",
+    "PGH",
+    "PLC",
+    "PLR",
+    "PLW",
+    "PTH",
+    "PYI",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
+    "SLF",
+    "TD",
+    "TRY",
 ]
 
 [tool.ruff.lint.isort]
