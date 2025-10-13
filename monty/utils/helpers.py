@@ -163,16 +163,16 @@ def get_invite_link_from_app_info(
 def get_invite_link_from_app_info(
     app_info: disnake.AppInfo,
     *,
-    guild_id: int = None,
-    default_permissions: disnake.Permissions = None,
+    guild_id: int | None = None,
+    default_permissions: disnake.Permissions | None = None,
 ) -> str | None: ...
 
 
 def get_invite_link_from_app_info(
     app_info: disnake.AppInfo,
     *,
-    guild_id: int = None,
-    default_permissions: disnake.Permissions = None,
+    guild_id: int | None = None,
+    default_permissions: disnake.Permissions | None = None,
 ) -> str | dict[int, str] | None:
     """Get an invite link from the provided disnake.AppInfo object."""
     urls: dict[int, yarl.URL] | None = {}

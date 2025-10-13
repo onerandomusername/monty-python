@@ -297,7 +297,7 @@ class GithubInfo(
         encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
         return f"{prefix}_{encoded}"
 
-    def render_github_markdown(self, body: str, *, context: RenderContext = None, limit: int = 2700) -> str:
+    def render_github_markdown(self, body: str, *, context: RenderContext | None = None, limit: int = 2700) -> str:
         """Render GitHub Flavored Markdown to Discord flavoured markdown."""
         url_prefix = context and context.html_url
         markdown = mistune.create_markdown(
@@ -807,7 +807,7 @@ class GithubInfo(
         self,
         content: str,
         *,
-        guild_id: int = None,
+        guild_id: int | None = None,
         extract_full_links: bool = False,
     ) -> list[FoundIssue]:
         """Extract issues in a message into FoundIssues."""
@@ -1133,7 +1133,7 @@ class GithubInfo(
 
     @commands.Cog.listener("on_message")
     async def on_message_automatic_issue_link(
-        self, message: disnake.Message | disnake.ApplicationCommandInteraction, content: str = None
+        self, message: disnake.Message | disnake.ApplicationCommandInteraction, content: str | None = None
     ) -> None:
         """
         Automatic issue linking.

@@ -397,7 +397,7 @@ class Snekbox(
 
     @commands.command(name="eval", aliases=("e",))
     @commands.guild_only()
-    async def eval_command(self, ctx: commands.Context, *, code: str = None) -> None:
+    async def eval_command(self, ctx: commands.Context, *, code: str | None = None) -> None:
         """
         Run Python code and get the results.
 
@@ -408,12 +408,12 @@ class Snekbox(
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-        if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
-            return
-
         if not code:  # None or empty string
             await invoke_help_command(ctx)
+            return
+
+        if ctx.author.id in self.jobs:
+            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
             return
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")

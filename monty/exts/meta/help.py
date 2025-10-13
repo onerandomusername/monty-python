@@ -53,7 +53,7 @@ class HelpQueryNotFound(ValueError):
     query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
-    def __init__(self, arg: str, possible_matches: dict = None) -> None:
+    def __init__(self, arg: str, possible_matches: dict | None = None) -> None:
         super().__init__(arg)
         self.possible_matches = possible_matches
 

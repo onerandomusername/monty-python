@@ -79,7 +79,7 @@ class PythonDiscourse(commands.Cog):
         data = await self.fetch_data(POST_API_URL.format(id=post_id))  # type: ignore
         return data, topic_info
 
-    def make_post_embed(self, data: dict[str, Any], topic_info: TopicInfo = None) -> disnake.Embed:
+    def make_post_embed(self, data: dict[str, Any], topic_info: TopicInfo | None = None) -> disnake.Embed:
         """Return an embed representing the provided post and topic information."""
         # consider parsing this into markdown
         limit = 2700

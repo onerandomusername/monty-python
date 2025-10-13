@@ -136,9 +136,9 @@ class Meta(
     async def invite(
         self,
         inter: disnake.CommandInteraction,
-        guild_id: LargeInt = None,
+        guild_id: LargeInt | None = None,
         raw_link: bool = False,
-        ephemeral: bool = None,
+        ephemeral: bool | None = None,
     ) -> None:
         """
         Generate an invite link to invite Monty.
@@ -235,7 +235,7 @@ class Meta(
         await inter.send(embed=e, components=components)
 
     @monty.sub_command()
-    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = None) -> None:
+    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool | None = None) -> None:
         """
         Get a link to the support server.
 

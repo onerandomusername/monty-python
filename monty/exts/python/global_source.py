@@ -151,7 +151,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     @commands.command("globalsourcedebug", hidden=True)
     @commands.is_owner()
-    async def globalsourcedebug(self, ctx: commands.Context, query: str = None) -> None:
+    async def globalsourcedebug(self, ctx: commands.Context, query: str | None = None) -> None:
         """Refresh the existing code and reinvoke it continually until the command is run again."""
         if self.refresh_code.is_running():
             if query:

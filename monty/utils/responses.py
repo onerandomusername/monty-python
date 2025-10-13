@@ -104,10 +104,10 @@ async def send_general_response(
     channel: disnake.abc.Messageable,
     response: str,
     *,
-    message: disnake.Message = None,
+    message: disnake.Message | None = None,
     embed: disnake.Embed = _UNSET,
-    colour: disnake.Colour = None,
-    title: str = None,
+    colour: disnake.Colour | None = None,
+    title: str | None = None,
     tag_as: Literal["general", "affirmative", "negatory"] = "general",
     **kwargs,
 ) -> disnake.Message:

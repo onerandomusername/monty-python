@@ -89,7 +89,7 @@ class CodeBlockActions(
         message: disnake.Message,
         require_fenced: bool = False,
         check_is_python: bool = False,
-        file_exts: set = None,
+        file_exts: set | None = None,
         no_len_limit: bool = False,
     ) -> tuple[Literal[False], None, None] | tuple[Literal[True], str, bool]:
         """Extract code out of a message's content, attachments, or paste link within the message."""
@@ -182,7 +182,7 @@ class CodeBlockActions(
         await inter.send(msg, components=components)
 
     @commands.command(name="paste", aliases=("p",))
-    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message = None) -> None:
+    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message | None = None) -> None:
         """Paste the contents of the provided message on workbin."""
         if not message:
             if not ctx.message.reference or not isinstance(ctx.message.reference.resolved, disnake.Message):
@@ -311,7 +311,7 @@ class CodeBlockActions(
         await inter.send(msg, components=components)
 
     @commands.command(name="blackify", aliases=("black", "bl"))
-    async def prefix_black(self, ctx: commands.Context, message: disnake.Message = None) -> None:
+    async def prefix_black(self, ctx: commands.Context, message: disnake.Message | None = None) -> None:
         """Format the provided message with black."""
         if not message:
             if not ctx.message.reference or not isinstance(

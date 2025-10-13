@@ -101,7 +101,7 @@ class Monty(commands.Bot):
             self.invite_permissions = constants.Client.default_invite_permissions
         return self.invite_permissions
 
-    async def ensure_guild(self, guild_id: int, *, session: AsyncSession = None) -> Guild:
+    async def ensure_guild(self, guild_id: int, *, session: AsyncSession | None = None) -> Guild:
         """Fetch and return a guild config, creating if it does not exist."""
         guild = self.guild_db.get(guild_id)
         if not guild:

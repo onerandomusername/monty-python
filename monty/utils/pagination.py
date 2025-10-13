@@ -110,7 +110,7 @@ class LinePaginator(commands.Paginator):
         max_size: int = 500,
         empty: bool = True,
         linesep: str = "\n",
-        restrict_to_user: disnake.User | disnake.Member = None,
+        restrict_to_user: disnake.User | disnake.Member | None = None,
         timeout: int = 300,
         footer_text: str | None = None,
         url: str | None = None,
@@ -345,7 +345,7 @@ class ImagePaginator(commands.Paginator):
         self._current_page.append(line)
         self.close_page()
 
-    def add_image(self, image: str = None) -> None:
+    def add_image(self, image: str | None = None) -> None:
         """Adds an image to a page given the url."""
         self.images.append(image)
 
