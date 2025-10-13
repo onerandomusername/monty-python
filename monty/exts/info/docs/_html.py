@@ -1,7 +1,6 @@
 import re
 from collections.abc import Callable, Container, Iterable
 from functools import partial
-from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString, PageElement, Tag
@@ -10,10 +9,6 @@ from bs4.filter import SoupStrainer
 from monty.log import get_logger
 
 from . import MAX_SIGNATURE_AMOUNT
-
-
-if TYPE_CHECKING:
-    from markupsafe import Markup
 
 
 log = get_logger(__name__)
@@ -31,6 +26,7 @@ _SEARCH_END_TAG_ATTRS = (
 )
 
 
+# TODO: I'm not actually sure this class does anything anymore
 class Strainer(SoupStrainer):
     """Subclass of SoupStrainer to allow matching of both `Tag`s and `NavigableString`s."""
 
@@ -47,14 +43,14 @@ class Strainer(SoupStrainer):
         """Extend default SoupStrainer behaviour to allow matching both `Tag`s` and `NavigableString`s."""
         if isinstance(markup, str):
             # Let everything through the text filter if we're including strings and tags.
-            if not self.name and not self.attrs and self.include_strings:
+            if not self.name_rules and not self.attribute_rules and self.include_strings:
                 return markup
         else:
-            return super().search(markup)
+            return super().search(markup)  # pyright: ignore[reportArgumentType]
 
 
 def _find_elements_until_tag(
-    start_element: PageElement,
+    start_element: PageElement | Tag | None,
     end_tag_filter: Container[str] | Callable[[Tag], bool],
     *,
     func: Callable,
@@ -98,7 +94,7 @@ def _class_filter_factory(class_names: Iterable[str]) -> Callable[[Tag], bool]:
 
     def match_tag(tag: Tag) -> bool:
         for attr in class_names:
-            if attr in tag.get("class", ()):
+            if attr in (tag.get("class") or ()):
                 return True
         return tag.name == "table"
 

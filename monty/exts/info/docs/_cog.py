@@ -110,6 +110,7 @@ class DocView(DeleteView):
 
         self.sync_attribute_dropdown()
 
+        assert isinstance(self.attribute_select.placeholder, str)
         self.attribute_select.placeholder += f" of {self.docitem.group} {self.docitem.symbol_name}"
 
         if not self.attribute_select.options:
@@ -252,7 +253,7 @@ class DocCog(
 
     def _get_default_completion(
         self,
-        inter: disnake.ApplicationCommandInteraction,
+        inter: disnake.ApplicationCommandInteraction | commands.Context | disnake.Message,
         guild: disnake.Guild = None,
     ) -> list[str]:
         if guild:
@@ -603,18 +604,51 @@ class DocCog(
 
         return False, info.get("home_page") or project_urls.get("Homepage") or project_urls.get("Home")
 
+    @typing.overload
+    async def _docs_get_command(
+        self,
+        inter: disnake.Message,
+        search: str,
+        maybe_start: bool = True,
+        *,
+        return_embed: typing.Literal[True],
+        threshold: commands.Range[int, 0, 100] = 60,
+        scorer: Any = None,
+    ) -> disnake.Embed | None: ...
+    @typing.overload
     async def _docs_get_command(
         self,
         inter: disnake.ApplicationCommandInteraction | commands.Context,
         search: str | None,
         maybe_start: bool = True,
         *,
+        return_embed: typing.Literal[True] = True,
+        threshold: commands.Range[int, 0, 100] = 60,
+        scorer: Any = None,
+    ) -> None: ...
+    @typing.overload
+    async def _docs_get_command(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        search: str | None,
+        maybe_start: bool = True,
+        *,
+        return_embed: typing.Literal[False] = False,
+        threshold: commands.Range[int, 0, 100] = 60,
+        scorer: Any = None,
+    ) -> None: ...
+    async def _docs_get_command(
+        self,
+        inter: disnake.ApplicationCommandInteraction | commands.Context | disnake.Message,
+        search: str | None,
+        maybe_start: bool = True,
+        *,
         return_embed: bool = False,
         threshold: commands.Range[int, 0, 100] = 60,
         scorer: Any = None,
-    ) -> None:
+    ) -> disnake.Embed | None:
         if not search:
-            if isinstance(inter, disnake.Message):
+            if not isinstance(inter, (disnake.Interaction, commands.Context)):
                 raise RuntimeError("if inter is a Message, search must be provided")
             inventory_embed = disnake.Embed(
                 title=f"All inventories (`{len(self.base_urls)}` total)", colour=disnake.Colour.blue()
@@ -628,66 +662,68 @@ class DocCog(
                 inventory_embed.description = "Hmmm, seems like there's nothing here yet."
                 await inter.send(embed=inventory_embed)
 
+            return
+
+        symbol = search.strip("`")
+        tries = [symbol]
+        if maybe_start:
+            tries.append(symbol.split()[0])
+        for sym in tries:
+            sym = await self._docs_autocomplete(inter, sym, threshold=threshold, scorer=scorer)
+            if sym:
+                sym = sym[0]
+                break
         else:
-            symbol = search.strip("`")
-            no_match = False
-            tries = [symbol]
-            if maybe_start:
-                tries.append(symbol.split()[0])
-            for sym in tries:
-                sym = await self._docs_autocomplete(inter, sym, threshold=threshold, scorer=scorer)
-                if sym:
-                    sym = sym[0]
-                    break
+            sym = None
+
+        res = None
+        if sym:
+            if isinstance(inter, disnake.Interaction):
+                maybe_defer(inter)
+            elif isinstance(inter, (commands.Context)):
+                await inter.trigger_typing()
+            elif isinstance(inter, disnake.Message):
+                await inter.channel.trigger_typing()
+            res = await self.create_symbol_embed(sym)
+        if return_embed or isinstance(inter, disnake.Message):
+            return res[0] if res else None
+        if TYPE_CHECKING:
+            inter = cast("disnake.ApplicationCommandInteraction | commands.Context", inter)
+        if not res:
+            error_text = f"No documentation found for `{symbol}`."
+
+            maybe_package = symbol.split()[0]
+            maybe_docs = (
+                self._get_link_from_inventories(maybe_package) or (await self.maybe_pypi_docs(maybe_package))[1]
+            )
+            if maybe_docs:
+                error_text += f"\nYou may find what you're looking for at <{maybe_docs}>"
+            if isinstance(inter, disnake.Interaction):
+                await inter.send(error_text, ephemeral=True)
             else:
-                no_match = True
-                sym = None
-
-            res = None
-            if not no_match:
-                if isinstance(inter, disnake.Interaction):
-                    maybe_defer(inter)
-                elif hasattr(inter, "trigger_typing"):
-                    await inter.trigger_typing()
-                elif isinstance(inter, disnake.Message):
-                    await inter.channel.trigger_typing()
-                res = await self.create_symbol_embed(sym)
-            if return_embed:
-                return res[0] if res else None
-
-            if not res:
-                error_text = f"No documentation found for `{symbol}`."
-
-                maybe_package = symbol.split()[0]
-                maybe_docs = (
-                    self._get_link_from_inventories(maybe_package) or (await self.maybe_pypi_docs(maybe_package))[1]
+                await inter.send(
+                    error_text,
+                    allowed_mentions=disnake.AllowedMentions.none(),
+                    components=DeleteButton(inter.author),
                 )
-                if maybe_docs:
-                    error_text += f"\nYou may find what you're looking for at <{maybe_docs}>"
-                if isinstance(inter, disnake.Interaction):
-                    await inter.send(error_text, ephemeral=True)
-                else:
-                    await inter.send(
-                        error_text,
-                        allowed_mentions=disnake.AllowedMentions.none(),
-                        components=DeleteButton(inter.author),
-                    )
-                return None
+            return None
 
-            doc_embed, doc_item = res
-            view = DocView(inter, self.bot, doc_item, doc_embed)
-            msg = await inter.send(embed=doc_embed, view=view)
-            await view.wait()
-            view.disable()
-            if getattr(view, "deleted", False):
-                return None
-            try:
-                if msg is not None:
-                    await msg.edit(view=view)
-                else:
-                    await inter.edit_original_message(view=view)
-            except disnake.HTTPException:
-                pass
+        doc_embed, doc_item = res
+        view = DocView(inter, self.bot, doc_item, doc_embed)
+        msg = await inter.send(embed=doc_embed, view=view)
+        await view.wait()
+        view.disable()
+        if getattr(view, "deleted", False):
+            return None
+        try:
+            if msg is not None:
+                await msg.edit(view=view)
+            elif isinstance(inter, disnake.Interaction):
+                await inter.edit_original_message(view=view)
+            else:
+                raise RuntimeError("Interaction/message not found to edit the view in.")
+        except disnake.HTTPException:
+            pass
 
     @slash_docs.sub_command("view")
     async def docs_get_command(self, inter: disnake.ApplicationCommandInteraction, query: str | None) -> None:
@@ -702,7 +738,7 @@ class DocCog(
 
     async def _docs_autocomplete(
         self,
-        inter: disnake.Interaction,
+        inter: disnake.ApplicationCommandInteraction | commands.Context | disnake.Message,
         query: str,
         *,
         count: int = 24,
@@ -726,14 +762,14 @@ class DocCog(
         if not query:
             return self._get_default_completion(inter, inter.guild)
         # ----------------------------------------------------
-        guild_id = (inter.guild and inter.guild.id) or inter.guild_id
+        guild_id = (inter.guild and inter.guild.id) or cast("int|None", getattr(inter, "guild_id", None))
         blacklist = BLACKLIST_MAPPING.get(guild_id or 0)
 
         query = query.strip()
 
         packages = self.get_packages_for_guild(guild_id)
 
-        def processor(sentence: str) -> str:
+        def processor(sentence: str, blacklist: list[str] | tuple[str, ...] = blacklist or ()) -> str:
             if (sym := self.doc_symbols_all.get(sentence)) and sym.package in blacklist:
                 return ""
             else:
@@ -785,7 +821,7 @@ class DocCog(
         """
         results = {}
         guild_id = (inter.guild and inter.guild.id) or inter.guild_id
-        blacklist = BLACKLIST_MAPPING.get(guild_id)
+        blacklist = BLACKLIST_MAPPING.get(guild_id) if guild_id else None
 
         query = query.strip()
 
@@ -830,7 +866,7 @@ class DocCog(
         ----------
         package: Uses the internal information, checks PyPI otherwise.
         """
-        if not (pypi := self.bot.get_cog("PyPI")):
+        if not (pypi := cast("PyPI | None", self.bot.get_cog("PyPI"))):
             await inter.send("Sorry, I'm unable to process this at the moment!", ephemeral=True)
             return
 
@@ -902,7 +938,8 @@ class DocCog(
 
         self.update_single(package, inventory_dict)
         await ctx.send(
-            f"Added the package `{package.name}` to the database and updated the inventories.", components=components
+            f"Added the package `{package.name}` to the database and updated the inventories.",
+            components=components,
         )
 
     @docs_group.command(name="deletedoc", aliases=("removedoc", "rm", "d"))
@@ -929,7 +966,10 @@ class DocCog(
             await self.refresh_inventories()
             await doc_cache.delete(package_name)
 
-        await ctx.send(f"Successfully deleted `{package_name}` and refreshed the inventories.", components=components)
+        await ctx.send(
+            f"Successfully deleted `{package_name}` and refreshed the inventories.",
+            components=components,
+        )
 
     @docs_group.command(name="refreshdoc", aliases=("rfsh", "r"))
     @commands.is_owner()
@@ -948,7 +988,8 @@ class DocCog(
             removed = "- " + removed
 
         embed = disnake.Embed(
-            title="Inventories refreshed", description=f"```diff\n{added}\n{removed}```" if added or removed else ""
+            title="Inventories refreshed",
+            description=f"```diff\n{added}\n{removed}```" if added or removed else "",
         )
 
         components = DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message)
@@ -966,7 +1007,10 @@ class DocCog(
 
         if await doc_cache.delete(package_name):
             await self.item_fetcher.stale_inventory_notifier.symbol_counter.delete(package_name)
-            await ctx.send(f"Successfully cleared the cache for `{package_name}`.", components=components)
+            await ctx.send(
+                f"Successfully cleared the cache for `{package_name}`.",
+                components=components,
+            )
         else:
             await ctx.send("No keys matching the package found.", components=components)
 
@@ -987,7 +1031,13 @@ class DocCog(
             return
         embed = disnake.Embed(title="Whitelisted packages")
         for guild, packages in self.whitelist.items():
-            embed.add_field(self.bot.get_guild(guild).name + f" ({guild})", ", ".join(sorted(packages)))
+            guild_obj = self.bot.get_guild(guild)
+            if not guild_obj:
+                guild_obj = f"Guild ID {guild}"
+            embed.add_field(
+                f"{guild_obj!s} ({guild})",
+                ", ".join(sorted(packages)),
+            )
         await ctx.send(embed=embed, components=components)
 
     @commands.is_owner()
@@ -1097,7 +1147,11 @@ class DocCog(
         for match in matches:
             tasks.append(
                 self._docs_get_command(
-                    message, match, return_embed=True, threshold=100, scorer=rapidfuzz.fuzz.partial_ratio
+                    message,
+                    match,
+                    return_embed=True,
+                    threshold=100,
+                    scorer=rapidfuzz.fuzz.partial_ratio,
                 )
             )
 

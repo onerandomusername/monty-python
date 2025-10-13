@@ -1,11 +1,13 @@
 import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import cachingutils
 import cachingutils.redis
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
     import redis.asyncio
 
     from ._cog import DocItem
@@ -43,13 +45,15 @@ class DocRedisCache(cachingutils.redis.AsyncRedisCache):
             self._set_expires.add(redis_key)
             needs_expire = not await self._redis.exists(redis_key)
 
-        await self._redis.hset(redis_key, item.symbol_id, value)  # pyright: ignore[reportGeneralTypeIssues]
+        await cast("Awaitable[int]", self._redis.hset(redis_key, item.symbol_id, value))
         if needs_expire:
             await self._redis.expire(redis_key, WEEK_SECONDS)
 
     async def get(self, item: "DocItem", default: Any = None) -> str | None:
         """Return the Markdown content of the symbol `item` if it exists."""
-        res = await self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)  # pyright: ignore[reportGeneralTypeIssues]
+        res = await cast(
+            "Awaitable[bytes | None]", self._redis.hget(f"{self.namespace}:{item_key(item)}", item.symbol_id)
+        )
         if res:
             return res.decode()
         return default
