@@ -44,7 +44,7 @@ class Cog(NamedTuple):
 log = get_logger(__name__)
 
 
-class HelpQueryNotFound(ValueError):
+class HelpQueryNotFoundError(ValueError):
     """
     Raised when a HelpSession Query doesn't match a command or cog.
 
@@ -160,7 +160,7 @@ class HelpSession:
         """
         Handles when a query does not match a valid command or cog.
 
-        Will pass on possible close matches along with the `HelpQueryNotFound` exception.
+        Will pass on possible close matches along with the `HelpQueryNotFoundError` exception.
         """
         # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
@@ -168,7 +168,7 @@ class HelpSession:
         result = process.extract(query, choices, score_cutoff=60, scorer=fuzz.ratio)
 
         msg = f'Query "{query}" not found.'
-        raise HelpQueryNotFound(msg, {choice: score for choice, score, pos in result})
+        raise HelpQueryNotFoundError(msg, {choice: score for choice, score, pos in result})
 
     async def timeout(self, seconds: int = TIMEOUT) -> None:
         """Waits for a set number of seconds, then stops the help session."""
@@ -525,7 +525,7 @@ class Help(commands.Cog):
         """Shows Command Help."""
         try:
             await HelpSession.start(ctx, *commands)
-        except HelpQueryNotFound as error:
+        except HelpQueryNotFoundError as error:
             embed = disnake.Embed()
             embed.colour = disnake.Colour.red()
             embed.title = str(error)
@@ -559,6 +559,7 @@ def setup(bot: Monty) -> None:
     If an exception is raised during the loading of the cog, `unload` will be called in order to
     reinstate the original help command.
     """
+    global _OLD_HELP
     _OLD_HELP = bot.get_command("help")
     bot.remove_command("help")
 

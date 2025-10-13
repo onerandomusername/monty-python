@@ -754,7 +754,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         )
 
     @commands.Cog.listener(disnake.Event.dropdown)
-    async def FEATURES_GLOBAL_TOGGLE_listener(self, inter: disnake.MessageInteraction) -> None:
+    async def features_global_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for guild feature toggle select."""
         if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GLOBAL_TOGGLE):
             return
