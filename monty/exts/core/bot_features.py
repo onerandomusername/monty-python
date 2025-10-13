@@ -776,7 +776,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # Ask for confirmation
         action_map = {"True": "globally enable", "False": "globally disable", "None": "switch to guild overrides"}
-        confirm, conf_inter, components = await self.wait_for_confirmation(
+        confirm, conf_inter, _components = await self.wait_for_confirmation(
             inter,
             f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation Required\nAre you"
             f" sure you want to **{action_map[selected_value]}** feature `{feature_name}`?\n\u200b",

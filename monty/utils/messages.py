@@ -43,10 +43,10 @@ def sub_clyde(username: str | None) -> str | None:
 
     Discord disallows "clyde" anywhere in the username for webhooks. It will return a 400.
     Return None only if `username` is None.
-    """
+    """  # noqa: RUF002
 
     def replace_e(match: re.Match) -> str:
-        char = "е" if match[2] == "e" else "Е"
+        char = "\u0435" if match[2] == "e" else "\u0415"
         return match[1] + char
 
     if username:

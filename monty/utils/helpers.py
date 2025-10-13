@@ -81,8 +81,8 @@ EXPAND_BUTTON_PREFIX = "ghexp-v1:"
 
 def encode_github_link(link: str) -> str:
     """Encode a github link with base 65536."""
-    scheme, netloc, path, query, fragment = urlsplit(link)
-    user, repo, literal_blob, blob, file_path = path.lstrip("/").split("/", 4)
+    _scheme, _netloc, path, _query, fragment = urlsplit(link)
+    user, repo, _literal_blob, blob, file_path = path.lstrip("/").split("/", 4)
     data = f"{user}/{repo}/{blob}/{file_path}#{fragment}"
 
     encoded = base65536.encode(data.encode())

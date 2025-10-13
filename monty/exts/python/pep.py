@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import cast
+from typing import ClassVar, cast
 from urllib.parse import urljoin
 
 import aiohttp
@@ -62,7 +62,7 @@ class HeaderParser:
             log.error("Failed to find PEP title in PEP HTML. `h1.page-title` could not be found.")
             msg = "Failed to parse PEP title. Please report this issue in the support server."
             raise MontyCommandError(msg)
-        results["title"] = h1.text.split("–", 1)[-1]
+        results["title"] = h1.text.split("\u2013", 1)[-1]
 
         return results
 
@@ -70,7 +70,7 @@ class HeaderParser:
 class PEPHeaders:
     """Parser for getting the headers from the HTML of a pep page."""
 
-    header_tags = ["h2", "h3", "h4", "h5", "h6"]
+    header_tags: ClassVar[list[str]] = ["h2", "h3", "h4", "h5", "h6"]
 
     def parse(self, soup: BeautifulSoup) -> dict[str, str]:
         """Parse the provided BeautifulSoup object and return a dict of PEP header to body."""

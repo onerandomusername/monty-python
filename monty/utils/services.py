@@ -63,7 +63,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
                 response_json = await response.json()
                 if not 200 <= response.status < 300 and attempt == FAILED_REQUEST_ATTEMPTS:
                     msg = "The paste service could not be used at this time."
-                    raise APIError(api="workbin", status_code=response.status)  # noqa: EM101
+                    raise APIError(msg, api="workbin", status_code=response.status)
         except ClientConnectorError:
             log.warning(
                 f"Failed to connect to paste service at url {paste_url}, "

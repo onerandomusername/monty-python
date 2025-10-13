@@ -399,8 +399,8 @@ class Colour(
                 query=input_hex_colour, choices=self.colour_mapping.values(), score_cutoff=80
             )
             if result:
-                match, certainty, _ = result
-                return [name for name, hex_code in self.colour_mapping.items() if hex_code == match][0]
+                match, _certainty, _ = result
+                return next(name for name, hex_code in self.colour_mapping.items() if hex_code == match)
         except (TypeError, ValueError):
             pass
         return None
@@ -412,7 +412,7 @@ class Colour(
                 query=input_colour_name, choices=self.colour_mapping.keys(), score_cutoff=80
             )
             if result:
-                match, certainty, _ = result
+                match, _certainty, _ = result
                 return f"#{self.colour_mapping[match]}"
         except (ValueError, TypeError):
             pass

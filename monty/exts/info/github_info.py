@@ -1260,7 +1260,7 @@ class GithubInfo(
             allow_expand = await self.bot.guild_has_feature(guild_id, Feature.GITHUB_ISSUE_EXPAND)
             allow_pre_expanded = False
 
-        embed, issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
+        embed, _issue_count, was_expanded = self.format_embed(links, expand_one_issue=allow_pre_expanded)
         log.debug(f"Sending GitHub issues to {message.channel} in guild {message.guild}.")
         components: list[disnake.ui.Button] = [DeleteButton(message.author)]
         if allow_expand:
