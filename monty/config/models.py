@@ -122,7 +122,7 @@ class ConfigAttrMetadata:
     requires_bot: bool = False
     long_description: str | None = None
     depends_on_features: tuple[constants.Feature] | None = None
-    validator: Callable | Callable[..., Coroutine] | None = None
+    validator: Callable[..., bool] | Callable[..., Coroutine[None, None, bool]] | None = None
     status_messages: StatusMessages = field(default_factory=StatusMessages)
 
     def __post_init__(self, category: Category | None) -> None:
