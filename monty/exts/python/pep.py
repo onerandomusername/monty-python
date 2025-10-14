@@ -263,7 +263,7 @@ class PythonEnhancementProposals(
         """Completion for pep numbers."""
         if not query:
             # return some interesting peps
-            interesting_peps = [0, 8, 257, 517, 619, 660, 664]
+            interesting_peps = [0, 8, 257, 517, 621, 660, 745, 790]
             resp = {title: pep for title, pep in self.autocomplete.items() if pep in interesting_peps}
             return dict(sorted(resp.items(), key=lambda x: int(x[1])))
 
