@@ -35,10 +35,10 @@ def get_redis_session(*, use_fakeredis: bool = False) -> redis.asyncio.Redis:
         except ImportError as e:
             msg = "fakeredis must be installed to use fake redis"
             raise RuntimeError(msg) from e
-        redis_session = fakeredis.aioredis.FakeRedis.from_url(constants.Redis.uri)
+        redis_session = fakeredis.aioredis.FakeRedis.from_url(str(constants.Redis.uri))
     else:
         pool = redis.asyncio.BlockingConnectionPool.from_url(
-            constants.Redis.uri,
+            str(constants.Redis.uri),
             max_connections=20,
             timeout=300,
         )
@@ -57,7 +57,7 @@ async def main() -> None:
         constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
     )
 
-    database_engine = create_async_engine(constants.Database.postgres_bind)
+    database_engine = create_async_engine(str(constants.Database.postgres_bind))
     # run alembic migrations
     if constants.Database.run_migrations:
         log.info(f"Running database migrations to target {constants.Database.migration_target}")
