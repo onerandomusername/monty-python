@@ -120,7 +120,6 @@ class BatchParser:
         if doc_item not in self._item_futures and doc_item not in self._queue:
             self._item_futures[doc_item].user_requested = True
 
-            # providing a context is workaround for cloudflare issues
             try:
                 async with self._bot.http_session.get(doc_item.url, raise_for_status=True) as response:
                     soup = await self._bot.loop.run_in_executor(
