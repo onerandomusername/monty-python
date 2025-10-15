@@ -1,15 +1,16 @@
-import dataclasses
+import enum
 import logging
 from os import environ
 from typing import TYPE_CHECKING, Literal, cast
 
 import disnake
+from disnake.ext import commands
 
 
 if TYPE_CHECKING:
     from monty.log import MontyLogger
 
-__all__ = (
+__all__ = (  # noqa: RUF022
     "Client",
     "Monitoring",
     "Database",
@@ -34,14 +35,28 @@ class Client:
     version = environ.get("GIT_SHA", "main")
     default_command_prefix = environ.get("PREFIX", "-")
     config_prefix = "monty-python"
+    intents = disnake.Intents.default() | disnake.Intents.message_content
+    command_sync_flags = commands.CommandSyncFlags(
+        allow_command_deletion=False,
+        sync_guild_commands=True,
+        sync_global_commands=True,
+        sync_commands_debug=True,
+        sync_on_cog_actions=True,
+    )
+    allowed_mentions = disnake.AllowedMentions(
+        everyone=False,
+        roles=False,
+        users=False,
+        replied_user=True,
+    )
+    activity = disnake.Game(name=f"Commands: {default_command_prefix}help")
 
     # debug configuration
     debug = environ.get("BOT_DEBUG", "true").lower() == "true"
     proxy = environ.get("BOT_PROXY_URL", "") or None
-    extensions = environ.get("BOT_EXTENSIONS", None) and {
-        ext.strip() for ext in environ.get("BOT_EXTENSIONS").split(",")  # type: ignore reportOptionalMemberAccess
-    }
-
+    extensions: bool | set[str] = (
+        "BOT_EXTENSIONS" in environ and {ext.strip() for ext in environ["BOT_EXTENSIONS"].split(",")}
+    ) or "BOT_EXTENSIONS" in environ
     # source and support
     git_repo = "https://github.com/onerandomusername/monty-python"
     support_server = "mPscM4FjWB"
@@ -68,7 +83,7 @@ class Client:
 
 class Database:
     postgres_bind: str = environ.get("DB_BIND", "")
-    run_migrations: bool = not (environ.get("DB_RUN_MIGRATIONS", "true").lower() == "false")
+    run_migrations: bool = environ.get("DB_RUN_MIGRATIONS", "true").lower() != "false"
     migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
 
 
@@ -82,7 +97,7 @@ class Monitoring:
     debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
     sentry_enabled = bool(environ.get("SENTRY_DSN"))
     trace_loggers = environ.get("BOT_TRACE_LOGGERS")
-    log_mode: Literal["daily", "dev"] = "daily" if "daily" == environ.get("BOT_LOG_MODE", "dev").lower() else "dev"
+    log_mode: Literal["daily", "dev"] = "daily" if environ.get("BOT_LOG_MODE", "dev").lower() == "daily" else "dev"
 
     public_status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
     ping_url: str = environ.get("UPTIME_URL", "")
@@ -192,7 +207,7 @@ class Icons:
         "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
     )
     github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
-    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"  # noqa: E501
+    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"
 
 
 ## Authentication and Endpoint management for external services
@@ -218,22 +233,21 @@ class Endpoints:
 
 
 ## Feature Management
-@dataclasses.dataclass()
-class Feature:
-    CODEBLOCK_RECOMMENDATIONS: str = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
-    DISCORD_TOKEN_REMOVER: str = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
-    DISCORD_WEBHOOK_REMOVER: str = "DISCORD_WEBHOOK_FILTER"
-    GITHUB_COMMENT_LINKS: str = "GITHUB_EXPAND_COMMENT_LINKS"
-    GITHUB_DISCUSSIONS: str = "GITHUB_AUTOLINK_DISCUSSIONS"
-    GITHUB_ISSUE_EXPAND: str = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
-    GITHUB_ISSUE_LINKS: str = "GITHUB_EXPAND_ISSUE_LINKS"
-    GLOBAL_SOURCE: str = "GLOBAL_SOURCE_COMMAND"
-    INLINE_DOCS: str = "INLINE_DOCUMENTATION"
-    INLINE_EVALULATION: str = "INLINE_EVALULATION"
-    PYPI_AUTOCOMPLETE: str = "PYPI_PACKAGE_AUTOCOMPLETE"
-    PYTHON_DISCOURSE_AUTOLINK: str = "PYTHON_DISCOURSE_AUTOLINK"
-    RUFF_RULE_V2: str = "RUFF_RULE_V2"
-    SOURCE_AUTOCOMPLETE: str = "META_SOURCE_COMMAND_AUTOCOMPLETE"
+class Feature(enum.Enum):
+    CODEBLOCK_RECOMMENDATIONS = "PYTHON_CODEBLOCK_RECOMMENDATIONS"
+    DISCORD_TOKEN_REMOVER = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
+    DISCORD_WEBHOOK_REMOVER = "DISCORD_WEBHOOK_FILTER"
+    GITHUB_COMMENT_LINKS = "GITHUB_EXPAND_COMMENT_LINKS"
+    GITHUB_DISCUSSIONS = "GITHUB_AUTOLINK_DISCUSSIONS"
+    GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+    GITHUB_ISSUE_LINKS = "GITHUB_EXPAND_ISSUE_LINKS"
+    GLOBAL_SOURCE = "GLOBAL_SOURCE_COMMAND"
+    INLINE_DOCS = "INLINE_DOCUMENTATION"
+    INLINE_EVALULATION = "INLINE_EVALULATION"
+    PYPI_AUTOCOMPLETE = "PYPI_PACKAGE_AUTOCOMPLETE"
+    PYTHON_DISCOURSE_AUTOLINK = "PYTHON_DISCOURSE_AUTOLINK"
+    RUFF_RULE_V2 = "RUFF_RULE_V2"
+    SOURCE_AUTOCOMPLETE = "META_SOURCE_COMMAND_AUTOCOMPLETE"
 
 
 # legacy implementation of features, will be removed in the future

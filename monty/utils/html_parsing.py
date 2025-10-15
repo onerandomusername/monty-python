@@ -3,11 +3,9 @@ from __future__ import annotations
 import re
 import string
 import textwrap
-from collections import namedtuple
-from typing import TYPE_CHECKING, Collection, Iterable, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, NamedTuple
 
-from bs4 import BeautifulSoup
-from bs4.element import NavigableString, Tag
+from bs4.element import NavigableString, PageElement, Tag
 
 from monty.exts.info.docs import MAX_SIGNATURE_AMOUNT
 from monty.exts.info.docs._html import get_dd_description, get_general_description, get_signatures
@@ -17,6 +15,10 @@ from monty.utils.markdown import DocMarkdownConverter
 
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Iterator
+
+    from bs4 import BeautifulSoup
+
     from monty.exts.info.docs._cog import DocItem
 
 log = get_logger(__name__)
@@ -39,7 +41,12 @@ _MAX_SIGNATURES_LENGTH = (_EMBED_CODE_BLOCK_LINE_LENGTH + 8) * MAX_SIGNATURE_AMO
 _MAX_DESCRIPTION_LENGTH = 4096 - _MAX_SIGNATURES_LENGTH
 _TRUNCATE_STRIP_CHARACTERS = "!?:;." + string.whitespace
 
-BracketPair = namedtuple("BracketPair", ["opening_bracket", "closing_bracket"])
+
+class BracketPair(NamedTuple):
+    opening_bracket: str
+    closing_bracket: str
+
+
 _BRACKET_PAIRS = {
     "{": BracketPair("{", "}"),
     "(": BracketPair("(", ")"),
@@ -56,7 +63,7 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
     """
     last_split = 0
     depth = 0
-    current_search: Optional[BracketPair] = None
+    current_search: BracketPair | None = None
 
     enumerated_string = enumerate(parameters_string)
     for index, character in enumerated_string:
@@ -80,19 +87,18 @@ def _split_parameters(parameters_string: str) -> Iterator[str]:
                 yield parameters_string[last_split:index]
                 last_split = index + 1
 
-        else:
-            if character == current_search.opening_bracket:
-                depth += 1
+        elif character == current_search.opening_bracket:
+            depth += 1
 
-            elif character == current_search.closing_bracket:
-                depth -= 1
-                if depth == 0:
-                    current_search = None
+        elif character == current_search.closing_bracket:
+            depth -= 1
+            if depth == 0:
+                current_search = None
 
     yield parameters_string[last_split:]
 
 
-def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collection[str]]:
+def _truncate_signatures(signatures: Collection[str]) -> list[str] | Collection[str]:
     """
     Truncate passed signatures to not exceed `_MAX_SIGNATURES_LENGTH`.
 
@@ -136,7 +142,7 @@ def _truncate_signatures(signatures: Collection[str]) -> Union[List[str], Collec
 
 
 def _get_truncated_description(
-    elements: Iterable[Union[Tag, NavigableString]],
+    elements: Iterable[Tag | NavigableString | PageElement] | Tag,
     markdown_converter: DocMarkdownConverter,
     max_length: int,
     max_lines: int,
@@ -152,21 +158,28 @@ def _get_truncated_description(
     rendered_length = 0
 
     tag_end_index = 0
+
     for element in elements:
         is_tag = isinstance(element, Tag)
+        is_page_element = isinstance(element, PageElement)
         if is_tag:
             # remove links in headers
             # see also https://github.com/sphinx-doc/sphinx/blob/ba7408209e84ee413f240afc20f3c6b484a81f8f/sphinx/themes/basic/static/searchtools.js#L157
             for link in element.select(".headerlink"):
                 link.decompose()
-        element_length = len(element.text) if is_tag else len(element)
+
+            element_length = len(element.text)
+        elif is_page_element:
+            element_length = 0
+        else:
+            element_length = len(element)
 
         if rendered_length + element_length >= max_length:
             break
         if is_tag:
             element_markdown = markdown_converter.process_tag(element, convert_as_inline=False)
         else:
-            element_markdown = markdown_converter.process_text(element)
+            element_markdown = markdown_converter.process_text(element.text)
 
         rendered_length += element_length
         tag_end_index += len(element_markdown)
@@ -234,9 +247,7 @@ def _get_truncated_description(
     return truncated_result.strip(_TRUNCATE_STRIP_CHARACTERS) + "..."
 
 
-def _create_markdown(
-    signatures: Optional[List[str]], description: Iterable[Union[Tag, NavigableString]], url: str
-) -> str:
+def _create_markdown(signatures: list[str] | None, description: Iterable[Tag | NavigableString], url: str) -> str:
     """
     Create a Markdown string with the signatures at the top, and the converted html description below them.
 
@@ -254,14 +265,14 @@ def _create_markdown(
         return description_str
 
 
-def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> Optional[str]:
+def get_symbol_markdown(soup: BeautifulSoup, symbol_data: DocItem) -> str | None:
     """
     Return parsed Markdown of the passed item using the passed in soup, truncated to fit within a discord message.
 
     The method of parsing and what information gets included depends on the symbol's group.
     """
     symbol_heading = soup.find(id=symbol_data.symbol_id)
-    if symbol_heading is None:
+    if not isinstance(symbol_heading, Tag):
         return None
     signature = None
     # Modules, doc pages and labels don't point to description list tags but to tags like divs,

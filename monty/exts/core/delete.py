@@ -3,8 +3,11 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
 from monty.utils.messages import DELETE_ID_V2
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 VIEW_DELETE_ID_V1 = "wait_for_deletion_interaction_trash"
 
@@ -23,6 +26,7 @@ class DeleteManager(commands.Cog):
     @commands.Cog.listener("on_button_click")
     async def handle_v2_button(self, inter: disnake.MessageInteraction) -> None:
         """Delete a message if the user is authorized to delete the message."""
+        assert inter.component.custom_id
         if not inter.component.custom_id.startswith(DELETE_ID_V2):
             return
 
@@ -30,9 +34,8 @@ class DeleteManager(commands.Cog):
 
         perms, user_id, *extra = custom_id.split(":")
         delete_msg = None
-        if extra:
-            if extra[0]:
-                delete_msg = int(extra[0])
+        if extra and extra[0]:
+            delete_msg = int(extra[0])
 
         perms, user_id = int(perms), int(user_id)
 
@@ -70,16 +73,17 @@ class DeleteManager(commands.Cog):
         if inter.component.custom_id != VIEW_DELETE_ID_V1:
             return
 
-        view = disnake.ui.View.from_message(inter.message)
         # get the button from the view
-        for comp in view.children:
-            if VIEW_DELETE_ID_V1 == getattr(comp, "custom_id", None):
+        components = disnake.ui.components_from_message(inter.message)
+        for comp in disnake.ui.walk_components(components):
+            if getattr(comp, "custom_id", None) == VIEW_DELETE_ID_V1 and isinstance(comp, disnake.ui.Button):
                 break
         else:
-            raise RuntimeError("view doesn't contain the button that was clicked.")
+            msg = "view doesn't contain the button that was clicked."
+            raise RuntimeError(msg)
 
         comp.disabled = True
-        await inter.response.edit_message(view=view)
+        await inter.response.edit_message(components=components)
         await inter.followup.send("This button should not have been enabled, and no longer works.", ephemeral=True)
 
 

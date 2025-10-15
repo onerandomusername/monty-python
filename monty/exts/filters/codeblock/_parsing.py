@@ -3,7 +3,8 @@
 import ast
 import re
 import textwrap
-from typing import NamedTuple, Optional, Sequence
+from collections.abc import Sequence
+from typing import NamedTuple
 
 from monty import constants
 from monty.log import get_logger
@@ -70,7 +71,7 @@ class BadLanguage(NamedTuple):
     has_terminal_newline: bool
 
 
-def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
+def find_code_blocks(message: str) -> Sequence[CodeBlock] | None:
     """
     Find and return all Markdown code blocks in the `message`.
 
@@ -82,7 +83,7 @@ def find_code_blocks(message: str) -> Optional[Sequence[CodeBlock]]:
     """
     log.trace("Finding all code blocks in a message.")
 
-    code_blocks = []
+    code_blocks: list[CodeBlock] = []
     for match in _RE_CODE_BLOCK.finditer(message):
         # Used to ensure non-matched groups have an empty string as the default value.
         groups = match.groupdict("")
@@ -158,7 +159,7 @@ def is_python_code(content: str) -> bool:
     return _is_python_code(dedented) or _is_repl_code(dedented) or _is_python_code(_fix_indentation(content))
 
 
-def parse_bad_language(content: str) -> Optional[BadLanguage]:
+def parse_bad_language(content: str) -> BadLanguage | None:
     """
     Return information about a poorly formatted Python language in code block `content`.
 
@@ -224,6 +225,4 @@ def _fix_indentation(content: str) -> str:
     first_indent = max(first_indent, second_indent)
 
     # Dedent the rest of the lines and join them together with the first line.
-    content = first_line + "".join(line[first_indent:] for line in lines[1:])
-
-    return content
+    return first_line + "".join(line[first_indent:] for line in lines[1:])

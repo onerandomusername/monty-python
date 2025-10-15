@@ -1,5 +1,4 @@
 import typing
-from typing import Dict, Optional
 
 from aiohttp import ClientConnectorError
 from attrs import define
@@ -38,7 +37,7 @@ class GitHubRateLimit:
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
-async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> Optional[str]:
+async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> str | None:
     """
     Upload `contents` to the paste service.
 
@@ -63,7 +62,8 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             async with bot.http_session.post(paste_url, json=json) as response:
                 response_json = await response.json()
                 if not 200 <= response.status < 300 and attempt == FAILED_REQUEST_ATTEMPTS:
-                    raise APIError("workbin", response.status, "The paste service could not be used at this time.")
+                    msg = "The paste service could not be used at this time."
+                    raise APIError(msg, api="workbin", status_code=response.status)
         except ClientConnectorError:
             log.warning(
                 f"Failed to connect to paste service at url {paste_url}, "
@@ -83,7 +83,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
                 f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )
             continue
-        elif "key" in response_json:
+        if "key" in response_json:
             log.info(f"Successfully uploaded contents to paste service behind key {response_json['key']}.")
 
             paste_link = constants.Endpoints.paste_service.format(key=f"?id={response_json['key']}")
@@ -97,7 +97,12 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
             f"trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
         )
 
-    raise APIError("workbin", response.status if response else 0, "The paste service could not be used at this time.")
+    msg = "The paste service could not be used at this time."
+    raise APIError(
+        msg,
+        api="Workbin",
+        status_code=response.status if response else 0,
+    )
 
 
 # https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api?apiVersion=2022-11-28#checking-the-status-of-your-rate-limit
@@ -118,7 +123,7 @@ def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
 # https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
 def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
     """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
-    ratelimits: Dict[str, Dict[str, int]] = json["resources"]
+    ratelimits: dict[str, dict[str, int]] = json["resources"]
     for name, resource in ratelimits.items():
         GITHUB_RATELIMITS[name] = GitHubRateLimit(
             limit=resource["limit"],

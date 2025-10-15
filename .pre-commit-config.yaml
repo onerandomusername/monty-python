@@ -11,6 +11,7 @@ repos:
       # - id: pretty-format-json
       #   args: [--indent=4, --autofix]
       - id: end-of-file-fixer
+        exclude: ^(\.basedpyright/baseline\.json)$
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: trailing-whitespace
@@ -27,19 +28,9 @@ repos:
     hooks:
       - id: uv-lock
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 6.0.1
-    hooks:
-      - id: isort
-
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3
-
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.13.0
+    rev: v0.13.3
     hooks:
       - id: ruff-check
         args: [--fix]
+      - id: ruff-format

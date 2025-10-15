@@ -4,8 +4,9 @@ import random
 import re
 import reprlib
 import types
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Mapping, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 from urllib.parse import urldefrag
 
 import disnake
@@ -33,7 +34,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-# todo: move to utils
+# TODO: move to utils
 COG_NAME_REGEX = re.compile(r"((?<=[a-z])[A-Z]|(?<=[a-zA-Z])[A-Z](?=[a-z]))")
 
 logger = get_logger(__name__)
@@ -52,13 +53,13 @@ class FrozenChainMap(Mapping[K, V]):
         for mapping in self.maps:
             try:
                 return mapping[key]  # can't use 'key in mapping' with defaultdict
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 pass
         return self.__missing__(key)  # support subclasses that define __missing__
 
-    def get(self, key: K, default: V = None) -> Union[K, V]:
+    def get(self, key: K, default: V = None) -> V | None:
         """Get the object at the provided key."""
-        return self[key] if key in self else default
+        return self.get(key, default)
 
     def __len__(self) -> int:
         return len(set().union(*self.maps))  # reuses stored hash values if possible
@@ -84,7 +85,7 @@ class FrozenChainMap(Mapping[K, V]):
         """Create a ChainMap with a single dict created from the iterable."""
         return cls(dict.fromkeys(iterable, *args))
 
-    def new_child(self, m: Mapping[K, Any] = None) -> "FrozenChainMap[K, V]":  # like Django's Context.push()
+    def new_child(self, m: Mapping[K, Any] | None = None) -> "FrozenChainMap[K, V]":  # like Django's Context.push()
         """
         New ChainMap with a new map followed by all previous maps.
 
@@ -107,7 +108,7 @@ class MetaSource(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        # todo: add more features to the values, typed as object for now
+        # TODO: add more features to the values, typed as object for now
         self.objects: dict[str, object] = {}
         self.refresh_active = asyncio.Lock()
         self._cog_ready = asyncio.Event()
@@ -119,15 +120,16 @@ class MetaSource(
     @commands.Cog.listener("on_slash_command_add")
     @commands.Cog.listener("on_slash_command_remove")
     async def refresh_cache(
-        self, obj: Optional[Union[commands.Command, commands.Cog, commands.InvokableSlashCommand]] = None
+        self, obj: commands.Command | commands.Cog | commands.InvokableSlashCommand | None = None
     ) -> None:
         """Refreshes the cache when a cog is added or removed."""
-        # sleep for a second in the event that multiple cogs are reloaded or commands are added/removed
         # do nothing if the cog is this cog
         if obj and (
             obj is self or (isinstance(obj, (commands.Command, commands.InvokableSlashCommand)) and obj.cog is self)
         ):
-            logger.debug("returning early as our own cog was acted upon")
+            logger.trace(
+                "Received an event to refresh the cache but the event was triggered by the source cog itself. Skipping."
+            )
             return
         if self.refresh_active.locked():
             logger.trace("Received an event to refresh the cache but cache refresh is already active.")
@@ -146,14 +148,14 @@ class MetaSource(
             self.all_cogs = self.bot.cogs
             self.all_extensions = self.bot.extensions
 
-            # todo: this will need to be synced
-            self.all_prefix_commands: dict[str, Union[commands.Command, commands.Group]] = {}
+            # TODO: this will need to be synced
+            self.all_prefix_commands: dict[str, commands.Command | commands.Group] = {}
             for cmd in self.bot.walk_commands():
                 self.all_prefix_commands[cmd.qualified_name] = cmd
 
             # also need to add children, hence why this is a copy
             self.all_slash_commands: dict[
-                str, Union[commands.InvokableSlashCommand, commands.SubCommand, commands.SubCommandGroup]
+                str, commands.InvokableSlashCommand | commands.SubCommand | commands.SubCommandGroup
             ] = {}
             self.all_slash_commands.update(self.bot.all_slash_commands)
 
@@ -208,20 +210,19 @@ class MetaSource(
     @commands.command(name="source", aliases=("src",))
     async def source_command(
         self,
-        ctx: Union[commands.Context, disnake.ApplicationCommandInteraction],
+        ctx: commands.Context | disnake.ApplicationCommandInteraction,
         *,
-        source_item: SourceConverterAnn = None,
+        source_item: SourceConverterAnn | None = None,
     ) -> None:
         """Display information and a GitHub link to the source code of a command or cog."""
 
-        async def send_message(embed: disnake.Embed, components: list = None) -> None:
+        async def send_message(embed: disnake.Embed, components: list | None = None) -> None:
             components = components or []
             if isinstance(ctx, commands.Context):
                 components.insert(0, DeleteButton(ctx.author, initial_message=ctx.message))
             else:
                 components.insert(0, DeleteButton(ctx.author))
             await ctx.send(embed=embed, components=components)
-            return
 
         if not source_item:
             embed = disnake.Embed(title=f"{Client.name}'s GitHub Repository")
@@ -272,7 +273,7 @@ class MetaSource(
             return {query: query} if query else {}
 
         await self._cog_ready.wait()
-        # todo: weight the first results based on usage
+        # TODO: weight the first results based on usage
         scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
 
         if not query:
@@ -290,7 +291,7 @@ class MetaSource(
         # make the completion
         return {key: value for value, score, key in fuzz_results}
 
-    def get_source_link(self, source_item: SourceType) -> Tuple[str, str, Optional[int]]:
+    def get_source_link(self, source_item: SourceType) -> tuple[str, str, int | None]:
         """
         Build GitHub link of source item, return this link, file location and first line number.
 
@@ -320,13 +321,15 @@ class MetaSource(
             except TypeError:
                 filename = None
             if filename is None:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.")
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg)
 
         if not isinstance(source_item, str):
             try:
                 lines, first_line_no = inspect.getsourcelines(src)
             except OSError:
-                raise commands.BadArgument("Cannot get source for a dynamically-created object.") from None
+                msg = "Cannot get source for a dynamically-created object."
+                raise commands.BadArgument(msg) from None
 
             lines_extension = f"#L{first_line_no}-L{first_line_no + len(lines) - 1}"
         else:
@@ -339,7 +342,7 @@ class MetaSource(
 
         return url, file_location, first_line_no or None
 
-    def build_embed(self, source_object: SourceType) -> Tuple[disnake.Embed, str]:
+    def build_embed(self, source_object: SourceType) -> tuple[disnake.Embed, str]:
         """Build embed based on source object."""
         url, location, first_line = self.get_source_link(source_object)
 

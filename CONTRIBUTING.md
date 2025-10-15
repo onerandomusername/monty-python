@@ -37,7 +37,7 @@ The general workflow can be summarized as follows:
 
 1. Fork + clone the repository.
 1. Initialize the development environment:
-    `uv sync --all-groups && uv run pre-commit install`.
+    `uv sync --all-groups && uv run prek install`.
 1. Create a new branch.
 1. Commit your changes, update documentation if required.
 1. Push the branch to your fork, and
@@ -71,7 +71,7 @@ file.
 
 If running the bot within docker, most of the following steps can be skipped as
 the environment is built within docker automatically. You'll still need to clone
-the repository and set up pre-commit hooks.
+the repository and set up the git pre-commit hooks using prek.
 
 ### Clone the repo
 
@@ -82,8 +82,7 @@ git clone https://github.com/onerandomusername/monty-python
 cd monty-python
 ```
 
-Next, create a file named `.env` within the cloned repository. This will be used
-later regardless of how you run Monty.
+Next, create a file named `.env` within the cloned repository.
 
 A minimum viable contents (if using Docker) are as follows:
 
@@ -94,8 +93,8 @@ BOT_TOKEN=...
 # to change the default prefix from `-`
 PREFIX=...
 
-# optional, used to increase GitHub ratelimits from
-# 60 to 5000/h and enable the graphql API
+# optional, but necessary for anything using GitHub,
+# required to enable the GitHub related code
 GITHUB_TOKEN=...
 ```
 
@@ -109,11 +108,14 @@ uv run prek install
 ```
 
 If you don't already have uv installed, check the
-[uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or
-uvx.
+[uv documentation](https://docs.astral.sh/uv/), or use a tool like pipx or uvx.
 
-Make sure you install prek, as it will lint every commit before its
-created, limiting the amount of fixes needing to be made in the review process.
+Make sure you run `prek install`, as it will integrate with git and lint every
+commit before committing, limiting the amount of fixes needing to be made in the
+review process.
+
+Some fixes aren't automatic or done with prek, so take a look at
+[Running CI locally](#running-ci-locally)
 
 ### Create a Discord Bot
 
@@ -130,7 +132,7 @@ You'll also need to connect this bot to at least one server you have access to.
 > Monty Python requires the message content intent and **won't start** if that
 > intent is disabled. Be sure to enable it when configuring the bot.
 
-# Running Monty
+## Run a development instance
 
 From this point, I suggest running two separate docker compose commands. The
 first one to run is `docker compose up --detach postgres redis` which starts the
@@ -172,3 +174,60 @@ docker compose up monty
 
 Monty should now be running! There's now a few other configuration things to do
 to finish initialising the database. See the bot only commands.
+
+## Running CI locally
+
+As a public bot, Monty Python has continuous integration through GitHub actions
+and other developer tools to ensure that Monty is held to strict quality
+standards (as time progresses)!
+
+To run the CI equivalent locally, we use nox as our runner.
+
+```sh
+uv run nox
+```
+
+With no arguments, this command will run all of the sessions and fixes that we
+run in CI.
+
+If any changes are made, the results should be commited along with the rest of
+your code.
+
+### Commands and Autodoc
+
+To document the procedures and methods on Monty, there is a custom script which
+serves to update two files listing the prefix and application commands that are
+available on Monty. These files are still in beta, and should not be relied at
+this moment for anything other than contributing documentation.
+
+Running the autodoc session should automatically update these files, if there
+were any changes.
+
+```sh
+uv run nox -s autodoc`
+```
+
+### Building the documentation
+
+To preview the documentation with an automatic reloading server, use the
+following command:
+
+```sh
+uv run nox -s docs
+```
+
+Alternatively you can run mkdocs directly once dev dependencies are installed:
+
+```sh
+uv run mkdocs serve
+```
+
+The dev server runs on http://127.0.0.1:8000 by default. Use `mkdocs build` to
+produce the static site into `site/`.
+
+If you modified any documentation pages, including the CONTRIBUTING.md document
+or the README.md, make sure you run mdformat.
+
+```sh
+uv run nox -s mdformat
+```

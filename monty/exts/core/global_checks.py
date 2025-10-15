@@ -3,6 +3,10 @@ from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
+
+
+EXT_METADATA = ExtMetadata(core=True)
 
 
 logger = get_logger(__name__)
@@ -25,7 +29,7 @@ class GlobalCheck(commands.Cog):
         if self._bot_invite_link:
             return
 
-        # todo: don't require a fake guild object
+        # TODO: don't require a fake guild object
         class FakeGuild:
             id: str = "{guild_id}"
 
@@ -44,7 +48,7 @@ class GlobalCheck(commands.Cog):
             return True
         if await self.bot.is_owner(ctx.author):
             return True
-        raise commands.NoPrivateMessage()
+        raise commands.NoPrivateMessage
 
 
 def setup(bot: Monty) -> None:

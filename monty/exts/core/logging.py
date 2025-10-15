@@ -12,6 +12,12 @@ from monty.metadata import ExtMetadata
 EXT_METADATA = ExtMetadata(core=True)
 logger = get_logger(__name__)
 
+COMMAND_TYPES = {
+    disnake.ApplicationCommandType.chat_input: "slash",
+    disnake.ApplicationCommandType.user: "user",
+    disnake.ApplicationCommandType.message: "message",
+}
+
 
 class InternalLogger(commands.Cog):
     """Internal logging for debug and abuse handling."""
@@ -20,14 +26,16 @@ class InternalLogger(commands.Cog):
         self.bot = bot
 
     @commands.Cog.listener()
-    async def on_command(self, ctx: commands.Context, command: Any = None, spl: str = None) -> None:
+    async def on_command(
+        self, ctx: commands.Context, command: commands.Command | None = None, content: str | None = None
+    ) -> None:
         """Log a command invoke."""
-        if not spl:
-            spl = ctx.message.content
-        spl = spl.split("\n")
-        if command is None:
-            command: commands.Command = ctx.command
-        qualname = command.qualified_name
+        if not isinstance(content, str):
+            content = ctx.message.content
+        spl = content.split("\n")
+        if not command:
+            command = ctx.command
+        qualname = command.qualified_name if command else "unknown"
         self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".uses")
         logger.info(
             "command %s by %s (%s) in channel %s (%s) in guild %s: %s",
@@ -48,7 +56,7 @@ class InternalLogger(commands.Cog):
     @commands.Cog.listener()
     async def on_command_completion(self, ctx: commands.Context) -> None:
         """Log a successful command completion."""
-        qualname = ctx.command.qualified_name
+        qualname = ctx.command.qualified_name if ctx.command else "unknown"
         logger.info(
             "command %s by %s (%s) in channel %s (%s) in guild %s has completed!",
             qualname,
@@ -59,18 +67,18 @@ class InternalLogger(commands.Cog):
             ctx.guild and ctx.guild.id,
         )
 
+        self.bot.socket_events["COMMAND_COMPLETION"] += 1
         self.bot.stats.incr("prefix_commands." + qualname.replace(".", "_") + ".completion")
 
     @commands.Cog.listener()
-    async def on_slash_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Log the start of a slash command."""
+    async def on_application_command(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Log the start of an application command."""
         spl = str(inter.filled_options).replace("\n", " ")
         spl = spl.split("\n")
-        # todo: fix this in disnake
+        # TODO: fix this in disnake
         if inter.application_command is disnake.utils.MISSING:
             return
         qualname = inter.application_command.qualified_name
-        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".uses")
 
         logger.info(
             "slash command `%s` by %s (%s) in channel %s (%s) in guild %s: %s",
@@ -83,13 +91,21 @@ class InternalLogger(commands.Cog):
             spl[0] + (" ..." if len(spl) > 1 else ""),
         )
 
-    @commands.Cog.listener()
-    async def on_slash_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
-        """Log slash command completion."""
+        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".uses")
+
+    @commands.Cog.listener(disnake.Event.message_command_completion)
+    @commands.Cog.listener(disnake.Event.user_command_completion)
+    @commands.Cog.listener(disnake.Event.slash_command_completion)
+    async def on_application_command_completion(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Log application command completion."""
         qualname = inter.application_command.qualified_name
-        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".completion")
+        try:
+            command_type = COMMAND_TYPES[inter.application_command.body.type] + " command"
+        except KeyError:
+            command_type = "unknown command type"
         logger.info(
-            "slash command `%s` by %s (%s) in channel %s (%s) in guild %s has completed!",
+            "{%s} `%s` by %s (%s) in channel %s (%s) in guild %s has completed!",
+            command_type,
             qualname,
             inter.author,
             inter.author.id,
@@ -97,6 +113,9 @@ class InternalLogger(commands.Cog):
             inter.channel_id,
             inter.guild_id,
         )
+
+        self.bot.socket_events[command_type.replace(" ", "_").upper() + "_COMPLETION"] += 1
+        self.bot.stats.incr("slash_commands." + qualname.replace(".", "_") + ".completion")
 
 
 def setup(bot: Monty) -> None:

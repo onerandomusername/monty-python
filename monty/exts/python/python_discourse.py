@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Optional, Union
+from typing import Any
 from urllib.parse import urljoin
 
 import aiohttp
@@ -34,9 +32,9 @@ logger = get_logger(__name__)
 class DiscussionTopic:
     id: int
     url: str
-    reply_id: Optional[int] = None
+    reply_id: int | None = None
 
-    def __init__(self, id: Union[int, str], url: str, reply: Optional[Union[str, int]] = None) -> None:
+    def __init__(self, id: int | str, url: str, reply: str | int | None = None) -> None:
         self.id = int(id)
         self.url = url
         self.reply_id = int(reply) if reply is not None else None
@@ -81,7 +79,7 @@ class PythonDiscourse(commands.Cog):
         data = await self.fetch_data(POST_API_URL.format(id=post_id))  # type: ignore
         return data, topic_info
 
-    def make_post_embed(self, data: dict[str, Any], topic_info: TopicInfo = None) -> disnake.Embed:
+    def make_post_embed(self, data: dict[str, Any], topic_info: TopicInfo | None = None) -> disnake.Embed:
         """Return an embed representing the provided post and topic information."""
         # consider parsing this into markdown
         limit = 2700
@@ -116,16 +114,14 @@ class PythonDiscourse(commands.Cog):
 
     def extract_topic_urls(self, content: str) -> list[DiscussionTopic]:
         """Extract python discourse urls from the provided content."""
-        posts = []
-        for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content))):
-            posts.append(
-                DiscussionTopic(
-                    id=match.group("num"),
-                    url=match[0],
-                    reply=match.group("reply"),
-                )
+        return [
+            DiscussionTopic(
+                id=match.group("num"),
+                url=match[0],
+                reply=match.group("reply"),
             )
-        return posts
+            for match in filter(None, map(TOPIC_REGEX.fullmatch, extract_urls(content)))
+        ]
 
     @commands.Cog.listener("on_message")
     async def on_message(self, message: disnake.Message) -> None:

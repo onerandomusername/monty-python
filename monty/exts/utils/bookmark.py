@@ -1,7 +1,6 @@
 import asyncio
 import random
-import typing
-from typing import Optional, Union
+from typing import TYPE_CHECKING, overload
 
 import disnake
 from disnake.ext import commands
@@ -10,9 +9,23 @@ from monty.bot import Monty
 from monty.constants import Colours, Icons
 from monty.log import get_logger
 from monty.utils import responses
-from monty.utils.converters import WrappedMessageConverter
 from monty.utils.messages import DeleteButton
 
+
+if TYPE_CHECKING:
+    WrappedMessageConverter = disnake.Message
+else:
+    from monty.utils.converters import WrappedMessageConverter
+
+MessageTopLevelComponent = (
+    disnake.ui.Section
+    | disnake.ui.TextDisplay
+    | disnake.ui.MediaGallery
+    | disnake.ui.File
+    | disnake.ui.Separator
+    | disnake.ui.Container
+    | disnake.ui.ActionRow
+)
 
 log = get_logger(__name__)
 
@@ -55,7 +68,7 @@ class DeleteBookmarkView(disnake.ui.View):
         """Disable all attributes in this view."""
         for c in self.children:
             if hasattr(c, "disabled") and c.is_dispatchable():
-                c.disabled = True
+                c.disabled = True  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class Bookmark(
@@ -90,7 +103,7 @@ class Bookmark(
         return embed
 
     @staticmethod
-    def build_error_embed(user: disnake.Member) -> disnake.Embed:
+    def build_error_embed(user: disnake.Member | disnake.User) -> disnake.Embed:
         """Builds an error embed for when a bookmark requester has DMs disabled."""
         return disnake.Embed(
             title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
@@ -99,8 +112,11 @@ class Bookmark(
         )
 
     @staticmethod
-    def check_perms(user: disnake.User, message: disnake.Message) -> bool:
+    def check_perms(user: disnake.User | disnake.Member, message: disnake.Message) -> bool:
         """Prevent users from bookmarking a message in a channel they don't have access to."""
+        if isinstance(user, disnake.User):
+            # we can't check permissions for users, so we forbid it
+            return False
         permissions = message.channel.permissions_for(user)
         if not permissions.read_message_history:
             log.info(f"{user} tried to bookmark a message in #{message.channel} but has no permissions.")
@@ -109,13 +125,13 @@ class Bookmark(
 
     async def action_bookmark(
         self,
-        channel: disnake.TextChannel,
-        user: disnake.Member,
+        channel: disnake.abc.Messageable,
+        user: disnake.Member | disnake.User,
         target_message: disnake.Message,
         title: str,
         *,
         bypass_read_check: bool = False,
-    ) -> Union[disnake.Embed, disnake.Message]:
+    ) -> disnake.Embed | disnake.Message:
         """Sends the bookmark DM, or sends an error embed when a user bookmarks a message."""
         if not bypass_read_check and not self.check_perms(user, target_message):
             return disnake.Embed(
@@ -137,16 +153,15 @@ class Bookmark(
         try:
             message = await user.send(embed=embed, components=components)
         except disnake.Forbidden:
-            error_embed = self.build_error_embed(user)
-            return error_embed
+            return self.build_error_embed(user)
         else:
             log.info(f"{user} bookmarked {target_message.jump_url} with title '{title}'")
         return message
 
     @staticmethod
     async def send_embed(
-        ctx: typing.Union[commands.Context, disnake.Interaction], target_message: disnake.Message
-    ) -> Optional[disnake.Message]:
+        ctx: commands.Context | disnake.Interaction, target_message: disnake.Message
+    ) -> disnake.Message | None:
         """Sends an embed, with a button, so users can click to bookmark the message too."""
         content = f"Sent you a DM, {ctx.author.mention}"
 
@@ -166,67 +181,91 @@ class Bookmark(
                 disnake.ui.Button(label="Jump to Message", url=target_message.jump_url),
             ),
         ]
+        kwargs = {}
         if isinstance(ctx, commands.Context):
-            if ctx.channel == target_message.channel and ctx.channel.permissions_for(ctx.me).read_message_history:
-                reference = target_message.to_reference(fail_if_not_exists=False)
-            else:
-                reference = None
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+            if ctx.channel == target_message.channel and app_permissions.read_message_history:
+                kwargs["reference"] = target_message.to_reference(fail_if_not_exists=False)
 
             allowed_mentions = disnake.AllowedMentions.none()
-            allowed_mentions.users = [ctx.author]
+            allowed_mentions.users = [ctx.author]  # type: ignore
 
             await ctx.send(
                 content=content,
                 allowed_mentions=allowed_mentions,
-                reference=reference,
                 components=DeleteButton(ctx.author, initial_message=ctx.message),
             )
             message = await ctx.send(
                 embed=embed,
                 allowed_mentions=disnake.AllowedMentions.none(),
                 components=components,
-                reference=reference,
+                **kwargs,
             )
+        elif (
+            ctx.context.private_channel
+            or not ctx.authorizing_integration_owners.guild_id
+            or (ctx.authorizing_integration_owners.guild_id and not ctx.permissions.send_messages)
+        ):
+            message = await ctx.response.send_message("Sent you a DM with the bookmark!", ephemeral=True)
         else:
-            if (
-                ctx.context.private_channel
-                or not ctx.authorizing_integration_owners.guild_id
-                or (ctx.authorizing_integration_owners.guild_id and not ctx.permissions.send_messages)
-            ):
-                message = await ctx.response.send_message("Sent you a DM with the bookmark!", ephemeral=True)
-            else:
-                message = await ctx.response.send_message(
-                    embed=embed,
-                    components=components,
-                    allowed_mentions=disnake.AllowedMentions.none(),
-                )
-                await ctx.followup.send(content=content, ephemeral=True)
+            message = await ctx.response.send_message(
+                embed=embed,
+                components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
+            await ctx.followup.send(content=content, ephemeral=True)
 
         return message
 
-    @commands.command(name="bookmark", aliases=("bm", "pin"))
-    async def bookmark(
+    @overload
+    async def _bookmark(
         self,
-        ctx: typing.Union[commands.Context, disnake.ModalInteraction, disnake.ApplicationCommandInteraction],
-        target_message: Optional[WrappedMessageConverter],
+        ctx: commands.Context,
+        target_message: disnake.Message | None = None,
         *,
         title: str = "Bookmark",
-    ) -> None:
-        """Send the author a link to `target_message` via DMs."""
+    ) -> None: ...
+
+    @overload
+    async def _bookmark(
+        self,
+        ctx: disnake.ModalInteraction | disnake.ApplicationCommandInteraction,
+        target_message: disnake.Message,
+        *,
+        title: str = "Bookmark",
+    ) -> disnake.Message | None: ...
+
+    async def _bookmark(
+        self,
+        ctx: (
+            commands.Context
+            | disnake.ModalInteraction
+            | disnake.ApplicationCommandInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        target_message: disnake.Message | None = None,
+        *,
+        title: str = "Bookmark",
+    ) -> disnake.Message | None:
         if not target_message:
-            if not ctx.message.reference:
-                raise commands.UserInputError(
+            assert isinstance(ctx, commands.Context)
+            if not ctx.message.reference or not isinstance(
+                referenced_message := ctx.message.reference.resolved, disnake.Message
+            ):
+                msg = (
                     "You must either provide a valid message to bookmark, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
-            target_message = ctx.message.reference.resolved
+                raise commands.UserInputError(msg)
+            target_message = referenced_message
         if not target_message.guild and not isinstance(
             ctx, (disnake.ModalInteraction, disnake.MessageCommandInteraction)
         ):
-            raise commands.NoPrivateMessage("You may only bookmark messages that aren't in DMs.")
+            msg = "You may only bookmark messages that aren't in DMs."
+            raise commands.NoPrivateMessage(msg)
 
         result = await self.action_bookmark(
             ctx.channel,
@@ -238,17 +277,30 @@ class Bookmark(
         if isinstance(result, disnake.Embed):
             if isinstance(ctx, disnake.Interaction):
                 await ctx.send(embed=result, ephemeral=True)
-            elif ctx.channel.permissions_for(ctx.me).read_message_history:
-                components = DeleteButton(ctx.author, initial_message=ctx.message)
-                await ctx.reply(embed=result, fail_if_not_exists=False, components=components)
             else:
-                components = DeleteButton(ctx.author, initial_message=ctx.message)
-                await ctx.send(embed=result, components=components)
+                app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+                if app_permissions.read_message_history:
+                    components = DeleteButton(ctx.author, initial_message=ctx.message)
+                    await ctx.reply(embed=result, fail_if_not_exists=False, components=components)
+                else:
+                    components = DeleteButton(ctx.author, initial_message=ctx.message)
+                    await ctx.send(embed=result, components=components)
             return
         await self.send_embed(
             ctx,
             target_message,
         )
+
+    @commands.command(name="bookmark", aliases=("bm", "pin"))
+    async def bookmark_prefix(
+        self,
+        ctx: commands.Context,
+        target_message: WrappedMessageConverter | None,
+        *,
+        title: str = "Bookmark",
+    ) -> None:
+        """Send the author a link to `target_message` via DMs."""
+        await self._bookmark(ctx, target_message, title=title)
 
     @commands.slash_command(name="bm", description="Bookmark a message.")
     async def bookmark_slash(
@@ -265,7 +317,7 @@ class Bookmark(
         message: A message to bookmark. This can be a link or id.
         title: An optional title for your direct message.
         """
-        await self.bookmark(inter, message, title=title)
+        await self._bookmark(inter, message, title=title)
 
     @commands.message_command(
         name="Bookmark",
@@ -295,7 +347,7 @@ class Bookmark(
         except asyncio.TimeoutError:
             return
 
-        await self.bookmark(
+        await self._bookmark(
             modal_inter,
             inter.target,
             title=modal_inter.text_values["title"],
@@ -303,21 +355,26 @@ class Bookmark(
 
     @commands.Cog.listener("on_button_click")
     # cursed.
-    async def bookmark_button(self, inter: Union[disnake.MessageInteraction, disnake.ModalInteraction]) -> None:
+    async def bookmark_button(self, inter: disnake.MessageInteraction | disnake.ModalInteraction) -> None:
         """Listen for bookmarked button events and respond to them."""
-        if not inter.component.custom_id.startswith(CUSTOM_ID):
+        custom_id: str = inter.data.custom_id
+        if not custom_id.startswith(CUSTOM_ID):
             return
-        custom_id = inter.component.custom_id.removeprefix(CUSTOM_ID)
 
-        def remove_button(message: disnake.Message) -> disnake.ui.View:
-            view = disnake.ui.View.from_message(message)
-            for child in view.children:
+        custom_id = custom_id.removeprefix(CUSTOM_ID)
+
+        # TODO: this does not check internal components, only top level ones
+        def remove_button(message: disnake.Message | None) -> list[MessageTopLevelComponent]:
+            if message is None:
+                return []
+            comp = disnake.ui.components_from_message(message)
+            for child in comp:
                 if (getattr(child, "custom_id", "") or "").startswith(CUSTOM_ID):
-                    view.remove_item(child)
+                    comp.remove(child)
                     break
             else:
                 log.warning("Button was not found to be removed.")
-            return view
+            return comp
 
         channel_id, message_id = custom_id.split("-")
         channel_id, message_id = int(channel_id), int(message_id)
@@ -330,15 +387,16 @@ class Bookmark(
             await inter.response.send_message("I can no longer view this channel.", ephemeral=True)
             return
 
-        if not channel.permissions_for(channel.guild.me).read_message_history:
+        app_permissions = channel.permissions_for(channel.me)  # type: ignore
+        if not app_permissions.read_message_history:
             # while we could remove the button there is no reason to as we aren't making an invalid api request
             await inter.response.send_message("I am currently unable to view the message this button is for.")
             return
         try:
-            message = await channel.fetch_message(message_id)
-        except (disnake.NotFound, disnake.Forbidden):
-            view = remove_button(inter.message)
-            await inter.response.edit_message(view=view)
+            message = await channel.fetch_message(message_id)  # pyright: ignore[reportAttributeAccessIssue]
+        except (disnake.NotFound, disnake.Forbidden, AttributeError):
+            components = remove_button(inter.message)
+            await inter.response.edit_message(components=components)
             await inter.send("This message either no longer exists or I cannot reference it.", ephemeral=True)
             return
         maybe_error = await self.action_bookmark(inter.channel, inter.author, message, title="Bookmark")

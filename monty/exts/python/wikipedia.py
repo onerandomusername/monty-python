@@ -1,6 +1,5 @@
 import re
 from html import unescape
-from typing import List
 
 import disnake
 from disnake.ext import commands
@@ -37,22 +36,22 @@ class WikipediaSearch(commands.Cog, name="Wikipedia Search"):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-    async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> List[str]:
+    async def wiki_request(self, channel: disnake.abc.Messageable, search: str) -> list[str]:
         """Search wikipedia search string and return formatted first 10 pages found."""
         params = WIKI_PARAMS | {"srlimit": 10, "srsearch": search}
         async with self.bot.http_session.get(url=SEARCH_API, params=params) as resp:
             if resp.status != 200:
                 log.info(f"Unexpected response `{resp.status}` while searching wikipedia for `{search}`")
-                raise APIError("Wikipedia API", resp.status)
+                raise APIError(status_code=resp.status, api="Wikipedia API")
 
             raw_data = await resp.json()
 
             if not raw_data.get("query"):
                 if error := raw_data.get("errors"):
                     log.error(f"There was an error while communicating with the Wikipedia API: {error}")
-                raise APIError("Wikipedia API", resp.status, error)
+                raise APIError(status_code=resp.status, api="Wikipedia API")
 
-            lines = []
+            lines: list[str] = []
             if raw_data["query"]["searchinfo"]["totalhits"]:
                 for article in raw_data["query"]["search"]:
                     line = WIKI_SEARCH_RESULT.format(

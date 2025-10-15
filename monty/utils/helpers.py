@@ -3,12 +3,13 @@ from __future__ import annotations
 import asyncio
 import datetime
 import ssl
-from typing import TYPE_CHECKING, Any, Coroutine, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 from urllib.parse import urlsplit, urlunsplit
 
 import base65536
 import dateutil.parser
 import disnake
+import yarl
 
 from monty.log import get_logger
 from monty.utils import scheduling
@@ -16,6 +17,8 @@ from monty.utils.messages import extract_urls
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from typing_extensions import ParamSpec
 
     P = ParamSpec("P")
@@ -33,7 +36,7 @@ def suppress_links(message: str) -> str:
     return message
 
 
-def find_nth_occurrence(string: str, substring: str, n: int) -> Optional[int]:
+def find_nth_occurrence(string: str, substring: str, n: int) -> int | None:
     """Return index of `n`th occurrence of `substring` in `string`, or None if not found."""
     index = 0
     for _ in range(n):
@@ -78,8 +81,8 @@ EXPAND_BUTTON_PREFIX = "ghexp-v1:"
 
 def encode_github_link(link: str) -> str:
     """Encode a github link with base 65536."""
-    scheme, netloc, path, query, fragment = urlsplit(link)
-    user, repo, literal_blob, blob, file_path = path.lstrip("/").split("/", 4)
+    _scheme, _netloc, path, _query, fragment = urlsplit(link)
+    user, repo, _literal_blob, blob, file_path = path.lstrip("/").split("/", 4)
     data = f"{user}/{repo}/{blob}/{file_path}#{fragment}"
 
     encoded = base65536.encode(data.encode())
@@ -103,7 +106,7 @@ def decode_github_link(compressed: str) -> str:
     return urlunsplit(("https", "github.com", path, "", fragment))
 
 
-def maybe_defer(inter: disnake.Interaction, *, delay: Union[float, int] = 2.0, **options) -> asyncio.Task:
+def maybe_defer(inter: disnake.Interaction, *, delay: float = 2.0, **options) -> asyncio.Task:
     """Defer an interaction if it has not been responded to after ``delay`` seconds."""
     loop = inter.bot.loop
     if delay <= 0:
@@ -146,3 +149,117 @@ def ssl_create_default_context() -> ssl.SSLContext:
     ssl_context = ssl.create_default_context()
     ssl_context.post_handshake_auth = True
     return ssl_context
+
+
+@overload
+def get_invite_link_from_app_info(
+    app_info: disnake.AppInfo,
+    *,
+    default_permissions: None = None,
+) -> str | dict[int, str]: ...
+
+
+@overload
+def get_invite_link_from_app_info(
+    app_info: disnake.AppInfo,
+    *,
+    guild_id: int | None = None,
+    default_permissions: disnake.Permissions | None = None,
+) -> str | None: ...
+
+
+def get_invite_link_from_app_info(
+    app_info: disnake.AppInfo,
+    *,
+    guild_id: int | None = None,
+    default_permissions: disnake.Permissions | None = None,
+) -> str | dict[int, str] | None:
+    """Get an invite link from the provided disnake.AppInfo object."""
+    urls: dict[int, yarl.URL] | None = {}
+    # shortcut this mess with custom_install_urls...
+    if app_info.custom_install_url:
+        return str(app_info.custom_install_url)
+
+    if default_permissions is None:
+        default_permissions = disnake.Permissions(
+            view_channel=True,
+            send_messages=True,
+            embed_links=True,
+            attach_files=True,
+            send_polls=True,
+            send_messages_in_threads=True,
+        )
+
+    # this bit of the API is a bit of a mess, so let's try to cover all the cases
+    # if a bot has the user and guild install types SET, then they can be installed either way,
+    # but might not have an in-app invite
+    # in this configuration a link that works for both is preferred but not installable
+    # if a bot has only guild installs, then we can provide a guild invite link
+    # if a bot has only user installs, then we can provide a user invite link
+    # as of now, bots cannot have neither
+    # the interesting case is when a bot has no discord provided url.
+    # In this case we have to fall back to a possible invite value
+
+    # The entire flow is as follows:
+    # - If a custom install url is provided, use that.
+    # - If both user and guild install types are available:
+    #   - check for install_params in either config
+    #     - if either has install_params, return a Discord Provided URL
+    #     - else, return both user and guild oauth urls in a dict
+    # - If only guild installs or only user installs are available:
+    #   - check for install_params in the respective config
+    #     - if present, use its permissions for the oauth url if provided (else no permissions)
+    #     - if not present, this is NOT a discord provided URL
+    #       - fall back to a fallback creation
+    # a discord provided url matches the case of user or guild install type config having install_params
+    # if either of them have install_params, then we can assume a discord provided url exists
+
+    # HOWEVER
+    # if the `guild_id` param is provided, we can only return a guild invite link,
+    # therefore we don't even check user installations
+
+    if not guild_id and any(
+        (g and g.install_params) for g in (app_info.user_install_type_config, app_info.guild_install_type_config)
+    ):
+        return str(yarl.URL("https://discord.com/oauth2/authorize").with_query(client_id=app_info.id))
+
+    params: dict[str, Any] = {}
+    params["client_id"] = app_info.id
+    if app_info.redirect_uris and app_info.redirect_uris[0]:
+        params["redirect_uri"] = app_info.redirect_uris[0]
+
+    if app_info.user_install_type_config and not guild_id:
+        params["scopes"] = ("applications.commands",)
+        params["integration_type"] = disnake.ApplicationInstallTypes(user=True).values[0]
+
+        if app_info.user_install_type_config.install_params:
+            params["scopes"] = app_info.user_install_type_config.install_params.scopes
+
+        urls[disnake.ApplicationInstallTypes.user.flag] = yarl.URL(
+            disnake.utils.oauth_url(
+                **params,
+            )
+        )
+
+    if app_info.guild_install_type_config:
+        if guild_id:
+            params["guild"] = disnake.Object(id=guild_id)
+        if default_permissions:
+            params["permissions"] = default_permissions
+        params["integration_type"] = disnake.ApplicationInstallTypes(guild=True).values[0]
+
+        if app_info.guild_install_type_config.install_params:
+            params["scopes"] = app_info.guild_install_type_config.install_params.scopes
+            params["permissions"] = app_info.guild_install_type_config.install_params.permissions or default_permissions
+
+        urls[disnake.ApplicationInstallTypes.guild.flag] = yarl.URL(
+            disnake.utils.oauth_url(
+                **params,
+            )
+        )
+
+    if len(urls) == 1:
+        return str(next(iter(urls.values())))
+    if len(urls) == 0:
+        return None
+    return {k: str(v) for k, v in urls.items()}

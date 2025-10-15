@@ -1,16 +1,15 @@
 import importlib.metadata
 import random
 from datetime import datetime, timedelta
-from typing import Optional
 
 import disnake
 import psutil
 from disnake.ext import commands
-from disnake.ext.commands import LargeInt, Range
+from disnake.ext.commands import LargeInt
 
 from monty.bot import Monty
 from monty.constants import Client, Colours
-from monty.utils.helpers import utcnow
+from monty.utils import helpers
 from monty.utils.messages import DeleteButton
 
 
@@ -87,12 +86,11 @@ class Meta(
         self.bot = bot
         self.process = psutil.Process()
 
-        self._app_info_last_fetched: Optional[datetime] = None
+        self._app_info_last_fetched: datetime | None = None
 
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
         """Meta commands."""
-        pass
 
     @monty.sub_command(name="about")
     async def about(self, inter: disnake.CommandInteraction) -> None:
@@ -129,7 +127,7 @@ class Meta(
         e.set_footer(text=str(self.bot.user), icon_url=self.bot.user.display_avatar.url)
 
         ephemeral = bool(inter.guild_id)
-        components = []
+        components: list[DeleteButton] = []
         if not ephemeral:
             components.append(DeleteButton(inter.author))
         await inter.send(embed=e, ephemeral=ephemeral, components=components)
@@ -138,37 +136,61 @@ class Meta(
     async def invite(
         self,
         inter: disnake.CommandInteraction,
-        permissions: Range[int, 0, disnake.Permissions.all().value] = None,
-        guild_id: LargeInt = None,
+        guild_id: LargeInt | None = None,
         raw_link: bool = False,
-        ephemeral: bool = None,
+        ephemeral: bool | None = None,
     ) -> None:
         """
         Generate an invite link to invite Monty.
 
         Parameters
         ----------
-        permissions: The permissions to grant the invite link.
-        guild_id: The guild to invite the bot to.
-        raw_link: Whether to return the raw invite link.
         ephemeral: Whether to send the invite link as an ephemeral message.
+        raw_link: Whether to return the raw invite link.
+        guild_id: The guild to prefill the invite link with.
         """
         if ephemeral is None:
             ephemeral = bool(inter.guild_id)
 
-        # ignore because we don't have any spaces in the command name
-        # therefore, it will always be a slash command and not a subcommand or group
-        discord_command: commands.InvokableSlashCommand = self.bot.get_slash_command("discord")  # type: ignore
+        appinfo = await self.application_info()
 
-        if not discord_command:
-            raise commands.CommandError("Could not create an invite link right now.")
-        invite_command = discord_command.children["app-invite"]
-        await invite_command(
-            inter,
-            client_id=self.bot.user.id,
-            permissions=permissions,
-            guild_id=guild_id,
-            raw_link=raw_link,
+        urls = helpers.get_invite_link_from_app_info(appinfo)
+
+        message = "Click below to add me!" if not raw_link else "Click the following link to add me!"
+
+        labels = {
+            disnake.ApplicationInstallTypes.user.flag: "User install (global commands)",
+            disnake.ApplicationInstallTypes.guild.flag: "Guild invite",
+        }
+
+        components: list[disnake.ui.Button] = []
+
+        if not ephemeral:
+            components.append(DeleteButton(inter.author))
+
+        if raw_link:
+            if isinstance(urls, dict):
+                message += "\n"
+                for num, url in urls.items():
+                    title = labels[num]
+                    message += title + ": <" + url + ">\n"
+            else:
+                message += f"\n{urls}"
+        elif isinstance(urls, dict):
+            for num, url in urls.items():
+                title = labels[num]
+                components.append(disnake.ui.Button(url=url, style=disnake.ButtonStyle.link, label=title))
+        else:
+            components.append(
+                disnake.ui.Button(
+                    url=urls, style=disnake.ButtonStyle.link, label=f"Click to invite {inter.bot.user.name}!"
+                )
+            )
+
+        await inter.response.send_message(
+            message,
+            allowed_mentions=disnake.AllowedMentions.none(),
+            components=components,
             ephemeral=ephemeral,
         )
 
@@ -213,7 +235,7 @@ class Meta(
         await inter.send(embed=e, components=components)
 
     @monty.sub_command()
-    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool = None) -> None:
+    async def support(self, inter: disnake.CommandInteraction, ephemeral: bool | None = None) -> None:
         """
         Get a link to the support server.
 
@@ -231,16 +253,16 @@ class Meta(
 
         await inter.send(
             "If you find yourself in need of support, please join the support server: "
-            "https://discord.gg/{invite}".format(invite=Client.support_server),
+            f"https://discord.gg/{Client.support_server}",
             ephemeral=ephemeral,
             components=components,
         )
 
     async def application_info(self) -> disnake.AppInfo:
         """Fetch the application info using a local hour-long cache."""
-        if not self._app_info_last_fetched or utcnow() - self._app_info_last_fetched > timedelta(hours=1):
+        if not self._app_info_last_fetched or helpers.utcnow() - self._app_info_last_fetched > timedelta(hours=0):
             self._cached_app_info = await self.bot.application_info()
-            self._app_info_last_fetched = utcnow()
+            self._app_info_last_fetched = helpers.utcnow()
         return self._cached_app_info
 
     @monty.sub_command()

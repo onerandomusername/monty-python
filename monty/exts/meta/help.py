@@ -2,7 +2,7 @@
 import asyncio
 import itertools
 from contextlib import suppress
-from typing import List, NamedTuple, Optional, Union
+from typing import NamedTuple, NoReturn
 
 import disnake
 from disnake.ext import commands
@@ -30,19 +30,21 @@ PAGINATION_EMOJI: dict[str, str] = {
     "stop": DELETE_EMOJI,
 }
 
+_OLD_HELP = None
+
 
 class Cog(NamedTuple):
     """Show information about a Cog's name, description and commands."""
 
     name: str
     description: str
-    commands: List[commands.Command]
+    commands: list[commands.Command]
 
 
 log = get_logger(__name__)
 
 
-class HelpQueryNotFound(ValueError):
+class HelpQueryNotFoundError(ValueError):
     """
     Raised when a HelpSession Query doesn't match a command or cog.
 
@@ -51,7 +53,7 @@ class HelpQueryNotFound(ValueError):
     query, where keys are the possible matched command names and values are the likeness match scores.
     """
 
-    def __init__(self, arg: str, possible_matches: dict = None) -> None:
+    def __init__(self, arg: str, possible_matches: dict | None = None) -> None:
         super().__init__(arg)
         self.possible_matches = possible_matches
 
@@ -63,7 +65,7 @@ class HelpSession:
     Expected attributes include:
         * title: str
             The title of the help message.
-        * query: Union[disnake.ext.commands.Bot, disnake.ext.commands.Command]
+        * query: disnake.ext.commands.Bot | disnake.ext.commands.Command
         * description: str
             The description of the query.
         * pages: list[str]
@@ -94,13 +96,16 @@ class HelpSession:
         self.title = "Command Help"
 
         # set the query details for the session
+        self.query: commands.Command | Cog | Monty | commands.GroupMixin
         if command:
             query_str = " ".join(command)
             self.query = self._get_query(query_str)
-            self.description = self.query.description or self.query.help
+            self.description = self.query.description
+            if not self.description and isinstance(self.query, commands.Command):
+                self.description = self.query.help
         else:
             self.query = ctx.bot
-            self.description = self.query.description
+            self.description = None
         self.author = ctx.author
         self.destination = ctx.channel
 
@@ -111,13 +116,13 @@ class HelpSession:
         self._max_lines = max_lines
 
         # init session states
-        self._pages = None
+        self._pages: list[str] = []
         self._current_page = 0
         self.message = None
         self._timeout_task = None
         self.reset_timeout()
 
-    def _get_query(self, query: str) -> Union[commands.Command, Cog]:
+    def _get_query(self, query: str) -> commands.Command | Cog:
         """Attempts to match the provided query with a valid command or cog."""
         command = self._bot.get_command(query)
         if command:
@@ -127,10 +132,9 @@ class HelpSession:
         cog_matches = []
         description = None
         for cog in self._bot.cogs.values():
-            if hasattr(cog, "category") and cog.category == query:
+            if getattr(cog, "category", None) == query:
                 cog_matches.append(cog)
-                if hasattr(cog, "category_description"):
-                    description = cog.category_description
+                description = getattr(cog, "category_description", None)
 
         # Try to search by cog name if no categories match.
         if not cog_matches:
@@ -145,25 +149,27 @@ class HelpSession:
             cmds = (cog.get_commands() for cog in cog_matches)  # Commands of all cogs
 
             return Cog(
-                name=cog.category if hasattr(cog, "category") else cog.qualified_name,
+                name=getattr(cog, "category", cog.qualified_name),
                 description=description or cog.description,
-                commands=tuple(itertools.chain.from_iterable(cmds)),  # Flatten the list
+                commands=list(itertools.chain.from_iterable(cmds)),  # Flatten the list
             )
 
         self._handle_not_found(query)
+        return None
 
-    def _handle_not_found(self, query: str) -> None:
+    def _handle_not_found(self, query: str) -> NoReturn:
         """
         Handles when a query does not match a valid command or cog.
 
-        Will pass on possible close matches along with the `HelpQueryNotFound` exception.
+        Will pass on possible close matches along with the `HelpQueryNotFoundError` exception.
         """
         # Combine command and cog names
         choices = list(self._bot.all_commands) + list(self._bot.cogs)
 
         result = process.extract(query, choices, score_cutoff=60, scorer=fuzz.ratio)
 
-        raise HelpQueryNotFound(f'Query "{query}" not found.', {choice: score for choice, score, pos in result})
+        msg = f'Query "{query}" not found.'
+        raise HelpQueryNotFoundError(msg, {choice: score for choice, score, pos in result})
 
     async def timeout(self, seconds: int = TIMEOUT) -> None:
         """Waits for a set number of seconds, then stops the help session."""
@@ -171,7 +177,7 @@ class HelpSession:
         await self.stop()
 
     @staticmethod
-    def strip_custom_id(custom_id: str) -> Optional[str]:
+    def strip_custom_id(custom_id: str) -> str | None:
         """Remove paginator custom id prefix."""
         if not custom_id.startswith(CUSTOM_ID_PREFIX):
             return None
@@ -181,9 +187,8 @@ class HelpSession:
     def reset_timeout(self) -> None:
         """Cancels the original timeout task and sets it again from the start."""
         # cancel original if it exists
-        if self._timeout_task:
-            if not self._timeout_task.cancelled():
-                self._timeout_task.cancel()
+        if self._timeout_task and not self._timeout_task.cancelled():
+            self._timeout_task.cancel()
 
         # recreate the timeout task
         self._timeout_task = scheduling.create_task(self.timeout())
@@ -254,7 +259,7 @@ class HelpSession:
         This is a custom implementation of `command.signature` in order to format the command
         signature without aliases.
         """
-        results = []
+        results: list[str] = []
         for name, param in cmd.clean_params.items():
             # if argument has a default value
             if param.default is not param.empty:
@@ -303,6 +308,7 @@ class HelpSession:
     async def _add_command_signature(self, paginator: LinePaginator) -> None:
         prefix = ""
 
+        assert isinstance(self.query, commands.Command)
         signature = self._get_command_params(self.query)
         parent = self.query.full_parent_name + " " if self.query.parent else ""
         paginator.add_line(f"**```{prefix}{parent}{signature}```**")
@@ -316,6 +322,7 @@ class HelpSession:
 
     async def _list_child_commands(self, paginator: LinePaginator) -> None:
         # remove hidden commands if session is not wanting hiddens
+        assert isinstance(self.query, (commands.GroupMixin | Cog))
         if not self._show_hidden:
             filtered = [c for c in self.query.commands if not c.hidden]
         else:
@@ -341,7 +348,7 @@ class HelpSession:
             await self._format_command_category(paginator, category, list(cmds))
 
     async def _format_command_category(
-        self, paginator: LinePaginator, category: str, cmds: List[commands.Command]
+        self, paginator: LinePaginator, category: str, cmds: list[commands.Command]
     ) -> None:
         cmds = sorted(cmds, key=lambda c: c.name)
         cat_cmds = []
@@ -371,7 +378,7 @@ class HelpSession:
 
             paginator.add_line(details)
 
-    async def _format_command(self, command: commands.Command) -> List[str]:
+    async def _format_command(self, command: commands.Command) -> list[str]:
         # skip if hidden and hide if session is set to
         if command.hidden and not self._show_hidden:
             return []
@@ -470,7 +477,7 @@ class HelpSession:
             else:
                 view = disnake.ui.View.from_message(self.message, timeout=1)
                 for child in view.children:
-                    if hasattr(child, "disabled") and child.is_dispatchable():
+                    if isinstance(child, (disnake.ui.Button, disnake.ui.Select)):
                         child.disabled = True
                 await self.message.edit(view=view)
 
@@ -518,7 +525,7 @@ class Help(commands.Cog):
         """Shows Command Help."""
         try:
             await HelpSession.start(ctx, *commands)
-        except HelpQueryNotFound as error:
+        except HelpQueryNotFoundError as error:
             embed = disnake.Embed()
             embed.colour = disnake.Colour.red()
             embed.title = str(error)
@@ -537,7 +544,8 @@ def unload(bot: Monty) -> None:
     This is run if the cog raises an exception on load, or if the extension is unloaded.
     """
     bot.remove_command("help")
-    bot.add_command(bot._old_help)
+    if _OLD_HELP:
+        bot.add_command(_OLD_HELP)
 
 
 def setup(bot: Monty) -> None:
@@ -545,13 +553,14 @@ def setup(bot: Monty) -> None:
     The setup for the help extension.
 
     This is called automatically on `bot.load_extension` being run.
-    Stores the original help command instance on the `bot._old_help` attribute for later
+    Stores the original help command instance in `_old_help` attribute for later
     reinstatement, before removing it from the command registry so the new help command can be
     loaded successfully.
     If an exception is raised during the loading of the cog, `unload` will be called in order to
     reinstate the original help command.
     """
-    bot._old_help = bot.get_command("help")
+    global _OLD_HELP
+    _OLD_HELP = bot.get_command("help")
     bot.remove_command("help")
 
     try:

@@ -1,13 +1,12 @@
-from __future__ import annotations
-
-import os
-from typing import TYPE_CHECKING, Final, List
+import pathlib
+from typing import TYPE_CHECKING, Final, cast
 from urllib.parse import urldefrag
 
 import disnake
 from disnake.ext import commands, tasks
 
 from monty import constants
+from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils.features import require_feature
 from monty.utils.helpers import encode_github_link
@@ -15,11 +14,11 @@ from monty.utils.messages import DeleteButton
 
 
 if TYPE_CHECKING:
-    from monty.bot import Monty
     from monty.exts.python.eval import Snekbox
 
+
 logger = get_logger(__name__)
-CODE_FILE = os.path.dirname(__file__) + "/_global_source_snekcode.py"
+CODE_FILE = pathlib.Path(__file__).parent / "_global_source_snekcode.py"
 
 
 class GlobalSource(commands.Cog, name="Global Source"):
@@ -27,7 +26,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
-        with open(CODE_FILE, "r") as f:
+        with CODE_FILE.open() as f:
             # this is declared as final as we should *not* be writing to it
             self.code: Final[str] = f.read()
 
@@ -36,18 +35,18 @@ class GlobalSource(commands.Cog, name="Global Source"):
         self.refresh_code.stop()
 
     @property
-    def snekbox(self) -> Snekbox:
+    def snekbox(self) -> "Snekbox":
         """Return the snekbox cog where the code is ran."""
-        snekbox: Snekbox
-        if snekbox := self.bot.get_cog("Snekbox"):  # type: ignore # this will always be a Snekbox instance
+        if snekbox := cast("Snekbox | None", self.bot.get_cog("Snekbox")):  # this will always be a Snekbox instance
             return snekbox
-        raise RuntimeError("Snekbox is not loaded")
+        msg = "Snekbox is not loaded"
+        raise RuntimeError(msg)
 
     @require_feature(constants.Feature.GLOBAL_SOURCE)
     @commands.command(name="globalsource", aliases=("gs",), hidden=True)
-    async def globalsource(self, ctx: commands.Context, object: str) -> None:
+    async def globalsource(self, ctx: commands.Context, object: str) -> None:  # noqa: A002
         """Get the source of a python object."""
-        object = object.strip("`")
+        object = object.strip("`")  # noqa: A001
         async with ctx.typing():
             result = await self.snekbox.post_eval(
                 self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object),
@@ -78,7 +77,8 @@ class GlobalSource(commands.Cog, name="Global Source"):
         elif returncode == 1:
             # generic exception occured
             logger.exception(result["stdout"])
-            raise Exception("Snekbox returned an error.")
+            msg = "Snekbox returned an error."
+            raise Exception(msg)
         elif returncode == 2:
             text = "The module you provided was not resolvable to an installed module."
         elif returncode == 3:
@@ -101,7 +101,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
         else:
             text = "Something went wrong."
 
-        components: List[disnake.ui.action_row.Components] = []
+        components: list[disnake.ui.action_row.Components] = []
         if isinstance(ctx, commands.Context):
             components.append(DeleteButton(ctx.author, initial_message=ctx.message))
         else:
@@ -133,11 +133,11 @@ class GlobalSource(commands.Cog, name="Global Source"):
     @tasks.loop(seconds=1)
     async def refresh_code(self, ctx: commands.Context, query: str) -> None:
         """Refresh the internal code every second."""
-        modified = os.stat(CODE_FILE).st_mtime
+        modified = CODE_FILE.stat().st_mtime
         if modified <= self.last_modified:
             return
         self.last_modified = modified
-        with open(CODE_FILE, "r") as f:
+        with CODE_FILE.open() as f:
             self.code = f.read()  # type: ignore # this is the one time we can write to the code
             logger.debug("Updated global_source code")
 
@@ -153,7 +153,7 @@ class GlobalSource(commands.Cog, name="Global Source"):
 
     @commands.command("globalsourcedebug", hidden=True)
     @commands.is_owner()
-    async def globalsourcedebug(self, ctx: commands.Context, query: str = None) -> None:
+    async def globalsourcedebug(self, ctx: commands.Context, query: str | None = None) -> None:
         """Refresh the existing code and reinvoke it continually until the command is run again."""
         if self.refresh_code.is_running():
             if query:

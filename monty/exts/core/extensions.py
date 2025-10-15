@@ -1,5 +1,8 @@
 import functools
+import importlib
 import importlib.util
+import pathlib
+import sys
 import typing as t
 from enum import Enum
 
@@ -12,10 +15,13 @@ from monty.constants import Client
 from monty.log import get_logger
 from monty.metadata import ExtMetadata
 from monty.utils import scheduling
-from monty.utils.converters import Extension
 from monty.utils.extensions import EXTENSIONS, invoke_help_command
 from monty.utils.messages import DeleteButton
 from monty.utils.pagination import LinePaginator
+
+
+if t.TYPE_CHECKING:
+    import watchfiles
 
 
 EXT_METADATA = ExtMetadata(core=True, no_unload=True)
@@ -25,6 +31,11 @@ log = get_logger(__name__)
 
 UNLOAD_BLACKLIST: set[str] = set()
 BASE_PATH_LEN = exts.__name__.count(".")
+
+if t.TYPE_CHECKING:
+    Extension = str
+else:
+    from monty.utils.converters import Extension
 
 
 class ExtensionStatus(str, Enum):
@@ -44,6 +55,39 @@ class Action(Enum):
     RELOAD = functools.partial(Monty.reload_extension)
 
 
+## determine dependents of a file and reload all dependencies accordingly
+RuffDependents = dict[str, list[str]]
+
+
+def _flatten_dependents(*, dependents: RuffDependents, paths: list[str]) -> list[str]:
+    """
+    Flatten a ruff dependents dict to a list of files.
+
+    Each file will only appear once, even if multiple files depend on it.
+    This is the list of files that need to be reloaded if `single` is changed.
+    """
+    to_process = paths.copy()
+    result = []
+
+    while to_process:
+        current_module = to_process.pop()
+        if current_module not in result:
+            result.append(current_module)
+        current_dependents = dependents.get(current_module, [])
+        for dependent in current_dependents:
+            if dependent in result:
+                result.remove(dependent)
+                to_process.append(dependent)
+                continue
+
+            to_process.append(dependent)
+            result.append(dependent)
+        if current_module not in result:
+            result.append(current_module)
+
+    return result
+
+
 class Extensions(commands.Cog):
     """Extension management commands."""
 
@@ -54,23 +98,23 @@ class Extensions(commands.Cog):
 
     async def cog_load(self) -> None:
         """Resume autoreload if it is enabled."""
-        if self.bot._autoreload_log_channel and self.bot._autoreload_task:
+        if self.bot._autoreload_args and self.bot._autoreload_task:
             # remake the task
             if not self.bot._autoreload_task.done():
                 # don't immediately cancel so it has a moment to finish the request to the discord channel
                 self.bot.loop.call_later(1, self.bot._autoreload_task.cancel)
 
-            self.bot._autoreload_task = scheduling.create_task(
-                self._autoreload_worker(self.bot._autoreload_log_channel)
-            )
-        else:
-            log.error("didn't remake")
+            self.bot._autoreload_task = scheduling.create_task(self._autoreload_worker(**self.bot._autoreload_args))
 
     def cog_unload(self) -> None:
         """Cancel the coro on unload."""
-        if not self._unloading_through_autoreload and not self.bot._autoreload_log_channel:
-            if self.bot._autoreload_task and not self.bot._autoreload_task.done():
-                self.bot._autoreload_task.cancel()
+        if (
+            not self._unloading_through_autoreload
+            and not self.bot._autoreload_args
+            and self.bot._autoreload_task
+            and not self.bot._autoreload_task.done()
+        ):
+            self.bot._autoreload_task.cancel()
 
     @commands.group(
         name="extensions",
@@ -87,13 +131,13 @@ class Extensions(commands.Cog):
         Load extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all unloaded extensions will be loaded.
-        """  # noqa: W605
+        """
         if not extensions:
             await invoke_help_command(ctx)
             return
 
         if "*" in extensions or "**" in extensions:
-            extensions = set(EXTENSIONS) - set(self.bot.extensions.keys())
+            extensions = tuple(set(EXTENSIONS) - set(self.bot.extensions.keys()))  # type: ignore
 
         msg = self.batch_manage(Action.LOAD, *extensions)
 
@@ -106,7 +150,7 @@ class Extensions(commands.Cog):
         Unload currently loaded extensions given their fully qualified or unqualified names.
 
         If '\*' or '\*\*' is given as the name, all loaded extensions will be unloaded.
-        """  # noqa: W605
+        """
         if not extensions:
             await invoke_help_command(ctx)
             return
@@ -138,16 +182,15 @@ class Extensions(commands.Cog):
 
         If '\*' is given as the name, all currently loaded extensions will be reloaded.
         If '\*\*' is given as the name, all extensions, including unloaded ones, will be reloaded.
-        """  # noqa: W605
+        """
         if not extensions:
             await invoke_help_command(ctx)
             return
 
         if "**" in extensions:
-            extensions = EXTENSIONS
+            extensions = tuple(EXTENSIONS)
         elif "*" in extensions:
-            extensions = set(self.bot.extensions.keys()) | set(extensions)
-            extensions.remove("*")
+            extensions = tuple(ext for ext in (set(self.bot.extensions.keys()) | set(extensions)) if ext != "*")
 
         msg = self.batch_manage(Action.RELOAD, *extensions)
 
@@ -169,7 +212,7 @@ class Extensions(commands.Cog):
             icon_url=str(self.bot.user.display_avatar.url),
         )
 
-        lines = []
+        lines: list[str] = []
         categories = self.group_extension_statuses()
         for category, extensions in sorted(categories.items()):
             # Treat each category as a single line by concatenating everything.
@@ -207,9 +250,9 @@ class Extensions(commands.Cog):
 
         return ExtensionStatus.PARTIALLY_LOADED
 
-    def group_extension_statuses(self) -> t.Mapping[str, str]:
+    def group_extension_statuses(self) -> t.Mapping[str, list[str]]:
         """Return a mapping of extension names and statuses to their categories."""
-        categories = {}
+        categories: dict[str, list[str]] = {}
 
         for ext in EXTENSIONS:
             status = self.get_extension_status(ext)
@@ -253,7 +296,7 @@ class Extensions(commands.Cog):
 
         return msg
 
-    def manage(self, action: Action, ext: str) -> t.Tuple[str, t.Optional[str]]:
+    def manage(self, action: Action, ext: str) -> tuple[str, str | None]:
         """Apply an action to an extension and return the status message and any error message."""
         verb = action.name.lower()
         error_msg = None
@@ -268,8 +311,7 @@ class Extensions(commands.Cog):
             msg = f":x: Extension `{ext}` is already {verb}ed."
             log.debug(msg[4:])
         except Exception as e:
-            if hasattr(e, "original"):
-                e = e.original
+            e = getattr(e, "original", e)
 
             log.exception(f"Extension '{ext}' failed to {verb}.")
 
@@ -281,29 +323,117 @@ class Extensions(commands.Cog):
 
         return msg, error_msg
 
-    async def _autoreload_worker(self, channel: disnake.abc.Messageable) -> None:
+    async def _autoreload_action(
+        self,
+        *,
+        changes: "set[tuple[watchfiles.Change, str]]",
+        ext_paths: dict[str, str],
+        channel: disnake.abc.Messageable,
+        extra_mods_to_path: dict[str, str],
+    ) -> None:
+        import subprocess
+
+        modified_extensions = set()
+        extra_path_message = ""
+        all_changes = []
+        for change in changes:
+            if change[1] not in ext_paths:
+                for extra_path in extra_mods_to_path:
+                    if change[1].startswith(extra_path):
+                        relative_path = str(pathlib.Path(change[1]).relative_to(pathlib.Path.cwd()))
+                        extra_path_message += relative_path + "\n"
+
+                        break
+                else:
+                    continue
+                try:
+                    dependent_process = await self.bot.loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            subprocess.run,
+                            ["uv", "run", "ruff", "analyze", "graph", "monty", "-q", "--direction", "dependents"],
+                            capture_output=True,
+                            encoding="utf-8",
+                            check=True,
+                            cwd=pathlib.Path.cwd(),
+                        ),
+                    )
+                except Exception as e:
+                    log.error(f"Error running ruff analyze graph: {e}")
+                    continue
+                dependents: RuffDependents = disnake.utils._from_json(dependent_process.stdout)
+                res = str(pathlib.Path(extra_path).relative_to(pathlib.Path.cwd()))
+                all_changes = _flatten_dependents(
+                    dependents=dependents,
+                    paths=[res, *all_changes],
+                )
+                continue
+            modified_extensions.add(ext_paths[change[1]])
+
+        for path in all_changes:
+            modified_extensions.update(
+                ext
+                for ext, module in self.bot.extensions.items()
+                if module.__file__ and module.__file__.startswith(path)
+            )
+            # reload all of the modules from all changes
+            name = path.replace("/", ".").removesuffix(".py").removesuffix(".__init__")
+            if name in self.bot.extensions:
+                modified_extensions.add(name)
+                continue
+            old = sys.modules.pop(name)
+            importlib.invalidate_caches()
+            try:
+                importlib.import_module(name)
+            except Exception as e:
+                sys.modules[name] = old
+                log.exception(f"Error re-importing module {name}: {e}")
+                raise
+
+        if __name__ in modified_extensions:
+            # we bug out if we try to reload ourselves. It cancels the task
+            # this is utterly terrible code
+            self._unloading_through_autoreload = True
+
+        msg = self.batch_manage(Action.RELOAD, *modified_extensions)
+        if extra_path_message:
+            msg += f"\nChanges detected in extra paths:\n```{extra_path_message}```"
+
+        await channel.send("autoreload detected changes::\n" + msg)
+
+    async def _autoreload_worker(self, channel: disnake.abc.Messageable, extra_paths: t.Sequence[str] = ()) -> None:
         import watchfiles
 
         ext_paths = {module.__file__: extension for extension, module in self.bot.extensions.items() if module.__file__}
 
-        self.bot._autoreload_log_channel = channel  # add for use in cog_unload
+        self.bot._autoreload_args = {"channel": channel, "extra_paths": extra_paths}  # add for use in cog_unload
 
-        async for changes in watchfiles.awatch(*ext_paths):
-            modified_extensions = set()
-            for change in changes:
-                if change[1] not in ext_paths:
-                    continue
-                modified_extensions.add(ext_paths[change[1]])
+        extra_mods_to_path = {}
+        if extra_paths:
+            extra_mods_to_path = {}
+            for path in extra_paths:
+                if pathlib.Path(path).is_dir():
+                    extra_mods_to_path.update(
+                        {
+                            str(p.resolve()): p.stem
+                            for p in pathlib.Path(path).rglob("*.py")
+                            if p.is_file() and p.stem != "__init__"
+                        }
+                    )
+                else:
+                    extra_mods_to_path.update({str(pathlib.Path(path).resolve()): pathlib.Path(path).stem})
 
-            if __name__ in modified_extensions:
-                # we bug out if we try to reload ourselves. It cancels the task
-                # this is utterly terrible code
-                self.bot.cogs["Extensions"]._unloading_through_autoreload = True
-                self.bot._autoreload_log_channel = channel  # readd in case it was removed
-
-            msg = self.batch_manage(Action.RELOAD, *modified_extensions)
-
-            await channel.send("autoreload detected changes::\n" + msg)
+        async for changes in watchfiles.awatch(*ext_paths, *extra_mods_to_path):
+            try:
+                await self._autoreload_action(
+                    channel=channel,
+                    ext_paths=ext_paths,
+                    extra_mods_to_path=extra_mods_to_path,
+                    changes=changes,
+                )
+            except Exception as e:
+                log.exception(f"Error in autoreload action: {e}")
+                await channel.send(f"Error in autoreload action: {e}")
 
     # developer autoreloading
     @extensions_group.group(
@@ -312,33 +442,59 @@ class Extensions(commands.Cog):
         invoke_without_command=True,
     )
     async def autoreload(self, ctx: commands.Context) -> None:
-        """Autoreload of modified extensions."""
+        """
+        Autoreload of modified extensions.
+
+        This watches for file edits, and will reload modified extensions automatically.
+        """
         msg = "Autoreload is currently: "
         msg += "enabled" if self.bot._autoreload_task and not self.bot._autoreload_task.done() else "disabled"
         msg += "."
         await ctx.send(msg)
 
     @autoreload.command(name="enable")
-    async def enable_autoreload(self, ctx: commands.Context) -> None:
+    async def enable_autoreload(self, ctx: commands.Context, *extra_paths: str) -> None:
         """Enable extension autoreload."""
         if not importlib.util.find_spec("watchfiles"):
-            raise RuntimeError("Watchfiles not installed. Command not usable.")
+            msg = "Watchfiles not installed. Command not usable."
+            raise RuntimeError(msg)
 
-        if self.bot._autoreload_task and not self.bot._autoreload_task.done():
-            raise commands.BadArgument("Autoreload task already exists")
+        if extra_paths:
+            for path in extra_paths:
+                if not pathlib.Path(path).is_file():
+                    msg = f"Extra path '{path}' is not a valid file."
+                    raise commands.BadArgument(msg)
+        else:
+            extra_paths += (
+                "monty/utils",
+                "monty/metadata.py",
+                "monty/config",
+            )
 
-        self.bot._autoreload_task = scheduling.create_task(self._autoreload_worker(ctx.channel))
-        await ctx.send("Enabled autoreload task!")
+        msg = ""
+        if self.bot._autoreload_task:
+            self.bot._autoreload_task.cancel()
+            msg = "Cancelling previous autoreload task. Starting a new one."
+
+        self.bot._autoreload_task = scheduling.create_task(
+            self._autoreload_worker(ctx.channel, extra_paths=extra_paths)
+        )
+        if not msg:
+            msg += "\nEnabled autoreload task!"
+        if extra_paths:
+            msg += f" Watching extra paths: `{'`, `'.join(extra_paths)}`"
+        await ctx.send(msg)
 
     @autoreload.command(name="disable")
     async def disable_autoreload(self, ctx: commands.Context) -> None:
         """Disable extension autoreload."""
         if not self.bot._autoreload_task:
-            raise commands.BadArgument("Reload was already off.")
+            msg = "Reload was already off."
+            raise commands.BadArgument(msg)
 
         if not self.bot._autoreload_task.done():
             self.bot._autoreload_task.cancel()
-        self.bot._autoreload_log_channel = None
+        self.bot._autoreload_args = None
         await ctx.send("Disabled autoreload task!")
 
     # This cannot be static (must have a __func__ attribute).

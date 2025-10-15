@@ -1,19 +1,20 @@
 import asyncio
 import re
-import textwrap
 from functools import partial
 from signal import Signals
-from typing import Any, Optional, Tuple, overload
+from typing import Literal, overload
 
 import aiohttp
 import disnake
 import yarl
+from disnake import Message
 from disnake.ext import commands
 
 from monty.bot import Monty
 from monty.constants import Auth, Endpoints, Feature
 from monty.errors import APIError
 from monty.log import get_logger
+from monty.utils.code import prepare_input
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import utcnow
 from monty.utils.messages import DeleteButton
@@ -27,31 +28,15 @@ log = get_logger(__name__)
 INLINE_EVAL_REGEX = re.compile(r"\$(?P<fence>`+)(.+)(?P=fence)")
 
 ESCAPE_REGEX = re.compile("[`\u202e\u200b]{3,}")
-FORMATTED_CODE_REGEX = re.compile(
-    r"(?P<delim>(?P<block>```)|``?)"  # code delimiter: 1-3 backticks; (?P=block) only matches if it's a block
-    r"(?(block)(?:(?P<lang>[a-z]+)\n)?)"  # if we're in a block, match optional language (only letters plus newline)
-    r"(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"  # extract all code inside the markup
-    r"\s*"  # any more whitespace before the end of the code markup
-    r"(?P=delim)",  # match the exact same delimiter from the start again
-    re.DOTALL | re.IGNORECASE,  # "." also matches newlines, case insensitive
-)
-RAW_CODE_REGEX = re.compile(
-    r"^(?:[ \t]*\n)*"  # any blank (empty or tabs/spaces only) lines before the code
-    r"(?P<code>.*?)"  # extract all the rest as code
-    r"\s*$",  # any trailing whitespace until the end of the string
-    re.DOTALL,  # "." also matches newlines
-)
 
 MAX_PASTE_LEN = 10000
-
 
 SIGKILL = 9
 
 REEVAL_EMOJI = "\U0001f501"  # :repeat:
 REEVAL_TIMEOUT = 30
 
-HEADERS = {}
+HEADERS: dict[str, str] = {}
 if Auth.snekbox:
     HEADERS["Authorization"] = Auth.snekbox
 PLACEHOLDER_CODE = """
@@ -114,10 +99,10 @@ class Snekbox(
         self.url = yarl.URL(Endpoints.snekbox)
         self.jobs = {}
 
-    async def post_eval(self, code: str, *, args: Optional[list[str]] = None) -> dict:
+    async def post_eval(self, code: str, *, args: list[str] | None = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = self.url / "eval"
-        data = {"input": code}
+        data: dict[str, str | list[str]] = {"input": code}
 
         if args is not None:
             data["args"] = args
@@ -127,13 +112,14 @@ class Snekbox(
                 json=data,
                 raise_for_status=True,
                 headers=HEADERS,
-                timeout=10,
+                timeout=aiohttp.ClientTimeout(10),
             ) as resp:
                 return await resp.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
+            msg = "Snekbox backend is offline or misconfigured."
+            raise APIError(msg, status_code=0, api="snekbox") from e
 
-    async def upload_output(self, output: str, extension: str = "text") -> Optional[str]:
+    async def upload_output(self, output: str, extension: str = "text") -> str | None:
         """Upload the eval output to a paste service and return a URL to it if successful."""
         log.trace("Uploading full output to paste service...")
 
@@ -142,48 +128,8 @@ class Snekbox(
             return None
         return await send_to_paste_service(self.bot, output, extension=extension)
 
-    @overload
     @staticmethod
-    def prepare_input(code: str, *, require_fenced: bool = False) -> str: ...
-
-    @overload
-    @staticmethod
-    def prepare_input(code: str, *, require_fenced: bool = True) -> Optional[str]: ...
-
-    @staticmethod
-    def prepare_input(code: str, *, require_fenced: bool = False) -> Optional[str]:
-        """
-        Extract code from the Markdown, format it, and insert it into the code template.
-
-        If there is any code block, ignore text outside the code block.
-        Use the first code block, but prefer a fenced code block.
-        If there are several fenced code blocks, concatenate only the fenced code blocks.
-        """
-        if match := list(FORMATTED_CODE_REGEX.finditer(code)):
-            blocks = [block for block in match if block.group("block")]
-
-            if len(blocks) > 1:
-                code = "\n".join(block.group("code") for block in blocks)
-                info = "several code blocks"
-            else:
-                match = match[0] if len(blocks) == 0 else blocks[0]
-                code, block, lang, delim = match.group("code", "block", "lang", "delim")
-                if block:
-                    info = (f"'{lang}' highlighted" if lang else "plain") + " code block"
-                else:
-                    info = f"{delim}-enclosed inline code"
-        elif require_fenced:
-            return None
-        else:
-            code = RAW_CODE_REGEX.fullmatch(code).group("code")
-            info = "unformatted or badly formatted code"
-
-        code = textwrap.dedent(code)
-        log.trace(f"Extracted {info} for evaluation:\n{code}")
-        return code
-
-    @staticmethod
-    def get_results_message(results: dict) -> Tuple[str, str]:
+    def get_results_message(results: dict) -> tuple[str, str]:
         """Return a user-friendly message and error corresponding to the process's return code."""
         stdout, returncode = results["stdout"], results["returncode"]
         msg = f"Your eval job has completed with return code {returncode}"
@@ -217,7 +163,7 @@ class Snekbox(
         else:  # Exception
             return ":x:"
 
-    async def format_output(self, output: str) -> Tuple[str, Optional[str]]:
+    async def format_output(self, output: str) -> tuple[str, str | None]:
         """
         Format the output and return a tuple of the formatted output and a URL to the full output.
 
@@ -244,9 +190,9 @@ class Snekbox(
         lines = output.count("\n")
 
         if lines > 0:
-            output = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
-            output = output[:11]  # Limiting to only 11 lines
-            output = "\n".join(output)
+            output_lines = [f"{i:03d} | {line}" for i, line in enumerate(output.split("\n"), 1)]
+            output_lines = output_lines[:11]  # Limiting to only 11 lines
+            output = "\n".join(output_lines)
 
         if lines > 10:
             truncated = True
@@ -267,19 +213,49 @@ class Snekbox(
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = True, original_source: bool = False
-    ) -> tuple[str, Optional[str]]:
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: Literal[True] = True,
+        original_source: bool = False,
+    ) -> tuple[str, str | None]:
         pass
 
     @overload
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
+        self,
+        ctx: (
+            commands.Context
+            | disnake.Message
+            | disnake.ApplicationCommandInteraction
+            | disnake.ModalInteraction
+            | disnake.MessageCommandInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
     ) -> disnake.Message:
         pass
 
     async def send_eval(
-        self, ctx: commands.Context, code: str, return_result: bool = False, original_source: bool = False
-    ) -> Any:
+        self,
+        ctx: (
+            Message
+            | commands.Context
+            | disnake.ApplicationCommandInteraction
+            | disnake.MessageCommandInteraction
+            | disnake.ModalInteraction
+        ),
+        code: str,
+        return_result: bool = False,
+        original_source: bool = False,
+    ) -> tuple[str, str | None] | disnake.Message:
         """
         Evaluate code, format it, and send the output to the corresponding channel.
 
@@ -287,6 +263,7 @@ class Snekbox(
         """
         if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
+
         results = await self.post_eval(code)
         msg, error = self.get_results_message(results)
 
@@ -301,8 +278,8 @@ class Snekbox(
         log.info(f"{ctx.author}'s job had a return code of {results['returncode']}")
 
         if original_source:
-            original_source = await self.upload_output(code)
-            msg += f"\nOriginal code link: {original_source}"
+            original_source_link = await self.upload_output(code)
+            msg += f"\nOriginal code link: {original_source_link}"
 
         if return_result:
             return msg, paste_link
@@ -311,15 +288,15 @@ class Snekbox(
             msg = f"{msg}\nFull output: {paste_link}"
 
         components = DeleteButton(ctx.author)
-        if hasattr(ctx, "reply"):
-            response = await ctx.reply(msg, components=components)
-        else:
+        if isinstance(ctx, (disnake.Interaction)):
             await ctx.send(msg, components=components)
             response = await ctx.original_message()
+        else:
+            response = await ctx.reply(msg, components=components)
 
         return response
 
-    async def continue_eval(self, ctx: commands.Context, response: disnake.Message) -> Optional[str]:
+    async def continue_eval(self, ctx: commands.Context, response: disnake.Message) -> str | None:
         """
         Check if the eval session should continue.
 
@@ -341,8 +318,10 @@ class Snekbox(
                 await response.delete()
             except disnake.NotFound:
                 pass
+
             # if we have permissions, delete the user's reaction
-            if ctx.channel.permissions_for(ctx.me).manage_messages:
+            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+            if app_permissions.manage_messages:
                 try:
                     await ctx.message.clear_reaction(REEVAL_EMOJI)
                 except disnake.Forbidden:
@@ -364,7 +343,7 @@ class Snekbox(
         else:
             return code
 
-    async def get_code(self, message: disnake.Message) -> Optional[str]:
+    async def get_code(self, message: disnake.Message) -> str | None:
         """
         Return the code from `message` to be evaluated.
 
@@ -389,7 +368,7 @@ class Snekbox(
         contexts=disnake.InteractionContextTypes(guild=True, private_channel=True),
         install_types=disnake.ApplicationInstallTypes.all(),
     )
-    async def slash_eval(self, inter: disnake.CommandInteraction, code: Optional[str] = None) -> None:
+    async def slash_eval(self, inter: disnake.ApplicationCommandInteraction, code: str | None = None) -> None:
         """
         Evaluate python code.
 
@@ -397,16 +376,29 @@ class Snekbox(
         ----------
         code: Code to evaluate, leave blank to open a modal.
         """
-        if code:
-            await inter.response.defer()
-            await self.eval_command(inter, code=code)
-            return
-        else:
+        if not code:
             await inter.response.send_modal(EvalModal(self))
+            return
+
+        if inter.author.id in self.jobs:
+            await inter.send(
+                f"{inter.author.mention} You've already got a job running - please wait for it to finish!",
+                ephemeral=True,
+            )
+            return
+
+        log.info(f"Received code from {inter.author} for evaluation:\n{code}")
+
+        self.jobs[inter.author.id] = utcnow()
+        code = prepare_input(code)
+        try:
+            await self.send_eval(inter, code)
+        finally:
+            del self.jobs[inter.author.id]
 
     @commands.command(name="eval", aliases=("e",))
     @commands.guild_only()
-    async def eval_command(self, ctx: commands.Context, *, code: str = None) -> None:
+    async def eval_command(self, ctx: commands.Context, *, code: str | None = None) -> None:
         """
         Run Python code and get the results.
 
@@ -417,26 +409,23 @@ class Snekbox(
         We've done our best to make this sandboxed, but do let us know if you manage to find an
         issue with it!
         """
-        if ctx.author.id in self.jobs:
-            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
-            return
-
         if not code:  # None or empty string
             await invoke_help_command(ctx)
+            return
+
+        if ctx.author.id in self.jobs:
+            await ctx.send(f"{ctx.author.mention} You've already got a job running - please wait for it to finish!")
             return
 
         log.info(f"Received code from {ctx.author} for evaluation:\n{code}")
 
         while True:
             self.jobs[ctx.author.id] = utcnow()
-            code = self.prepare_input(code)
+            code = prepare_input(code)
             try:
-                response = await self.send_eval(ctx, code)
+                response = await self.send_eval(ctx, code, return_result=False)
             finally:
                 del self.jobs[ctx.author.id]
-
-            if not isinstance(ctx, commands.Context):
-                return
 
             code = await self.continue_eval(ctx, response)
             if not code:
@@ -465,7 +454,6 @@ class Snekbox(
     @commands.is_owner()
     async def manage_snekbox(self, ctx: commands.Context) -> None:
         """Commands for managing the snekbox instance."""
-        pass
 
     @manage_snekbox.group("packages", aliases=("pack", "packs", "p"), invoke_without_command=True)
     async def manage_snekbox_packages(self, ctx: commands.Context) -> None:
@@ -479,7 +467,8 @@ class Snekbox(
             async with self.bot.http_session.get(self.url / "packages", headers=HEADERS, raise_for_status=True) as resp:
                 json = await resp.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
+            msg = "Snekbox backend is offline or misconfigured."
+            raise APIError(msg, status_code=0, api="snekbox") from e
 
         embed = disnake.Embed(title="Installed packages")
         embed.description = ""
@@ -504,7 +493,8 @@ class Snekbox(
                 ) as resp:
                     pass
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
+                msg = "Snekbox backend is offline or misconfigured."
+                raise APIError(msg, status_code=0, api="snekbox") from e
         await ctx.reply(
             f"[{resp.status}] Installed the packages.",
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
@@ -514,17 +504,20 @@ class Snekbox(
     @manage_snekbox_packages.command(name="remove", aliases=("delete", "uninstall", "r", "d", "del"))
     async def uninstall_snekbox_package(self, ctx: commands.Context, *packages: str) -> None:
         """Uninstall the provided package from snekbox."""
+        resp = None
         async with ctx.typing():
-            for package in packages:
-                try:
+            try:
+                for package in packages:
                     async with self.bot.http_session.delete(
                         self.url / "packages" / package, headers=HEADERS, raise_for_status=True
                     ) as resp:
                         pass
-                except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                    raise APIError("snekbox", 0, "Request errored.") from e
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                msg = "Snekbox backend is offline or misconfigured."
+                raise APIError(msg, status_code=0, api="snekbox") from e
+        status = resp.status if resp else "N/A"
         await ctx.reply(
-            f"[{resp.status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
+            f"[{status}] Deleted the package" + ("s." if len(packages) > 1 else "."),
             components=DeleteButton(ctx.author, allow_manage_messages=False, initial_message=ctx.message),
             fail_if_not_exists=False,
         )
@@ -538,7 +531,8 @@ class Snekbox(
             ) as resp:
                 data = await resp.json()
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            raise APIError("snekbox", 0, "Snekbox backend is offline or misconfigured.") from e
+            msg = "Snekbox backend is offline or misconfigured."
+            raise APIError(msg, status_code=0, api="snekbox") from e
         embed = disnake.Embed(title=f"{data['version']} -- {data['name']}")
         if url := data.get("home-page"):
             embed.url = url

@@ -4,7 +4,7 @@ import re
 import zlib
 from collections import defaultdict
 from datetime import timedelta
-from typing import TYPE_CHECKING, AsyncIterator, DefaultDict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import aiohttp
 
@@ -14,6 +14,8 @@ from monty.utils.caching import redis_cache
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from monty.bot import Monty
 
 
@@ -22,7 +24,7 @@ log = get_logger(__name__)
 FAILED_REQUEST_ATTEMPTS = 3
 _V2_LINE_RE = re.compile(r"(?x)(.+?)\s+(\S*:\S*)\s+(-?\d+)\s+?(\S*)\s+(.*)")
 
-InventoryDict = DefaultDict[str, List[Union[Tuple[str, str], Tuple[str, str, str]]]]
+InventoryDict = defaultdict[str, list[tuple[str, str, str]]]
 
 
 class InvalidHeaderError(Exception):
@@ -100,22 +102,26 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
         try:
             inventory_version = int(inventory_header[-1:])
         except ValueError as e:
-            raise InvalidHeaderError("Unable to convert inventory version header.") from e
+            msg = "Unable to convert inventory version header."
+            raise InvalidHeaderError(msg) from e
 
         has_project_header = (await stream.readline()).startswith(b"# Project")
         has_version_header = (await stream.readline()).startswith(b"# Version")
         if not (has_project_header and has_version_header):
-            raise InvalidHeaderError("Inventory missing project or version header.")
+            msg = "Inventory missing project or version header."
+            raise InvalidHeaderError(msg)
 
         if inventory_version == 1:
             return await _load_v1(stream)
 
         elif inventory_version == 2:
             if b"zlib" not in await stream.readline():
-                raise InvalidHeaderError("'zlib' not found in header of compressed inventory.")
+                msg = "'zlib' not found in header of compressed inventory."
+                raise InvalidHeaderError(msg)
             return await _load_v2(stream)
 
-    raise InvalidHeaderError("Incompatible inventory version.")
+    msg = "Incompatible inventory version."
+    raise InvalidHeaderError(msg)
 
 
 @redis_cache(
@@ -125,7 +131,7 @@ async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
     skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
     timeout=timedelta(hours=12),
 )
-async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Optional[InventoryDict]:
+async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> InventoryDict | None:
     """
     Get an inventory dict from `url`, retrying `FAILED_REQUEST_ATTEMPTS` times on errors.
 
@@ -135,7 +141,7 @@ async def fetch_inventory(bot: Monty, url: str, *, use_cache: bool = True) -> Op
     for attempt in range(1, FAILED_REQUEST_ATTEMPTS + 1):
         try:
             inventory = await _fetch_inventory(bot, url)
-        except aiohttp.ClientConnectorError:
+        except aiohttp.ClientConnectorError:  # noqa: PERF203
             log.warning(
                 f"Failed to connect to inventory url at {url}; trying again ({attempt}/{FAILED_REQUEST_ATTEMPTS})."
             )

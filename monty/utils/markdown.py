@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urljoin
 
 import mistune.renderers
@@ -10,9 +10,9 @@ from monty import constants
 
 
 __all__ = (
-    "remove_codeblocks",
-    "DocMarkdownConverter",
     "DiscordRenderer",
+    "DocMarkdownConverter",
+    "remove_codeblocks",
 )
 # taken from version 0.6.1 of markdownify
 WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
@@ -24,7 +24,7 @@ CODE_BLOCK_RE = re.compile(
 )
 
 # references should be preceded by a non-word character (or element start)
-GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.I)
+GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.IGNORECASE)
 
 
 def remove_codeblocks(content: str) -> str:
@@ -40,7 +40,7 @@ class DocMarkdownConverter(MarkdownConverter):
         self.page_url = page_url
 
     # overwritten to use our regex from version 0.6.1
-    def process_text(self, text: Optional[str]) -> Any:
+    def process_text(self, text: str | None) -> Any:
         """Process the text, using our custom regex."""
         return self.escape(WHITESPACE_RE.sub(" ", text or ""))
 
@@ -102,17 +102,17 @@ class DocMarkdownConverter(MarkdownConverter):
         return ""
 
 
-# todo: this will be expanded over time as necessary
+# TODO: this will be expanded over time as necessary
 class DiscordRenderer(mistune.renderers.BaseRenderer):
     """Custom renderer for markdown to discord compatiable markdown."""
 
-    def __init__(self, repo: str = None):
+    def __init__(self, repo: str | None = None) -> None:
         self._repo = (repo or "").rstrip("/")
 
     def text(self, text: str) -> str:
         """Replace GitHub links with their expanded versions."""
         if self._repo:
-            # todo: expand this to all different varieties of automatic links
+            # TODO: expand this to all different varieties of automatic links
             # if a repository is provided we replace all snippets with the correct thing
             def replacement(match: re.Match[str]) -> str:
                 return self.link(self._repo + "/issues/" + match[1], text=match[0])
@@ -120,7 +120,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
             text = GH_ISSUE_RE.sub(replacement, text)
         return text
 
-    def link(self, link: str, text: Optional[str] = None, title: Optional[str] = None) -> str:
+    def link(self, link: str, text: str | None = None, title: str | None = None) -> str:
         """Properly format a link."""
         if text or title:
             if not text:
@@ -133,7 +133,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         else:
             return link
 
-    def image(self, src: str, alt: str = None, title: str = None) -> str:
+    def image(self, src: str, alt: str | None = None, title: str | None = None) -> str:
         """Return a link to the provided image."""
         return "!" + self.link(src, text="image", title=alt)
 
@@ -177,7 +177,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
         """Return text in lists as-is."""
         return text + "\n"
 
-    def block_code(self, code: str, info: str = None) -> str:
+    def block_code(self, code: str, info: str | None = None) -> str:
         """Put the code in a codeblock."""
         md = "```"
         if info is not None:
@@ -213,7 +213,7 @@ class DiscordRenderer(mistune.renderers.BaseRenderer):
 
     def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
         """Return the unedited list."""
-        # todo: figure out how this should actually work
+        # TODO: figure out how this should actually work
         if level == 1:
             return text.lstrip("\n") + "\n"
         return text

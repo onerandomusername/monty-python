@@ -14,7 +14,7 @@ AnyCallable = t.Callable[..., t.Any]
 FuncT = t.TypeVar("FuncT", bound=AnyCallable)
 OtherFuncT = t.TypeVar("OtherFuncT", bound=AnyCallable)
 
-Argument = t.Union[int, str]
+Argument = int | str
 BoundArgs = t.OrderedDict[str, t.Any]
 Decorator = t.Callable[[FuncT], OtherFuncT]
 ArgValGetter = t.Callable[[BoundArgs], t.Any]
@@ -42,21 +42,24 @@ def get_arg_value(name_or_pos: Argument, arguments: BoundArgs) -> t.Any:
             _, value = arg_values[arg_pos]
             return value
         except IndexError:
-            raise ValueError(f"Argument position {arg_pos} is out of bounds.") from None
+            msg = f"Argument position {arg_pos} is out of bounds."
+            raise ValueError(msg) from None
     elif isinstance(name_or_pos, str):
         arg_name = name_or_pos
         try:
             return arguments[arg_name]
         except KeyError:
-            raise ValueError(f"Argument {arg_name!r} doesn't exist.") from None
+            msg = f"Argument {arg_name!r} doesn't exist."
+            raise ValueError(msg) from None
     else:
-        raise TypeError("'arg' must either be an int (positional index) or a str (keyword).")
+        msg = "'arg' must either be an int (positional index) or a str (keyword)."
+        raise TypeError(msg)
 
 
 def get_arg_value_wrapper(
     decorator_func: t.Callable[[ArgValGetter], Decorator[FuncT, OtherFuncT]],
     name_or_pos: Argument,
-    func: t.Callable[[t.Any], t.Any] = None,
+    func: t.Callable[[t.Any], t.Any] | None = None,
 ) -> Decorator[FuncT, OtherFuncT]:
     """
     Call `decorator_func` with the value of the arg at the given name/position.
@@ -78,7 +81,7 @@ def get_arg_value_wrapper(
     return decorator_func(wrapper)
 
 
-def get_bound_args(func: t.Callable, args: t.Tuple, kwargs: t.Dict[str, t.Any]) -> BoundArgs:
+def get_bound_args(func: t.Callable, args: tuple, kwargs: dict[str, t.Any]) -> BoundArgs:
     """
     Bind `args` and `kwargs` to `func` and return a mapping of parameter names to argument values.
 
@@ -95,12 +98,12 @@ def update_wrapper_globals(
     wrapper: FuncT,
     wrapped: AnyCallable,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: set[str] | frozenset[str] | None = None,
 ) -> FuncT:
     """
     Update globals of `wrapper` with the globals from `wrapped`.
 
-    For forwardrefs in command annotations discordpy uses the __global__ attribute of the function
+    For forwardrefs in command annotations disnake uses the __global__ attribute of the function
     to resolve their values, with decorators that replace the function this breaks because they have
     their own globals.
 
@@ -109,7 +112,7 @@ def update_wrapper_globals(
 
     An exception will be raised in case `wrapper` and `wrapped` share a global name that is used by
     `wrapped`'s typehints and is not in `ignored_conflict_names`,
-    as this can cause incorrect objects being used by discordpy's converters.
+    as this can cause incorrect objects being used by disnake's converters.
     """
     if ignored_conflict_names is None:
         ignored_conflict_names = frozenset()
@@ -121,11 +124,12 @@ def update_wrapper_globals(
     shared_globals = set(wrapper.__code__.co_names) & set(annotation_global_names)
     shared_globals &= set(wrapped.__globals__) & set(wrapper.__globals__) - ignored_conflict_names
     if shared_globals:
-        raise GlobalNameConflictError(
+        msg = (
             "wrapper and the wrapped function share the following "
             f"global names used by annotations: {', '.join(shared_globals)}. Resolve the conflicts or add "
             "the name to the `ignored_conflict_names` set to suppress this error if this is intentional."
         )
+        raise GlobalNameConflictError(msg)
 
     new_globals = wrapper.__globals__.copy()
     new_globals.update((k, v) for k, v in wrapped.__globals__.items() if k not in wrapper.__code__.co_names)
@@ -143,14 +147,14 @@ def command_wraps(
     assigned: t.Sequence[str] = functools.WRAPPER_ASSIGNMENTS,
     updated: t.Sequence[str] = functools.WRAPPER_UPDATES,
     *,
-    ignored_conflict_names: t.Union[set[str], frozenset[str]] = None,
+    ignored_conflict_names: set[str] | frozenset[str] | None = None,
 ) -> t.Callable[[FuncT], FuncT]:
-    """Update the decorated function to look like `wrapped` and update globals for discordpy forwardref evaluation."""
+    """Update the decorated function to look like `wrapped` and update globals for disnake forwardref evaluation."""
     if ignored_conflict_names is None:
         ignored_conflict_names = frozenset()
 
     def decorator(wrapper: FuncT) -> FuncT:
-        return functools.update_wrapper(
+        return functools.update_wrapper(  # pyright: ignore[reportReturnType]
             update_wrapper_globals(wrapper, wrapped, ignored_conflict_names=ignored_conflict_names),
             wrapped,
             assigned,

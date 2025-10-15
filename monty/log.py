@@ -3,24 +3,26 @@ from __future__ import annotations
 
 import logging
 import logging.handlers
-import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
-import coloredlogs
+from rich.console import Console
+from rich.logging import RichHandler
 
 from monty import constants
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from typing_extensions import Unpack
 
 
 TRACE = 5
 
 
-def get_logger(name: str) -> "MontyLogger":
+def get_logger(name: str) -> MontyLogger:
     """Stub method for logging.getLogger."""
     return cast("MontyLogger", logging.getLogger(name))
 
@@ -84,18 +86,14 @@ def setup() -> None:
     file_handler.setFormatter(log_format)
     root_logger.addHandler(file_handler)
 
-    if "COLOREDLOGS_LEVEL_STYLES" not in os.environ:
-        coloredlogs.DEFAULT_LEVEL_STYLES = {
-            **coloredlogs.DEFAULT_LEVEL_STYLES,
-            "trace": {"color": 246},
-            "critical": {"background": "red"},
-            "debug": coloredlogs.DEFAULT_LEVEL_STYLES["info"],
-        }
-
-    if "COLOREDLOGS_LOG_FORMAT" not in os.environ:
-        coloredlogs.DEFAULT_LOG_FORMAT = format_string
-
-    coloredlogs.install(level=TRACE, stream=sys.stdout)
+    if RichHandler and Console:
+        rich_handler = RichHandler(rich_tracebacks=True, console=Console(stderr=True))
+        # rich_handler.setFormatter(log_format)
+        root_logger.addHandler(rich_handler)
+    else:
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setFormatter(log_format)
+        root_logger.addHandler(console_handler)
 
     root_logger.setLevel(logging.DEBUG if constants.Monitoring.debug_logging else logging.INFO)
     # Silence irrelevant loggers
@@ -104,7 +102,9 @@ def setup() -> None:
     logging.getLogger("cachingutils").setLevel(logging.INFO)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
     logging.getLogger("sqlalchemy.pool").setLevel(logging.INFO)
-    logging.getLogger("gql.transport.aiohttp").setLevel(logging.WARNING)
+    logging.getLogger("gql.dsl").setLevel(logging.INFO)
+    logging.getLogger("gql.transport.aiohttp").setLevel(logging.INFO)
+    logging.getLogger("watchfiles").setLevel(logging.INFO)
     _set_trace_loggers()
 
     root_logger.info("Logging initialization complete")

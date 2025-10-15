@@ -1,7 +1,7 @@
 import asyncio
 import re
 import urllib.parse
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal, cast
 
 import aiohttp
 import disnake
@@ -11,13 +11,14 @@ from monty.bot import Monty
 from monty.constants import Endpoints
 from monty.errors import MontyCommandError
 from monty.log import get_logger
+from monty.utils.code import prepare_input
 from monty.utils.messages import DeleteButton, extract_urls
 from monty.utils.services import send_to_paste_service
 
 
 if TYPE_CHECKING:
-    from monty.exts.eval import Snekbox
-    from monty.exts.info.codeblock._cog import CodeBlockCog
+    from monty.exts.filters.codeblock._cog import CodeBlockCog
+    from monty.exts.python.eval import Snekbox
 
 logger = get_logger(__name__)
 
@@ -51,12 +52,9 @@ class CodeBlockActions(
         self.bot = bot
         self.black_endpoint = Endpoints.black_formatter
 
-    def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> Optional[str]:
+    def get_code(self, content: str, require_fenced: bool = False, check_is_python: bool = False) -> str | None:
         """Get the code from the provided content. Parses codeblocks and assures its python code."""
-        if not (snekbox := self.get_snekbox()):
-            logger.trace("Could not parse message as the snekbox cog is not loaded.")
-            return None
-        code = snekbox.prepare_input(content, require_fenced=require_fenced)
+        code = prepare_input(content, require_fenced=require_fenced)
         if not code:
             logger.trace("Parsed message but either no code was found or was too short.")
             return None
@@ -66,7 +64,7 @@ class CodeBlockActions(
             return None
         return code
 
-    async def check_paste_link(self, content: str) -> Optional[str]:
+    async def check_paste_link(self, content: str) -> str | None:
         """Fetch code from a paste link."""
         match: re.Match[str] | None = next(filter(None, map(PASTE_REGEX.match, extract_urls(content))), None)
         if not match:
@@ -91,9 +89,9 @@ class CodeBlockActions(
         message: disnake.Message,
         require_fenced: bool = False,
         check_is_python: bool = False,
-        file_exts: set = None,
+        file_exts: set | None = None,
         no_len_limit: bool = False,
-    ) -> tuple[bool, Optional[str], Optional[bool]]:
+    ) -> tuple[Literal[False], None, None] | tuple[Literal[True], str, bool]:
         """Extract code out of a message's content, attachments, or paste link within the message."""
         if file_exts is None:
             file_exts = {"py", "txt"}
@@ -128,18 +126,26 @@ class CodeBlockActions(
 
         return True, code, is_paste
 
-    def get_snekbox(self) -> Optional["Snekbox"]:
+    def get_snekbox(self) -> "Snekbox":
         """Get the Snekbox cog. This method serves for typechecking."""
-        return self.bot.get_cog("Snekbox")
+        snekbox = cast("Snekbox | None", self.bot.get_cog("Snekbox"))
+        if not snekbox:
+            msg = "Snekbox cog is not available."
+            raise ValueError(msg)
+        return snekbox
 
-    def get_codeblock_cog(self) -> Optional["CodeBlockCog"]:
+    def get_codeblock_cog(self) -> "CodeBlockCog":
         """Get the Codeblock cog. This method serves for typechecking."""
-        return self.bot.get_cog("Code Block")
+        codeblock = cast("CodeBlockCog | None", self.bot.get_cog("Code Block"))
+        if not codeblock:
+            msg = "Code Block cog is not available."
+            raise ValueError(msg)
+        return codeblock
 
     async def _upload_to_workbin(
         self,
         message: disnake.Message,
-    ) -> tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         success, code, is_paste = await self.parse_code(
             message,
             require_fenced=False,
@@ -151,12 +157,13 @@ class CodeBlockActions(
             return False, "This message does not have any code to extract or is too long to process.", None
         if is_paste:
             return False, "This is already a paste link.", None
+        if not code:
+            return False, "No code found.", None
 
         url = await send_to_paste_service(self.bot, code, extension="python")
 
         msg = f"I've uploaded this message to paste, you can view it here: <{url}>"
         return True, msg, url
-        ...
 
     @commands.message_command(name="Upload to Workbin")
     async def message_command_workbin(self, inter: disnake.MessageCommandInteraction) -> None:
@@ -177,17 +184,18 @@ class CodeBlockActions(
         await inter.send(msg, components=components)
 
     @commands.command(name="paste", aliases=("p",))
-    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message = None) -> None:
+    async def prefix_paste(self, ctx: commands.Context, message: disnake.Message | None = None) -> None:
         """Paste the contents of the provided message on workbin."""
         if not message:
             if not ctx.message.reference or not isinstance(ctx.message.reference.resolved, disnake.Message):
-                raise commands.UserInputError(
+                msg = (
                     "You must either provide a valid message to paste, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
+                raise commands.UserInputError(msg)
             message = ctx.message.reference.resolved
 
         mentions = disnake.AllowedMentions.none()
@@ -224,8 +232,6 @@ class CodeBlockActions(
         ----------
         message: A message to paste. This can be a link or id.
         """
-        inter.channel_id = inter.channel.id
-
         success, msg, url = await self._upload_to_workbin(message)
         if not success:
             raise MontyCommandError(msg)
@@ -246,8 +252,11 @@ class CodeBlockActions(
         self,
         message: disnake.Message,
         include_message: bool = False,
-    ) -> tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         # success, string, link
+        if not self.black_endpoint:
+            msg = "Black endpoint is not configured."
+            raise RuntimeError(msg)
 
         success, code, _ = await self.parse_code(
             message,
@@ -306,18 +315,21 @@ class CodeBlockActions(
         await inter.send(msg, components=components)
 
     @commands.command(name="blackify", aliases=("black", "bl"))
-    async def prefix_black(self, ctx: commands.Context, message: disnake.Message = None) -> None:
+    async def prefix_black(self, ctx: commands.Context, message: disnake.Message | None = None) -> None:
         """Format the provided message with black."""
         if not message:
-            if not ctx.message.reference:
-                raise commands.UserInputError(
+            if not ctx.message.reference or not isinstance(
+                resolved_message := ctx.message.reference.resolved, disnake.Message
+            ):
+                msg = (
                     "You must either provide a valid message to format with black, or reply to one."
                     "\n\nThe lookup strategy for a message is as follows (in order):"
                     "\n1. Lookup by '{channel ID}-{message ID}' (retrieved by shift-clicking on 'Copy ID')"
                     "\n2. Lookup by message ID (the message **must** be in the context channel)"
                     "\n3. Lookup by message URL"
                 )
-            message = ctx.message.reference.resolved
+                raise commands.UserInputError(msg)
+            message = resolved_message
 
         mentions = disnake.AllowedMentions.none()
         reference = message.to_reference(fail_if_not_exists=False)
@@ -328,14 +340,16 @@ class CodeBlockActions(
             await ctx.send(msg, reference=reference, allowed_mentions=mentions)
             return
 
-        button = None
+        components = []
         if url:
-            button = disnake.ui.Button(
-                style=disnake.ButtonStyle.url,
-                label="Click to open in workbin",
-                url=url,
+            components.append(
+                disnake.ui.Button(
+                    style=disnake.ButtonStyle.url,
+                    label="Click to open in workbin",
+                    url=url,
+                )
             )
-        await ctx.send(msg, components=button, reference=reference, allowed_mentions=mentions)
+        await ctx.send(msg, components=components, reference=reference, allowed_mentions=mentions)
 
     @commands.message_command(
         name="Run in Snekbox",
@@ -349,11 +363,13 @@ class CodeBlockActions(
             require_fenced=False,
             check_is_python=False,
         )
-        if not success:
-            raise MontyCommandError("This message does not have any code to extract.")
+        if not success or not code:
+            msg = "This message does not have any code to extract."
+            raise MontyCommandError(msg)
 
         target = inter.target
         original_source = False
+        modal_inter: disnake.ModalInteraction | None = None
 
         # only provide a modal if the code is short enough
         if code and len(code) <= 4000:
@@ -372,19 +388,22 @@ class CodeBlockActions(
             )
 
             try:
-                inter: disnake.ModalInteraction = await self.bot.wait_for(
-                    "modal_submit",
-                    timeout=300,
-                    check=lambda m: m.custom_id == f"snekbox-eval-{inter.id}" and m.user == inter.user,
+                modal_inter = cast(
+                    "disnake.ModalInteraction",
+                    await self.bot.wait_for(
+                        "modal_submit",
+                        timeout=300,
+                        check=lambda m, inter=inter: m.custom_id == f"snekbox-eval-{inter.id}" and m.user == inter.user,
+                    ),
                 )
             except asyncio.TimeoutError:
                 return
-            new_code = inter.text_values["code"]
+            new_code = modal_inter.text_values["code"]
             if code != new_code:
                 code = new_code
                 original_source = True
 
-        await inter.response.defer()
+        await (modal_inter or inter).response.defer()
         msg, link = await self.get_snekbox().send_eval(
             target, code, return_result=True, original_source=original_source
         )
@@ -399,7 +418,7 @@ class CodeBlockActions(
                 )
             )
 
-        await inter.edit_original_message(content=msg, components=components)
+        await (modal_inter or inter).edit_original_message(content=msg, components=components)
 
 
 def setup(bot: Monty) -> None:

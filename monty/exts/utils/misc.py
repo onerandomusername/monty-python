@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import re
 import unicodedata
-from typing import Tuple
 
 import disnake
 from disnake.ext import commands
@@ -31,16 +28,15 @@ class Misc(
     def _format_snowflake(self, snowflake: disnake.Object) -> str:
         """Return a formatted Snowflake form."""
         timestamp = int(snowflake.created_at.timestamp())
-        out = (
+        return (
             f"**{snowflake.id}** ({timestamp})\n"
             f"<t:{timestamp}:f> (<t:{timestamp}:R>)."
             f"`{snowflake.created_at.isoformat().replace('+00:00', 'Z')}`\n"
         )
-        return out
 
     @commands.slash_command(name="char-info")
     async def charinfo(
-        self, ctx: disnake.ApplicationCommandInteraction, characters: commands.String[str, ..., 50]
+        self, ctx: disnake.ApplicationCommandInteraction[Monty], characters: commands.String[str, ..., 50]
     ) -> None:
         """
         Shows you information on up to 50 unicode characters.
@@ -62,7 +58,7 @@ class Misc(
             await ctx.send(f"Too many characters ({len(characters)}/50)")
             return
 
-        def get_info(char: str) -> Tuple[str, str]:
+        def get_info(char: str) -> tuple[str, str]:
             digit = f"{ord(char):x}"
             if len(digit) <= 4:
                 u_code = f"\\u{digit:>04}"
@@ -73,7 +69,7 @@ class Misc(
             info = f"`{u_code.ljust(10)}`: {name} - {disnake.utils.escape_markdown(char)}"
             return (info, u_code)
 
-        (char_list, raw_list) = zip(*(get_info(c) for c in characters))
+        (char_list, raw_list) = zip(*(get_info(c) for c in characters), strict=False)
         embed = disnake.Embed().set_author(name="Character Info")
 
         if len(characters) > 1:
@@ -83,10 +79,11 @@ class Misc(
         await ctx.send(embed=embed, components=DeleteButton(ctx.author))
 
     @commands.command(aliases=("snf", "snfl", "sf"))
-    async def snowflake(self, ctx: commands.Context, *snowflakes: disnake.Object) -> None:
+    async def snowflake(self, ctx: commands.Context[Monty], *snowflakes: disnake.Object) -> None:
         """Get Discord snowflake creation time."""
         if not snowflakes:
-            raise commands.BadArgument("At least one snowflake must be provided.")
+            msg = "At least one snowflake must be provided."
+            raise commands.BadArgument(msg)
 
         # clear any duplicated keys
         snowflakes = tuple(set(snowflakes))
@@ -97,16 +94,14 @@ class Misc(
             icon_url="https://github.com/twitter/twemoji/blob/master/assets/72x72/2744.png?raw=true",
         )
 
-        lines = []
-        for snowflake in snowflakes:
-            lines.append(self._format_snowflake(snowflake))
+        lines: list[str] = [self._format_snowflake(snowflake) for snowflake in snowflakes]
 
         await LinePaginator.paginate(lines, ctx=ctx, embed=embed, max_lines=5, max_size=1000)
 
     @commands.slash_command(name="snowflake")
     async def slash_snowflake(
         self,
-        inter: disnake.AppCommandInteraction,
+        inter: disnake.AppCommandInteraction[Monty],
         snowflake: disnake.Object,
     ) -> None:
         """

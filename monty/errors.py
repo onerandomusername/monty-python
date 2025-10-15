@@ -1,17 +1,27 @@
 from __future__ import annotations
 
 import random
-from typing import Hashable, Optional
+from typing import TYPE_CHECKING
 
 from disnake.ext import commands
 
 from monty.utils.responses import FAILURE_HEADERS
 
 
+if TYPE_CHECKING:
+    from collections.abc import Hashable
+
+
 class APIError(commands.CommandError):
     """Raised when an external API (eg. Wikipedia) returns an error response."""
 
-    def __init__(self, api: str, status_code: int, error_msg: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        error_msg: str | None = None,
+        *,
+        api: str,
+        status_code: int,
+    ) -> None:
         super().__init__(error_msg)
         self.api = api
         self.status_code = status_code
@@ -61,7 +71,7 @@ class LockedResourceError(RuntimeError):
 
 
 class MontyCommandError(commands.CommandError):
-    def __init__(self, message: str, *, title: str = None):
+    def __init__(self, message: str, *, title: str | None = None) -> None:
         if not title:
             title = random.choice(FAILURE_HEADERS)
         self.title = title
@@ -69,7 +79,7 @@ class MontyCommandError(commands.CommandError):
 
 
 class OpenDMsRequired(commands.UserInputError):
-    def __init__(self, message: str = None, *args):
+    def __init__(self, message: str | None = None, *args) -> None:
         self.title = "Open DMs Required"
         if message is None:
             message = "I must be able to DM you to run this command. Please open your DMs"

@@ -8,7 +8,7 @@ response if a command raises a disnake.ext.commands.CommandError exception.
 """
 
 import random
-from typing import Any, Literal, Tuple
+from typing import Any, Literal
 
 import disnake
 from disnake.ext import commands
@@ -18,14 +18,14 @@ from monty.log import get_logger
 
 
 __all__ = (
-    "DEFAULT_SUCCESS_COLOUR",
-    "SUCCESS_HEADERS",
     "DEFAULT_FAILURE_COLOUR",
+    "DEFAULT_SUCCESS_COLOUR",
     "FAILURE_HEADERS",
+    "SUCCESS_HEADERS",
     "USER_INPUT_ERROR_REPLIES",
     "send_general_response",
-    "send_positive_response",
     "send_negatory_response",
+    "send_positive_response",
 )
 
 _UNSET: Any = object()
@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 
 
 DEFAULT_SUCCESS_COLOUR = disnake.Colour(constants.Colours.soft_green)
-SUCCESS_HEADERS: Tuple[str, ...] = (
+SUCCESS_HEADERS: tuple[str, ...] = (
     "Affirmative",
     "As you wish",
     "Done",
@@ -64,7 +64,7 @@ SUCCESS_HEADERS: Tuple[str, ...] = (
 )
 
 DEFAULT_FAILURE_COLOUR = disnake.Colour(constants.Colours.soft_red)
-FAILURE_HEADERS: Tuple[str, ...] = (
+FAILURE_HEADERS: tuple[str, ...] = (
     "Abort!",
     "I cannot do that",
     "Hold up!",
@@ -89,7 +89,7 @@ FAILURE_HEADERS: Tuple[str, ...] = (
 )
 
 # Bot replies
-USER_INPUT_ERROR_REPLIES: Tuple[str, ...] = (
+USER_INPUT_ERROR_REPLIES: tuple[str, ...] = (
     "That input was invalid.",
     "Proper input not received.",
     "Please check your arguments.",
@@ -104,10 +104,10 @@ async def send_general_response(
     channel: disnake.abc.Messageable,
     response: str,
     *,
-    message: disnake.Message = None,
+    message: disnake.Message | None = None,
     embed: disnake.Embed = _UNSET,
-    colour: disnake.Colour = None,
-    title: str = None,
+    colour: disnake.Colour | None = None,
+    title: str | None = None,
     tag_as: Literal["general", "affirmative", "negatory"] = "general",
     **kwargs,
 ) -> disnake.Message:

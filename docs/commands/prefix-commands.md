@@ -1,19 +1,5 @@
 # Prefix Commands
 
-## Admin
-
-Admin-only eval command and repr.
-
-### `gateway [events...]`
-
-*Sends current stats from the gateway.*
-
-**Can also use:** `gw`
-
-### `inter-eval <code>`
-
-*Sends a message with a button to evaluate code.*
-
 ## Bookmark
 
 Creates personal bookmarks by relaying a message link to the user's DMs.
@@ -50,7 +36,7 @@ Cog for the Colour command.
 
 **Can also use:** `color`
 
-### `colour cmyk <cyan> <magenta> <yellow> <key>`
+### `colour cmyk <cyan> <magenta> <yellow> <black>`
 
 *Create an embed from a CMYK input.*
 
@@ -70,7 +56,7 @@ Cog for the Colour command.
 
 *Create an embed from a name input.*
 
-### `colour random `
+### `colour random`
 
 *Create an embed from a randomly chosen colour.*
 
@@ -82,27 +68,27 @@ Cog for the Colour command.
 
 Extension management commands.
 
-### `extensions `
+### `extensions`
 
 *Load, unload, reload, and list loaded extensions.*
 
 **Can also use:** `c`, `cogs`, `ext`, `exts`
 
-### `extensions autoreload `
+### `extensions autoreload`
 
 *Autoreload of modified extensions.*
 
 **Can also use:** `extensions ar`
 
-### `extensions autoreload disable `
+### `extensions autoreload disable`
 
 *Disable extension autoreload.*
 
-### `extensions autoreload enable `
+### `extensions autoreload enable [extra_paths...]`
 
 *Enable extension autoreload.*
 
-### `extensions list `
+### `extensions list`
 
 *Get a list of all extensions, including their loaded status.*
 
@@ -122,7 +108,8 @@ Extension management commands.
 
 ### `extensions unload [extensions...]`
 
-*Unload currently loaded extensions given their fully qualified or unqualified names.*
+*Unload currently loaded extensions given their fully qualified or unqualified
+names.*
 
 **Can also use:** `extensions ul`
 
@@ -140,7 +127,7 @@ Management commands for bot features.
 
 **Can also use:** `features a`, `features enable`
 
-### `features guild `
+### `features guild`
 
 *Show the features for the current guild.*
 
@@ -166,7 +153,7 @@ Fetches info from GitHub.
 
 **Can also use:** `github pr`, `github pull`
 
-### `github repository [repo...]`
+### `github repository [repository...]`
 
 *Fetches a repositories' GitHub information.*
 
@@ -188,15 +175,14 @@ Custom disnake.Embed Pagination Help feature.
 
 ## HTTP Status Codes
 
-```
-Fetch an image depicting HTTP status codes as a dog or a cat.
+Fetch an image depicting HTTP status codes as a dog or a cat or as goat.
 
-If neither animal is selected a cat or dog is chosen randomly for the given status code.
-```
+If neither animal is selected a cat or dog or goat is chosen randomly for the
+given status code.
 
 ### `http_status <code>`
 
-*Choose a cat or dog randomly for the given status code.*
+*Choose an animal randomly for the given status code.*
 
 **Can also use:** `http`, `httpstatus`, `status`
 
@@ -207,6 +193,10 @@ If neither animal is selected a cat or dog is chosen randomly for the given stat
 ### `http_status dog <code>`
 
 *Sends an embed with an image of a dog, portraying the status code.*
+
+### `http_status goat <code>`
+
+*Sends an embed with an image of a goat, portraying the status code.*
 
 ## Meta Source
 
@@ -242,7 +232,7 @@ User initiated command to search for a Real Python article.
 
 Management commands for bot rollouts.
 
-### `rollouts `
+### `rollouts`
 
 *Manage feature rollouts.*
 
@@ -256,7 +246,7 @@ Management commands for bot rollouts.
 
 *Delete an existing rollout. There is no going back.*
 
-### `rollouts link `
+### `rollouts link`
 
 *Manage rollout links to features and other components.*
 
@@ -266,7 +256,7 @@ Management commands for bot rollouts.
 
 *Link or unlink a feature from the specified rollout.*
 
-### `rollouts list `
+### `rollouts list`
 
 *List all rollouts and their current status.*
 
@@ -280,7 +270,8 @@ Management commands for bot rollouts.
 
 ### `rollouts stop <rollout>`
 
-*Stop a rollout. This does not decrease the rollout amount, just stops increasing the rollout.*
+*Stop a rollout. This does not decrease the rollout amount, just stops
+increasing the rollout.*
 
 **Can also use:** `rollouts halt`
 
@@ -300,13 +291,13 @@ Safe evaluation of Python code using Snekbox.
 
 **Can also use:** `e`
 
-### `snekbox `
+### `snekbox`
 
 *Commands for managing the snekbox instance.*
 
 **Can also use:** `snek`
 
-### `snekbox packages `
+### `snekbox packages`
 
 *Manage the packages installed on snekbox.*
 
@@ -318,7 +309,7 @@ Safe evaluation of Python code using Snekbox.
 
 **Can also use:** `snekbox packages a`, `snekbox packages install`
 
-### `snekbox packages list `
+### `snekbox packages list`
 
 *List all packages on snekbox.*
 
@@ -328,7 +319,8 @@ Safe evaluation of Python code using Snekbox.
 
 *Uninstall the provided package from snekbox.*
 
-**Can also use:** `snekbox packages d`, `snekbox packages del`, `snekbox packages delete`, `snekbox packages r`, `snekbox packages uninstall`
+**Can also use:** `snekbox packages d`, `snekbox packages del`,
+`snekbox packages delete`, `snekbox packages r`, `snekbox packages uninstall`
 
 ### `snekbox packages view <package>`
 

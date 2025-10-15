@@ -11,8 +11,11 @@ from monty.bot import Monty
 from monty.database import Feature
 from monty.database.guild import Guild
 from monty.log import get_logger
+from monty.metadata import ExtMetadata
 from monty.utils.messages import DeleteButton
 
+
+EXT_METADATA = ExtMetadata(core=True)
 
 if TYPE_CHECKING:
     MaybeFeature = str
@@ -42,7 +45,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self._colours = itertools.cycle(
-            (disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue))
+            disnake.Colour(x) for x in (constants.Colours.python_yellow, constants.Colours.python_blue)
         )
 
     @property
@@ -63,7 +66,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         confirm_button_text: str = "Confirm",
         deny_button_text: str = "Deny",
         go_back_button: disnake.ui.Button | None = None,
-    ) -> Union[tuple[bool, disnake.MessageInteraction, list[disnake.ui.Container]], tuple[None, None, None]]:
+    ) -> tuple[bool, disnake.MessageInteraction, list[disnake.ui.Container]] | tuple[None, None, None]:
         """Wait for the user to provide confirmation, and handle expiration."""
         # ask the user if they want to add this feature
         if isinstance(message_or_inter, disnake.Message):
@@ -102,7 +105,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             )
             sent_msg = message_or_inter.message
         else:
-            raise TypeError("message_or_inter must be a Message or MessageInteraction")
+            msg = "message_or_inter must be a Message or MessageInteraction"
+            raise TypeError(msg)
 
         try:
             inter: disnake.MessageInteraction = await self.bot.wait_for(
@@ -138,7 +142,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_features(
         self,
         ctx: commands.Context,
-        arg: disnake.Guild | disnake.Object | FeatureConverter = None,
+        arg: disnake.Guild | disnake.Object | FeatureConverter | None = None,
         show_all: Literal["all"] | None = None,
     ) -> None:
         """Manage features."""
@@ -155,7 +159,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def set_feature(self, feature: Feature, status: bool | None) -> Feature:
         """Enable the specified feature globally."""
         if not feature:
-            raise commands.UserInputError("That feature does not exist.")
+            msg = "That feature does not exist."
+            raise commands.UserInputError(msg)
         if feature.enabled is status:
             # already set, return early
             return feature
@@ -181,7 +186,9 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         colour = (
             disnake.Colour.green()
             if feature.enabled is True
-            else disnake.Colour.greyple() if feature.enabled is None else disnake.Colour.red()
+            else disnake.Colour.greyple()
+            if feature.enabled is None
+            else disnake.Colour.red()
         )
         components: list = [
             disnake.ui.Container(
@@ -379,7 +386,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         page: int = 0,
         max_page: int | None = None,
         *,
-        for_guild: disnake.Object | int | None = None,
+        for_guild: disnake.abc.Snowflake | int | None = None,
         show_all: bool | None = None,
     ) -> None:
         def _get_feature_page(
@@ -394,23 +401,22 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if show_all is None:
             show_all = False
 
-        guild_to_check: int | None = None
         # if guild_to_check isn't set, set it to the current guild if available
         # and enable show_all
         if not for_guild and getattr(ctx, "guild", None):
             for_guild = ctx.guild
             show_all = True
 
+        guild_to_check: int | None = None
+        features: list[tuple[str, Feature]] = []
         if for_guild:
             title = "Guild Features"
             guild_to_check = getattr(for_guild, "id", None) or for_guild or getattr(ctx.guild, "id", None)  # type: ignore
-            guild_db = await self.bot.ensure_guild(guild_to_check)
-            if show_all:
-                features = sorted(self.features.items())
-            else:
-                enabled_features = [f for f in self.features.values() if f.name in guild_db.feature_ids]
-                features = sorted((f.name, f) for f in enabled_features)
-        else:
+            if guild_to_check:
+                guild_db = await self.bot.ensure_guild(guild_to_check)
+                features = [(f.name, f) for f in self.features.values() if f.name in guild_db.feature_ids]
+
+        if not features or show_all:
             title = "Global Features"
             features = sorted(self.features.items())
 
@@ -482,13 +488,10 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                     )
                 )
         # we are here because there are no features
+        elif guild_to_check:
+            components[-1].children.append(disnake.ui.TextDisplay(f"No features are overridden for {guild_to_check}"))
         else:
-            if guild_to_check:
-                components[-1].children.append(
-                    disnake.ui.TextDisplay(f"No features are overridden for {guild_to_check}")
-                )
-            else:
-                components[-1].children.append(disnake.ui.TextDisplay("No features are overridden."))
+            components[-1].children.append(disnake.ui.TextDisplay("No features are overridden."))
 
         # Paginator buttons
         if total >= FEATURES_PER_PAGE:
@@ -616,7 +619,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_add(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Add the features to the provided guilds, defaulting to the local guild."""
@@ -624,7 +627,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             guilds: list[disnake.Guild] = [ctx.guild]  # type:ignore
 
         # only give feature create option if there is only one feature
-        ctx_or_inter: Union[disnake.MessageInteraction, commands.Context[Monty]] = ctx
+        ctx_or_inter: disnake.MessageInteraction | commands.Context[Monty] = ctx
         async with self.bot.db.begin() as session:
             if len(names) == 1:
                 name = names[0]
@@ -674,11 +677,12 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 guild_db = await self.bot.ensure_guild(guild.id)
                 guild_dbs.append(guild_db)
 
-                more_features = []
+                more_features: list[str] = []
                 for name in feature_names:
                     if name in guild_db.feature_ids:
                         if len(guilds) == 1:
-                            raise commands.UserInputError(f"That feature is already enabled in guild ID `{guild.id}`.")
+                            msg = f"That feature is already enabled in guild ID `{guild.id}`."
+                            raise commands.UserInputError(msg)
                         else:
                             continue
                     more_features.append(name)
@@ -702,7 +706,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
     async def cmd_guild_remove(
         self,
         ctx: commands.Context,
-        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore
+        guilds: commands.Greedy[Union[disnake.Guild, disnake.Object]] = None,  # type: ignore  # noqa: UP007
         *names: MaybeFeature,
     ) -> None:
         """Remove the features from the provided guilds, defaulting to the local guild."""
@@ -732,7 +736,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
                 for name in feature_names:
                     if name not in guild_db.feature_ids:
                         if len(guilds) == 1:
-                            raise commands.UserInputError(f"That feature is not enabled in guild ID `{guild.id}`.")
+                            msg = f"That feature is not enabled in guild ID `{guild.id}`."
+                            raise commands.UserInputError(msg)
                         else:
                             continue
                     remove_features.append(name)
@@ -749,7 +754,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         )
 
     @commands.Cog.listener(disnake.Event.dropdown)
-    async def FEATURES_GLOBAL_TOGGLE_listener(self, inter: disnake.MessageInteraction) -> None:
+    async def features_global_toggle_listener(self, inter: disnake.MessageInteraction) -> None:
         """Listen for guild feature toggle select."""
         if not inter.component.custom_id or not inter.component.custom_id.startswith(FEATURES_GLOBAL_TOGGLE):
             return
@@ -771,7 +776,7 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         # Ask for confirmation
         action_map = {"True": "globally enable", "False": "globally disable", "None": "switch to guild overrides"}
-        confirm, conf_inter, components = await self.wait_for_confirmation(
+        confirm, conf_inter, _components = await self.wait_for_confirmation(
             inter,
             f"-# **Features » {feature.name} » global enablement confirmation**\n ### Confirmation Required\nAre you"
             f" sure you want to **{action_map[selected_value]}** feature `{feature_name}`?\n\u200b",
@@ -826,9 +831,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
             if not guild_has_feature:
                 if feature.name not in guild_db.feature_ids:
                     guild_db.feature_ids.append(feature.name)
-            else:
-                if feature.name in guild_db.feature_ids:
-                    guild_db.feature_ids.remove(feature.name)
+            elif feature.name in guild_db.feature_ids:
+                guild_db.feature_ids.remove(feature.name)
             guild_db = await session.merge(guild_db)
             self.bot.guild_db[guild.id] = guild_db
             await session.commit()
@@ -846,7 +850,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
         if await self.bot.is_owner(ctx.author):
             return True
 
-        raise commands.NotOwner("You do not own this bot.")
+        msg = "You do not own this bot."
+        raise commands.NotOwner(msg)
 
 
 def setup(bot: Monty) -> None:

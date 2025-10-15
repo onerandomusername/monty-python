@@ -1,35 +1,25 @@
 import asyncio
 import collections
-import dataclasses
-import functools
-import socket
-import sys
-from datetime import timedelta
-from types import SimpleNamespace
-from typing import Any, Optional, Union
-from unittest.mock import Mock
+from typing import Any
 from weakref import WeakValueDictionary
 
-import aiohttp
 import arrow
 import cachingutils.redis
 import disnake
-import multidict
 import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
-from multidict import CIMultiDict, CIMultiDictProxy
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from monty import constants
+from monty.aiohttp_session import CachingClientSession
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
-from monty.utils.caching import RedisCache
 from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 
@@ -60,7 +50,13 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str = None, **kwargs) -> None:
+    def __init__(
+        self,
+        redis_session: redis.asyncio.Redis,
+        database_engine: AsyncEngine,
+        proxy: str | None = None,
+        **kwargs,
+    ) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
@@ -72,8 +68,8 @@ class Monty(commands.Bot):
 
         self.create_http_session(proxy=proxy)
 
-        self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
-        self.db_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+        self.db_engine = database_engine
+        self.db_session = async_sessionmaker(database_engine, expire_on_commit=False, class_=AsyncSession)
 
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
@@ -90,113 +86,16 @@ class Monty(commands.Bot):
         scheduling.create_task(self._create_features())
 
         self._autoreload_task: asyncio.Task | None = None
-        self._autoreload_log_channel: disnake.abc.Messageable | None = None
+        self._autoreload_args: dict[str, Any] | None = None
 
     @property
     def db(self) -> async_sessionmaker[AsyncSession]:
         """Alias of `bot.db_session`."""
         return self.db_session
 
-    def create_http_session(self, proxy: str = None) -> None:
-        """Create the aiohttp session and set the trace logger, if desired."""
-        trace_configs = []
-
-        aiohttp_log = get_logger(__package__ + ".http")
-
-        async def on_request_end(
-            session: aiohttp.ClientSession,
-            ctx: SimpleNamespace,
-            end: aiohttp.TraceRequestEndParams,
-        ) -> None:
-            """Log all aiohttp requests on request end."""
-            resp = end.response
-            aiohttp_log.info(
-                "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
-                    status=resp.status,
-                    reason=resp.reason,
-                    method=end.method.upper(),
-                    url=end.url,
-                    content_type=resp.content_type,
-                )
-            )
-
-        trace_config = aiohttp.TraceConfig()
-        trace_config.on_request_end.append(on_request_end)
-        trace_configs.append(trace_config)
-
-        # dead simple ETag caching
-        cache = RedisCache(
-            "aiohttp_requests",
-            timeout=timedelta(days=5),
-        )
-        _og_request = aiohttp.ClientSession._request
-        cache_logger = get_logger("monty.utils.caching.http")
-
-        async def _request(
-            self: aiohttp.ClientSession,
-            method: str,
-            str_or_url: Any,
-            use_cache: bool = True,
-            **kwargs,
-        ) -> aiohttp.ClientResponse:
-            """Do the same thing as aiohttp does, but always cache the response."""
-            method = method.upper().strip()
-            cache_key = f"{method}:{str(str_or_url)}"
-            async with cache.lock(cache_key):
-                cached = await cache.get(cache_key)
-                if cached and use_cache:
-                    etag, body, resp_headers = cached
-                    if etag:
-                        kwargs.setdefault("headers", {})["If-None-Match"] = etag
-                else:
-                    etag = None
-                    body = None
-                    resp_headers = None
-
-                r = await _og_request(self, method, str_or_url, **kwargs)
-                if not use_cache:
-                    return r
-                if r.status == 304:
-                    cache_logger.debug("HTTP Cache hit on %s", cache_key)
-                    # decode the original headers
-                    headers: CIMultiDict[str] = CIMultiDict()
-                    for key, value in resp_headers:
-                        headers[key.decode()] = value.decode()
-                    r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
-                    r.content = reader = aiohttp.StreamReader(
-                        protocol=Mock(_reading_paused=False),
-                        limit=len(body),
-                    )
-                    reader.feed_data(body)
-                    reader.feed_eof()
-                    r.status = 200
-                    return r
-
-                etag = r.headers.get("ETag")
-                # only cache if etag is provided and the request was in the 200
-                if etag and 200 <= r.status < 300:
-                    body = await r.read()
-                    await cache.set(cache_key, (etag, body, r.raw_headers))
-                return r
-
-        user_agent = "Python/{0[0]}.{0[1]} Monty-Python/{1} ({2})".format(
-            sys.version_info, constants.Client.version, constants.Client.git_repo
-        )
-
-        self.http_session = aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(
-                resolver=aiohttp.AsyncResolver(),
-                family=socket.AF_INET,
-                verify_ssl=not bool(proxy and proxy.startswith("http://")),
-            ),
-            trace_configs=trace_configs,
-            headers=multidict.CIMultiDict({"User-agent": user_agent}),
-        )
-        if proxy:
-            partial_request = functools.partial(_request, self.http_session, proxy=proxy)
-        else:
-            partial_request = functools.partial(_request, self.http_session)
-        self.http_session._request = partial_request
+    def create_http_session(self, proxy: str | None = None) -> None:
+        """Create the bot's aiohttp session."""
+        self.http_session = CachingClientSession(proxy=proxy)
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
@@ -208,7 +107,7 @@ class Monty(commands.Bot):
             self.invite_permissions = constants.Client.default_invite_permissions
         return self.invite_permissions
 
-    async def ensure_guild(self, guild_id: int, *, session: AsyncSession = None) -> Guild:
+    async def ensure_guild(self, guild_id: int, *, session: AsyncSession | None = None) -> Guild:
         """Fetch and return a guild config, creating if it does not exist."""
         guild = self.guild_db.get(guild_id)
         if not guild:
@@ -252,7 +151,7 @@ class Monty(commands.Bot):
 
         return config
 
-    async def get_prefix(self, message: disnake.Message) -> Optional[Union[list[str], str]]:
+    async def get_prefix(self, message: disnake.Message) -> list[str] | str | None:
         """Get the bot prefix."""
         prefixes = commands.when_mentioned(self, message)
         if message.guild:
@@ -268,19 +167,16 @@ class Monty(commands.Bot):
 
     async def _create_features(self) -> None:
         """Update the database with all features defined immediately upon launch. No more lazy creation."""
-        await self.wait_until_first_connect()
-
-        async with self._feature_db_lock:
-            async with self.db.begin() as session:
-                stmt = sa.select(Feature).options(selectinload(Feature.rollout))
-                result = await session.scalars(stmt)
-                existing_feature_names = {feature.name for feature in result.all()}
-                for feature_name in dataclasses.asdict(constants.Feature()).values():
-                    if feature_name in existing_feature_names:
-                        continue
-                    feature_instance = Feature(feature_name)
-                    session.add(feature_instance)
-                await session.commit()  # this will error out if it cannot be made
+        async with self._feature_db_lock, self.db.begin() as session:
+            stmt = sa.select(Feature).options(selectinload(Feature.rollout))
+            result = await session.scalars(stmt)
+            existing_feature_names = {feature.name for feature in result.all()}
+            for feature_enum in constants.Feature:
+                if feature_enum.value in existing_feature_names:
+                    continue
+                feature_instance = Feature(feature_enum.value)
+                session.add(feature_instance)
+            await session.commit()  # this will error out if it cannot be made
 
         await self.refresh_features()
 
@@ -298,8 +194,8 @@ class Monty(commands.Bot):
 
     async def guild_has_feature(
         self,
-        guild: Optional[Union[int, disnake.abc.Snowflake]],
-        feature: str,
+        guild: int | disnake.abc.Snowflake | None,
+        feature: constants.Feature | str,
         *,
         include_feature_status: bool = True,
         create_if_not_exists: bool = True,
@@ -310,6 +206,8 @@ class Monty(commands.Bot):
         By default, this considers the feature's enabled status,
         which can be disabled with `include_feature_status` set to False.
         """
+        if isinstance(feature, constants.Feature):
+            feature = feature.value
         # first create the feature if we are told to create it
         if feature in self.features:
             feature_instance = self.features[feature]
@@ -333,9 +231,8 @@ class Monty(commands.Bot):
                             self.features[feature] = feature_instance
         # we're defaulting to non-existing features as None, rather than False.
         # this might change later.
-        if include_feature_status and feature_instance:
-            if feature_instance.enabled is not None:
-                return feature_instance.enabled
+        if include_feature_status and feature_instance and feature_instance.enabled is not None:
+            return feature_instance.enabled
 
         # the feature's enabled status is None, so we should check the guild
         # support the guild being None to make it easier to use
@@ -373,31 +270,50 @@ class Monty(commands.Bot):
         )
         return await super().login(token)
 
-    async def close(self) -> None:
+    async def close(self, *, unplanned: bool = False) -> None:
         """Close sessions when bot is shutting down."""
-        await super().close()
+        if not self.is_closed():
+            await super().close()
+        else:
+            log.debug("Bot is already closed; skipping super().close()")
 
+        if unplanned:
+            log.warning("Bot is shutting down; closing sessions.")
+        else:
+            log.info("Bot is shutting down; closing sessions.")
         if self.http_session:
             await self.http_session.close()
+            log.debug("HTTP session closed.")
         if self.db_engine:
             await self.db_engine.dispose()
+            log.debug("Database engine disposed.")
 
         if self.redis_session:
             await self.redis_session.aclose(close_connection_pool=True)
+            log.debug("Redis session closed.")
 
         await asyncio.sleep(0.6)
 
     def load_extensions(self) -> None:
         """Load all extensions as released by walk_extensions()."""
-        if constants.Client.extensions:
+        partial_load = bool(constants.Client.extensions)
+        if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
-        EXTENSIONS.update(walk_extensions())
+        requested_extensions = set()
+        if isinstance(constants.Client.extensions, set):
+            requested_extensions.update(constants.Client.extensions)
+
         for ext, ext_metadata in walk_extensions():
-            if not constants.Client.extensions:
+            EXTENSIONS[ext] = ext_metadata
+            if not partial_load:
                 self.load_extension(ext)
                 continue
 
-            if ext_metadata.core or ext in constants.Client.extensions:
+            if ext_metadata.core or ext in requested_extensions:
+                if ext_metadata.core:
+                    log.debug("Loading %r as it is a core extension.", ext)
+                if ext in requested_extensions:
+                    log.debug("Loading %r as it is a requested extension.", ext)
                 self.load_extension(ext)
                 continue
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
@@ -413,7 +329,7 @@ class Monty(commands.Bot):
         log.info(f"Cog loaded: {cog.qualified_name}")
         self.dispatch("cog_load", cog)
 
-    def remove_cog(self, name: str) -> Optional[commands.Cog]:
+    def remove_cog(self, name: str) -> commands.Cog | None:
         """Remove the cog from the bot and dispatch a cog_remove event."""
         cog = super().remove_cog(name)
         if cog is None:
@@ -427,7 +343,7 @@ class Monty(commands.Bot):
         self._add_root_aliases(command)
         self.dispatch("command_add", command)
 
-    def remove_command(self, name: str) -> Optional[commands.Command]:
+    def remove_command(self, name: str) -> commands.Command | None:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
 
@@ -439,7 +355,7 @@ class Monty(commands.Bot):
         command = super().remove_command(name)
         if command is None:
             # Even if it's a root alias, there's no way to get the Bot instance to remove the alias.
-            return
+            return None
 
         self.dispatch("command_remove", command)
         self._remove_root_aliases(command)
@@ -450,7 +366,7 @@ class Monty(commands.Bot):
         super().add_slash_command(slash_command)
         self.dispatch("slash_command_add", slash_command)
 
-    def remove_slash_command(self, name: str) -> Optional[commands.InvokableSlashCommand]:
+    def remove_slash_command(self, name: str) -> commands.InvokableSlashCommand | None:
         """Remove the slash command from the bot and dispatch a slash_command_remove event."""
         slash_command = super().remove_slash_command(name)
         if slash_command is None:
