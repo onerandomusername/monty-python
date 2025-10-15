@@ -1,5 +1,5 @@
+import dataclasses
 import functools
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import ClassVar, Literal, cast
 from urllib.parse import urljoin
@@ -29,12 +29,16 @@ ICON_URL = "https://www.python.org/static/opengraph-icon-200x200.png"
 API_URL = "https://peps.python.org/api/peps.json"
 
 
-@dataclass(kw_only=True, frozen=True)
+# the values below each exist on the api as documented at https://peps.python.org/api/
+# this schema should be kept in sync with that api
+# to save on memory, fields not currently used are commented out.
+# if you need them, uncomment them.
+@dataclasses.dataclass(kw_only=True, frozen=True)
 class PEPInfo:
     number: int
     title: str
-    authors: str
-    discussions_to: str | None = None
+    # authors: str
+    # discussions_to: str | None = None
     status: Literal[
         "Accepted",
         "Active",
@@ -47,15 +51,15 @@ class PEPInfo:
         "Withdrawn",
     ]
     type: Literal["Informational", "Process", "Standards Track"]
-    topic: Literal["governance", "packaging", "release", "typing", ""]
+    # topic: Literal["governance", "packaging", "release", "typing", ""]
     created: str
     python_version: str | None
-    post_history: str | None
-    resolution: str | None
-    requires: str | None
-    replaces: str | None
-    superseded_by: str | None
-    author_names: list[str]
+    # post_history: str | None
+    # resolution: str | None
+    # requires: str | None
+    # replaces: str | None
+    # superseded_by: str | None
+    # author_names: list[str]
     url: str
 
     def __hash__(self) -> int:
@@ -111,7 +115,11 @@ class PythonEnhancementProposals(
         self.last_refreshed_peps = utcnow()
         new_peps: dict[int, PEPInfo] = {}
         new_autocomplete: dict[str, int] = {}
+        fields = frozenset(field.name for field in dataclasses.fields(PEPInfo))
         for pep_data in peps.values():
+            for field in list(pep_data):
+                if field not in fields:
+                    pep_data.pop(field)
             pep_info = PEPInfo(**pep_data)
             new_peps[pep_info.number] = pep_info
             new_autocomplete[f"PEP {pep_info.number} \u2013 {pep_data['title']}"] = pep_info.number
@@ -291,17 +299,11 @@ class PythonEnhancementProposals(
         """Completion for pep headers."""
         number = cast("int | None", inter.filled_options.get("number"))
         if number is None:
-            return [
-                "No PEP number provided.",
-                "You must provide a valid pep number before providing a header.",
-            ]
+            return ["No PEP number provided.", "You must provide a valid pep number before providing a header."]
         if number not in self.peps:
-            return [
-                f"Cannot find PEP {number}.",
-                "You must provide a valid pep number before providing a header.",
-            ]
+            return [f"Cannot find PEP {number}.", "You must provide a valid pep number before providing a header."]
 
-        _, soup = await self.fetch_pep_soup(self.peps[number])  # pyright: ignore[reportCallIssue]
+        soup = await self.fetch_pep_soup(self.peps[number])  # pyright: ignore[reportCallIssue]
 
         headers = PEPHeaders().parse(soup)
 
