@@ -1,6 +1,6 @@
 import asyncio
 import collections
-from typing import TYPE_CHECKING, Any, Self, cast, final
+from typing import TYPE_CHECKING, Any, cast, final
 from weakref import WeakValueDictionary
 
 import arrow
@@ -13,7 +13,7 @@ from disnake.ext import commands
 from disnake.ext.commands.core import CogT
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from monty import constants
 from monty.aiohttp_session import CachingClientSession, session_args_for_proxy
