@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import aiohttp
 
 from monty.log import get_logger
-from monty.utils import helpers
 from monty.utils.caching import redis_cache
 
 
@@ -93,9 +92,7 @@ async def _load_v2(stream: aiohttp.StreamReader) -> InventoryDict:
 async def _fetch_inventory(bot: Monty, url: str) -> InventoryDict:
     """Fetch, parse and return an intersphinx inventory file from an url."""
     timeout = aiohttp.ClientTimeout(sock_connect=5, sock_read=5)
-    async with bot.http_session.get(
-        url, timeout=timeout, raise_for_status=True, use_cache=False, ssl=helpers.ssl_create_default_context()
-    ) as response:
+    async with bot.http_session.get(url, timeout=timeout, raise_for_status=True, use_cache=False) as response:
         stream = response.content
 
         inventory_header = (await stream.readline()).decode().rstrip()

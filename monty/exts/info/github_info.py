@@ -23,6 +23,7 @@ from gql.transport.exceptions import TransportError, TransportQueryError
 
 import monty.utils.services
 from monty import constants
+from monty.aiohttp_session import session_args_for_proxy
 from monty.bot import Monty
 from monty.constants import Feature
 from monty.errors import MontyCommandError
@@ -221,7 +222,13 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS)
+        transport = AIOHTTPTransport(
+            url="https://api.github.com/graphql",
+            timeout=20,
+            headers=GITHUB_REQUEST_HEADERS,
+            # copy because invariance
+            client_session_args=dict(session_args_for_proxy(bot.http.proxy)),
+        )
 
         self.gql_client = gql.Client(transport=transport, fetch_schema_from_transport=True)
 

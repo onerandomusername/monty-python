@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from monty import constants
-from monty.aiohttp_session import CachingClientSession
+from monty.aiohttp_session import CachingClientSession, session_args_for_proxy
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.log import get_logger
@@ -60,6 +60,10 @@ class Monty(commands.Bot):
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
+
+        # pass proxy and connector to disnake client
+        kwargs.update(session_args_for_proxy(proxy))
+
         super().__init__(**kwargs)
 
         self.redis_session = redis_session

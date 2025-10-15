@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 import sys
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 from unittest.mock import Mock
 
 import aiohttp
@@ -11,6 +11,7 @@ from multidict import CIMultiDict, CIMultiDictProxy
 
 from monty import constants
 from monty.log import get_logger
+from monty.utils import helpers
 from monty.utils.caching import RedisCache
 
 
@@ -45,14 +46,29 @@ async def _on_request_end(
     )
 
 
+class SessionArgs(TypedDict):
+    proxy: str | None
+    connector: aiohttp.BaseConnector
+
+
+def session_args_for_proxy(proxy: str | None) -> SessionArgs:
+    """Create a dict with `proxy` and `connector` items, to be passed to aiohttp.ClientSession."""
+    connector = aiohttp.TCPConnector(
+        resolver=aiohttp.AsyncResolver(),
+        family=socket.AF_INET,
+        ssl=(
+            helpers._SSL_CONTEXT_UNVERIFIED
+            if (proxy and proxy.startswith("http://"))
+            else helpers._SSL_CONTEXT_VERIFIED
+        ),
+    )
+    return {"proxy": proxy or None, "connector": connector}
+
+
 class CachingClientSession(aiohttp.ClientSession):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if "connector" not in kwargs:
-            kwargs["connector"] = aiohttp.TCPConnector(
-                resolver=aiohttp.AsyncResolver(),
-                family=socket.AF_INET,
-                verify_ssl=not bool(constants.Client.proxy and constants.Client.proxy.startswith("http://")),
-            )
+        kwargs.update(session_args_for_proxy(kwargs.get("proxy")))
+
         if "trace_configs" not in kwargs:
             trace_config = aiohttp.TraceConfig()
             trace_config.on_request_end.append(_on_request_end)
