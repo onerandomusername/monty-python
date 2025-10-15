@@ -10,7 +10,7 @@ import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from monty import constants
@@ -50,7 +50,13 @@ class Monty(commands.Bot):
 
     name = constants.Client.name
 
-    def __init__(self, redis_session: redis.asyncio.Redis, proxy: str | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        redis_session: redis.asyncio.Redis,
+        database_engine: AsyncEngine,
+        proxy: str | None = None,
+        **kwargs,
+    ) -> None:
         if TEST_GUILDS:
             kwargs["test_guilds"] = TEST_GUILDS
             log.warning("registering as test_guilds")
@@ -66,8 +72,8 @@ class Monty(commands.Bot):
 
         self.create_http_session(proxy=proxy)
 
-        self.db_engine = engine = create_async_engine(constants.Database.postgres_bind)
-        self.db_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+        self.db_engine = database_engine
+        self.db_session = async_sessionmaker(database_engine, expire_on_commit=False, class_=AsyncSession)
 
         self.guild_configs: dict[int, GuildConfig] = {}
         self.guild_db: dict[int, Guild] = {}
@@ -165,8 +171,6 @@ class Monty(commands.Bot):
 
     async def _create_features(self) -> None:
         """Update the database with all features defined immediately upon launch. No more lazy creation."""
-        await self.wait_until_first_connect()
-
         async with self._feature_db_lock, self.db.begin() as session:
             stmt = sa.select(Feature).options(selectinload(Feature.rollout))
             result = await session.scalars(stmt)

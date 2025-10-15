@@ -8,6 +8,7 @@ import cachingutils.redis
 import disnake
 import redis
 import redis.asyncio
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from monty import constants, monkey_patches
 from monty.bot import Monty
@@ -56,12 +57,16 @@ async def main() -> None:
         constants.Client.config_prefix, session=redis_session, prefix=constants.Redis.prefix
     )
 
+    database_engine = create_async_engine(constants.Database.postgres_bind)
     # run alembic migrations
     if constants.Database.run_migrations:
         log.info(f"Running database migrations to target {constants.Database.migration_target}")
-        await run_alembic()
+        await run_alembic(database_engine)
     else:
         log.info("Skipping database migrations per environment settings.")
+        # we still need to connect to the database to verify connection info is correct
+        async with database_engine.connect():
+            pass
 
     # ping redis
     await redis_session.ping()
@@ -69,6 +74,7 @@ async def main() -> None:
 
     bot = Monty(
         redis_session=redis_session,
+        database_engine=database_engine,
         command_prefix=constants.Client.default_command_prefix,
         activity=constants.Client.activity,
         allowed_mentions=constants.Client.allowed_mentions,

@@ -144,12 +144,12 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         """Fetches a snippet from a GitHub repo."""
         # Search the GitHub API for the specified branch
         branches = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/branches",
+            f"https://api.github.com/repos/{repo}/branches?per_page=100",
             "json",
             headers=GITHUB_REQUEST_HEADERS,
         )
         tags = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/tags", "json", headers=GITHUB_REQUEST_HEADERS
+            f"https://api.github.com/repos/{repo}/tags?per_page=100", "json", headers=GITHUB_REQUEST_HEADERS
         )
         refs = branches + tags
         ref, encoded_file_path = self._find_ref(path, refs)
