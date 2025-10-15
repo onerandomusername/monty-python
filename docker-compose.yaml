@@ -32,6 +32,15 @@ services:
       timeout: 1s
       retries: 5
 
+  mitmproxy:
+    << : *restart_policy
+    image: mitmproxy/mitmproxy:latest
+    hostname: mitmproxy
+    command: ["mitmweb", "--web-host", "0.0.0.0", "--set", "web_password=monty-proxy"]
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8081:8081"
+
   snekbox:
     << : *restart_policy
     image: ghcr.io/onerandomusername/snekbox:latest
@@ -61,12 +70,15 @@ services:
         restart: true
       redis:
         condition: service_healthy
+      mitmproxy:
+        condition: service_started
 
     environment:
       - REDIS_URI=redis://redis:6379
       - DB_BIND=postgresql+asyncpg://monty:monty@postgres:5432/monty
       - USE_FAKEREDIS=false
       - SNEKBOX_URL=http://snekbox:8060/
+      - BOT_PROXY_URL=http://mitmproxy:8080/
 
     env_file:
       - .env
