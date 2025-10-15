@@ -391,62 +391,63 @@ class GithubInfo(
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
         """Fetches a user's GitHub information."""
         async with ctx.typing():
-            user_data: dict[str, Any] = await self.fetch_data(
-                f"{GITHUB_API_URL}/users/{quote_plus(username)}",
-                headers=GITHUB_REQUEST_HEADERS,
-            )  # type: ignore
-
-            # User_data will not have a message key if the user exists
-            if "message" in user_data:
+            try:
+                resp = await self.bot.github.rest.users.async_get_by_username(username)
+                user_data = resp.parsed_data
+            except Exception as e:
+                # TODO: more specific exception
+                log.exception("Error fetching user info for %s: %s", username, e)
                 msg = f"The profile for `{username}` was not found."
-                raise MontyCommandError(msg)
+                raise MontyCommandError(msg) from None
 
-            org_data: list[dict[str, Any]] = await self.fetch_data(
-                user_data["organizations_url"],
-                headers=GITHUB_REQUEST_HEADERS,
-            )  # type: ignore
-            orgs = [f"[{org['login']}](https://github.com/{org['login']})" for org in org_data]
-            orgs_to_add = " | ".join(orgs)
+            if user_data.type != "Organization":
+                resp = await self.bot.github.rest.orgs.async_list_for_user(username)
+                org_data = resp.parsed_data
+                orgs = [f"[{org.login}]({org.url})" for org in org_data]
+                orgs_to_add = " | ".join(orgs)
+            else:
+                orgs_to_add = ""
+                orgs = []
 
-            gists = user_data["public_gists"]
+            gists = user_data.public_gists
 
             # Forming blog link
-            if re.match(r"^https?:\/\/", user_data["blog"]):  # Blog link is complete
-                blog = user_data["blog"]
-            elif user_data["blog"]:  # Blog exists but the link is not complete
-                blog = f"https://{user_data['blog']}"
+            if (blog := user_data.blog) and re.match(r"^https?:\/\/", blog):  # Blog link is complete
+                pass
+            elif user_data.blog:  # Blog exists but the link is not complete
+                blog = f"https://{user_data.blog}"
             else:
                 blog = "No website link available."
 
-            html_url = user_data["html_url"]
+            html_url = user_data.html_url
             embed = disnake.Embed(
-                title=f"`{user_data['login']}`'s GitHub profile info",
-                description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
+                title=f"`{user_data.login}`'s GitHub profile info",
+                description=f"```{user_data.bio}```\n" if user_data.bio else "",
                 colour=disnake.Colour.blurple(),
                 url=html_url,
-                timestamp=fromisoformat(user_data["created_at"]),
+                timestamp=user_data.created_at,
             )
-            embed.set_thumbnail(url=user_data["avatar_url"])
+            embed.set_thumbnail(url=user_data.avatar_url)
             embed.set_footer(text="Account created at")
 
-            if user_data["type"] == "User":
+            if user_data.type == "User":
                 embed.add_field(
                     name="Followers",
-                    value=f"[{user_data['followers']}]({user_data['html_url']}?tab=followers)",
+                    value=f"[{user_data.followers}]({user_data.html_url}?tab=followers)",
                     inline=True,
                 )
                 embed.add_field(
                     name="Following",
-                    value=f"[{user_data['following']}]({user_data['html_url']}?tab=following)",
+                    value=f"[{user_data.following}]({user_data.html_url}?tab=following)",
                     inline=True,
                 )
 
             embed.add_field(
                 name="Public repos",
-                value=f"[{user_data['public_repos']}]({user_data['html_url']}?tab=repositories)",
+                value=f"[{user_data.public_repos}]({user_data.html_url}?tab=repositories)",
             )
 
-            if user_data["type"] == "User":
+            if user_data.type == "User":
                 embed.add_field(
                     name="Gists",
                     value=f"[{gists}](https://gist.github.com/{quote_plus(username, safe='')})",
