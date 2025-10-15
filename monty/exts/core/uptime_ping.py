@@ -15,9 +15,11 @@ class UptimePing(commands.Cog):
     """Pong a remote server for uptime monitoring."""
 
     def __init__(self, bot: Monty) -> None:
+        assert constants.Monitoring.ping_url is not None
+
         self.bot = bot
         self._url = yarl.URL(constants.Monitoring.ping_url)
-        if constants.Monitoring.ping_enabled:
+        if self._url:
             self.uptime_monitor.start()
 
     def cog_unload(self) -> None:
@@ -49,7 +51,7 @@ class UptimePing(commands.Cog):
 
 def setup(bot: Monty) -> None:
     """Add the Uptime Ping cog to the bot."""
-    if not constants.Monitoring.ping_enabled:
+    if not constants.Monitoring.ping_url:
         logger.info("Uptime monitoring is not enabled, skipping loading the cog.")
         return
     bot.add_cog(UptimePing(bot))

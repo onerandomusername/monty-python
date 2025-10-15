@@ -66,6 +66,8 @@ class CodeBlockActions(
 
     async def check_paste_link(self, content: str) -> str | None:
         """Fetch code from a paste link."""
+        if not Endpoints.paste_service or not Endpoints.raw_paste:
+            return None
         match: re.Match[str] | None = next(filter(None, map(PASTE_REGEX.match, extract_urls(content))), None)
         if not match:
             return None

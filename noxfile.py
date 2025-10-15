@@ -39,6 +39,11 @@ CI: Final[bool] = "CI" in os.environ
 # used to reset cached coverage data once for the first test run only
 reset_coverage = True
 
+FAKE_BOT_ENV = {
+    "BOT_TOKEN": "",
+    "DB_BIND": "postgresql+asyncpg://monty:monty@localhost:5432/monty",
+}
+
 
 def install_deps(
     session: nox.Session,
@@ -131,7 +136,7 @@ def autodoc(session: nox.Session) -> None:
         ],
     )
     args = session.posargs
-    session.run("python", "autodoc.py", *args)
+    session.run("python", "autodoc.py", *args, env=FAKE_BOT_ENV)
 
     session.notify("mdformat", ["docs/commands", "--no-check"])
 

@@ -96,6 +96,7 @@ class Snekbox(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        assert Endpoints.snekbox, "Snekbox endpoint must be configured to load the eval cog"
         self.url = yarl.URL(Endpoints.snekbox)
         self.jobs = {}
 

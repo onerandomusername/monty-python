@@ -16,8 +16,6 @@ log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
-PASTE_DISABLED = not constants.Endpoints.paste_service
-
 GITHUB_REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -45,7 +43,7 @@ async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "
 
     When an error occurs, `None` is returned, otherwise the generated URL with the suffix.
     """
-    if PASTE_DISABLED:
+    if not constants.Endpoints.paste_service:
         return "Sorry, paste isn't configured!"
 
     log.debug(f"Sending contents of size {len(contents.encode())} bytes to paste service.")

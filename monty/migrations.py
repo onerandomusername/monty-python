@@ -25,5 +25,5 @@ async def run_async_upgrade(engine: AsyncEngine) -> None:
 
 async def run_alembic(engine: AsyncEngine | None = None) -> None:
     """Run alembic migrations."""
-    engine = engine or create_async_engine(constants.Database.postgres_bind)
+    engine = engine or create_async_engine(str(constants.Database.postgres_bind))
     await run_async_upgrade(engine)

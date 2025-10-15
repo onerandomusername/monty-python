@@ -1,14 +1,14 @@
 import enum
-import logging
-from os import environ
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Annotated, ClassVar, Literal
 
 import disnake
+import pydantic
+import yarl
 from disnake.ext import commands
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings as PydanticBaseSettings
+from pydantic_settings import SettingsConfigDict
 
-
-if TYPE_CHECKING:
-    from monty.log import MontyLogger
 
 __all__ = (  # noqa: RUF022
     "Client",
@@ -25,44 +25,73 @@ __all__ = (  # noqa: RUF022
     "Guilds",
 )
 
-# due to recursive imports, we have to use this
-log = cast("MontyLogger", logging.getLogger(__name__))
+
+class BaseSettings(PydanticBaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-class Client:
-    name = "Monty Python"
-    token = environ.get("BOT_TOKEN")
-    version = environ.get("GIT_SHA", "main")
-    default_command_prefix = environ.get("PREFIX", "-")
-    config_prefix = "monty-python"
-    intents = disnake.Intents.default() | disnake.Intents.message_content
-    command_sync_flags = commands.CommandSyncFlags(
+def is_url(url: str) -> str:
+    try:
+        result = yarl.URL(url)
+    except Exception:
+        msg = "Invalid URL"
+        raise ValueError(msg) from None
+    if not all([result.scheme in ("http", "https"), result.host is not None]):
+        msg = "Invalid URL"
+        raise ValueError(msg)
+    return url
+
+
+StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
+
+
+class ClientCls(BaseSettings):
+    name: ClassVar = "Monty Python"
+    token: str = Field(validation_alias="BOT_TOKEN")
+    version: str = Field("main", validation_alias="GIT_SHA")
+    default_command_prefix: str = Field("-", validation_alias="PREFIX")
+    config_prefix: ClassVar = "monty-python"
+    intents: ClassVar = disnake.Intents.default() | disnake.Intents.message_content
+    command_sync_flags: ClassVar = commands.CommandSyncFlags(
         allow_command_deletion=False,
         sync_guild_commands=True,
         sync_global_commands=True,
         sync_commands_debug=True,
         sync_on_cog_actions=True,
     )
-    allowed_mentions = disnake.AllowedMentions(
+    allowed_mentions: ClassVar = disnake.AllowedMentions(
         everyone=False,
         roles=False,
         users=False,
         replied_user=True,
     )
-    activity = disnake.Game(name=f"Commands: {default_command_prefix}help")
+    activity: ClassVar = disnake.Game(name=f"Commands: {default_command_prefix}help")
 
     # debug configuration
-    debug = environ.get("BOT_DEBUG", "true").lower() == "true"
-    proxy = environ.get("BOT_PROXY_URL", "") or None
-    extensions: bool | set[str] = (
-        "BOT_EXTENSIONS" in environ and {ext.strip() for ext in environ["BOT_EXTENSIONS"].split(",")}
-    ) or "BOT_EXTENSIONS" in environ
+    debug: bool = Field(False, validation_alias="BOT_DEBUG")
+    proxy: str | None = Field(None, validation_alias="BOT_PROXY_URL")
+    extensions: set[str] | bool | None = Field(None, validation_alias="BOT_EXTENSIONS")
+
+    @field_validator("extensions", mode="before")
+    @classmethod
+    def parse_extensions(cls, v: str | None) -> set[str] | bool | None:
+        """Parse BOT_EXTENSIONS environment variable into a set of strings."""
+        if v is None or v == "":
+            return None
+        if isinstance(v, str):
+            if v.lower() == "true":
+                return True
+            if v.lower() == "false":
+                return False
+            return {ext.strip() for ext in v.split(",") if ext.strip()}
+        return v
+
     # source and support
-    git_repo = "https://github.com/onerandomusername/monty-python"
-    support_server = "mPscM4FjWB"
+    git_repo: ClassVar = "https://github.com/onerandomusername/monty-python"
+    support_server: ClassVar = "mPscM4FjWB"
     # note that these are the default invite permissions,
     # But Monty fetches the ones configured in the developer portal and replace these
-    default_invite_permissions = disnake.Permissions(
+    default_invite_permissions: ClassVar = disnake.Permissions(
         view_channel=True,
         send_messages=True,
         send_messages_in_threads=True,
@@ -81,44 +110,80 @@ class Client:
     )
 
 
-class Database:
-    postgres_bind: str = environ.get("DB_BIND", "")
-    run_migrations: bool = environ.get("DB_RUN_MIGRATIONS", "true").lower() != "false"
-    migration_target: str = environ.get("DB_MIGRATION_TARGET", "head")
+class DatabaseCls(BaseSettings):
+    postgres_bind: pydantic.PostgresDsn = Field(validation_alias="DB_BIND")
+    run_migrations: bool = Field(True, validation_alias="DB_RUN_MIGRATIONS")
+    migration_target: str = Field("head", validation_alias="DB_MIGRATION_TARGET")
 
 
-class Redis:
-    uri = environ.get("REDIS_URI", "redis://redis:6379")
-    use_fakeredis = environ.get("USE_FAKEREDIS", "false").lower() == "true"
-    prefix = Client.config_prefix + ":"
+class RedisCls(BaseSettings):
+    uri: pydantic.RedisDsn = Field(validation_alias="REDIS_URI", default=pydantic.RedisDsn("redis://redis:6379"))
+    use_fakeredis: bool = Field(validation_alias="USE_FAKEREDIS", default=False)
+    prefix: ClassVar = ClientCls.config_prefix + ":"
 
 
-class Monitoring:
-    debug_logging = environ.get("LOG_DEBUG", "true").lower() == "true"
-    sentry_enabled = bool(environ.get("SENTRY_DSN"))
-    trace_loggers = environ.get("BOT_TRACE_LOGGERS")
-    log_mode: Literal["daily", "dev"] = "daily" if environ.get("BOT_LOG_MODE", "dev").lower() == "daily" else "dev"
+class MonitoringCls(BaseSettings):
+    """Runtime monitoring configuration exposed via environment variables.
 
-    public_status_page: str | None = environ.get("UPTIME_STATUS_PAGE") or None
-    ping_url: str = environ.get("UPTIME_URL", "")
-    ping_interval: int = int(environ.get("UPTIME_INTERVAL", 60))  # in seconds
-    ping_enabled: bool = bool(ping_url)
-    ping_query_params = {
+    The individual fields keep the original environment variable names via
+    Field(..., validation_alias=...)
+    """
+
+    debug_logging: bool = Field(True, validation_alias="LOG_DEBUG")
+    sentry_enabled: bool = Field(False, validation_alias="SENTRY_DSN")
+    trace_loggers: str | None = Field(None, validation_alias="BOT_TRACE_LOGGERS")
+    bot_log_mode: str = Field("dev", validation_alias="BOT_LOG_MODE")
+
+    public_status_page: str | None = Field(None, validation_alias="UPTIME_STATUS_PAGE")
+    ping_url: StrHttpUrl | None = Field(None, validation_alias="UPTIME_URL")
+    ping_interval: int = Field(60, validation_alias="UPTIME_INTERVAL")
+
+    @property
+    def log_mode(self) -> Literal["daily", "dev"]:
+        """Return the log mode based on bot_log_mode."""
+        return "daily" if (self.bot_log_mode or "").lower() == "daily" else "dev"
+
+    ping_query_params: ClassVar[dict] = {
         "status": "up",
         "msg": "OK",
         "ping": lambda bot: f"{bot.latency * 1000:.2f}",
     }
 
+    @field_validator("sentry_enabled", mode="before")
+    @classmethod
+    def parse_sentry_enabled(cls, v: str | None) -> bool:
+        """Parse SENTRY_ENABLED environment variable into a boolean."""
+        return not (v is None or v == "")
 
-class Stats:
-    host = environ.get("STATS_HOST", "localhost")
-    port = int(environ.get("STATS_PORT", 8125))
-    prefix = Client.config_prefix
+
+class StatsCls(BaseSettings):
+    host: str = Field("localhost", validation_alias="STATS_HOST")
+    port: int = Field(8125, validation_alias="STATS_PORT")
+    prefix: str = Field(ClientCls.config_prefix)
+
+
+class AuthCls(BaseSettings):
+    github: str | None = Field(None, validation_alias="GITHUB_TOKEN")
+    snekbox: str | None = Field(None, validation_alias="SNEKBOX_AUTH")
+
+
+class EndpointsCls(BaseSettings):
+    pypi_simple: ClassVar = "https://pypi.org/simple/"
+    app_info: StrHttpUrl | None = Field(None, validation_alias="APPLICATION_INFO_ENDPOINT")
+    top_pypi_packages: StrHttpUrl | None = Field(None, validation_alias="PYPI_TOP_PACKAGES")
+
+    snekbox: StrHttpUrl | None = Field(None, validation_alias="SNEKBOX_URL")
+
+    black_formatter: StrHttpUrl | None = Field(None, validation_alias="BLACK_API")
+    black_playground: StrHttpUrl = Field("https://black.vercel.app/", validation_alias="BLACK_PLAYGROUND")
+
+    paste_service: StrHttpUrl | None = Field(None, validation_alias="PASTE_SERVICE")
+    raw_paste: StrHttpUrl | None = Field(None, validation_alias="PASTE_SERVICE_RAW")
 
 
 # DEPRECATED: to be moved to a postgres value
 # note: enablement of Codeblock actions is controlled via the Feature.CODEBLOCK_RECOMMENDATIONS
-class CodeBlock:
+class CodeBlockCls(BaseModel):
     cooldown_seconds: int = 300
     minimum_lines: int = 4
 
@@ -126,54 +191,54 @@ class CodeBlock:
 # TODO: every colour across the bot should use colours from this palette
 # this includes calling disnake.Colour.blurple() and other methods.
 # TODO: redesign colour palette
-class Colours:
-    white = 0xFFFFFF
-    blue = 0x0279FD
-    bright_green = 0x01D277
-    dark_green = 0x1F8B4C
-    orange = 0xE67E22
-    pink = 0xCF84E0
-    purple = 0xB734EB
-    soft_green = 0x68C290
-    soft_orange = 0xF9CB54
-    soft_red = 0xCD6D6D
-    yellow = 0xF9F586
-    python_blue = 0x4B8BBE
-    python_yellow = 0xFFD43B
-    grass_green = 0x66FF00
-    gold = 0xE6C200
+class ColoursCls(BaseModel):
+    white: int = 0xFFFFFF
+    blue: int = 0x0279FD
+    bright_green: int = 0x01D277
+    dark_green: int = 0x1F8B4C
+    orange: int = 0xE67E22
+    pink: int = 0xCF84E0
+    purple: int = 0xB734EB
+    soft_green: int = 0x68C290
+    soft_orange: int = 0xF9CB54
+    soft_red: int = 0xCD6D6D
+    yellow: int = 0xF9F586
+    python_blue: int = 0x4B8BBE
+    python_yellow: int = 0xFFD43B
+    grass_green: int = 0x66FF00
+    gold: int = 0xE6C200
 
 
 ## DEPRECATED
 # TODO: Will be replaced in favour of application emojis
-class Emojis:
-    cross_mark = "\u274c"
-    star = "\u2b50"
-    christmas_tree = "\U0001f384"
-    check = "\u2611"
-    envelope = "\U0001f4e8"
-    trashcan = environ.get("TRASHCAN_EMOJI", "<:trashcan:637136429717389331>")
-    trashcan_on_red = environ.get("TRASHCAN_ON_RED_EMOJI", "<:trashcan:976669056587415592>")
-    trashcat_special = environ.get("TRASHCAT_SPECIAL_EMOJI", "<:catborked:976598820651679794>")
-    ok_hand = ":ok_hand:"
-    hand_raised = "\U0001f64b"
-    black = "<:black_format:928530654143066143>"
-    upload = "\U0001f4dd"
-    snekbox = "\U0001f40d"
+class EmojisCls(BaseModel):
+    cross_mark: str = "\u274c"
+    star: str = "\u2b50"
+    christmas_tree: str = "\U0001f384"
+    check: str = "\u2611"
+    envelope: str = "\U0001f4e8"
+    trashcan: str = Field("<:trashcan:637136429717389331>", validation_alias="TRASHCAN_EMOJI")
+    trashcan_on_red: str = Field("<:trashcan:976669056587415592>", validation_alias="TRASHCAN_ON_RED_EMOJI")
+    trashcat_special: str = Field("<:catborked:976598820651679794>", validation_alias="TRASHCAT_SPECIAL_EMOJI")
+    ok_hand: str = ":ok_hand:"
+    hand_raised: str = "\U0001f64b"
+    black: str = "<:black_format:928530654143066143>"
+    upload: str = "\U0001f4dd"
+    snekbox: str = "\U0001f40d"
 
-    # These icons are from Github's repo https://github.com/primer/octicons/
-    discussion_answered = "<:discussion_answered:979267343710584894>"
-    issue_open = "<:issue_open:882464248951877682>"
-    issue_closed = "<:issue_closed:882464248972865536>"
-    issue_closed_completed = "<:issue_closed_completed:979047130847117343>"
-    issue_closed_unplanned = "<:issue_closed_unplanned:979052245507276840>"
-    issue_draft = "<:issue_draft:882464249337774130>"  # Not currently used by Github, but here for future.
-    pull_request_open = "<:pull_open:882464248721182842>"
-    pull_request_closed = "<:pull_closed:882464248989638676>"
-    pull_request_draft = "<:pull_draft:882464249065136138>"
-    pull_request_merged = "<:pull_merged:882464249119645787>"
+    # GitHub octicons
+    discussion_answered: str = "<:discussion_answered:979267343710584894>"
+    issue_open: str = "<:issue_open:882464248951877682>"
+    issue_closed: str = "<:issue_closed:882464248972865536>"
+    issue_closed_completed: str = "<:issue_closed_completed:979047130847117343>"
+    issue_closed_unplanned: str = "<:issue_closed_unplanned:979052245507276840>"
+    issue_draft: str = "<:issue_draft:882464249337774130>"
+    pull_request_open: str = "<:pull_open:882464248721182842>"
+    pull_request_closed: str = "<:pull_closed:882464248989638676>"
+    pull_request_draft: str = "<:pull_draft:882464249065136138>"
+    pull_request_merged: str = "<:pull_merged:882464249119645787>"
 
-    number_emojis = {
+    number_emojis: dict[int, str] = {
         1: "\u0031\ufe0f\u20e3",
         2: "\u0032\ufe0f\u20e3",
         3: "\u0033\ufe0f\u20e3",
@@ -185,51 +250,26 @@ class Emojis:
         9: "\u0039\ufe0f\u20e3",
     }
 
-    confirmation = "\u2705"
-    decline = "\u274c"
-    no_choice_light = "\u25fb\ufe0f"
+    confirmation: str = "\u2705"
+    decline: str = "\u274c"
+    no_choice_light: str = "\u25fb\ufe0f"
 
-    x = "\U0001f1fd"
-    o = "\U0001f1f4"
+    x: str = "\U0001f1fd"
+    o: str = "\U0001f1f4"
 
-    stackoverflow_tag = "<:stackoverflow_tag:882722838161797181>"
-    stackoverflow_views = "<:stackoverflow_views:882722838006607922>"
+    stackoverflow_tag: str = "<:stackoverflow_tag:882722838161797181>"
+    stackoverflow_views: str = "<:stackoverflow_views:882722838006607922>"
 
-    reddit_upvote = "<:reddit_upvote:882722837868195901>"
-    reddit_comments = "<:reddit_comments:882722838153416705>"
+    reddit_upvote: str = "<:reddit_upvote:882722837868195901>"
+    reddit_comments: str = "<:reddit_comments:882722838153416705>"
 
 
 # TODO: stash all icons as emojis
-class Icons:
-    questionmark = "https://cdn.discordapp.com/emojis/512367613339369475.png"
-    bookmark = (
-        "https://images-ext-2.discordapp.net/external/zl4oDwcmxUILY7sD9ZWE2fU5R7n6QcxEmPYSE5eddbg/"
-        "%3Fv%3D1/https/cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
-    )
-    github_avatar_url = "https://avatars1.githubusercontent.com/u/9919"
-    python_discourse = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"
-
-
-## Authentication and Endpoint management for external services
-
-
-class Auth:
-    github = environ.get("GITHUB_TOKEN")
-    snekbox = environ.get("SNEKBOX_AUTH")
-
-
-class Endpoints:
-    app_info = environ.get("APPLICATION_INFO_ENDPOINT")
-    pypi_simple = "https://pypi.org/simple/"
-    top_pypi_packages = environ.get("PYPI_TOP_PACKAGES", "")
-
-    snekbox = environ.get("SNEKBOX_URL", "")
-
-    black_formatter = environ.get("BLACK_API")
-    black_playground = environ.get("BLACK_PLAYGROUND", "https://black.vercel.app/")
-
-    paste_service = environ.get("PASTE_SERVICE", "")
-    raw_paste: str = environ.get("PASTE_SERVICE_RAW", "")
+class IconsCls(BaseModel):
+    questionmark: str = "https://cdn.discordapp.com/emojis/512367613339369475.png"
+    bookmark: str = "https://cdn.discordapp.com/emojis/654080405988966419.png?width=20&height=20"
+    github_avatar_url: str = "https://avatars1.githubusercontent.com/u/9919"
+    python_discourse: str = "https://global.discourse-cdn.com/business6/uploads/python1/optimized/1X/4c06143de7870c35963b818b15b395092a434991_2_180x180.png"
 
 
 ## Feature Management
@@ -251,6 +291,23 @@ class Feature(enum.Enum):
 
 
 # legacy implementation of features, will be removed in the future
-class Guilds:
-    disnake = 808030843078836254
-    nextcord = 881118111967883295
+class GuildsCls(BaseModel):
+    disnake: int = 808030843078836254
+    nextcord: int = 881118111967883295
+
+
+## compatibility with configuration before pydantic. Replace the definitions
+# with themselves and have global instances.
+# theoretically temporary
+Client = ClientCls()  # pyright: ignore[reportCallIssue]
+Database = DatabaseCls()  # pyright: ignore[reportCallIssue]
+Redis = RedisCls()  # pyright: ignore[reportCallIssue]
+Stats = StatsCls()  # pyright: ignore[reportCallIssue]
+Auth = AuthCls()  # pyright: ignore[reportCallIssue]
+Endpoints = EndpointsCls()  # pyright: ignore[reportCallIssue]
+Monitoring = MonitoringCls()  # pyright: ignore[reportCallIssue]
+CodeBlock = CodeBlockCls()
+Colours = ColoursCls()
+Emojis = EmojisCls()  # pyright: ignore[reportCallIssue]
+Icons = IconsCls()
+Guilds = GuildsCls()
