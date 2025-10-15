@@ -30,12 +30,16 @@ class BaseSettings(PydanticBaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-def is_url(url: str) -> bool:
+def is_url(url: str) -> str:
     try:
         result = yarl.URL(url)
-        return all([result.scheme in ("http", "https"), result.host is not None])
     except Exception:
-        return False
+        msg = "Invalid URL"
+        raise ValueError(msg) from None
+    if not all([result.scheme in ("http", "https"), result.host is not None]):
+        msg = "Invalid URL"
+        raise ValueError(msg)
+    return url
 
 
 StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
@@ -134,8 +138,6 @@ class MonitoringCls(BaseSettings):
     ping_url: StrHttpUrl | None = Field(None, validation_alias="UPTIME_URL")
     ping_interval: int = Field(60, validation_alias="UPTIME_INTERVAL")
 
-    model_config = SettingsConfigDict(extra="ignore")
-
     @property
     def log_mode(self) -> Literal["daily", "dev"]:
         """Return the log mode based on bot_log_mode."""
@@ -146,6 +148,12 @@ class MonitoringCls(BaseSettings):
         "msg": "OK",
         "ping": lambda bot: f"{bot.latency * 1000:.2f}",
     }
+
+    @field_validator("sentry_enabled", mode="before")
+    @classmethod
+    def parse_sentry_enabled(cls, v: str | None) -> bool:
+        """Parse SENTRY_ENABLED environment variable into a boolean."""
+        return not (v is None or v == "")
 
 
 class StatsCls(BaseSettings):
