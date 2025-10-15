@@ -43,7 +43,7 @@ StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
 
 class ClientCls(BaseSettings):
     name: ClassVar = "Monty Python"
-    token: str | None = Field(None, validation_alias="BOT_TOKEN")
+    token: str = Field(validation_alias="BOT_TOKEN")
     version: str = Field("main", validation_alias="GIT_SHA")
     default_command_prefix: str = Field("-", validation_alias="PREFIX")
     config_prefix: ClassVar = "monty-python"
@@ -66,15 +66,19 @@ class ClientCls(BaseSettings):
     # debug configuration
     debug: bool = Field(False, validation_alias="BOT_DEBUG")
     proxy: str | None = Field(None, validation_alias="BOT_PROXY_URL")
-    extensions: set[str] | None = Field(None, validation_alias="BOT_EXTENSIONS")
+    extensions: set[str] | bool | None = Field(None, validation_alias="BOT_EXTENSIONS")
 
     @field_validator("extensions", mode="before")
     @classmethod
-    def parse_extensions(cls, v: str | None) -> set[str] | None:
+    def parse_extensions(cls, v: str | None) -> set[str] | bool | None:
         """Parse BOT_EXTENSIONS environment variable into a set of strings."""
         if v is None or v == "":
             return None
         if isinstance(v, str):
+            if v.lower() == "true":
+                return True
+            if v.lower() == "false":
+                return False
             return {ext.strip() for ext in v.split(",") if ext.strip()}
         return v
 
@@ -104,7 +108,7 @@ class ClientCls(BaseSettings):
 
 class DatabaseCls(BaseSettings):
     postgres_bind: pydantic.PostgresDsn = Field(validation_alias="DB_BIND")
-    run_migrations: bool = Field(validation_alias="DB_RUN_MIGRATIONS")
+    run_migrations: bool = Field(True, validation_alias="DB_RUN_MIGRATIONS")
     migration_target: str = Field("head", validation_alias="DB_MIGRATION_TARGET")
 
 
