@@ -33,7 +33,7 @@ from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
-from monty.utils.services import GITHUB_REQUEST_HEADERS
+from monty.utils.services import GITHUB_REQUEST_HEADERS, GITHUB_REQUEST_HEADERS_SECONDARY
 
 
 KT = TypeVar("KT")
@@ -130,6 +130,22 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
                     html_url: url
                     avatar_url: avatarUrl
                 }
+                discussion {
+                    repository {
+                        name
+                    }
+                }
+            }
+        }
+    }
+"""
+)
+ORG_DISCUSSION_REPO_GRAPHQL_QUERY = gql.gql(
+    """
+    query getOrgDiscussionRepo($org: String!) {
+        organization(login: $org) {
+            organizationDiscussionsRepository {
+                name
             }
         }
     }
@@ -221,9 +237,13 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=GITHUB_REQUEST_HEADERS)
-
-        self.gql_client = gql.Client(transport=transport, fetch_schema_from_transport=True)
+        self.gql_client = self._create_gql_client(GITHUB_REQUEST_HEADERS)
+        if constants.Auth.github_secondary:
+            self.gql_client_secondary = self._create_gql_client(GITHUB_REQUEST_HEADERS_SECONDARY)
+            # session will be created in cog_load
+        else:
+            self.gql_client_secondary = None
+            self.gql_secondary = None
 
         # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.autolink_cache: cachingutils.MemoryCache[int, tuple[disnake.Message, list[FoundIssue]]] = (
@@ -243,10 +263,18 @@ class GithubInfo(
 
         # TODO: cache the schema in redis and load from there
         self.gql = await self.gql_client.connect_async(reconnecting=True)
+        if self.gql_client_secondary:
+            self.gql_secondary = await self.gql_client_secondary.connect_async(reconnecting=True)
 
     def cog_unload(self) -> None:
         """Close gql session upon unloading cog."""
         scheduling.create_task(self.gql_client.close_async(), name="gql client close")
+        if self.gql_client_secondary:
+            scheduling.create_task(self.gql_client_secondary.close_async(), name="gql client close")
+
+    def _create_gql_client(self, headers: dict[str, str]) -> gql.Client:
+        transport = AIOHTTPTransport(url="https://api.github.com/graphql", timeout=20, headers=headers)
+        return gql.Client(transport=transport, fetch_schema_from_transport=True)
 
     async def _fetch_and_update_ratelimits(self) -> None:
         # this is NOT using fetch_data because we need to check the status code.
@@ -561,6 +589,11 @@ class GithubInfo(
 
         Returns IssueState on success, FetchError on failure.
         """
+        # shortcut directly to org-level discussions if special name
+        is_org_level = user == "orgs"
+        if is_org_level:
+            is_discussion = True
+
         if not is_discussion:  # not a discussion, or uncertain
             url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
             json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
@@ -573,6 +606,28 @@ class GithubInfo(
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
+
+            if is_org_level:
+                if not self.gql_secondary:
+                    return FetchError(404, "Issue not found.")
+                # in this case, the url is "github.com/orgs/<org>/discussions/..."
+                user = repository
+                try:
+                    json_data = await self.gql_secondary.execute(
+                        gql.GraphQLRequest(
+                            ORG_DISCUSSION_REPO_GRAPHQL_QUERY,
+                            variable_values={
+                                "org": user,
+                            },
+                        )
+                    )
+                except (TransportError, TransportQueryError):
+                    return FetchError(-1, "Issue not found.")
+
+                json_repo = json_data["organization"]["organizationDiscussionsRepository"]
+                if not json_repo:
+                    return FetchError(404, "Issue not found.")
+                repository = json_repo["name"]
 
             try:
                 json_data = await self.gql.execute(
@@ -1008,6 +1063,12 @@ class GithubInfo(
                     continue
 
                 comment = json_data["node"]
+
+                # The API returns the real `<org>/<repo>` slug here for comments in org discussions,
+                # while we'd expect `orgs/<org>` (which is what the UI would redirect to, as well).
+                if issue.organisation == "orgs":
+                    org_discussion_repo = comment["discussion"]["repository"]["name"]
+                    expected_url = re.sub(r"/orgs/([^/]+)", f"/\\1/{org_discussion_repo}", expected_url)
 
             else:
                 if frag.startswith("issuecomment-"):

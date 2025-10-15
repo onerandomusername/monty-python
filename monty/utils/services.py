@@ -22,8 +22,12 @@ GITHUB_REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
     "X-GitHub-Api-Version": "2022-11-28",
 }
+GITHUB_REQUEST_HEADERS_SECONDARY = GITHUB_REQUEST_HEADERS.copy()
+
 if constants.Auth.github:
     GITHUB_REQUEST_HEADERS["Authorization"] = f"token {constants.Auth.github}"
+if constants.Auth.github_secondary:
+    GITHUB_REQUEST_HEADERS_SECONDARY["Authorization"] = f"token {constants.Auth.github_secondary}"
 
 
 @define()

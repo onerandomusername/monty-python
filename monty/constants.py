@@ -215,6 +215,7 @@ class Icons:
 
 class Auth:
     github = environ.get("GITHUB_TOKEN")
+    github_secondary = environ.get("GITHUB_TOKEN_SECONDARY")
     snekbox = environ.get("SNEKBOX_AUTH")
 
 
