@@ -160,13 +160,13 @@ class InternalEval(commands.Cog):
             with io.StringIO() as buf:
                 console = rich.console.Console(file=buf, no_color=not use_ansi, color_system="standard")
                 if result.raw_value is not None:
-                    rich.pretty.pprint(result.raw_value, console=console)
+                    rich.pretty.pprint(result.raw_value, console=console, indent_guides=False)
                 result.raw_value = buf.getvalue()
                 new_results = []
                 for val in result._:
                     buf.seek(0)
                     buf.truncate(0)
-                    rich.pretty.pprint(val, console=console)
+                    rich.pretty.pprint(val, console=console, indent_guides=False)
                     new_results.append(buf.getvalue())
                 result._ = new_results
         return result
@@ -196,11 +196,20 @@ class InternalEval(commands.Cog):
         return None
 
     def get_component_for_segment(
-        self, *, content: str, title: str, language: str, display_colour: int | disnake.Colour | None = None
+        self,
+        *,
+        content: str,
+        title: str,
+        language: str,
+        display_colour: int | disnake.Colour | None = None,
     ) -> tuple[disnake.ui.Container | list[Any], disnake.File | None]:
         """Get a UI component for a given segment of text."""
         file = None
         file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
+        if file_tuple and language == "ansi":
+            content = rich.text.Text.from_ansi(content).plain
+            file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
+            language = "py"
         if file_tuple:
             filename, file = file_tuple
             container = disnake.ui.Container(
@@ -244,7 +253,10 @@ class InternalEval(commands.Cog):
         components: list[disnake.ui.Container] = []
         if result.raw_value is not None and result.raw_value.strip():
             component, file = self.get_component_for_segment(
-                content=result.raw_value, title="Result", language="ansi", display_colour=disnake.Colour.greyple()
+                content=result.raw_value,
+                title="Result",
+                language="ansi",
+                display_colour=disnake.Colour.greyple(),
             )
             self.add_segments(response, components=component, files=file)
         if result.errors:
