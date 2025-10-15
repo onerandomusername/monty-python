@@ -43,7 +43,7 @@ StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
 
 class ClientCls(BaseSettings):
     name: ClassVar = "Monty Python"
-    token: str | None = Field(validation_alias="BOT_TOKEN")
+    token: str | None = Field(None, validation_alias="BOT_TOKEN")
     version: str = Field("main", validation_alias="GIT_SHA")
     default_command_prefix: str = Field("-", validation_alias="PREFIX")
     config_prefix: ClassVar = "monty-python"
