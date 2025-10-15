@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "nox==2025.5.1",
+#     "nox==2025.10.14",
 # ]
 # ///
 # SPDX-License-Identifier: MIT
@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
+# this matches whatever min version we need for nox features in this file
+# which is not necessarily the version we use
 nox.needs_version = ">=2025.5.1"
 
 
