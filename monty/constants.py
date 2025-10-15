@@ -1,4 +1,5 @@
 import enum
+from collections.abc import Callable
 from typing import Annotated, ClassVar, Literal
 
 import disnake
@@ -27,7 +28,7 @@ __all__ = (  # noqa: RUF022
 
 
 class BaseSettings(PydanticBaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")  # pyright: ignore[reportUnannotatedClassAttribute]
 
 
 def is_url(url: str) -> str:
@@ -46,30 +47,31 @@ StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
 
 
 class ClientCls(BaseSettings):
-    name: ClassVar = "Monty Python"
+    name: ClassVar[str] = "Monty Python"
     token: str = Field(validation_alias="BOT_TOKEN")
     version: str = Field("main", validation_alias="GIT_SHA")
     default_command_prefix: str = Field("-", validation_alias="PREFIX")
-    config_prefix: ClassVar = "monty-python"
-    intents: ClassVar = disnake.Intents.default() | disnake.Intents.message_content
-    command_sync_flags: ClassVar = commands.CommandSyncFlags(
+    config_prefix: ClassVar[str] = "monty-python"
+    intents: ClassVar[disnake.Intents] = disnake.Intents.default() | disnake.Intents.message_content
+    command_sync_flags: ClassVar[commands.CommandSyncFlags] = commands.CommandSyncFlags(
         allow_command_deletion=False,
         sync_guild_commands=True,
         sync_global_commands=True,
         sync_commands_debug=True,
         sync_on_cog_actions=True,
     )
-    allowed_mentions: ClassVar = disnake.AllowedMentions(
+    allowed_mentions: ClassVar[disnake.AllowedMentions] = disnake.AllowedMentions(
         everyone=False,
         roles=False,
         users=False,
         replied_user=True,
     )
-    activity: ClassVar = disnake.Game(name=f"Commands: {default_command_prefix}help")
+    activity: ClassVar[disnake.Game] = disnake.Game(name=f"Commands: {default_command_prefix}help")
 
     # debug configuration
     debug: bool = Field(False, validation_alias="BOT_DEBUG")
     proxy: str | None = Field(None, validation_alias="BOT_PROXY_URL")
+    test_guilds: list[int] = []
     extensions: set[str] | bool | None = Field(None, validation_alias="BOT_EXTENSIONS")
 
     @field_validator("extensions", mode="before")
@@ -78,20 +80,18 @@ class ClientCls(BaseSettings):
         """Parse BOT_EXTENSIONS environment variable into a set of strings."""
         if v is None or v == "":
             return None
-        if isinstance(v, str):
-            if v.lower() == "true":
-                return True
-            if v.lower() == "false":
-                return False
-            return {ext.strip() for ext in v.split(",") if ext.strip()}
-        return v
+        if v.lower() == "true":
+            return True
+        if v.lower() == "false":
+            return False
+        return {ext.strip() for ext in v.split(",") if ext.strip()}
 
     # source and support
-    git_repo: ClassVar = "https://github.com/onerandomusername/monty-python"
-    support_server: ClassVar = "mPscM4FjWB"
+    git_repo: ClassVar[StrHttpUrl] = "https://github.com/onerandomusername/monty-python"
+    support_server: ClassVar[str] = "mPscM4FjWB"
     # note that these are the default invite permissions,
     # But Monty fetches the ones configured in the developer portal and replace these
-    default_invite_permissions: ClassVar = disnake.Permissions(
+    default_invite_permissions: ClassVar[disnake.Permissions] = disnake.Permissions(
         view_channel=True,
         send_messages=True,
         send_messages_in_threads=True,
@@ -119,7 +119,7 @@ class DatabaseCls(BaseSettings):
 class RedisCls(BaseSettings):
     uri: pydantic.RedisDsn = Field(validation_alias="REDIS_URI", default=pydantic.RedisDsn("redis://redis:6379"))
     use_fakeredis: bool = Field(validation_alias="USE_FAKEREDIS", default=False)
-    prefix: ClassVar = ClientCls.config_prefix + ":"
+    prefix: ClassVar[str] = ClientCls.config_prefix + ":"
 
 
 class MonitoringCls(BaseSettings):
@@ -143,7 +143,7 @@ class MonitoringCls(BaseSettings):
         """Return the log mode based on bot_log_mode."""
         return "daily" if (self.bot_log_mode or "").lower() == "daily" else "dev"
 
-    ping_query_params: ClassVar[dict] = {
+    ping_query_params: ClassVar[dict[str, str | Callable[[commands.Bot], str]]] = {
         "status": "up",
         "msg": "OK",
         "ping": lambda bot: f"{bot.latency * 1000:.2f}",
@@ -168,7 +168,7 @@ class AuthCls(BaseSettings):
 
 
 class EndpointsCls(BaseSettings):
-    pypi_simple: ClassVar = "https://pypi.org/simple/"
+    pypi_simple: ClassVar[StrHttpUrl] = "https://pypi.org/simple/"
     app_info: StrHttpUrl | None = Field(None, validation_alias="APPLICATION_INFO_ENDPOINT")
     top_pypi_packages: StrHttpUrl | None = Field(None, validation_alias="PYPI_TOP_PACKAGES")
 
@@ -301,7 +301,7 @@ class GuildsCls(BaseModel):
 # theoretically temporary
 Client = ClientCls()  # pyright: ignore[reportCallIssue]
 Database = DatabaseCls()  # pyright: ignore[reportCallIssue]
-Redis = RedisCls()  # pyright: ignore[reportCallIssue]
+Redis = RedisCls()
 Stats = StatsCls()  # pyright: ignore[reportCallIssue]
 Auth = AuthCls()  # pyright: ignore[reportCallIssue]
 Endpoints = EndpointsCls()  # pyright: ignore[reportCallIssue]
