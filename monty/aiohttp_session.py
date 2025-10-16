@@ -5,8 +5,8 @@ import sys
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import aiohttp
-from aiohttp_client_cache.backends.redis import RedisBackend as AiohttpRedisBackend
-from aiohttp_client_cache.cache_control import CacheActions, ExpirationTime
+from aiohttp_client_cache.backends.redis import RedisBackend
+from aiohttp_client_cache.cache_control import CacheActions
 from aiohttp_client_cache.session import CachedSession
 
 from monty import constants
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     import redis.asyncio
     from aiohttp.tracing import TraceConfig
-    from aiohttp.typedefs import StrOrURL
+    from aiohttp_client_cache.response import CachedResponse
 
 aiohttp_log = get_logger("monty.http")
 cache_logger = get_logger("monty.http.caching")
@@ -33,40 +33,6 @@ class RevalidatingCacheActions(CacheActions):
         res = super().from_headers(key, headers)
         res.revalidate = True
         return res
-
-
-class RedisBackend(AiohttpRedisBackend):
-    def create_cache_actions(
-        self,
-        key: str,
-        url: StrOrURL,
-        expire_after: ExpirationTime = None,
-        refresh: bool = False,
-        **kwargs,
-    ) -> CacheActions:
-        """
-        Create cache actions based on request info.
-
-        Args:
-            key: key from create_key function
-            url: Request URL
-            expire_after: Expiration time to set only for this request; overrides
-                ``CachedSession.expire_after``, and accepts all the same values.
-            refresh: Revalidate with the server before using a cached response, and refresh if needed
-                (e.g., a "soft refresh", like F5 in a browser)
-            kwargs: All other request arguments
-        """
-        return CacheActions.from_request(
-            key,
-            url=url,
-            request_expire_after=expire_after,
-            refresh=refresh,
-            session_expire_after=self.expire_after,
-            urls_expire_after=self.urls_expire_after,
-            cache_control=self.cache_control,
-            cache_disabled=self.disabled,
-            **kwargs,
-        )
 
 
 """Create the aiohttp session and set the trace logger, if desired."""
@@ -138,3 +104,12 @@ class CachingClientSession(CachedSession):
                 ),
             }
         super().__init__(*args, **kwargs)
+
+    async def _request(self, *args, **kwargs) -> CachedResponse:
+        if "refresh" not in kwargs:
+            kwargs["refresh"] = True
+        response = await super()._request(*args, **kwargs)
+        # support status == 200 in other code
+        if response.status == 304:
+            response.status = 200
+        return response
