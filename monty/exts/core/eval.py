@@ -106,7 +106,7 @@ class InternalEval(commands.Cog):
         ast.fix_missing_locations(stmt)
         code = compile(ast.Module(body=[stmt], type_ignores=[]), "<string>", "exec", ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
         if use_await:
-            res = await types.LambdaType(code, global_vars)()  # type: ignore
+            res = await types.LambdaType(code, global_vars)()
         else:
             res = eval(code, global_vars)  # noqa: S307
         return res, global_vars

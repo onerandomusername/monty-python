@@ -301,7 +301,7 @@ class GuildsCls(BaseModel):
 # theoretically temporary
 Client = ClientCls()  # pyright: ignore[reportCallIssue]
 Database = DatabaseCls()  # pyright: ignore[reportCallIssue]
-Redis = RedisCls()  # pyright: ignore[reportCallIssue]
+Redis = RedisCls()
 Stats = StatsCls()  # pyright: ignore[reportCallIssue]
 Auth = AuthCls()  # pyright: ignore[reportCallIssue]
 Endpoints = EndpointsCls()  # pyright: ignore[reportCallIssue]
