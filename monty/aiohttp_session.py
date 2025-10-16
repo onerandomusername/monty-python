@@ -81,7 +81,8 @@ def get_cache_backend(redis: redis.asyncio.Redis) -> RedisBackend:
     return RedisBackend(
         constants.Client.config_prefix,
         "aiohttp_requests",
-        expire_after=20,
+        # We default to revalidating, so this just prevents ballooning.
+        expire_after=60 * 60 * 24 * 7,  # hold requests for one week.
         cache_control=True,
         connection=redis,
     )
