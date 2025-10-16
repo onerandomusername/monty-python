@@ -109,8 +109,4 @@ class CachingClientSession(CachedSession):
     async def _request(self, *args, **kwargs) -> CachedResponse:
         if "refresh" not in kwargs:
             kwargs["refresh"] = True
-        response = await super()._request(*args, **kwargs)
-        # support status == 200 in other code
-        if response.status == 304:
-            response.status = 200
-        return response
+        return await super()._request(*args, **kwargs)
