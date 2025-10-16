@@ -4,59 +4,32 @@ import itertools
 import random
 import re
 from dataclasses import dataclass
-from datetime import timedelta, timezone
-from typing import Any, NamedTuple, TypeVar
-from urllib.parse import quote, quote_plus
+from datetime import timezone
+from typing import Any, NamedTuple
+from urllib.parse import quote_plus
 
 import attrs
 import cachingutils
 import cachingutils.redis
 import disnake
-import gql
-import gql.client
+import githubkit
+import githubkit.exception
 import mistune
 import msgpack
 import yarl
 from disnake.ext import commands
-from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.exceptions import TransportError, TransportQueryError
 
 import monty.utils.services
 from monty import constants
-from monty.aiohttp_session import session_args_for_proxy
 from monty.bot import Monty
 from monty.constants import Feature
 from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import responses, scheduling
-from monty.utils.caching import redis_cache
 from monty.utils.extensions import invoke_help_command
 from monty.utils.helpers import fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
-from monty.utils.services import GITHUB_REQUEST_HEADERS
-
-
-KT = TypeVar("KT")
-VT = TypeVar("VT")
-
-BAD_RESPONSE = {
-    404: "Object not located! Please enter a valid number!",
-}
-
-
-GITHUB_API_URL = "https://api.github.com"
-
-RATE_LIMIT_ENDPOINT = f"{GITHUB_API_URL}/rate_limit"
-ORG_REPOS_ENDPOINT = f"{GITHUB_API_URL}/orgs/{{org}}/repos?per_page=100&type=public"
-USER_REPOS_ENDPOINT = f"{GITHUB_API_URL}/users/{{user}}/repos?per_page=100&type=public"
-ISSUE_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/{{number}}"
-PR_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}"
-LIST_PULLS_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls?per_page=100"
-LIST_ISSUES_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues?per_page=100"
-ISSUE_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/issues/comments/{{comment_id}}"
-PULL_REVIEW_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/{{number}}/reviews/{{review_id}}"
-PULL_REVIEW_COMMENT_ENDPOINT = f"{GITHUB_API_URL}/repos/{{user}}/{{repository}}/pulls/comments/{{comment_id}}"
 
 
 # Maximum number of issues in one message
@@ -89,8 +62,7 @@ EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
 
-DISCUSSION_GRAPHQL_QUERY = gql.gql(
-    """
+DISCUSSION_GRAPHQL_QUERY = """
     query getDiscussion($user: String!, $repository: String!, $number: Int!) {
         repository(followRenames: true, owner: $user, name: $repository) {
             discussion(number: $number) {
@@ -116,9 +88,8 @@ DISCUSSION_GRAPHQL_QUERY = gql.gql(
         }
     }
 """
-)
-DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
-    """
+
+DISCUSSION_COMMENT_GRAPHQL_QUERY = """
     query getDiscussionComment($id: ID!) {
         node(id: $id) {
             ... on DiscussionComment {
@@ -135,16 +106,8 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = gql.gql(
         }
     }
 """
-)
 
 log = get_logger(__name__)
-
-
-class RepoTarget(NamedTuple):
-    """Used for the repo and user injection."""
-
-    user: str
-    repo: str
 
 
 class RenderContext(NamedTuple):
@@ -172,7 +135,7 @@ class IssueSourceFormat(enum.IntEnum):
 class FoundIssue:
     """Dataclass representing an issue found by the regex."""
 
-    organisation: str | None
+    organisation: str
     repository: str
     number: str
     source_format: IssueSourceFormat
@@ -206,7 +169,7 @@ class IssueState:
     url: str
     title: str
     emoji: str
-    raw_json: dict[str, Any] | None = None
+    raw_json: dict[str, Any] | Any | None = None
 
 
 class GithubInfo(
@@ -222,22 +185,9 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        transport = AIOHTTPTransport(
-            url="https://api.github.com/graphql",
-            timeout=20,
-            headers=GITHUB_REQUEST_HEADERS,
-            # copy because invariance
-            client_session_args=dict(session_args_for_proxy(bot.http.proxy)),
-        )
-
-        self.gql_client = gql.Client(transport=transport, fetch_schema_from_transport=True)
-
-        # this is a memory cache for most requests, but a redis cache will be used for the list of repos
         self.autolink_cache: cachingutils.MemoryCache[int, tuple[disnake.Message, list[FoundIssue]]] = (
             cachingutils.MemoryCache(timeout=600)
         )
-
-        self.guilds: dict[str, str] = {}
 
     async def cog_load(self) -> None:
         """
@@ -248,47 +198,15 @@ class GithubInfo(
         """
         await self._fetch_and_update_ratelimits()
 
-        # TODO: cache the schema in redis and load from there
-        self.gql = await self.gql_client.connect_async(reconnecting=True)
-
-    def cog_unload(self) -> None:
-        """Close gql session upon unloading cog."""
-        scheduling.create_task(self.gql_client.close_async(), name="gql client close")
-
     async def _fetch_and_update_ratelimits(self) -> None:
-        # this is NOT using fetch_data because we need to check the status code.
-        async with self.bot.http_session.get(RATE_LIMIT_ENDPOINT, headers=GITHUB_REQUEST_HEADERS) as r:
-            # the Rate_limit endpoint is not ratelimited
-            if r.status == 403 or r.status >= 500 or r.status == 401:
-                return
-
-            data = await r.json()
-
+        r = await self.bot.github.rest.rate_limit.async_get()
+        data = r.json()
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
     async def fetch_guild_to_org(self, guild_id: int) -> str | None:
         """Fetch the org that matches to a specific guild_id."""
         guild_config = await self.bot.ensure_guild_config(guild_id)
         return guild_config and guild_config.github_issues_org
-
-    async def fetch_data(
-        self, url: str, *, method: str = "GET", as_text: bool = False, **kw
-    ) -> dict[str, Any] | str | list[Any] | Any:
-        """Fetch the data from GitHub. Shortcut method to not require multiple context managers."""
-        if "headers" in kw:
-            og = kw["headers"]
-            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
-            kw["headers"].update(og)
-        else:
-            kw["headers"] = GITHUB_REQUEST_HEADERS.copy()
-
-        method = method.upper().strip()
-        async with self.bot.http_session.request(method, url, **kw) as r:
-            monty.utils.services.update_github_ratelimits_on_request(r)
-            if as_text:
-                return await r.text()
-            else:
-                return await r.json()
 
     def _format_github_global_id(self, prefix: str, *ids: int, template: int = 0) -> str:
         # This is not documented, but is at least the current format as of writing this comment.
@@ -326,35 +244,11 @@ class GithubInfo(
 
         return body
 
-    @redis_cache(
-        "github-user-repos",
-        key_func=lambda user: user,
-        timeout=timedelta(hours=8),
-        include_posargs=[1],
-        include_kwargs=["user"],
-        allow_unset=True,
-    )
-    async def fetch_repos(self, user: str) -> dict[str, str]:
-        """Returns the first 100 repos for a user, a dict format."""
-        url = ORG_REPOS_ENDPOINT.format(org=user)
-        resp: list[Any] = await self.fetch_data(url, use_cache=False)  # type: ignore
-        if isinstance(resp, dict) and resp.get("message"):
-            url = USER_REPOS_ENDPOINT.format(user=user)
-            resp: list[Any] = await self.fetch_data(url, use_cache=False)  # type: ignore
-
-        repos = {}
-        for repo in resp:
-            name = repo["name"]
-            repos[name.lower()] = name
-
-        return repos
-
-    async def fetch_user_and_repo(
+    async def fetch_guild_user(
         self,
         guild_id: int | None,
-        repo: str | None = None,
         user: str | None = None,
-    ) -> RepoTarget:
+    ) -> str:
         """
         Adds a user and repo parameter to all slash commands.
 
@@ -370,7 +264,7 @@ class GithubInfo(
         if not user:
             raise commands.UserInputError("user must be provided or configured for this guild." if guild_id else ".")
 
-        return RepoTarget(user, repo)  # type: ignore
+        return user
 
     @commands.group(name="github", aliases=("gh", "git"), invoke_without_command=True)
     @commands.cooldown(3, 20, commands.BucketType.user)
@@ -393,61 +287,61 @@ class GithubInfo(
         async with ctx.typing():
             try:
                 resp = await self.bot.github.rest.users.async_get_by_username(username)
-                user_data = resp.parsed_data
-            except Exception as e:
-                # TODO: more specific exception
-                log.exception("Error fetching user info for %s: %s", username, e)
+                user_data = resp.json()
+            except githubkit.exception.RequestFailed as e:
+                if e.response.status_code not in (401, 403, 404):
+                    raise
+                log.info("Error fetching user info for %s: %s", username, e)
                 msg = f"The profile for `{username}` was not found."
                 raise MontyCommandError(msg) from None
 
-            if user_data.type != "Organization":
+            if user_data["type"] != "Organization":
                 resp = await self.bot.github.rest.orgs.async_list_for_user(username)
-                org_data = resp.parsed_data
-                orgs = [f"[{org.login}]({org.url})" for org in org_data]
+                org_data = resp.json()
+                orgs = [f"[{org['login']}](https://github.com/{org['login']})" for org in org_data]
                 orgs_to_add = " | ".join(orgs)
             else:
                 orgs_to_add = ""
                 orgs = []
 
-            gists = user_data.public_gists
+            gists = user_data["public_gists"]
 
             # Forming blog link
-            if (blog := user_data.blog) and re.match(r"^https?:\/\/", blog):  # Blog link is complete
-                pass
-            elif user_data.blog:  # Blog exists but the link is not complete
-                blog = f"https://{user_data.blog}"
+            if blog := user_data["blog"]:
+                if not re.match(r"^https?:\/\/", blog):  # Blog link is complete
+                    blog = f"https://{blog}"
             else:
                 blog = "No website link available."
 
-            html_url = user_data.html_url
+            html_url = user_data["html_url"]
             embed = disnake.Embed(
-                title=f"`{user_data.login}`'s GitHub profile info",
-                description=f"```{user_data.bio}```\n" if user_data.bio else "",
+                title=f"`{user_data['login']}`'s GitHub profile info",
+                description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
                 colour=disnake.Colour.blurple(),
                 url=html_url,
-                timestamp=user_data.created_at,
+                timestamp=user_data["created_at"],
             )
-            embed.set_thumbnail(url=user_data.avatar_url)
+            embed.set_thumbnail(url=user_data["avatar_url"])
             embed.set_footer(text="Account created at")
 
-            if user_data.type == "User":
+            if user_data["type"] == "User":
                 embed.add_field(
                     name="Followers",
-                    value=f"[{user_data.followers}]({user_data.html_url}?tab=followers)",
+                    value=f"[{user_data['followers']}]({user_data['html_url']}?tab=followers)",
                     inline=True,
                 )
                 embed.add_field(
                     name="Following",
-                    value=f"[{user_data.following}]({user_data.html_url}?tab=following)",
+                    value=f"[{user_data['following']}]({user_data['html_url']}?tab=following)",
                     inline=True,
                 )
 
             embed.add_field(
                 name="Public repos",
-                value=f"[{user_data.public_repos}]({user_data.html_url}?tab=repositories)",
+                value=f"[{user_data['public_repos']}]({user_data['html_url']}?tab=repositories)",
             )
 
-            if user_data.type == "User":
+            if user_data["type"] == "User":
                 embed.add_field(
                     name="Gists",
                     value=f"[{gists}](https://gist.github.com/{quote_plus(username, safe='')})",
@@ -490,13 +384,11 @@ class GithubInfo(
             return
 
         async with ctx.typing():
-            repo_data: dict[str, Any] = await self.fetch_data(
-                f"{GITHUB_API_URL}/repos/{quote(repo_name)}",
-                headers=GITHUB_REQUEST_HEADERS,
-            )  # type: ignore
-
-            # There won't be a message key if this repo exists
-            if "message" in repo_data:
+            try:
+                resp = await self.bot.github.rest.repos.async_get(*repo_name.split("/", 1))
+                repo_data = resp.json()
+            except githubkit.exception.RequestFailed:
+                # There won't be a message key if this repo exists
                 embed = disnake.Embed(
                     title=random.choice(responses.FAILURE_HEADERS),
                     description="The requested repository was not found.",
@@ -507,7 +399,7 @@ class GithubInfo(
                 return
 
         html_url = repo_data["html_url"]
-        description = repo_data["description"]
+        description = repo_data["description"] or ""
         embed = disnake.Embed(
             title=repo_data["name"],
             colour=disnake.Colour.blurple(),
@@ -515,11 +407,9 @@ class GithubInfo(
         )
 
         # If it's a fork, then it will have a parent key
-        try:
+        if "parent" in repo_data:
             parent = repo_data["parent"]
             description += f"\n\nForked from [{parent['full_name']}]({parent['html_url']})"
-        except KeyError:
-            log.debug("Repository is not a fork.")
 
         repo_owner = repo_data["owner"]
 
@@ -529,8 +419,8 @@ class GithubInfo(
             icon_url=repo_owner["avatar_url"],
         )
 
-        repo_created_at = fromisoformat(repo_data["created_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y")
-        last_pushed = fromisoformat(repo_data["pushed_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")
+        repo_created_at = repo_data["created_at"].astimezone(timezone.utc).strftime("%d/%m/%Y")
+        last_pushed = repo_data["pushed_at"].astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")
 
         embed.set_footer(
             text=(
@@ -569,12 +459,15 @@ class GithubInfo(
 
         Returns IssueState on success, FetchError on failure.
         """
+        json_data = None
         if not is_discussion:  # not a discussion, or uncertain
-            url = ISSUE_ENDPOINT.format(user=user, repository=repository, number=number)
-            json_data: dict[str, Any] = await self.fetch_data(url, headers=GITHUB_REQUEST_HEADERS)  # type: ignore
-
-            if "message" in json_data:
-                is_discussion = True  # if we got an error, assume it may be a discussion
+            try:
+                r = await self.bot.github.rest.issues.async_get(user, repository, number)
+            except githubkit.exception.RequestFailed as e:
+                if e.response.status_code == 404:
+                    is_discussion = True  # if we got a 404, assume it may be a discussion
+            else:
+                json_data = r.json()
 
         else:
             # fetch with gql
@@ -584,17 +477,15 @@ class GithubInfo(
                 return FetchError(404, "Issue not found.")
 
             try:
-                json_data = await self.gql.execute(
-                    gql.GraphQLRequest(
-                        DISCUSSION_GRAPHQL_QUERY,
-                        variable_values={
-                            "user": user,
-                            "repository": repository,
-                            "number": number,
-                        },
-                    )
+                json_data = await self.bot.github.graphql.arequest(
+                    DISCUSSION_GRAPHQL_QUERY,
+                    {
+                        "user": user,
+                        "repository": repository,
+                        "number": number,
+                    },
                 )
-            except (TransportError, TransportQueryError):
+            except githubkit.exception.GraphQLFailed:
                 return FetchError(-1, "Issue not found.")
 
             json_data = json_data["repository"]["discussion"]
@@ -602,20 +493,24 @@ class GithubInfo(
             # shuffle fields around to match issue json structure
             json_data["labels"] = (json_data.get("labels") or {}).get("nodes") or []
 
+        if not json_data:
+            # technically unreachable
+            return FetchError(404, "Issue not found.")
+
         # Since all pulls are issues, all of the data exists as a result of an issue request
         # This means that we don't need to make a second request, since the necessary data
         # of if the pull was merged or not is returned in the json body under pull_request.merged_at
         # If the 'pull_request' key is contained in the API response and there is no error code, then
         # we know that a PR has been requested and a call to the pulls API endpoint may be necessary
         # to get the desired information for the PR.
+        issue_url = json_data["html_url"]
         if pull_data := json_data.get("pull_request"):
-            issue_url = pull_data["html_url"]
             # When 'merged_at' is not None, this means that the state of the PR is merged
-            if pull_data["merged_at"] is not None:
+            if pull_data.get("merged_at") is not None:
                 emoji = constants.Emojis.pull_request_merged
             elif json_data["state"] == "closed":
                 emoji = constants.Emojis.pull_request_closed
-            elif json_data["draft"]:
+            elif json_data.get("draft"):
                 emoji = constants.Emojis.pull_request_draft
             else:
                 emoji = constants.Emojis.pull_request_open
@@ -627,7 +522,6 @@ class GithubInfo(
                 emoji = constants.Emojis.issue_draft
         else:
             # this is a definite issue and not a pull request, and should be treated as such
-            issue_url = json_data["html_url"]
             if json_data.get("state") == "open":
                 emoji = constants.Emojis.issue_open
             elif (reason := json_data.get("state_reason")) == "not_planned":
@@ -737,23 +631,14 @@ class GithubInfo(
         user: str | None = None,
     ) -> None:
         """Command to retrieve issue(s) from a GitHub repository."""
-        if not user or not repo:
-            user, repo = await self.fetch_user_and_repo(
+        if not user:
+            user = await self.fetch_guild_user(
                 ctx.guild and ctx.guild.id if isinstance(ctx, commands.Context) else ctx.guild_id,
                 user,
-                repo,
             )
-            if not user or not repo:
-                if not user:
-                    if not repo:
-                        # both are non-existant
-                        msg = "Both a user and repo must be provided."
-                        raise commands.CommandError(msg)
-                    # user is non-existant
-                    msg = "No user provided, a user must be provided."
-                    raise commands.CommandError(msg)
-                # repo is non-existant
-                msg = "No repo provided, a repo must be provided."
+            if not user:
+                # user is non-existant
+                msg = "No user provided, a user must be provided."
                 raise commands.CommandError(msg)
         # Remove duplicates while maintaining order
         issue_numbers = list(dict.fromkeys(numbers))
@@ -816,7 +701,7 @@ class GithubInfo(
         Right now this only returns the default user for the message's guild.
         """
         try:
-            default_user, _ = await self.fetch_user_and_repo(guild_id)
+            default_user = await self.fetch_guild_user(guild_id)
         except commands.UserInputError:
             return None
         return default_user
@@ -860,7 +745,25 @@ class GithubInfo(
                 if default_user is None:
                     continue
                 org = default_user
-                repos = await self.fetch_repos(org)
+                try:
+                    r = await self.bot.github.rest.repos.async_list_for_org(
+                        org,
+                        type="public",
+                        sort="updated",
+                        direction="desc",
+                        per_page=100,
+                    )
+                except githubkit.exception.RequestFailed as e:
+                    if e.response.status_code != 404:
+                        raise
+                    r = await self.bot.github.rest.repos.async_list_for_user(
+                        org,
+                        type="owner",
+                        sort="updated",
+                        direction="desc",
+                        per_page=100,
+                    )
+                repos = {repo.name.lower(): repo.name for repo in r.parsed_data}
                 if repo not in repos:
                     continue
                 repo = repos[repo]
@@ -947,7 +850,7 @@ class GithubInfo(
         found_issue = await self.fetch_issues(
             int(issue.number),
             issue.repository,
-            issue.organisation,  # type: ignore
+            issue.organisation,
             allow_discussions=True,  # if we have a discussion linked it was enabled at some point
         )
         embed, *_ = self.format_embed([found_issue], expand_one_issue=not is_expanded)
@@ -991,8 +894,6 @@ class GithubInfo(
             expected_url = issue.user_url
             assert expected_url
 
-            comment: dict[str, Any]
-            created_at_key = "created_at"
             if frag.startswith("discussioncomment-"):
                 global_id = self._format_github_global_id(
                     "DC",
@@ -1004,47 +905,44 @@ class GithubInfo(
                 )
 
                 try:
-                    json_data = await self.gql.execute(
-                        gql.GraphQLRequest(
-                            DISCUSSION_COMMENT_GRAPHQL_QUERY,
-                            variable_values={
-                                "id": global_id,
-                            },
-                        )
+                    json_data = await self.bot.github.graphql.arequest(
+                        DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                        {
+                            "id": global_id,
+                        },
                     )
-                except (TransportError, TransportQueryError) as e:
+                except githubkit.exception.GraphQLFailed as e:
                     log.warning("encountered error fetching discussion comment: %s", e)
                     continue
 
                 comment = json_data["node"]
 
             else:
+                org = issue.organisation
                 if frag.startswith("issuecomment-"):
-                    endpoint = ISSUE_COMMENT_ENDPOINT.format(
-                        user=issue.organisation,
-                        repository=issue.repository,
-                        comment_id=frag.removeprefix("issuecomment-"),
+                    request = self.bot.github.rest.issues.async_get_comment(
+                        org, issue.repository, int(frag.removeprefix("issuecomment-"))
                     )
+
                 elif frag.startswith("pullrequestreview-"):
-                    endpoint = PULL_REVIEW_ENDPOINT.format(
-                        user=issue.organisation,
-                        repository=issue.repository,
-                        number=issue.number,
-                        review_id=frag.removeprefix("pullrequestreview-"),
+                    request = self.bot.github.rest.pulls.async_get_review(
+                        org,
+                        issue.repository,
+                        int(issue.number),
+                        int(frag.removeprefix("pullrequestreview-")),
                     )
-                    created_at_key = "submitted_at"  # thank you github, very cool
                 elif frag.startswith("discussion_r"):
-                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                        user=issue.organisation,
-                        repository=issue.repository,
-                        comment_id=frag.removeprefix("discussion_r"),
+                    request = self.bot.github.rest.pulls.async_get_review_comment(
+                        org,
+                        issue.repository,
+                        int(frag.removeprefix("discussion_r")),
                     )
                 elif re.fullmatch(r"r\d+", frag):
                     # same as the one above
-                    endpoint = PULL_REVIEW_COMMENT_ENDPOINT.format(
-                        user=issue.organisation,
-                        repository=issue.repository,
-                        comment_id=frag.removeprefix("r"),
+                    request = self.bot.github.rest.pulls.async_get_review_comment(
+                        org,
+                        issue.repository,
+                        int(frag.removeprefix("r")),
                     )
                     # Linking comments from the "Files" tab of PRs gets you a link like
                     # `pull/1234/files#r12345678`; this is equivalent to the link from the
@@ -1058,15 +956,21 @@ class GithubInfo(
                 else:
                     continue
 
-                comment = await self.fetch_data(endpoint, as_text=False)  # type: ignore
-                if "message" in comment:
-                    log.warning("encountered error fetching %s: %s", endpoint, comment)
+                try:
+                    r = await request
+                    comment = r.json()
+                except githubkit.exception.RequestFailed as e:
+                    log.warning("encountered error fetching %s: %s", e.request.url, e)
                     continue
 
             # assert the url was not tampered with
             if expected_url != (html_url := comment["html_url"]):
                 # this is a warning as its the best way I currently have to track how often the wrong url is used
                 log.warning("[comment autolink] issue url %s does not match comment url %s", issue.user_url, html_url)
+                continue
+
+            if "body" not in comment:
+                log.error("comment does not have a body: %s", comment)
                 continue
 
             body = self.render_github_markdown(comment["body"])
@@ -1076,15 +980,19 @@ class GithubInfo(
             )
 
             author = comment["user"]
-            e.set_author(
-                name=author["login"],
-                icon_url=author["avatar_url"],
-                url=author["html_url"],
-            )
+            if author:
+                e.set_author(
+                    name=author["login"],
+                    icon_url=author["avatar_url"],
+                    url=author["html_url"],
+                )
 
             e.set_footer(text=f"Comment on {issue.organisation}/{issue.repository}#{issue.number}")
 
-            e.timestamp = fromisoformat(comment[created_at_key])
+            if "created_at" in comment:
+                e.timestamp = fromisoformat(comment["created_at"])  # pyright: ignore[reportArgumentType]
+            elif "submitted_at" in comment:
+                e.timestamp = fromisoformat(comment["submitted_at"])  # pyright: ignore[reportArgumentType]
 
             comments.append(e)
             components.append(disnake.ui.Button(url=comment["html_url"], label="View comment"))

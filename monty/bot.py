@@ -72,6 +72,9 @@ class Monty(commands.Bot):
         self.redis_cache = cachingutils.redis.async_session(constants.Redis.prefix, session=self.redis_session)
         self.redis_cache_key = constants.Redis.prefix
 
+        self.github: GitHubClient
+        self.http_session: CachingClientSession
+        self.httpx: httpx.AsyncClient
         self.create_http_session(proxy=proxy)
 
         self.db_engine = database_engine
