@@ -57,6 +57,8 @@ def prepare_input(code: str, *, require_fenced: bool = False) -> str | None:
     elif match := RAW_CODE_REGEX.fullmatch(code):
         code = match.group("code")
         info = "unformatted or badly formatted code"
+    else:
+        return None
 
     code = textwrap.dedent(code)
     log.trace("Extracted %s for evaluation:\n%s", info, code)

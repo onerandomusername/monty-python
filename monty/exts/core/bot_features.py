@@ -409,8 +409,8 @@ class FeatureManagement(commands.Cog, name="Feature Management"):
 
         guild_to_check: int | None = None
         features: list[tuple[str, Feature]] = []
+        title = "Guild Features"
         if for_guild:
-            title = "Guild Features"
             guild_to_check = getattr(for_guild, "id", None) or for_guild or getattr(ctx.guild, "id", None)  # type: ignore
             if guild_to_check:
                 guild_db = await self.bot.ensure_guild(guild_to_check)

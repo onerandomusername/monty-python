@@ -2,6 +2,7 @@ from http import HTTPStatus
 from random import choice
 from typing import Literal
 
+import aiohttp
 import disnake
 from disnake.ext import commands
 
@@ -66,17 +67,16 @@ class HTTPStatusCodes(commands.Cog, name="HTTP Status Codes"):
         try:
             HTTPStatus(code)
             async with self.bot.http_session.get(url, allow_redirects=False) as response:
-                if response.status == 200:
-                    embed.set_image(url=url)
-                else:
-                    raise NotImplementedError
+                response.raise_for_status()
+                embed.set_image(url=url)
+
             embed.set_footer(text=f"Powered by {response.url.host}")
 
         except ValueError:
             embed.set_footer(text="Inputted status code does not exist.")
 
-        except NotImplementedError:
-            embed.set_footer(text=f"Inputted status code is not implemented by {response.url.host} yet.")
+        except aiohttp.ClientResponseError as e:
+            embed.set_footer(text=f"Inputted status code is not implemented by {e.request_info.url.host} yet.")
 
         await ctx.send(embed=embed)
 

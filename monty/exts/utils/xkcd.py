@@ -69,11 +69,12 @@ class XKCD(
 
         embed.colour = responses.DEFAULT_FAILURE_COLOUR
 
+        match = None
         if comic and (match := re.match(COMIC_FORMAT, comic)) is None:
             msg = "Comic parameter should either be an integer or 'latest'."
             raise commands.BadArgument(msg)
 
-        if not comic or match.group(0) == "latest":
+        elif not comic or (match and match.group(0) == "latest"):
             if self.latest_comic_info is None:
                 msg = "xkcd"
                 msg = "Could not fetch the latest comic from XKCD. Please try again later."
