@@ -28,7 +28,7 @@ __all__ = (  # noqa: RUF022
 
 
 class BaseSettings(PydanticBaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 def is_url(url: str) -> str:
@@ -71,7 +71,13 @@ class ClientCls(BaseSettings):
     # debug configuration
     debug: bool = Field(False, validation_alias="BOT_DEBUG")
     proxy: str | None = Field(None, validation_alias="BOT_PROXY_URL")
-    test_guilds: list[int] = []
+    test_guilds: Annotated[
+        list[int] | None,
+        Field(
+            description="The list of IDs of the guilds where you're going to test your application commands.",
+            validation_alias="TEST_GUILDS",
+        ),
+    ] = None
     extensions: set[str] | bool | None = Field(None, validation_alias="BOT_EXTENSIONS")
 
     @field_validator("extensions", mode="before")
