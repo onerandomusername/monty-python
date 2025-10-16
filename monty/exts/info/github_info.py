@@ -575,8 +575,9 @@ class GithubInfo(
             if "message" in json_data:
                 is_discussion = True  # if we got an error, assume it may be a discussion
 
-        if is_discussion:
+        else:
             # fetch with gql
+
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")

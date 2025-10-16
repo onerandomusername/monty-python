@@ -177,10 +177,9 @@ pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
 sync = { cmd = "uv sync --all-groups --all-extras", help = "Sync all groups and extras to a local environment" }
 
 [tool.basedpyright]
-typeCheckingMode = "basic"
+typeCheckingMode = "standard"
 include = ["monty", "*.py"]
 
-strictParameterNoneValue = true
 reportUnnecessaryTypeIgnoreComment = true
 
 [tool.mdformat]

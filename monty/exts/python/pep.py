@@ -280,7 +280,7 @@ class PythonEnhancementProposals(
             limit=11,
             score_cutoff=0,
         )
-
+        top_score = 0
         for num, ((title, pep), score, _) in enumerate(processed):
             if num == 0:
                 top_score = score
