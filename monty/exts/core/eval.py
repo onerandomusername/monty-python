@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 import enum
 import io
+import traceback
 import types
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -117,7 +118,7 @@ class InternalEval(commands.Cog):
         try:
             tree, added_underscore = self.get_tree(code, modify=EvalRules.modify_return_underscore in rules)
         except SyntaxError as e:
-            result.errors.append(e.with_traceback(None))
+            result.errors.append(e)
             return result
 
         maybe_value = None
@@ -126,7 +127,7 @@ class InternalEval(commands.Cog):
             for stmt in tree:
                 try:
                     maybe_value, global_vars = await self._run_stmt(stmt, global_vars)
-                except Exception as e:
+                except (Exception, SyntaxError) as e:
                     result.errors.append(e)
                     break
                 if "_" in global_vars and global_vars["_"] is not None:
@@ -261,9 +262,18 @@ class InternalEval(commands.Cog):
             self.add_segments(response, components=component, files=file)
         if result.errors:
             component, file = self.get_component_for_segment(
-                content="\n".join(repr(item) for item in result.errors),
+                content="\n".join(
+                    "".join(
+                        traceback.format_exception(
+                            type(error),
+                            error,
+                            tb=error.__traceback__,
+                        )
+                    )
+                    for error in result.errors
+                ),
                 title="Errors",
-                language="ansi",
+                language="py",
                 display_colour=constants.Colours.soft_red,
             )
             self.add_segments(response, components=component, files=file)

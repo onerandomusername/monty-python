@@ -40,7 +40,7 @@ class UptimePing(commands.Cog):
     async def uptime_monitor(self) -> None:
         """Send an uptime ack if uptime monitoring is enabled."""
         url = self.get_url()
-        async with self.bot.http_session.get(url, use_cache=False):
+        async with self.bot.http_session.disabled(), self.bot.http_session.get(url):
             pass
 
     @uptime_monitor.before_loop

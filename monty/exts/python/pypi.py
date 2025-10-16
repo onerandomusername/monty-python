@@ -113,7 +113,10 @@ class PyPI(
         top_packages: list[str] = []
 
         log.debug("Started fetching package list from PyPI.")
-        async with self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True, headers=PYPI_API_HEADERS) as resp:
+        async with (
+            self.bot.http_session.disabled(),
+            self.bot.http_session.get(SIMPLE_INDEX, raise_for_status=True, headers=PYPI_API_HEADERS) as resp,
+        ):
             json = await resp.json()
 
         all_packages.update(proj["name"] for proj in json["projects"])

@@ -11,11 +11,13 @@ from monty.log import get_logger
 
 if typing.TYPE_CHECKING:
     import aiohttp
+    from githubkit.versions.latest import types as github_types
 
 log = get_logger(__name__)
 
 FAILED_REQUEST_ATTEMPTS = 3
 
+## deprecated in favour of githubkut
 GITHUB_REQUEST_HEADERS = {
     "Accept": "application/vnd.github.v3+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -32,6 +34,7 @@ class GitHubRateLimit:
     used: int
 
 
+# TODO: Implement this with GithubClient
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
@@ -119,10 +122,11 @@ def update_github_ratelimits_on_request(resp: "aiohttp.ClientResponse") -> None:
 
 
 # https://docs.github.com/en/rest/rate-limit/rate-limit?apiVersion=2022-11-28
-def update_github_ratelimits_from_ratelimit_page(json: dict[str, typing.Any]) -> None:
+def update_github_ratelimits_from_ratelimit_page(json: "github_types.RateLimitOverviewType") -> None:
     """Given the response from GitHub's rate_limit API page, update the stored GitHub Ratelimits."""
-    ratelimits: dict[str, dict[str, int]] = json["resources"]
-    for name, resource in ratelimits.items():
+    ratelimits = json["resources"]
+    for name in ratelimits:
+        resource = ratelimits[name]
         GITHUB_RATELIMITS[name] = GitHubRateLimit(
             limit=resource["limit"],
             remaining=resource["remaining"],
