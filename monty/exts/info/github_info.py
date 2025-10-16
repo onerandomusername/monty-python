@@ -199,7 +199,8 @@ class GithubInfo(
         await self._fetch_and_update_ratelimits()
 
     async def _fetch_and_update_ratelimits(self) -> None:
-        r = await self.bot.github.rest.rate_limit.async_get()
+        async with self.bot.http_session.disabled():  # do not cache this endpoint
+            r = await self.bot.github.rest.rate_limit.async_get()
         data = r.json()
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
