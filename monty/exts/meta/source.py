@@ -274,7 +274,7 @@ class MetaSource(
 
         await self._cog_ready.wait()
         # TODO: weight the first results based on usage
-        scorer = rapidfuzz.distance.JaroWinkler.similarity  # type: ignore # this is defined
+        scorer = rapidfuzz.distance.JaroWinkler.similarity  # this is defined
 
         if not query:
             # we need to shortcircuit and skip the fuzzing results
@@ -283,7 +283,7 @@ class MetaSource(
         fuzz_results = rapidfuzz.process.extract(
             query,
             self.object_display_names,
-            scorer=scorer,  # type: ignore
+            scorer=scorer,
             limit=25,
             score_cutoff=0.4,
         )

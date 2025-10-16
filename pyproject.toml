@@ -181,6 +181,7 @@ typeCheckingMode = "basic"
 include = ["monty", "*.py"]
 
 strictParameterNoneValue = true
+reportUnnecessaryTypeIgnoreComment = true
 
 [tool.mdformat]
 wrap = 80

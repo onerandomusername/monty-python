@@ -224,7 +224,7 @@ class Configuration(
             if not await can_guild_set_config_option(
                 self.bot,
                 metadata=category_options[attr],
-                guild_id=inter.guild_id,  # type: ignore
+                guild_id=inter.guild_id,
             ):
                 continue
 
@@ -271,7 +271,7 @@ class Configuration(
                 if not await can_guild_set_config_option(
                     self.bot,
                     metadata=category_options[attr],
-                    guild_id=inter.guild_id,  # type: ignore
+                    guild_id=inter.guild_id,
                 ):
                     continue
                 current = getattr(current_config, attr) if current_config else None
@@ -349,7 +349,7 @@ class Configuration(
         if not ctx.guild:
             await ctx.send(f"The prefix in DMs is ``{self.bot.command_prefix}``")
             return
-        config = await self.bot.ensure_guild_config(ctx.guild.id)  # type: ignore # checks prevent guild from being None
+        config = await self.bot.ensure_guild_config(ctx.guild.id)  # checks prevent guild from being None
         components = DeleteButton(ctx.author, initial_message=ctx.message)
         if config.prefix:
             await ctx.send(
@@ -503,7 +503,7 @@ class Configuration(
         except KeyError:
             msg = "This configuration category no longer exists."
             raise commands.UserInputError(msg) from None
-        config = await self.bot.ensure_guild_config(inter.guild_id)  # type: ignore # checks prevent guild from being None
+        config = await self.bot.ensure_guild_config(inter.guild_id)
 
         updates = {}
         for custom_id, value in inter.values.items():
@@ -513,7 +513,7 @@ class Configuration(
             meta = METADATA[custom_id]
             if category not in meta.categories:
                 continue
-            if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):  # type: ignore
+            if not await can_guild_set_config_option(self.bot, metadata=meta, guild_id=inter.guild_id):
                 msg = "You cannot set this configuration option as your guild does not have the required feature(s)."
                 raise commands.CheckFailure(
                     msg,
