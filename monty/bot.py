@@ -1,6 +1,6 @@
 import asyncio
 import collections
-from typing import Any
+from typing import Any, cast, final
 from weakref import WeakValueDictionary
 
 import arrow
@@ -13,6 +13,7 @@ import sqlalchemy as sa
 from disnake.ext import commands
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
+from typing_extensions import Self, override
 
 from monty import constants
 from monty.aiohttp_session import AiohttpTransport, CachingClientSession, get_cache_backend, session_args_for_proxy
@@ -27,20 +28,11 @@ from monty.utils.extensions import EXTENSIONS, walk_extensions
 
 log = get_logger(__name__)
 
-try:
-    import dotenv
-except ModuleNotFoundError:
-    TEST_GUILDS = None
-else:
-    TEST_GUILDS = dotenv.get_key(".env", "TEST_GUILDS")
-    if TEST_GUILDS:
-        TEST_GUILDS = [int(x.strip()) for x in TEST_GUILDS.split(",")]
-        log.info("TEST_GUILDS FOUND")
-
 
 __all__ = ("Monty",)
 
 
+@final
 class Monty(commands.Bot):
     """
     Base bot instance.
@@ -59,8 +51,8 @@ class Monty(commands.Bot):
         proxy: str | None = None,
         **kwargs,
     ) -> None:
-        if TEST_GUILDS:
-            kwargs["test_guilds"] = TEST_GUILDS
+        if constants.Client.test_guilds:
+            kwargs["test_guilds"] = constants.Client.test_guilds
             log.warning("registering as test_guilds")
 
         # pass proxy and connector to disnake client
@@ -94,7 +86,7 @@ class Monty(commands.Bot):
         scheduling.create_task(self.get_self_invite_perms())
         scheduling.create_task(self._create_features())
 
-        self._autoreload_task: asyncio.Task | None = None
+        self._autoreload_task: asyncio.Task[Any] | None = None
         self._autoreload_args: dict[str, Any] | None = None
 
     @property
@@ -277,6 +269,7 @@ class Monty(commands.Bot):
 
         return False
 
+    @override
     async def login(self, token: str) -> None:
         """Login to Discord and set the bot's start time."""
         self.start_time = arrow.utcnow()
@@ -287,6 +280,7 @@ class Monty(commands.Bot):
         )
         return await super().login(token)
 
+    @override
     async def close(self, *, unplanned: bool = False) -> None:
         """Close sessions when bot is shutting down."""
         if not self.is_closed():
@@ -311,12 +305,16 @@ class Monty(commands.Bot):
 
         await asyncio.sleep(0.6)
 
-    def load_extensions(self) -> None:
+    @override
+    def load_extensions(self, path: str | None = None) -> None:
         """Load all extensions as released by walk_extensions()."""
+        if path:
+            msg = "load_extensions doesn't expect a path"
+            raise ValueError(msg)
         partial_load = bool(constants.Client.extensions)
         if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
-        requested_extensions = set()
+        requested_extensions = set[str]()
         if isinstance(constants.Client.extensions, set):
             requested_extensions.update(constants.Client.extensions)
 
@@ -336,16 +334,18 @@ class Monty(commands.Bot):
             log.debug(f"SKIPPING loading {ext} as per environment variables.")
         log.info("Completed loading extensions.")
 
-    def add_cog(self, cog: commands.Cog, **kwargs: Any) -> None:
+    @override
+    def add_cog(self, cog: commands.Cog, *, override: bool = False) -> None:
         """
         Delegate to super to register `cog`.
 
         This only serves to make the info log, so that extensions don't have to.
         """
-        super().add_cog(cog, **kwargs)
+        super().add_cog(cog, override=override)
         log.info(f"Cog loaded: {cog.qualified_name}")
         self.dispatch("cog_load", cog)
 
+    @override
     def remove_cog(self, name: str) -> commands.Cog | None:
         """Remove the cog from the bot and dispatch a cog_remove event."""
         cog = super().remove_cog(name)
@@ -354,13 +354,15 @@ class Monty(commands.Bot):
         self.dispatch("cog_remove", cog)
         return cog
 
-    def add_command(self, command: commands.Command) -> None:
+    @override
+    def add_command(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Add `command` as normal and then add its root aliases to the bot."""
         super().add_command(command)
         self._add_root_aliases(command)
         self.dispatch("command_add", command)
 
-    def remove_command(self, name: str) -> commands.Command | None:
+    @override
+    def remove_command(self, name: str) -> commands.Command[commands.Cog | None, Any, Any] | None:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
 
@@ -378,11 +380,13 @@ class Monty(commands.Bot):
         self._remove_root_aliases(command)
         return command
 
+    @override
     def add_slash_command(self, slash_command: commands.InvokableSlashCommand) -> None:
         """Add the slash command to the bot and dispatch a slash_command_add event."""
         super().add_slash_command(slash_command)
         self.dispatch("slash_command_add", slash_command)
 
+    @override
     def remove_slash_command(self, name: str) -> commands.InvokableSlashCommand | None:
         """Remove the slash command from the bot and dispatch a slash_command_remove event."""
         slash_command = super().remove_slash_command(name)
@@ -391,14 +395,15 @@ class Monty(commands.Bot):
         self.dispatch("slash_command_remove", slash_command)
         return slash_command
 
-    async def on_command_error(self, context: commands.Context, exception: disnake.DiscordException) -> None:
+    @override
+    async def on_command_error(self, context: commands.Context[Self], exception: disnake.DiscordException) -> None:
         """Check command errors for UserInputError and reset the cooldown if thrown."""
         if isinstance(exception, commands.UserInputError) and context.command:
             context.command.reset_cooldown(context)
         else:
-            await super().on_command_error(context, exception)  # type:ignore
+            await super().on_command_error(context, cast("commands.CommandError", exception))
 
-    def _add_root_aliases(self, command: commands.Command) -> None:
+    def _add_root_aliases(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Recursively add root aliases for `command` and any of its subcommands."""
         if isinstance(command, commands.Group):
             for subcommand in command.commands:
@@ -410,7 +415,7 @@ class Monty(commands.Bot):
 
             self.all_commands[alias] = command
 
-    def _remove_root_aliases(self, command: commands.Command) -> None:
+    def _remove_root_aliases(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Recursively remove root aliases for `command` and any of its subcommands."""
         if isinstance(command, commands.Group):
             for subcommand in command.commands:
