@@ -1,6 +1,6 @@
 import asyncio
 import collections
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import Any, cast, final
 from weakref import WeakValueDictionary
 
 import arrow
@@ -10,7 +10,6 @@ import redis
 import redis.asyncio
 import sqlalchemy as sa
 from disnake.ext import commands
-from disnake.ext.commands.core import CogT
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 from typing_extensions import Self, override
@@ -23,10 +22,6 @@ from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
 from monty.utils.extensions import EXTENSIONS, walk_extensions
-
-
-if TYPE_CHECKING:
-    from disnake.ext.commands.errors import CommandError
 
 
 log = get_logger(__name__)
@@ -300,6 +295,9 @@ class Monty(commands.Bot):
     @override
     def load_extensions(self, path: str | None = None) -> None:
         """Load all extensions as released by walk_extensions()."""
+        if path:
+            msg = "load_extensions doesn't expect a path"
+            raise ValueError(msg)
         partial_load = bool(constants.Client.extensions)
         if partial_load:
             log.warning("Not loading all extensions as per environment settings.")
@@ -344,14 +342,14 @@ class Monty(commands.Bot):
         return cog
 
     @override
-    def add_command(self, command: commands.Command[CogT, Any, Any]) -> None:
+    def add_command(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Add `command` as normal and then add its root aliases to the bot."""
         super().add_command(command)
         self._add_root_aliases(command)
         self.dispatch("command_add", command)
 
     @override
-    def remove_command(self, name: str) -> commands.Command[CogT, Any, Any] | None:
+    def remove_command(self, name: str) -> commands.Command[commands.Cog | None, Any, Any] | None:
         """
         Remove a command/alias as normal and then remove its root aliases from the bot.
 
@@ -390,9 +388,9 @@ class Monty(commands.Bot):
         if isinstance(exception, commands.UserInputError) and context.command:
             context.command.reset_cooldown(context)
         else:
-            await super().on_command_error(context, cast("CommandError", exception))  # type:ignore
+            await super().on_command_error(context, cast("commands.CommandError", exception))
 
-    def _add_root_aliases(self, command: commands.Command[CogT, Any, Any]) -> None:
+    def _add_root_aliases(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Recursively add root aliases for `command` and any of its subcommands."""
         if isinstance(command, commands.Group):
             for subcommand in command.commands:
@@ -404,7 +402,7 @@ class Monty(commands.Bot):
 
             self.all_commands[alias] = command
 
-    def _remove_root_aliases(self, command: commands.Command[CogT, Any, Any]) -> None:
+    def _remove_root_aliases(self, command: commands.Command[commands.Cog | None, Any, Any]) -> None:
         """Recursively remove root aliases for `command` and any of its subcommands."""
         if isinstance(command, commands.Group):
             for subcommand in command.commands:
