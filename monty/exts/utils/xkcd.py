@@ -60,7 +60,7 @@ class XKCD(
             else:
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
-    @commands.slash_command(name="xkcd", description="View an xkcd comic.")
+    @commands.slash_command(name="xkcd")
     async def xkcd(self, _: disnake.ApplicationCommandInteraction) -> None:
         """View an xkcd comic."""
 
@@ -96,7 +96,7 @@ class XKCD(
                 ]
             )
 
-    @xkcd.sub_command(description="View the latest xkcd comic.")
+    @xkcd.sub_command()
     async def latest(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """View the latest xkcd comic."""
         if self.latest_comic_info is None:
@@ -105,14 +105,21 @@ class XKCD(
 
         await self.send_xkcd(inter, self.latest_comic_info)
 
-    @xkcd.sub_command(description="View an xkcd comic by its number.")
-    async def number(self, inter: disnake.ApplicationCommandInteraction, comic: str) -> None:
-        """View an xkcd comic by its number."""
+    @xkcd.sub_command()
+    async def number(self, inter: disnake.ApplicationCommandInteraction, comic: int) -> None:
+        """
+        View an xkcd comic by its number.
+
+        Parameters
+        ----------
+        comic: The number of the comic to view.
+        """
         async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
             if resp.status == 200:
                 info: XkcdDict = await resp.json()
             elif resp.status == 404:
-                if comic != "404":
+                # xkcd #404 returns a 404 code as an easter egg, so there should be a different message
+                if comic != 404:
                     msg = "That comic doesn't exist"
                     raise commands.BadArgument(msg)
 
@@ -120,7 +127,7 @@ class XKCD(
                     components=[
                         ui.Container(
                             ui.TextDisplay(f"### XKCD comic #{comic}"),
-                            ui.TextDisplay("{resp.status}: Could not retrieve xkcd comic #{comic}"),
+                            ui.TextDisplay("f{resp.status}: Could not retrieve xkcd comic #{comic}"),
                             accent_colour=responses.DEFAULT_FAILURE_COLOUR,
                         )
                     ]
@@ -138,7 +145,7 @@ class XKCD(
 
         await self.send_xkcd(inter, info)
 
-    @xkcd.sub_command(description="View a random xkcd comic.")
+    @xkcd.sub_command()
     async def random(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """View a random xkcd comic."""
         if self.latest_comic_info is None:

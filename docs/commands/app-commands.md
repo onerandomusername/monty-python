@@ -462,7 +462,7 @@ View the latest xkcd comic.
 
 ### `xkcd number`
 
-- `comic` (`string`) (required)
+- `comic` (`integer`) (required) The number of the comic to view.
 
 View an xkcd comic by its number.
 
