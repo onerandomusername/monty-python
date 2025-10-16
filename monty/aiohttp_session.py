@@ -2,26 +2,71 @@ from __future__ import annotations
 
 import socket
 import sys
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, TypedDict
-from unittest.mock import Mock
 
 import aiohttp
-from multidict import CIMultiDict, CIMultiDictProxy
+from aiohttp_client_cache.backends.redis import RedisBackend as AiohttpRedisBackend
+from aiohttp_client_cache.cache_control import CacheActions, ExpirationTime
+from aiohttp_client_cache.session import CachedSession
 
 from monty import constants
 from monty.log import get_logger
 from monty.utils import helpers
-from monty.utils.caching import RedisCache
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from types import SimpleNamespace
 
+    import redis.asyncio
     from aiohttp.tracing import TraceConfig
+    from aiohttp.typedefs import StrOrURL
 
 aiohttp_log = get_logger("monty.http")
 cache_logger = get_logger("monty.http.caching")
+
+
+class RevalidatingCacheActions(CacheActions):
+    @classmethod
+    def from_headers(cls, key: str, headers: Mapping):
+        """Initialize from request headers."""
+        res = super().from_headers(key, headers)
+        res.revalidate = True
+        return res
+
+
+class RedisBackend(AiohttpRedisBackend):
+    def create_cache_actions(
+        self,
+        key: str,
+        url: StrOrURL,
+        expire_after: ExpirationTime = None,
+        refresh: bool = False,
+        **kwargs,
+    ) -> CacheActions:
+        """
+        Create cache actions based on request info.
+
+        Args:
+            key: key from create_key function
+            url: Request URL
+            expire_after: Expiration time to set only for this request; overrides
+                ``CachedSession.expire_after``, and accepts all the same values.
+            refresh: Revalidate with the server before using a cached response, and refresh if needed
+                (e.g., a "soft refresh", like F5 in a browser)
+            kwargs: All other request arguments
+        """
+        return CacheActions.from_request(
+            key,
+            url=url,
+            request_expire_after=expire_after,
+            refresh=refresh,
+            session_expire_after=self.expire_after,
+            urls_expire_after=self.urls_expire_after,
+            cache_control=self.cache_control,
+            cache_disabled=self.disabled,
+            **kwargs,
+        )
 
 
 """Create the aiohttp session and set the trace logger, if desired."""
@@ -65,7 +110,18 @@ def session_args_for_proxy(proxy: str | None) -> SessionArgs:
     return {"proxy": proxy or None, "connector": connector}
 
 
-class CachingClientSession(aiohttp.ClientSession):
+def get_cache_backend(redis: redis.asyncio.Redis) -> RedisBackend:
+    """Get the cache backend for aiohttp_client_cache."""
+    return RedisBackend(
+        constants.Client.config_prefix,
+        "aiohttp_requests",
+        expire_after=20,
+        cache_control=True,
+        connection=redis,
+    )
+
+
+class CachingClientSession(CachedSession):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.update(session_args_for_proxy(kwargs.get("proxy")))
 
@@ -82,56 +138,3 @@ class CachingClientSession(aiohttp.ClientSession):
                 ),
             }
         super().__init__(*args, **kwargs)
-        self.cache = RedisCache(
-            "aiohttp_requests",
-            timeout=timedelta(days=5),
-        )
-
-    async def _request(
-        self,
-        method: str,
-        str_or_url: Any,
-        use_cache: bool = True,
-        **kwargs,
-    ) -> aiohttp.ClientResponse:
-        """Do the same thing as aiohttp does, but always cache the response."""
-        method = method.upper().strip()
-        cache_key = f"{method}:{str_or_url!s}"
-        async with self.cache.lock(cache_key):
-            cached = await self.cache.get(cache_key)
-            if cached and use_cache:
-                etag, body, resp_headers = cached
-                if etag:
-                    kwargs.setdefault("headers", {})["If-None-Match"] = etag
-            else:
-                etag = None
-                body = None
-                resp_headers = None
-
-            r = await super()._request(method, str_or_url, **kwargs)
-            if not use_cache:
-                return r
-            if r.status == 304:
-                cache_logger.debug("HTTP Cache hit on %s", cache_key)
-                # decode the original headers
-                headers: CIMultiDict[str] = CIMultiDict()
-                if resp_headers:
-                    for key, value in resp_headers:
-                        headers[key.decode()] = value.decode()
-                r._cache["headers"] = r._headers = CIMultiDictProxy(headers)
-                r.content = reader = aiohttp.StreamReader(
-                    protocol=Mock(_reading_paused=False),
-                    limit=len(body) if body else 0,
-                )
-                if body:
-                    reader.feed_data(body)
-                reader.feed_eof()
-                r.status = 200
-                return r
-
-            etag = r.headers.get("ETag")
-            # only cache if etag is provided and the request was in the 200
-            if etag and 200 <= r.status < 300:
-                body = await r.read()
-                await self.cache.set(cache_key, (etag, body, r.raw_headers))
-            return r
