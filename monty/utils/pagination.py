@@ -177,6 +177,7 @@ class LinePaginator(commands.Paginator):
             log.debug("No lines to add to paginator, adding '(nothing to display)' message")
             lines = ("(nothing to display)",)
 
+        line = ""
         try:
             for line in lines:
                 paginator.add_line(line, empty=empty)

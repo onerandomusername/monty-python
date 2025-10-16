@@ -882,21 +882,23 @@ class DocCog(
             )
             return
 
-        link = self._get_link_from_inventories(package)
-        if not link:
+        possible_link = self._get_link_from_inventories(package)
+        is_docs = True
+        if not possible_link:
             # check PyPI
             res = await self.maybe_pypi_docs(package, strip=False)
-            if res[0]:
-                link = res[1]
+            is_docs = res[0]
+            if is_docs:
+                possible_link = res[1]
 
         components = DeleteButton(inter.author)
-        if link:
-            await inter.send(f"Found documentation for {package} at <{link}>.", components=components)
+        if possible_link and is_docs:
+            await inter.send(f"Found documentation for {package} at <{possible_link}>.", components=components)
             return
         else:
             msg = f"No docs found for {package}."
-            if res[1]:
-                msg += f"\nHowever, I did find this homepage while looking: <{res[1]}>."
+            if possible_link:
+                msg += f"\nHowever, I did find this homepage while looking: <{possible_link}>."
             await inter.send(msg, components=components)
 
     @docs_group.command(name="setdoc", aliases=("s",))

@@ -264,7 +264,7 @@ class GithubInfo(
 
             data = await r.json()
 
-        monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)  # type: ignore
+        monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
     async def fetch_guild_to_org(self, guild_id: int) -> str | None:
         """Fetch the org that matches to a specific guild_id."""
@@ -349,7 +349,7 @@ class GithubInfo(
 
         return repos
 
-    async def fetch_user_and_repo(  # type: ignore
+    async def fetch_user_and_repo(
         self,
         guild_id: int | None,
         repo: str | None = None,
@@ -575,8 +575,9 @@ class GithubInfo(
             if "message" in json_data:
                 is_discussion = True  # if we got an error, assume it may be a discussion
 
-        if is_discussion:
+        else:
             # fetch with gql
+
             # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
@@ -740,7 +741,7 @@ class GithubInfo(
                 ctx.guild and ctx.guild.id if isinstance(ctx, commands.Context) else ctx.guild_id,
                 user,
                 repo,
-            )  # type: ignore
+            )
             if not user or not repo:
                 if not user:
                     if not repo:
@@ -1169,7 +1170,7 @@ class GithubInfo(
             )
         elif isinstance(message, disnake.ApplicationCommandInteraction):
             # HACK
-            guild_id = message.guild_id  # type: ignore
+            guild_id = message.guild_id
             perms = message.app_permissions
             extract_full_links = True
             guild_has_github_comment_linking_enabled = True  # we check the feature later

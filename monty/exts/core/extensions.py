@@ -137,7 +137,7 @@ class Extensions(commands.Cog):
             return
 
         if "*" in extensions or "**" in extensions:
-            extensions = tuple(set(EXTENSIONS) - set(self.bot.extensions.keys()))  # type: ignore
+            extensions = tuple(set(EXTENSIONS) - set(self.bot.extensions.keys()))
 
         msg = self.batch_manage(Action.LOAD, *extensions)
 
@@ -166,7 +166,7 @@ class Extensions(commands.Cog):
             msg = f":x: The following extension(s) may not be unloaded:```{blacklisted}```"
         else:
             if "*" in extensions or "**" in extensions:
-                extensions = tuple(set(self.bot.extensions.keys()) - UNLOAD_BLACKLIST)  # type: ignore
+                extensions = tuple(set(self.bot.extensions.keys()) - UNLOAD_BLACKLIST)
 
             msg = self.batch_manage(Action.UNLOAD, *extensions)
 

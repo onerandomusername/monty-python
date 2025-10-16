@@ -133,12 +133,13 @@ def autodoc(session: nox.Session) -> None:
         session,
         groups=[
             "devlibs",
+            "mdformat",
         ],
     )
     args = session.posargs
     session.run("python", "autodoc.py", *args, env=FAKE_BOT_ENV)
 
-    session.notify("mdformat", ["docs/commands", "--no-check"])
+    session.run("mdformat", "docs/commands")
 
 
 @nox.session
@@ -153,11 +154,7 @@ def mdformat(session: nox.Session) -> None:
     """Run mdformat on the documentation files."""
     install_deps(session, groups=["mdformat"])
     args = session.posargs or ["docs", "README.md", "CONTRIBUTING.md"]
-    check = CI
-    if "--no-check" in session.posargs:
-        check = False
-        args.remove("--no-check")
-    if check:
+    if CI and "--check" not in args:
         args.insert(0, "--check")
     session.run("mdformat", *args)
 
