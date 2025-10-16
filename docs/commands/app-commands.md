@@ -452,11 +452,27 @@ Evaluate python code.
 
 Retrieving XKCD comics.
 
-### `xkcd`
+### `xkcd latest`
 
-- `comic` (`string`) number or 'latest'. Leave empty to show a random comic.
+View the latest xkcd comic.
 
-View an xkcd comic.
+**Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
+
+**Installable as:** `Guild`, `User`
+
+### `xkcd number`
+
+- `comic` (`string`) (required)
+
+View an xkcd comic by its number.
+
+**Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
+
+**Installable as:** `Guild`, `User`
+
+### `xkcd random`
+
+View a random xkcd comic.
 
 **Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
 
