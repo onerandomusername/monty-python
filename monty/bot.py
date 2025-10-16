@@ -6,6 +6,7 @@ from weakref import WeakValueDictionary
 import arrow
 import cachingutils.redis
 import disnake
+import httpx
 import redis
 import redis.asyncio
 import sqlalchemy as sa
@@ -14,9 +15,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
 from monty import constants
-from monty.aiohttp_session import CachingClientSession, get_cache_backend, session_args_for_proxy
+from monty.aiohttp_session import AiohttpTransport, CachingClientSession, get_cache_backend, session_args_for_proxy
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
+from monty.github_client import GitHubClient
 from monty.log import get_logger
 from monty.statsd import AsyncStatsClient
 from monty.utils import rollouts, scheduling
@@ -70,6 +72,9 @@ class Monty(commands.Bot):
         self.redis_cache = cachingutils.redis.async_session(constants.Redis.prefix, session=self.redis_session)
         self.redis_cache_key = constants.Redis.prefix
 
+        self.github: GitHubClient
+        self.http_session: CachingClientSession
+        self.httpx: httpx.AsyncClient
         self.create_http_session(proxy=proxy)
 
         self.db_engine = database_engine
@@ -99,10 +104,15 @@ class Monty(commands.Bot):
 
     def create_http_session(self, proxy: str | None = None) -> None:
         """Create the bot's aiohttp session."""
-        self.http_session = CachingClientSession(
+        http_session = CachingClientSession(
             proxy=proxy,
             cache=get_cache_backend(self.redis_session),
         )
+        self.http_session = http_session
+
+        transport = AiohttpTransport(client=http_session)
+        self.httpx = httpx.AsyncClient(transport=transport)
+        self.github = GitHubClient(constants.Auth.github, transport=transport)
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""

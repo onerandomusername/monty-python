@@ -18,7 +18,6 @@ from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
 from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
-from monty.utils.services import GITHUB_REQUEST_HEADERS as DEFAULT_GITHUB_REQUEST_HEADERS
 
 
 if TYPE_CHECKING:
@@ -32,7 +31,7 @@ log = get_logger(__name__)
 
 # start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https?:\/\/github\.(?:com|dev)\/(?P<repo>[a-zA-Z0-9-]+\/[\w.-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
+    r"https?:\/\/github\.(?:com|dev)\/(?P<user>[a-zA-Z0-9-]+)\/(?P<repo>[a-zA-Z0-9-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
     r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]"
     r"|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
 )
@@ -57,9 +56,6 @@ BITBUCKET_RE = re.compile(
 LANGUAGE_MAPPING: dict[str, str] = {
     "pyi": "py",
 }
-
-GITHUB_REQUEST_HEADERS = DEFAULT_GITHUB_REQUEST_HEADERS.copy()
-GITHUB_REQUEST_HEADERS["Accept"] = "application/vnd.github.v3.raw"
 
 
 class CodeSnippets(commands.Cog, name="Code Snippets"):
@@ -92,15 +88,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
-        # make the request with the github_info cog if it is loaded
-        if url.startswith("https://api.github.com/") and (cog := self.get_github_cog()):
-            return await cog.fetch_data(
-                url,
-                as_text=response_format == "text",
-                raise_for_status=True,
-                **kwargs,
-            )
-
         key = (url, response_format)
         if cached := self.request_cache.get(key):
             return cached
@@ -116,7 +103,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         self.request_cache.set(key, body)
         return body
 
-    def _find_ref(self, path: str, refs: tuple) -> tuple:
+    def _find_ref(self, path: str, refs: list) -> tuple:
         """Loops through all branches and tags to find the required ref."""
         # Base case: there is no slash in the branch name
         ref, file_path = path.split("/", 1)
@@ -135,6 +122,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
     async def _fetch_github_snippet(
         self,
         *,
+        user: str,
         repo: str,
         path: str,
         start_line: str,
@@ -143,22 +131,21 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
     ) -> str:
         """Fetches a snippet from a GitHub repo."""
         # Search the GitHub API for the specified branch
-        branches = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/branches?per_page=100",
-            "json",
-            headers=GITHUB_REQUEST_HEADERS,
-        )
-        tags = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/tags?per_page=100", "json", headers=GITHUB_REQUEST_HEADERS
-        )
+        r = await self.bot.github.rest.repos.async_list_branches(user, repo, per_page=100)
+        branches = r.json()
+        r = await self.bot.github.rest.repos.async_list_tags(user, repo, per_page=100)
+        tags = r.json()
         refs = branches + tags
         ref, encoded_file_path = self._find_ref(path, refs)
 
-        file_contents = await self._fetch_response(
-            f"https://api.github.com/repos/{repo}/contents/{encoded_file_path}?ref={ref}",
-            "text",
-            headers=GITHUB_REQUEST_HEADERS,
+        r = await self.bot.github.rest.repos.async_get_content(
+            user,
+            repo,
+            encoded_file_path,
+            ref=ref,
+            headers={"Accept": "application/vnd.github.v3.raw"},
         )
+        file_contents = r.text
 
         # decode the file_path before calling snippet to codeblock
         file_path = urlunquote(encoded_file_path)
@@ -176,11 +163,15 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
-        gist_json = await self._fetch_response(
-            f"https://api.github.com/gists/{gist_id}{f'/{revision}' if len(revision) > 0 else ''}",
-            "json",
-            headers=GITHUB_REQUEST_HEADERS,
-        )
+        if revision:
+            endpoint = self.bot.github.rest.gists.async_get_revision(gist_id, revision)
+        else:
+            endpoint = self.bot.github.rest.gists.async_get(gist_id)
+        r = await endpoint
+        gist_json = r.json()
+
+        if "files" not in gist_json:
+            return ""
 
         # Check each file in the gist for the specified file
         for gist_file in gist_json["files"]:
@@ -188,7 +179,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
                 file_contents = await self._fetch_response(
                     gist_json["files"][gist_file]["raw_url"],
                     "text",
-                    headers=GITHUB_REQUEST_HEADERS,
                 )
                 return self._snippet_to_codeblock(file_contents, gist_file, start_line, end_line)
         return ""

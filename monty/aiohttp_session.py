@@ -5,6 +5,7 @@ import sys
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import aiohttp
+import httpx_aiohttp
 from aiohttp_client_cache.backends.redis import RedisBackend
 from aiohttp_client_cache.cache_control import CacheActions
 from aiohttp_client_cache.session import CachedSession
@@ -110,3 +111,11 @@ class CachingClientSession(CachedSession):
         if "refresh" not in kwargs:
             kwargs["refresh"] = True
         return await super()._request(*args, **kwargs)
+
+
+class AiohttpTransport(httpx_aiohttp.AiohttpTransport):
+    async def aclose(self) -> None:
+        """Override aclose to not do anything since we manage the underlying transport elsewhere."""
+
+    async def close(self) -> None:
+        """Override close to not do anything since we manage the underlying transport elsewhere."""
