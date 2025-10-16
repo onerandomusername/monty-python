@@ -104,7 +104,7 @@ class PyPI(
         "pypi-package-list",
         include_posargs=[],
         key_func=lambda *args, **kwargs: "packages",
-        skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),  # type: ignore
+        skip_cache_func=lambda *args, **kwargs: not kwargs.get("use_cache", True),
         timeout=datetime.timedelta(hours=36),
     )
     async def _fetch_package_list(self, *, use_cache: bool = True) -> tuple[set[str], list[str]]:
@@ -423,7 +423,7 @@ class PyPI(
         fuzz_results = rapidfuzz.process.extract(
             query,
             package_list,
-            scorer=scorer,  # type: ignore
+            scorer=scorer,
             limit=25,
             score_cutoff=0.4,
         )

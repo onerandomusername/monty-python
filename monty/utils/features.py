@@ -36,7 +36,7 @@ def require_feature(name: Feature) -> Callable[[T], T]:
         raise RuntimeError(msg)
 
     async def predicate(ctx: AnyContext) -> bool:
-        bot: Monty = ctx.bot  # type: ignore # this will be a Monty instance
+        bot: Monty = ctx.bot  # this will be a Monty instance
 
         guild_id: int | None = getattr(ctx, "guild_id", None) or (ctx.guild and ctx.guild.id)
 
