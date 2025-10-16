@@ -320,7 +320,7 @@ class GithubInfo(
                 description=f"```{user_data['bio']}```\n" if user_data["bio"] else "",
                 colour=disnake.Colour.blurple(),
                 url=html_url,
-                timestamp=user_data["created_at"],
+                timestamp=fromisoformat(user_data["created_at"]),  # pyright: ignore[reportArgumentType]
             )
             embed.set_thumbnail(url=user_data["avatar_url"])
             embed.set_footer(text="Account created at")
@@ -420,8 +420,8 @@ class GithubInfo(
             icon_url=repo_owner["avatar_url"],
         )
 
-        repo_created_at = repo_data["created_at"].astimezone(timezone.utc).strftime("%d/%m/%Y")
-        last_pushed = repo_data["pushed_at"].astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")
+        repo_created_at = fromisoformat(repo_data["created_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y")  # pyright: ignore[reportArgumentType]
+        last_pushed = fromisoformat(repo_data["pushed_at"]).astimezone(timezone.utc).strftime("%d/%m/%Y at %H:%M")  # pyright: ignore[reportArgumentType]
 
         embed.set_footer(
             text=(
