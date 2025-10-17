@@ -2,7 +2,6 @@ import random
 from typing import Any, TypedDict
 
 import disnake
-from disnake import ui
 from disnake.ext import commands, tasks
 from typing_extensions import NotRequired
 
@@ -68,11 +67,11 @@ class XKCD(
         if info["img"][-3:] in ("jpg", "png", "gif") and not info.get("extra_parts"):
             await inter.send(
                 components=[
-                    ui.Container(
-                        ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
-                        ui.TextDisplay(info["alt"]),
-                        ui.MediaGallery(disnake.MediaGalleryItem(info["img"])),
-                        ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
+                    disnake.ui.Container(
+                        disnake.ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
+                        disnake.ui.TextDisplay(info["alt"]),
+                        disnake.ui.MediaGallery(disnake.MediaGalleryItem(info["img"])),
+                        disnake.ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
                         accent_colour=disnake.Colour(Colours.soft_green),
                     ),
                     DeleteButton(inter.author, allow_manage_messages=False),
@@ -81,13 +80,13 @@ class XKCD(
         else:
             await inter.send(
                 components=[
-                    ui.Container(
-                        ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
-                        ui.TextDisplay(
+                    disnake.ui.Container(
+                        disnake.ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
+                        disnake.ui.TextDisplay(
                             "The selected comic is interactive, and cannot be displayed within an embed.\n"
                             f"Comic can be viewed [here](https://xkcd.com/{info['num']})."
                         ),
-                        ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
+                        disnake.ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
                         accent_colour=disnake.Colour(Colours.soft_green),
                     ),
                     DeleteButton(inter.author, allow_manage_messages=False),
@@ -123,9 +122,9 @@ class XKCD(
 
                 await inter.send(
                     components=[
-                        ui.Container(
-                            ui.TextDisplay(f"### XKCD comic #{comic}"),
-                            ui.TextDisplay("f{resp.status}: Could not retrieve xkcd comic #{comic}"),
+                        disnake.ui.Container(
+                            disnake.ui.TextDisplay(f"### XKCD comic #{comic}"),
+                            disnake.ui.TextDisplay("f{resp.status}: Could not retrieve xkcd comic #{comic}"),
                             accent_colour=responses.DEFAULT_FAILURE_COLOUR,
                         )
                     ]
