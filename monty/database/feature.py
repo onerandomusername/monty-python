@@ -1,31 +1,29 @@
+import enum
 import re
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column
 
 from .base import Base
-from .rollouts import Rollout
 
 
 NAME_REGEX = re.compile(r"^[A-Z0-9_]+$")
 
 
-class Feature(MappedAsDataclass, Base):
+# while this can be a bool/None, using an enum allows for future expansion if needed
+# this may be expanded to add additional types in the future
+class FeatureStatusEnum(enum.Enum):
+    """Status of a feature for an entity."""
+
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    DEFAULT = "default"
+
+
+class FeatureStatus(MappedAsDataclass, Base):
     """Represents a bot feature."""
 
     __tablename__ = "features"
 
     name: Mapped[str] = mapped_column(sa.String(length=50), primary_key=True)
-    enabled: Mapped[bool | None] = mapped_column(default=None, server_default=None, nullable=True)
-    rollout_id: Mapped[int | None] = mapped_column(
-        sa.ForeignKey("rollouts.id"), default=None, nullable=True, name="rollout"
-    )
-    rollout: Mapped[Rollout | None] = relationship(Rollout, default=None)
-
-    @validates("name")
-    def validate_name(self, key: str, name: str) -> str:
-        """Validate the `name` attribute meets the regex requirement."""
-        if not NAME_REGEX.fullmatch(name):
-            err = f"The provided feature name '{name}' does not match the name regex {NAME_REGEX!s}"
-            raise ValueError(err)
-        return name
+    status: Mapped[bool] = mapped_column(sa.Boolean, default=True)
