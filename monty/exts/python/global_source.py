@@ -49,9 +49,13 @@ class GlobalSource(commands.Cog, name="Global Source"):
         object = object.strip("`")  # noqa: A001
         async with ctx.typing():
             result = await self.snekbox.post_eval(
-                self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object),
                 # for `-X frozen_modules=off`, see https://github.com/python/cpython/issues/89183
-                args=["-X", "frozen_modules=off", "-c"],
+                args=[
+                    "-X",
+                    "frozen_modules=off",
+                    "-c",
+                    self.code.replace("REPLACE_THIS_STRING_WITH_THE_OBJECT_NAME", object),
+                ],
             )
 
         # exit codes:

@@ -100,25 +100,42 @@ class Snekbox(
         self.url = yarl.URL(Endpoints.snekbox)
         self.jobs = {}
 
-    async def post_eval(self, code: str, *, args: list[str] | None = None) -> dict:
+    @overload
+    async def post_eval(self, *, code: str) -> dict: ...
+    @overload
+    async def post_eval(self, *, args: list[str] | None = None) -> dict: ...
+    async def post_eval(self, *, code: str | None = None, args: list[str] | None = None) -> dict:
         """Send a POST request to the Snekbox API to evaluate code and return the results."""
         url = self.url / "eval"
-        data: dict[str, str | list[str]] = {"input": code}
 
-        if args is not None:
-            data["args"] = args
-        try:
-            async with self.bot.http_session.post(
-                url,
-                json=data,
-                raise_for_status=True,
-                headers=HEADERS,
-                timeout=aiohttp.ClientTimeout(10),
-            ) as resp:
-                return await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            msg = "Snekbox backend is offline or misconfigured."
-            raise APIError(msg, status_code=0, api="snekbox") from e
+        if code and args:
+            msg = "Cannot provide both code and args"
+            raise TypeError(msg)
+
+        data: dict[str, str | list[str]] = {}
+        if code:
+            if not isinstance(code, str):
+                msg = "code must be a string"
+                raise TypeError(msg)
+
+            data.update({"args": ["-c", code]})
+        elif args:
+            if not isinstance(args, list):
+                msg = "args must be a list of strings"
+                raise TypeError(msg)
+            data.update({"args": args})
+        else:
+            msg = "Must provide either code or args"
+            raise TypeError(msg)
+
+        async with self.bot.http_session.post(
+            url,
+            json=data,
+            raise_for_status=True,
+            headers=HEADERS,
+            timeout=aiohttp.ClientTimeout(10),
+        ) as resp:
+            return await resp.json()
 
     async def upload_output(self, output: str, extension: str = "text") -> str | None:
         """Upload the eval output to a paste service and return a URL to it if successful."""
@@ -265,7 +282,7 @@ class Snekbox(
         if isinstance(ctx, commands.Context):
             await ctx.trigger_typing()
 
-        results = await self.post_eval(code)
+        results = await self.post_eval(code=code)
         msg, error = self.get_results_message(results)
 
         if error:
