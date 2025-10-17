@@ -470,10 +470,8 @@ class GithubInfo(
             else:
                 json_data = r.json()
 
-        else:
+        if is_discussion:
             # fetch with gql
-
-            # no caching right now, and only enabled in the disnake guild
             if not allow_discussions:
                 return FetchError(404, "Issue not found.")
 
