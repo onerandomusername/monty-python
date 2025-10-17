@@ -1,9 +1,10 @@
 import random
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import disnake
 from disnake import ui
 from disnake.ext import commands, tasks
+from typing_extensions import NotRequired
 
 from monty.bot import Monty
 from monty.constants import Colours
@@ -18,7 +19,7 @@ log = get_logger(__name__)
 BASE_URL = "https://xkcd.com"
 
 
-class BaseXkcdDict(TypedDict):
+class XkcdDict(TypedDict):
     num: int
     month: str  # is int of month in string form
     year: str
@@ -27,10 +28,7 @@ class BaseXkcdDict(TypedDict):
     img: str
     title: str
     safe_title: str
-
-
-class XkcdDict(BaseXkcdDict, total=False):
-    extra_parts: dict
+    extra_parts: NotRequired[dict[str, Any]]
 
 
 class XKCD(
