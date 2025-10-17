@@ -67,7 +67,7 @@ tools = [
     { include-group = "nox" }
 ]
 ruff = [
-    "ruff==0.14.0",
+    "ruff==0.14.1",
 ]
 nox = [
     "nox>=2025.5.1",
