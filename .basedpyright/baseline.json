@@ -1,15 +1,5 @@
 {
     "files": {
-        "./monty/bot.py": [
-            {
-                "code": "reportIncompatibleMethodOverride",
-                "range": {
-                    "startColumn": 8,
-                    "endColumn": 23,
-                    "lineCount": 1
-                }
-            }
-        ],
         "./monty/exts/info/docs/_batch_parser.py": [
             {
                 "code": "reportIncompatibleMethodOverride",

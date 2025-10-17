@@ -2,12 +2,13 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
 import cachingutils
 import disnake
+import githubkit.exception
 import yarl
 from aiohttp import ClientResponseError
 from disnake.ext import commands
@@ -23,8 +24,6 @@ from monty.utils.messages import DeleteButton, suppress_embeds
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from typing import NoReturn
-
-    from monty.exts.info.github_info import GithubInfo
 
 
 log = get_logger(__name__)
@@ -79,12 +78,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         self.request_cache: cachingutils.MemoryCache[tuple[str, str], Any] = cachingutils.MemoryCache(
             timeout=timedelta(minutes=6)
         )
-
-    def get_github_cog(self) -> "GithubInfo | None":
-        """Return the GitHub Information cog if it is loaded."""
-        if cog := cast("GithubInfo | None", self.bot.get_cog("GitHub Information")):
-            return cog
-        return None
 
     async def _fetch_response(self, url: str, response_format: str, **kwargs) -> Any:
         """Makes http requests using aiohttp."""
@@ -325,6 +318,12 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
                         logging.DEBUG if error.status == 404 else logging.ERROR,
                         f"Failed to fetch code snippet from {match[0]!r}: {error.status} "
                         f"{error_message} for GET {error.request_info.real_url.human_repr()}",
+                    )
+                except githubkit.exception.RequestFailed as error:
+                    log.log(
+                        logging.ERROR if error.response.status_code != 404 else logging.DEBUG,
+                        f"Failed to fetch code snippet from {match[0]!r}: {error.response.status_code} "
+                        f"{error.response.reason_phrase} for {error.request.method} {error.request.url}",
                     )
 
         # Sorts the list of snippets by their match index and joins them into a single message
