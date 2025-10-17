@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, TypedDict
 import aiohttp
 import httpx_aiohttp
 from aiohttp_client_cache.backends.redis import RedisBackend
-from aiohttp_client_cache.cache_control import CacheActions
 from aiohttp_client_cache.session import CachedSession
 
 from monty import constants
@@ -16,7 +15,6 @@ from monty.utils import helpers
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from types import SimpleNamespace
 
     import redis.asyncio
@@ -25,19 +23,6 @@ if TYPE_CHECKING:
 
 aiohttp_log = get_logger("monty.http")
 cache_logger = get_logger("monty.http.caching")
-
-
-class RevalidatingCacheActions(CacheActions):
-    @classmethod
-    def from_headers(cls, key: str, headers: Mapping):
-        """Initialize from request headers."""
-        res = super().from_headers(key, headers)
-        res.revalidate = True
-        return res
-
-
-"""Create the aiohttp session and set the trace logger, if desired."""
-trace_configs: list[TraceConfig] = []
 
 
 async def _on_request_end(
@@ -91,9 +76,11 @@ def get_cache_backend(redis: redis.asyncio.Redis) -> RedisBackend:
 
 class CachingClientSession(CachedSession):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Create the aiohttp session and set the trace logger, if desired."""
         kwargs.update(session_args_for_proxy(kwargs.get("proxy")))
 
         if "trace_configs" not in kwargs:
+            trace_configs: list[TraceConfig] = []
             trace_config = aiohttp.TraceConfig()
             trace_config.on_request_end.append(_on_request_end)
             trace_configs.append(trace_config)
