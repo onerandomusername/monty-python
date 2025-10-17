@@ -1,8 +1,9 @@
-import re
-from typing import TypedDict
+import random
+from typing import Any, TypedDict
 
 import disnake
 from disnake.ext import commands, tasks
+from typing_extensions import NotRequired
 
 from monty.bot import Monty
 from monty.constants import Colours
@@ -14,7 +15,6 @@ from monty.utils.messages import DeleteButton
 
 log = get_logger(__name__)
 
-COMIC_FORMAT = re.compile(r"latest|[0-9]+")
 BASE_URL = "https://xkcd.com"
 
 
@@ -27,6 +27,7 @@ class XkcdDict(TypedDict):
     img: str
     title: str
     safe_title: str
+    extra_parts: NotRequired[dict[str, Any]]
 
 
 class XKCD(
@@ -57,71 +58,114 @@ class XKCD(
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
 
     @commands.slash_command(name="xkcd")
-    async def fetch_xkcd_comics(self, inter: disnake.ApplicationCommandInteraction, comic: str | None = None) -> None:
+    async def xkcd(self, _: disnake.ApplicationCommandInteraction) -> None:
+        """View an xkcd comic."""
+
+    async def send_xkcd(self, inter: disnake.ApplicationCommandInteraction, info: XkcdDict) -> None:
+        """Parse an xkcd API response into a component."""
+        date = f"{info['year']}/{info['month']}/{info['day']}"
+        if info["img"][-3:] in ("jpg", "png", "gif") and not info.get("extra_parts"):
+            await inter.send(
+                components=[
+                    disnake.ui.Container(
+                        disnake.ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
+                        disnake.ui.TextDisplay(info["alt"]),
+                        disnake.ui.MediaGallery(disnake.MediaGalleryItem(info["img"])),
+                        disnake.ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
+                        accent_colour=disnake.Colour(Colours.soft_green),
+                    ),
+                    DeleteButton(inter.author, allow_manage_messages=False),
+                ]
+            )
+        else:
+            await inter.send(
+                components=[
+                    disnake.ui.Container(
+                        disnake.ui.TextDisplay(f"### [XKCD comic #{info['num']}]({BASE_URL}/{info['num']})"),
+                        disnake.ui.TextDisplay(
+                            "The selected comic is interactive, and cannot be displayed within an embed.\n"
+                            f"Comic can be viewed [here](https://xkcd.com/{info['num']})."
+                        ),
+                        disnake.ui.TextDisplay(f"{date} - #{info['num']}, '{info['safe_title']}'"),
+                        accent_colour=disnake.Colour(Colours.soft_green),
+                    ),
+                    DeleteButton(inter.author, allow_manage_messages=False),
+                ]
+            )
+
+    @xkcd.sub_command()
+    async def latest(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """View the latest xkcd comic."""
+        if self.latest_comic_info is None:
+            msg = "Could not fetch the latest comic from XKCD. Please try again later."
+            raise APIError(msg, status_code=500, api="XKCD")
+
+        await self.send_xkcd(inter, self.latest_comic_info)
+
+    @xkcd.sub_command()
+    async def number(self, inter: disnake.ApplicationCommandInteraction, comic: int) -> None:
         """
-        View an xkcd comic.
+        View an xkcd comic by its number.
 
         Parameters
         ----------
-        comic: number or 'latest'. Leave empty to show a random comic.
+        comic: The number of the comic to view.
         """
-        embed = disnake.Embed()
+        async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
+            if resp.status == 200:
+                info: XkcdDict = await resp.json()
+            elif resp.status == 404:
+                # xkcd #404 returns a 404 code as an easter egg, so there should be a different message
+                if comic != 404:
+                    msg = "That comic doesn't exist"
+                    raise commands.BadArgument(msg)
 
-        embed.colour = responses.DEFAULT_FAILURE_COLOUR
+                await inter.send(
+                    components=[
+                        disnake.ui.Container(
+                            disnake.ui.TextDisplay(f"### XKCD comic #{comic}"),
+                            disnake.ui.TextDisplay("f{resp.status}: Could not retrieve xkcd comic #{comic}"),
+                            accent_colour=responses.DEFAULT_FAILURE_COLOUR,
+                        )
+                    ]
+                )
+                return
+            else:
+                log.error(f"XKCD comic could not be fetched. Something went wrong fetching {comic}")
 
-        match = None
-        if comic and (match := re.match(COMIC_FORMAT, comic)) is None:
-            msg = "Comic parameter should either be an integer or 'latest'."
-            raise commands.BadArgument(msg)
+                msg = "Could not fetch that comic from XKCD. Please try again later."
+                raise APIError(
+                    msg,
+                    api="XKCD",
+                    status_code=resp.status,
+                )
 
-        elif not comic or (match and match.group(0) == "latest"):
-            if self.latest_comic_info is None:
-                msg = "xkcd"
-                msg = "Could not fetch the latest comic from XKCD. Please try again later."
-                raise APIError(msg, status_code=500, api="XKCD")
-            info = self.latest_comic_info
-        else:
-            async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
-                if resp.status == 200:
-                    info: XkcdDict = await resp.json()
-                elif resp.status == 404:
-                    # 404 was avoided as an easter egg. We should show an embed for it
-                    if comic != "404":
-                        msg = "That comic doesn't exist."
-                        raise commands.BadArgument(msg)
-                    embed.title = f"XKCD comic #{comic}"
-                    embed.description = f"{resp.status}: Could not retrieve xkcd comic #{comic}."
-                    await inter.send(embed=embed, components=DeleteButton(inter.user))
-                    return
+        await self.send_xkcd(inter, info)
 
-                else:
-                    log.error(f"XKCD comic could not be fetched. Something went wrong fetching {comic}")
+    @xkcd.sub_command()
+    async def random(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """View a random xkcd comic."""
+        if self.latest_comic_info is None:
+            msg = "Could not fetch a random comic from XKCD. Please try again later."
+            raise APIError(msg, status_code=500, api="XKCD")
 
-                    msg = "xkcd"
-                    msg = "Could not fetch that comic from XKCD. Please try again later."
-                    raise APIError(
-                        msg,
-                        api="XKCD",
-                        status_code=resp.status,
-                    )
+        while (comic := random.randint(1, self.latest_comic_info["num"])) == 404:
+            ...
 
-        embed.title = f"XKCD comic #{info['num']}"
-        embed.description = info["alt"]
-        embed.url = f"{BASE_URL}/{info['num']}"
+        async with self.bot.http_session.get(f"{BASE_URL}/{comic}/info.0.json") as resp:
+            if resp.status == 200:
+                info: XkcdDict = await resp.json()
+            else:
+                log.error(f"XKCD comic could not be fetched. Something went wrong fetching {comic}")
 
-        if info["img"][-3:] in ("jpg", "png", "gif"):
-            embed.set_image(url=info["img"])
-            date = f"{info['year']}/{info['month']}/{info['day']}"
-            embed.set_footer(text=f"{date} - #{info['num']}, '{info['safe_title']}'")
-            embed.colour = Colours.soft_green
-        else:
-            embed.description = (
-                "The selected comic is interactive, and cannot be displayed within an embed.\n"
-                f"Comic can be viewed [here](https://xkcd.com/{info['num']})."
-            )
+                msg = "Could not fetch a random comic from XKCD. Please try again later."
+                raise APIError(
+                    msg,
+                    api="XKCD",
+                    status_code=resp.status,
+                )
 
-        components = DeleteButton(inter.author, allow_manage_messages=False)
-        await inter.send(embed=embed, components=components)
+        await self.send_xkcd(inter, info)
 
 
 def setup(bot: Monty) -> None:
