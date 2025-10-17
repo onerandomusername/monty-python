@@ -18,7 +18,7 @@ from monty.migrations import run_alembic
 log = logging.getLogger(__name__)
 
 try:
-    import uvloop  # pyright: ignore[reportMissingImports]
+    import uvloop  # type: ignore
 
     uvloop.install()
     log.info("Using uvloop as event loop.")

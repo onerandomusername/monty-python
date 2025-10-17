@@ -44,6 +44,8 @@ dependencies = [
     "SQLAlchemy[asyncio]~=2.0.41",
     "statsd<4.0.0,>=3.3.0",
     "typing-extensions>=4.15.0",
+    # markers from https://github.com/MagicStack/uvloop/blob/74f4c96d3fc5281b1820491d2568de771ea7851b/setup.py#L7-L8
+    "uvloop>=0.22.1 ; sys_platform != 'cli' and sys_platform != 'cygwin' and sys_platform != 'win32'",
     "yarl<2.0.0,>=1.17.2",
 ]
 
@@ -184,7 +186,8 @@ sync = { cmd = "uv sync --all-groups --all-extras", help = "Sync all groups and 
 typeCheckingMode = "standard"
 include = ["monty", "*.py"]
 
-reportUnnecessaryTypeIgnoreComment = true
+# temporarily disabled
+reportUnnecessaryTypeIgnoreComment = false
 
 [tool.mdformat]
 wrap = 80
