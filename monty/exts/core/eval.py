@@ -432,11 +432,15 @@ class InternalEval(commands.Cog):
                 if not response.components and not response.files:
                     continue
 
+                if msg.guild is not None and msg.channel.permissions_for(msg.guild.me).manage_messages:
+                    delete_contexts = (msg, None)
+                else:
+                    delete_contexts = (None,)
                 response.components += [
                     disnake.ui.ActionRow(
                         *[
-                            DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=msg)
-                            for m in (ctx.message, None)
+                            DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
+                            for m in delete_contexts
                         ]
                     )
                 ]
