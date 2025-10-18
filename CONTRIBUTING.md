@@ -204,7 +204,7 @@ Running the autodoc session should automatically update these files, if there
 were any changes.
 
 ```sh
-uv run nox -s autodoc`
+uv run nox -s autodoc
 ```
 
 ### Building the documentation
