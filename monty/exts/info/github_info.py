@@ -10,7 +10,6 @@ from urllib.parse import quote_plus
 
 import attrs
 import cachingutils
-import cachingutils.redis
 import disnake
 import githubkit
 import githubkit.exception

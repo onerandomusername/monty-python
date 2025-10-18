@@ -432,7 +432,7 @@ class PyPI(
         )
 
         # make the completion
-        res = [value for value, score, key in fuzz_results]
+        res = [value for value, _score, _key in fuzz_results]
 
         # we need to make sure the query is included and at the top if we're supposed to include it
         if include_query:

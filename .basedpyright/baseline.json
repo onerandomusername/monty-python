@@ -1,5 +1,201 @@
 {
     "files": {
+        "./monty/aiohttp_session.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 30,
+                    "endColumn": 34,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 38,
+                    "endColumn": 44,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/bot.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 10,
+                    "endColumn": 16,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/command.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/config/metadata.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 82,
+                    "endColumn": 83,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/config/models.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 62,
+                    "endColumn": 63,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/errors.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 52,
+                    "endColumn": 56,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/core/bot_features.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 29,
+                    "endColumn": 32,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 34,
+                    "endColumn": 95,
+                    "lineCount": 3
+                }
+            }
+        ],
+        "./monty/exts/core/error_handler.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 78,
+                    "endColumn": 84,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/core/eval.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 37,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 40,
+                    "endColumn": 25,
+                    "lineCount": 7
+                }
+            }
+        ],
+        "./monty/exts/core/extensions.py": [
+            {
+                "code": "reportConstantRedefinition",
+                "range": {
+                    "startColumn": 12,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/core/logging.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 49,
+                    "endColumn": 53,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 57,
+                    "endColumn": 63,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/core/rollouts.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 29,
+                    "endColumn": 32,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 34,
+                    "endColumn": 99,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/filters/token_remover.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 35,
+                    "endColumn": 39,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 43,
+                    "endColumn": 49,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/info/codesnippets.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 70,
+                    "endColumn": 76,
+                    "lineCount": 1
+                }
+            }
+        ],
         "./monty/exts/info/docs/_batch_parser.py": [
             {
                 "code": "reportIncompatibleMethodOverride",
@@ -18,9 +214,49 @@
                     "endColumn": 22,
                     "lineCount": 1
                 }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 41,
+                    "endColumn": 42,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 44,
+                    "endColumn": 48,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 58,
+                    "endColumn": 59,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 61,
+                    "endColumn": 65,
+                    "lineCount": 1
+                }
             }
         ],
         "./monty/exts/info/docs/_html.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 51,
+                    "endColumn": 57,
+                    "lineCount": 1
+                }
+            },
             {
                 "code": "reportIncompatibleMethodOverride",
                 "range": {
@@ -31,6 +267,22 @@
             }
         ],
         "./monty/exts/info/docs/_redis_cache.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
             {
                 "code": "reportIncompatibleVariableOverride",
                 "range": {
@@ -56,6 +308,56 @@
                 }
             }
         ],
+        "./monty/exts/meta/help.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 9,
+                    "endColumn": 16,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 39,
+                    "endColumn": 40,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 49,
+                    "endColumn": 56,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 60,
+                    "endColumn": 67,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 53,
+                    "endColumn": 61,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportConstantRedefinition",
+                "range": {
+                    "startColumn": 4,
+                    "endColumn": 13,
+                    "lineCount": 1
+                }
+            }
+        ],
         "./monty/exts/meta/source.py": [
             {
                 "code": "reportIncompatibleMethodOverride",
@@ -74,12 +376,264 @@
                 }
             }
         ],
+        "./monty/exts/python/codeblock_commands.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 37,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 40,
+                    "endColumn": 45,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 53,
+                    "endColumn": 119,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/python/pep.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 26,
+                    "endColumn": 27,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 31,
+                    "endColumn": 32,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/python/pypi.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 25,
+                    "endColumn": 29,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 33,
+                    "endColumn": 39,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 36,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 40,
+                    "endColumn": 46,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/python/python_discourse.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 37,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 40,
+                    "endColumn": 65,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/exts/utils/bookmark.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 29,
+                    "endColumn": 30,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 69,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/github_client.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/group.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/monkey_patches.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 24,
+                    "endColumn": 28,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 32,
+                    "endColumn": 38,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 31,
+                    "endColumn": 35,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 54,
+                    "endColumn": 58,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 62,
+                    "endColumn": 68,
+                    "lineCount": 1
+                }
+            }
+        ],
         "./monty/statsd.py": [
             {
                 "code": "reportIncompatibleMethodOverride",
                 "range": {
                     "startColumn": 8,
                     "endColumn": 13,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/utils/__init__.py": [
+            {
+                "code": "reportOptionalMemberAccess",
+                "range": {
+                    "startColumn": 23,
+                    "endColumn": 30,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 55,
+                    "endColumn": 56,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 58,
+                    "endColumn": 70,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/utils/caching.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 35,
+                    "endColumn": 39,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 43,
+                    "endColumn": 49,
                     "lineCount": 1
                 }
             }
@@ -186,6 +740,14 @@
         ],
         "./monty/utils/helpers.py": [
             {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 69,
+                    "endColumn": 76,
+                    "lineCount": 1
+                }
+            },
+            {
                 "code": "reportOverlappingOverload",
                 "range": {
                     "startColumn": 4,
@@ -194,7 +756,57 @@
                 }
             }
         ],
+        "./monty/utils/inventory_parser.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 11,
+                    "endColumn": 14,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 18,
+                    "endColumn": 20,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 22,
+                    "endColumn": 25,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 28,
+                    "endColumn": 32,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 36,
+                    "endColumn": 42,
+                    "lineCount": 1
+                }
+            }
+        ],
         "./monty/utils/markdown.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 43,
+                    "endColumn": 50,
+                    "lineCount": 1
+                }
+            },
             {
                 "code": "reportIncompatibleMethodOverride",
                 "range": {
@@ -234,6 +846,40 @@
                     "endColumn": 18,
                     "lineCount": 1
                 }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 77,
+                    "endColumn": 82,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/utils/messages.py": [
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 73,
+                    "endColumn": 74,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 76,
+                    "endColumn": 77,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportUnknownLambdaType",
+                "range": {
+                    "startColumn": 79,
+                    "endColumn": 97,
+                    "lineCount": 1
+                }
             }
         ],
         "./monty/utils/pagination.py": [
@@ -242,6 +888,42 @@
                 "range": {
                     "startColumn": 13,
                     "endColumn": 19,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/utils/responses.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 6,
+                    "endColumn": 12,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 6,
+                    "endColumn": 12,
+                    "lineCount": 1
+                }
+            },
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 6,
+                    "endColumn": 12,
+                    "lineCount": 1
+                }
+            }
+        ],
+        "./monty/utils/scheduling.py": [
+            {
+                "code": "reportMissingParameterType",
+                "range": {
+                    "startColumn": 6,
+                    "endColumn": 12,
                     "lineCount": 1
                 }
             }

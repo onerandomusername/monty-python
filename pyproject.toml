@@ -181,10 +181,22 @@ pyright = { cmd = "dotenv -f task.env run -- pyright", help = "Run pyright" }
 sync = { cmd = "uv sync --all-groups --all-extras", help = "Sync all groups and extras to a local environment" }
 
 [tool.basedpyright]
-typeCheckingMode = "standard"
+typeCheckingMode = "strict"
 include = ["monty", "*.py"]
 
 reportUnnecessaryTypeIgnoreComment = true
+
+reportMissingTypeArgument = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportPrivateUsage = false
+reportMissingTypeStubs = false
+
+# not sure if we want these
+reportUnnecessaryComparison = false
+reportUnnecessaryIsInstance = false
 
 [tool.mdformat]
 wrap = 80

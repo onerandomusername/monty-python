@@ -5,7 +5,7 @@ from monty.config.models import Category, ConfigAttrMetadata, SelectOptionMetada
 __all__ = ()
 
 
-def _check_config_metadata(metadata: dict[str, ConfigAttrMetadata]) -> None:
+def check_config_metadata(metadata: dict[str, ConfigAttrMetadata]) -> None:
     for m in metadata.values():
         assert 0 < len(m.description) < 100
         assert m.modal or m.select_option

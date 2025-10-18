@@ -4,7 +4,6 @@ from collections.abc import Generator
 from typing import TYPE_CHECKING
 
 import disnake
-import disnake.ext.commands
 
 from monty import constants
 from monty.log import get_logger

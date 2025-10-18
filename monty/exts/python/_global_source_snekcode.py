@@ -19,7 +19,6 @@ NOTE: THIS RUNS ON PYTHON 3.11
 if __name__ == "__main__":
     import importlib
     import importlib.metadata
-    import importlib.util
     import inspect
     import pathlib
     import pkgutil

@@ -289,7 +289,7 @@ class MetaSource(
         )
 
         # make the completion
-        return {key: value for value, score, key in fuzz_results}
+        return {key: value for value, _score, key in fuzz_results}
 
     def get_source_link(self, source_item: SourceType) -> tuple[str, str, int | None]:
         """

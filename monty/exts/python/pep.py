@@ -267,10 +267,15 @@ class PythonEnhancementProposals(
         try:
             int(query)
         except ValueError:
-            processor = lambda x: x[0]  # noqa: E731
+
+            def processor(x: tuple[str, int]) -> str:
+                return x[0]
+
             query = query.lower()
         else:
-            processor = lambda x: str(x[1])  # noqa: E731
+
+            def processor(x: tuple[str, int]) -> str:
+                return str(x[1])
 
         processed = rapidfuzz.process.extract(
             (query, query),

@@ -1,6 +1,7 @@
 import asyncio
 import re
 import string
+from typing import TYPE_CHECKING, Any
 
 import disnake
 from disnake.ext import commands
@@ -8,6 +9,10 @@ from disnake.ext import commands
 from monty.utils.pagination import LinePaginator
 
 from .helpers import pad_base64
+
+
+if TYPE_CHECKING:
+    from types import CoroutineType
 
 
 __all__ = [
@@ -46,46 +51,50 @@ async def disambiguate(
     def check(message: disnake.Message) -> bool:
         return message.content.isdecimal() and message.author == ctx.author and message.channel == ctx.channel
 
+    if embed is None:
+        embed = disnake.Embed()
+
+    coro1: CoroutineType[Any, Any, disnake.Message] = ctx.bot.wait_for("message", check=check, timeout=timeout)
+    coro2 = LinePaginator.paginate(
+        choices,
+        ctx,
+        embed=embed,
+        max_lines=entries_per_page,
+        empty=empty,
+        max_size=6000,
+        timeout=9000,
+    )
+
     try:
-        if embed is None:
-            embed = disnake.Embed()
-
-        coro1 = ctx.bot.wait_for("message", check=check, timeout=timeout)
-        coro2 = LinePaginator.paginate(
-            choices,
-            ctx,
-            embed=embed,
-            max_lines=entries_per_page,
-            empty=empty,
-            max_size=6000,
-            timeout=9000,
-        )
-
         # wait_for timeout will go to except instead of the wait_for thing as I expected
-        futures = [asyncio.ensure_future(coro1), asyncio.ensure_future(coro2)]
-        done, pending = await asyncio.wait(futures, return_when=asyncio.FIRST_COMPLETED)
-
-        # :yert:
-        result = next(iter(done)).result()
-
-        # Pagination was canceled - result is None
-        if result is None:
-            for coro in pending:
-                coro.cancel()
-            msg = "Canceled."
-            raise commands.BadArgument(msg)
-
-        # Pagination was not initiated, only one page
-        if result.author == ctx.bot.user:
-            # Continue the wait_for
-            result = await next(iter(pending))
-
-        # Love that duplicate code
-        for coro in pending:
-            coro.cancel()
+        done, pending = await asyncio.wait(
+            [asyncio.ensure_future(coro) for coro in (coro1, coro2)], return_when=asyncio.FIRST_COMPLETED
+        )
     except asyncio.TimeoutError:
         msg = "Timed out."
         raise commands.BadArgument(msg) from None
+        # :yert:
+    result = next(iter(done)).result()
+
+    # Pagination was canceled - result is None
+    if result is None:
+        for coro in pending:
+            coro.cancel()
+        msg = "Canceled."
+        raise commands.BadArgument(msg)
+
+    # Pagination was not initiated, only one page
+    if result.author == ctx.bot.user:
+        # Continue the wait_for
+        try:
+            result = await next(iter(pending))
+        except asyncio.TimeoutError:
+            msg = "Timed out."
+            raise commands.BadArgument(msg) from None
+
+    # Love that duplicate code
+    for coro in pending:
+        coro.cancel()
 
     # Guaranteed to not error because of isdecimal() in check
     index = int(result.content)
