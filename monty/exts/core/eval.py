@@ -196,7 +196,7 @@ class InternalEval(commands.Cog):
             return filename, file
         return None
 
-    def get_component_for_segment(
+    def _get_component_for_segment(
         self,
         *,
         content: str,
@@ -229,7 +229,7 @@ class InternalEval(commands.Cog):
         container.accent_color = display_colour
         return container.children, file
 
-    def add_segments(
+    def _add_segments(
         self,
         response: Response,
         *,
@@ -251,17 +251,16 @@ class InternalEval(commands.Cog):
     def get_formatted_response(self, result: Result) -> Response:
         """Formulate a response message based on the result."""
         response = Response()
-        components: list[disnake.ui.Container] = []
         if result.raw_value is not None and result.raw_value.strip():
-            component, file = self.get_component_for_segment(
+            component, file = self._get_component_for_segment(
                 content=result.raw_value,
                 title="Result",
                 language="ansi",
                 display_colour=disnake.Colour.greyple(),
             )
-            self.add_segments(response, components=component, files=file)
+            self._add_segments(response, components=component, files=file)
         if result.errors:
-            component, file = self.get_component_for_segment(
+            component, file = self._get_component_for_segment(
                 content="\n".join(
                     "".join(
                         traceback.format_exception(
@@ -276,24 +275,23 @@ class InternalEval(commands.Cog):
                 language="py",
                 display_colour=constants.Colours.soft_red,
             )
-            self.add_segments(response, components=component, files=file)
+            self._add_segments(response, components=component, files=file)
 
         if result.stdout:
-            component, file = self.get_component_for_segment(
+            component, file = self._get_component_for_segment(
                 content=result.stdout, title="Stdout", language="ansi", display_colour=constants.Colours.blue
             )
-            self.add_segments(response, components=component, files=file)
+            self._add_segments(response, components=component, files=file)
 
         if result._:
-            component, file = self.get_component_for_segment(
+            component, file = self._get_component_for_segment(
                 content="\n".join(repr(item) for item in result._),
                 title="Captured output",
                 language="ansi",
                 display_colour=constants.Colours.soft_orange,
             )
-            self.add_segments(response, components=component, files=file)
+            self._add_segments(response, components=component, files=file)
 
-        response.components.extend(components)
         return response
 
     @commands.command(name="ieval", aliases=["iexec"], hidden=True)
@@ -333,6 +331,10 @@ class InternalEval(commands.Cog):
         result = await self.run_code(body, global_vars, rules=rules)
         result = self.make_pretty(result, rules)
         response = self.get_formatted_response(result)
+
+        await ctx.message.add_reaction("\u2705" if not result.errors else "\u2757")
+        if not response.components and not response.files:
+            return
 
         if ctx.guild is not None and ctx.channel.permissions_for(ctx.guild.me).manage_messages:
             delete_contexts = (ctx.message, None)
@@ -426,6 +428,10 @@ class InternalEval(commands.Cog):
 
                 result = self.make_pretty(result, rules)
                 response = self.get_formatted_response(result)
+                await msg.add_reaction("\u2705" if not result.errors else "\u2757")
+                if not response.components and not response.files:
+                    continue
+
                 response.components += [
                     disnake.ui.ActionRow(
                         *[
