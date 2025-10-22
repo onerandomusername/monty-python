@@ -428,7 +428,7 @@ class Monty(commands.Bot):
     async def sync_app_emojis(self, *, force_local_backend: bool = False) -> None:
         """Sync the application's emojis with those from the GitHub repository."""
         # check if an update is needed
-        if constants.Client.version not in ("dev") and not force_local_backend:
+        if constants.Client.version not in ("dev",) and not force_local_backend:
             backend = app_emoji_syncing.GitHubBackend(
                 github_client=self.github,
                 user=constants.Client.git_repo_user,
