@@ -352,12 +352,16 @@ class InternalEval(commands.Cog):
     @commands.command(name="repl", hidden=True)
     async def repl(self, ctx: commands.Context) -> None:
         """Start a REPL session in the channel."""
+        delete_button = DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=ctx.message)
+        if self._repl_session.locked():
+            await ctx.send(
+                "A REPL session is already running. Please cancel it before starting a new one.",
+                components=[delete_button],
+            )
+            return
         rules = (
             EvalRules.pprint_result | EvalRules.modify_return_underscore | EvalRules.dual_await | EvalRules.sort_lists
         )
-        if self._repl_session.locked():
-            await ctx.send("A REPL session is already running. Please cancel it before starting a new one.")
-            return
 
         local_vars = {
             "author": ctx.author,
@@ -373,9 +377,13 @@ class InternalEval(commands.Cog):
             "pprint": rich.pretty.pprint,
             "asyncio": asyncio,
         }
-        last_result: Any = None
         async with self._repl_session:
-            await ctx.send("Starting REPL session. Type code to evaluate it. Send `exit` or `quit` to exit.")
+            await ctx.reply(
+                "Starting REPL session. Type code to evaluate it. Send `exit` or `quit` to exit.",
+                components=[delete_button],
+                allowed_mentions=disnake.AllowedMentions.none(),
+                fail_if_not_exists=True,
+            )
             while True:
                 # first get a message
                 try:
@@ -390,37 +398,57 @@ class InternalEval(commands.Cog):
                         ),
                     )
                 except asyncio.TimeoutError:
-                    await ctx.reply("REPL session timed out.")
+                    # delete button with no initial message
+                    await ctx.reply(
+                        "REPL session timed out.",
+                        components=DeleteButton(ctx.author.id, allow_manage_messages=False),
+                        allowed_mentions=disnake.AllowedMentions.none(),
+                        fail_if_not_exists=False,
+                    )
                     break
                 if msg.content.strip("`").lower() in ("exit", "quit"):
-                    await msg.reply("Exiting REPL session.")
+                    await msg.reply(
+                        "Exiting REPL session.",
+                        components=DeleteButton(ctx.author.id, allow_manage_messages=False),
+                        allowed_mentions=disnake.AllowedMentions.none(),
+                        fail_if_not_exists=False,
+                    )
                     break
                 body = prepare_input(msg.content, require_fenced=True)
                 try:
                     result = await self.run_code(body, local_vars, rules=rules)
                 except SystemExit:
+                    await msg.reply(
+                        "Exiting REPL session.",
+                        components=DeleteButton(ctx.author.id, allow_manage_messages=False),
+                        allowed_mentions=disnake.AllowedMentions.none(),
+                        fail_if_not_exists=False,
+                    )
                     break
 
                 result = self.make_pretty(result, rules)
-                if result.raw_value == last_result:
-                    result.raw_value = None
                 response = self.get_formatted_response(result)
                 await msg.add_reaction("\u2705" if not result.errors else "\u2757")
                 if not response.components and not response.files:
                     continue
 
+                if msg.guild is not None and msg.channel.permissions_for(msg.guild.me).manage_messages:
+                    delete_contexts = (msg, None)
+                else:
+                    delete_contexts = (None,)
                 response.components += [
                     disnake.ui.ActionRow(
                         *[
                             DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
-                            for m in (ctx.message, None)
+                            for m in delete_contexts
                         ]
                     )
                 ]
-                await ctx.send(
+                await ctx.reply(
                     allowed_mentions=disnake.AllowedMentions.none(),
                     components=response.components,
                     files=response.files,
+                    fail_if_not_exists=False,
                 )
                 local_vars = result.local_vars
 
