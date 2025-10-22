@@ -7,6 +7,17 @@ on:
       - main
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - develop
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,9 +27,58 @@ permissions:
   {}
 
 jobs:
+  # copied from the ci step
   build:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'develop'
+    name: Build & Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # used to publish to GHCR
+    steps:
+      # Create a commit SHA-based tag for the container repositories
+      - name: Create SHA Container Tag
+        id: sha_tag
+        run: |
+          tag=$(cut -c 1-7 <<< $GITHUB_SHA)
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+      # Check out the current repository in the `monty` subdirectory
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          path: monty
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN  }}
+
+      # Build and push the container to the GitHub Container
+      # Repository. The container will be tagged as "latest"
+      # and with the short SHA of the commit.
+      - name: Build and push
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: monty/
+          file: monty/Dockerfile
+          push: true
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/monty-python-beta:latest
+          cache-to: type=inline
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/monty-python-beta:latest
+            ghcr.io/${{ github.repository_owner }}/monty-python-beta:${{ steps.sha_tag.outputs.tag }}
+          build-args: |
+            git_sha=${{ github.sha }}
+
+  deploy:
     environment: production
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     name: Deploy to k8s
     runs-on: ubuntu-latest
     permissions:
@@ -55,7 +115,18 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN  }}
 
-      - name: Deploy to Kubernetes
+      - name: Deploy beta to Kubernetes
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'develop'
+        uses: azure/k8s-deploy@6f7c489cecd8da05646259d9fa3daae92e095c7b # v5.0.4
+        with:
+          manifests: |
+              monty/beta/deployment.yaml
+          images: 'ghcr.io/onerandomusername/monty-python-beta:${{ steps.sha_tag.outputs.tag }}'
+          # annotate-namespace: false
+          # strategy: 'none'
+
+      - name: Deploy Stable to Kubernetes
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_environment != 'develop'
         uses: azure/k8s-deploy@6f7c489cecd8da05646259d9fa3daae92e095c7b # v5.0.4
         with:
           manifests: |
@@ -75,6 +146,22 @@ jobs:
           persist-credentials: false
 
       - name: Create a Sentry.io release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_environment == 'develop'
+        uses: tclindner/sentry-releases-action@6aa8f28371f3b57460bbaefce469471b117b5620 # v1.3.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: monty-python-beta
+        with:
+          tagName: ${{ github.sha }}
+          # because for whatever reason we currently have two seperate sentry projects, not one.
+          # TODO(onerandomusername): consolidate
+          environment: production
+          releaseNamePrefix: monty@
+
+
+      - name: Create a Sentry.io release
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.deploy_environment != 'develop'
         uses: tclindner/sentry-releases-action@6aa8f28371f3b57460bbaefce469471b117b5620 # v1.3.0
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
