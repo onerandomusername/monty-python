@@ -49,7 +49,7 @@ Most initial features (eval, github issues, and similar) were initially forked f
 """  # noqa: E501
 
 STATUS = """
-Version: `{version}`
+Git commit: `{sha}`
 Disnake version: `{disnake_version}`
 
 Guilds: `{guilds}`
@@ -226,7 +226,7 @@ class Meta(
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
             memory_usage=memory_usage,
             cpu_usage=self.process.cpu_percent(),
-            version=Client.version[:7],
+            sha=(Client.git_sha or "develop")[:7],
             latency=f"{round(self.bot.latency * 1000)}ms",
             uptime=round(float(self.bot.start_time.format("X"))),
         )

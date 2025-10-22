@@ -338,7 +338,7 @@ class MetaSource(
 
         file_location = Path(filename).relative_to(Path.cwd()).as_posix()
 
-        url = f"{Client.git_repo}/blob/{Client.version}/{file_location}{lines_extension}"
+        url = f"{Client.git_repo}/blob/{Client.git_ref}/{file_location}{lines_extension}"
 
         return url, file_location, first_line_no or None
 
