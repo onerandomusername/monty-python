@@ -49,7 +49,6 @@ StrHttpUrl = Annotated[str, pydantic.AfterValidator(is_url)]
 class ClientCls(BaseSettings):
     name: ClassVar[str] = "Monty Python"
     token: str = Field(validation_alias="BOT_TOKEN")
-    version: str = Field("main", validation_alias="GIT_SHA")
     default_command_prefix: str = Field("-", validation_alias="PREFIX")
     config_prefix: ClassVar[str] = "monty-python"
     intents: ClassVar[disnake.Intents] = disnake.Intents.default() | disnake.Intents.message_content
@@ -93,6 +92,7 @@ class ClientCls(BaseSettings):
         return {ext.strip() for ext in v.split(",") if ext.strip()}
 
     # source and support
+    git_sha: str | None = Field(None, validation_alias="GIT_SHA")
     git_repo: ClassVar[StrHttpUrl] = "https://github.com/onerandomusername/monty-python"
     support_server: ClassVar[str] = "mPscM4FjWB"
     # note that these are the default invite permissions,
@@ -114,6 +114,11 @@ class ClientCls(BaseSettings):
         create_private_threads=True,
         view_audit_log=True,
     )
+
+    @property
+    def git_ref(self) -> str:
+        """Return the git reference to use in URLs."""
+        return self.git_sha or "main"
 
 
 class DatabaseCls(BaseSettings):

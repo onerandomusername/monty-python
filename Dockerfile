@@ -13,7 +13,7 @@ ENV UV_LINK_MODE=copy
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
 
 # Set SHA build argument
-ARG git_sha="main"
+ARG git_sha=""
 ENV GIT_SHA=$git_sha
 
 # as we have a git dep, install git

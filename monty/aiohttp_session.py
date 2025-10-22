@@ -88,7 +88,7 @@ class CachingClientSession(CachedSession):
         if "headers" not in kwargs:
             kwargs["headers"] = {
                 "User-Agent": (
-                    f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.version} "
+                    f"Python/{sys.version_info[0]}.{sys.version_info[1]} Monty-Python/{constants.Client.git_ref} "
                     f"({constants.Client.git_repo})"
                 ),
             }
