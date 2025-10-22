@@ -79,7 +79,7 @@ jobs:
   deploy:
     environment: ${{ github.event.inputs.deploy_environment || 'production' }}
     needs: build
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
+    if: always() && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
     name: Deploy to k8s
     runs-on: ubuntu-latest
     permissions:
@@ -139,6 +139,7 @@ jobs:
   create_sentry_release:
     name: Create Sentry Release
     needs: build
+    if: always()
     environment: ${{ github.event.inputs.deploy_environment || 'production' }}
     runs-on: ubuntu-latest
     steps:
