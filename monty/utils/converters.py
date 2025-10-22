@@ -53,7 +53,7 @@ def str_timedelta_from_now(human: str, /) -> timedelta | None:
     # for that we can use arrow which does this for us.
     if "years" in parts or "months" in parts:
         now = arrow.utcnow()
-        then = now.shift(**parts)
+        then = now.shift(check_imaginary=True, **parts)
         return then - now
 
     return timedelta(**parts)
