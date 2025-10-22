@@ -65,8 +65,6 @@ class ClientCls(BaseSettings):
         users=False,
         replied_user=True,
     )
-    activity: ClassVar[disnake.Game] = disnake.Game(name=f"Commands: {default_command_prefix}help")
-
     # debug configuration
     debug: bool = Field(False, validation_alias="BOT_DEBUG")
     proxy: str | None = Field(None, validation_alias="BOT_PROXY_URL")
@@ -119,6 +117,11 @@ class ClientCls(BaseSettings):
     def git_ref(self) -> str:
         """Return the git reference to use in URLs."""
         return self.git_sha or "main"
+
+    @property
+    def activity(self) -> disnake.Game:
+        """Return the bot's activity based on debug status."""
+        return disnake.Game(name=f"Commands: {self.default_command_prefix}help")
 
 
 class DatabaseCls(BaseSettings):
