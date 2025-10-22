@@ -425,20 +425,22 @@ class Monty(commands.Bot):
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
 
-    async def sync_app_emojis(self, *, force_local_backend: bool = False) -> None:
+    async def sync_app_emojis(self, *, force_local_backend: bool | None = None, sha: str | None = None) -> None:
         """Sync the application's emojis with those from the GitHub repository."""
         # check if an update is needed
-        if constants.Client.version not in ("dev",) and not force_local_backend:
+        if constants.Client.version in ("dev",) or force_local_backend is True:
+            backend = app_emoji_syncing.LocalGitBackend(
+                emoji_directory=constants.Client.app_emoji_directory,
+            )
+        else:
             backend = app_emoji_syncing.GitHubBackend(
                 github_client=self.github,
                 user=constants.Client.git_repo_user,
                 repo=constants.Client.git_repo_name,
                 emoji_directory=constants.Client.app_emoji_directory,
-                sha=constants.Client.version,
-            )
-        else:
-            backend = app_emoji_syncing.LocalGitBackend(
-                emoji_directory=constants.Client.app_emoji_directory,
+                # todo: set this based on the current git sha that's also on GitHub
+                # should not be the same as Client.version
+                sha=sha or constants.Client.version,
             )
 
         last_changed = await backend.get_last_changed_date()
