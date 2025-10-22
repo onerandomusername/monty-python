@@ -17,6 +17,7 @@ from typing_extensions import Self, override
 
 from monty import constants
 from monty.aiohttp_session import AiohttpTransport, CachingClientSession, get_cache_backend, session_args_for_proxy
+from monty.components import app_emoji_syncing
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.github_client import GitHubClient
@@ -423,3 +424,46 @@ class Monty(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
+
+    async def sync_app_emojis(self, *, force_local_backend: bool = False) -> None:
+        """Sync the application's emojis with those from the GitHub repository."""
+        # check if an update is needed
+        if constants.Client.version not in ("dev") and not force_local_backend:
+            backend = app_emoji_syncing.GitHubBackend(
+                github_client=self.github,
+                user=constants.Client.git_repo_user,
+                repo=constants.Client.git_repo_name,
+                emoji_directory=constants.Client.app_emoji_directory,
+                sha=constants.Client.version,
+            )
+        else:
+            backend = app_emoji_syncing.LocalGitBackend(
+                emoji_directory=constants.Client.app_emoji_directory,
+            )
+
+        last_changed = await backend.get_last_changed_date()
+
+        # we can assume that the app emojis we fetched match our internal enum
+        app_emojis_to_keep: set[str] = set(dict(constants.AppEmojis).values())
+
+        existing_app_emojis = await self.fetch_application_emojis()
+        for emoji in existing_app_emojis:
+            if emoji.name not in app_emojis_to_keep:
+                await emoji.delete()
+                continue
+
+            # pop the app emoji
+            app_emojis_to_keep.remove(emoji.name)
+
+            if emoji.created_at >= last_changed:
+                continue
+
+            # update the emoji
+            raw_emoji = await backend.get_emoji_content(emoji.name)
+            await emoji.delete()
+            await self.create_application_emoji(name=emoji.name, image=raw_emoji)
+
+        # add any new app emojis from the repo
+        for emoji_name in app_emojis_to_keep:
+            raw_emoji = await backend.get_emoji_content(emoji_name)
+            await self.create_application_emoji(name=emoji_name, image=raw_emoji)
