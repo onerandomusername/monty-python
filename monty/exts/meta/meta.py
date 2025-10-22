@@ -16,7 +16,6 @@ from monty.utils.messages import DeleteButton
 # TODO(onerandomusername): heavy refactor of this information
 ABOUT = f"""
 *A Python and GitHub focused Discord bot to make collaborating on Python projects through Discord easier than ever.*
-**Primary features**
 ### Features
 Monty allows for evaluating Python code within Discord, formatting code snippets with Black, and more, in the realm of Python and GitHub.
 See a message that you want to keep track of? Use the `Bookmark` command to save it for later!
