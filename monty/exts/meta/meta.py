@@ -13,43 +13,36 @@ from monty.utils import helpers
 from monty.utils.messages import DeleteButton
 
 
+# TODO(onerandomusername): heavy refactor of this information
 ABOUT = f"""
-Based off of multiple open source projects, Monty is a development tool for Discord servers.
-
+*A Python and GitHub focused Discord bot to make collaborating on Python projects through Discord easier than ever.*
 **Primary features**
-`/docs` View Python documentation from discord
-`/pep` View PEPs directly within discord
-`-eval` Evaluate Python code
-`-black` Blacken Python code
+### Features
+Monty allows for evaluating Python code within Discord, formatting code snippets with Black, and more, in the realm of Python and GitHub.
+See a message that you want to keep track of? Use the `Bookmark` command to save it for later!
+Auto-expand GitHub links to show rich embeds with issue/PR status, author, labels, and more information.
 
-**Additional features**
-- Leaked token alerting
-- Automatic github issue linking
-- Inline docs and eval
-- Automatic leaked webhook deletion
-- Codeblock detection
-
+If you find the default configuration too noisy, Monty also supports per-server configuration to enable/disable features as needed. Use `/config` to get started.
+### Get Started
 **GitHub**: {Client.git_repo}
-**Invite**: Use `/monty invite` to get an invite link to add me to your server.
+**Invite**: [Click here](https://discord.com/oauth2/authorize?client_id={{client_id}}) to add Monty!
 **Support**: https://discord.gg/{Client.support_server}
-**Credits**: Click the Credits button below to view who I thank for helping make Monty.
-"""
+**Credits**: Click the Credits button below to view who helped make Monty possible.
+"""  # noqa: E501
 
 CREDITS = """
 Monty Python would not have been possible without the following open source projects:
-
-**Primary library**
+### Primary framework
 **disnake**: [Website](https://disnake.dev) | [Server](https://discord.gg/disnake)
+### Initial framework and features
+python-discord's bot ([source](https://github.com/python-discord/bot))
+python-discord's sir-lancebot ([source](https://github.com/python-discord/sir-lancebot))
 
-**Initial framework and features**
-python-discord's sir-lancebot: ([Repo](https://github.com/python-discord/sir-lancebot))
-python-discord's bot: ([Repo](https://github.com/python-discord/bot))
-
-Most initial features (eval, github issues, and similar) were initially forked from python-discord's bot, and modified to work with Monty.
+Note that at this point in time, most of the commonly used features in Monty have been rewritten, though the overall codebase still resembles and mirrors the structure of the original applications.
 """  # noqa: E501
 
 STATUS = """
-Git commit: `{sha}`
+Git commit: [`{sha_short}`]({git_repo}/commit/{sha})
 Disnake version: `{disnake_version}`
 
 Guilds: `{guilds}`
@@ -87,6 +80,13 @@ class Meta(
         self.process = psutil.Process()
 
         self._app_info_last_fetched: datetime | None = None
+
+    async def cog_load(self) -> None:
+        """Called when the cog is loaded."""
+        # Pre-fetch application info
+        appinfo = await self.application_info()
+        global ABOUT
+        ABOUT = ABOUT.format(client_id=appinfo.id)
 
     @commands.slash_command(name="monty")
     async def monty(self, inter: disnake.CommandInteraction) -> None:
@@ -226,7 +226,9 @@ class Meta(
             channels=sum(len(guild.channels) for guild in self.bot.guilds),
             memory_usage=memory_usage,
             cpu_usage=self.process.cpu_percent(),
-            sha=(Client.git_sha or "develop")[:7],
+            sha_short=(Client.git_sha or "develop")[:7],
+            git_repo=Client.git_repo,
+            sha=Client.git_sha or "main",
             latency=f"{round(self.bot.latency * 1000)}ms",
             uptime=round(float(self.bot.start_time.format("X"))),
         )
