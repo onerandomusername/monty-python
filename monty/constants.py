@@ -269,18 +269,21 @@ class EmojisCls(BaseModel):
     reddit_comments: str = "<:reddit_comments:882722838153416705>"
 
 
-class AppEmojisCls(BaseModel):
+AppEmojiAnn = disnake.PartialEmoji | disnake.Emoji
+
+
+class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
     # GitHub octicons
-    discussion_answered: str = "github_discussion_answered"
-    issue_open: str = "github_issue_open"
-    issue_closed: str = "github_issue_closed"
-    issue_closed_completed: str = "github_issue_closed_completed"
-    issue_closed_unplanned: str = "github_issue_closed_unplanned"
-    issue_draft: str = "github_issue_draft"
-    pull_request_open: str = "github_pull_request_open"
-    pull_request_closed: str = "github_pull_request_closed"
-    pull_request_draft: str = "github_pull_request_draft"
-    pull_request_merged: str = "github_pull_request_merged"
+    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="github_discussion_answered")
+    issue_open: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_open")
+    issue_closed: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed")
+    issue_closed_completed: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed_completed")
+    issue_closed_unplanned: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed_unplanned")
+    issue_draft: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_draft")
+    pull_request_open: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_open")
+    pull_request_closed: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_closed")
+    pull_request_draft: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_draft")
+    pull_request_merged: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_merged")
 
 
 # TODO: stash all icons as emojis

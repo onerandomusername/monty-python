@@ -15,9 +15,11 @@ if TYPE_CHECKING:
 class AppEmojiSyncer(Protocol):
     async def get_last_changed_date(self) -> datetime.datetime:
         """Provide the timestamp of the most recent change for the emoji directory."""
+        ...
 
     async def get_emoji_content(self, emoji_name: str) -> bytes:
         """Provide the content of the specified emoji."""
+        ...
 
 
 class GitHubBackend:

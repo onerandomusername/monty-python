@@ -444,7 +444,9 @@ class Monty(commands.Bot):
         last_changed = await backend.get_last_changed_date()
 
         # we can assume that the app emojis we fetched match our internal enum
-        app_emojis_to_keep: set[str] = set(dict(constants.AppEmojis).values())
+        app_emojis_to_keep: dict[str, disnake.PartialEmoji] = {
+            emoji.name: emoji for _attr, emoji in constants.AppEmojis
+        }
 
         existing_app_emojis = await self.fetch_application_emojis()
         for emoji in existing_app_emojis:
@@ -453,7 +455,7 @@ class Monty(commands.Bot):
                 continue
 
             # pop the app emoji
-            app_emojis_to_keep.remove(emoji.name)
+            app_emojis_to_keep.pop(emoji.name)
 
             if emoji.created_at >= last_changed:
                 continue
@@ -467,3 +469,8 @@ class Monty(commands.Bot):
         for emoji_name in app_emojis_to_keep:
             raw_emoji = await backend.get_emoji_content(emoji_name)
             await self.create_application_emoji(name=emoji_name, image=raw_emoji)
+
+        # update the cached emojis to be their full objects
+        self.app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        for emoji_attr, partial_emoji in constants.AppEmojis:
+            setattr(constants.AppEmojis, emoji_attr, self.app_emojis[partial_emoji.name])
