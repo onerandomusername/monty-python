@@ -461,16 +461,27 @@ class Monty(commands.Bot):
                 continue
 
             # update the emoji
-            raw_emoji = await backend.get_emoji_content(emoji.name)
+            try:
+                raw_emoji = await backend.get_emoji_content(emoji.name)
+            except app_emoji_syncing.EmojiContentNotFoundError:
+                log.warning("Emoji content not found for %s, skipping update.", emoji.name)
+                continue
             await emoji.delete()
             await self.create_application_emoji(name=emoji.name, image=raw_emoji)
 
         # add any new app emojis from the repo
-        for emoji_name in app_emojis_to_keep:
-            raw_emoji = await backend.get_emoji_content(emoji_name)
+        for emoji_name in app_emojis_to_keep.copy():
+            try:
+                raw_emoji = await backend.get_emoji_content(emoji_name)
+            except app_emoji_syncing.EmojiContentNotFoundError:
+                log.warning("Emoji content not found for %s, skipping creation.", emoji_name)
+                app_emojis_to_keep.pop(emoji_name)
+                continue
             await self.create_application_emoji(name=emoji_name, image=raw_emoji)
 
         # update the cached emojis to be their full objects
         self.app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
         for emoji_attr, partial_emoji in constants.AppEmojis:
+            if partial_emoji.name not in self.app_emojis:
+                continue
             setattr(constants.AppEmojis, emoji_attr, self.app_emojis[partial_emoji.name])

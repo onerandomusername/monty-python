@@ -8,8 +8,13 @@ from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
     from asyncio.subprocess import Process
+    from collections.abc import Generator
 
     from monty.github_client import GitHubClient
+
+
+class EmojiContentNotFoundError(Exception):
+    """Exception raised when the content of an emoji is not found."""
 
 
 class AppEmojiSyncer(Protocol):
@@ -68,14 +73,27 @@ class GitHubBackend:
 class LocalGitBackend:
     def __init__(self, emoji_directory: str, sha: str | None = None):
         self.repo_path = pathlib.Path.cwd()
-        self.emoji_directory = emoji_directory.lstrip("/\\")
+        emoji_directory_path = pathlib.Path(emoji_directory)
+        if emoji_directory_path.anchor:
+            emoji_directory_path = pathlib.Path(*emoji_directory_path.parts[1:])
+        self.emoji_directory = (self.repo_path / emoji_directory_path.resolve()).relative_to(self.repo_path)
         self.sha = sha or "HEAD"
 
-    async def get_last_changed_date(self) -> datetime.datetime:
-        """Get the time of the last commit for the emoji directory.
+    def _list_local_files(self) -> Generator[pathlib.Path, None, None]:
+        """List all local emoji files."""
+        yield from (self.repo_path / self.emoji_directory).rglob("*.png")
 
-        TODO: support os.stat.
-        """
+    async def get_last_changed_date(self) -> datetime.datetime:
+        """Get the time of the last commit for the emoji directory."""
+        if self.sha == "HEAD":
+            # check modified files with pathlib
+            last_changed: datetime.datetime = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+            for file in self._list_local_files():
+                file_mtime = file.stat().st_mtime
+                if file_mtime > last_changed.timestamp():
+                    last_changed = datetime.datetime.fromtimestamp(file_mtime, tz=datetime.timezone.utc)
+            return last_changed
+
         proc = await asyncio.create_subprocess_exec(
             "git",
             "log",
@@ -97,9 +115,15 @@ class LocalGitBackend:
         """Read the emoji at the specified path."""
         path = f"{self.emoji_directory}/{emoji_name}.png"
         if self.sha == "HEAD":
-            cmd = f"cat {path}"
-        else:
-            cmd = f"git show {self.sha}:{path}"
+            # fetch the existing files at this exact moment
+            file_path = self.repo_path / self.emoji_directory / f"{emoji_name}.png"
+            if not file_path.exists():
+                msg = f"Emoji file not found: {file_path}"
+                raise EmojiContentNotFoundError(msg)
+            with file_path.open("rb") as f:
+                return f.read()
+
+        cmd = f"git show {self.sha}:{path}"
         proc: Process = await asyncio.create_subprocess_exec(
             *cmd.split(),
             cwd=self.repo_path,
