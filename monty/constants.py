@@ -92,6 +92,9 @@ class ClientCls(BaseSettings):
     # source and support
     git_sha: str | None = Field(None, validation_alias="GIT_SHA")
     git_repo: ClassVar[StrHttpUrl] = "https://github.com/onerandomusername/monty-python"
+    git_repo_user: str = "onerandomusername"
+    git_repo_name: str = "monty-python"
+    app_emoji_directory: str = "/monty/resources/emojis"
     support_server: ClassVar[str] = "mPscM4FjWB"
     # note that these are the default invite permissions,
     # But Monty fetches the ones configured in the developer portal and replace these
@@ -240,18 +243,6 @@ class EmojisCls(BaseModel):
     upload: str = "\U0001f4dd"
     snekbox: str = "\U0001f40d"
 
-    # GitHub octicons
-    discussion_answered: str = "<:discussion_answered:979267343710584894>"
-    issue_open: str = "<:issue_open:882464248951877682>"
-    issue_closed: str = "<:issue_closed:882464248972865536>"
-    issue_closed_completed: str = "<:issue_closed_completed:979047130847117343>"
-    issue_closed_unplanned: str = "<:issue_closed_unplanned:979052245507276840>"
-    issue_draft: str = "<:issue_draft:882464249337774130>"
-    pull_request_open: str = "<:pull_open:882464248721182842>"
-    pull_request_closed: str = "<:pull_closed:882464248989638676>"
-    pull_request_draft: str = "<:pull_draft:882464249065136138>"
-    pull_request_merged: str = "<:pull_merged:882464249119645787>"
-
     number_emojis: dict[int, str] = {
         1: "\u0031\ufe0f\u20e3",
         2: "\u0032\ufe0f\u20e3",
@@ -276,6 +267,23 @@ class EmojisCls(BaseModel):
 
     reddit_upvote: str = "<:reddit_upvote:882722837868195901>"
     reddit_comments: str = "<:reddit_comments:882722838153416705>"
+
+
+AppEmojiAnn = disnake.PartialEmoji | disnake.Emoji
+
+
+class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
+    # GitHub octicons
+    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="github_discussion_answered")
+    issue_open: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_open")
+    issue_closed: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed")
+    issue_closed_completed: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed_completed")
+    issue_closed_unplanned: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_closed_unplanned")
+    issue_draft: AppEmojiAnn = disnake.PartialEmoji(name="github_issue_draft")
+    pull_request_open: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_open")
+    pull_request_closed: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_closed")
+    pull_request_draft: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_draft")
+    pull_request_merged: AppEmojiAnn = disnake.PartialEmoji(name="github_pull_request_merged")
 
 
 # TODO: stash all icons as emojis
@@ -323,5 +331,6 @@ Monitoring = MonitoringCls()  # pyright: ignore[reportCallIssue]
 CodeBlock = CodeBlockCls()
 Colours = ColoursCls()
 Emojis = EmojisCls()  # pyright: ignore[reportCallIssue]
+AppEmojis = AppEmojisCls()
 Icons = IconsCls()
 Guilds = GuildsCls()

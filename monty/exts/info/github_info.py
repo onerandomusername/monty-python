@@ -174,7 +174,7 @@ class IssueState:
     number: int
     url: str
     title: str
-    emoji: str
+    emoji: disnake.PartialEmoji | disnake.Emoji
     raw_json: dict[str, Any] | Any | None = None
 
 
@@ -524,29 +524,29 @@ class GithubInfo(
         if pull_data := json_data.get("pull_request"):
             # When 'merged_at' is not None, this means that the state of the PR is merged
             if pull_data.get("merged_at") is not None:
-                emoji = constants.Emojis.pull_request_merged
+                emoji = constants.AppEmojis.pull_request_merged
             elif json_data["state"] == "closed":
-                emoji = constants.Emojis.pull_request_closed
+                emoji = constants.AppEmojis.pull_request_closed
             elif json_data.get("draft"):
-                emoji = constants.Emojis.pull_request_draft
+                emoji = constants.AppEmojis.pull_request_draft
             else:
-                emoji = constants.Emojis.pull_request_open
+                emoji = constants.AppEmojis.pull_request_open
         elif is_discussion:
             issue_url = json_data["html_url"]
             if json_data.get("answer"):
-                emoji = constants.Emojis.discussion_answered
+                emoji = constants.AppEmojis.discussion_answered
             else:
-                emoji = constants.Emojis.issue_draft
+                emoji = constants.AppEmojis.issue_draft
         else:
             # this is a definite issue and not a pull request, and should be treated as such
             if json_data.get("state") == "open":
-                emoji = constants.Emojis.issue_open
+                emoji = constants.AppEmojis.issue_open
             elif (reason := json_data.get("state_reason")) == "not_planned":
-                emoji = constants.Emojis.issue_closed_unplanned
+                emoji = constants.AppEmojis.issue_closed_unplanned
             elif reason == "completed":
-                emoji = constants.Emojis.issue_closed_completed
+                emoji = constants.AppEmojis.issue_closed_completed
             else:
-                emoji = constants.Emojis.issue_closed
+                emoji = constants.AppEmojis.issue_closed
 
         return IssueState(
             user,

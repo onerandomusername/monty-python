@@ -1,6 +1,7 @@
 import asyncio
 import collections
-from typing import Any, cast, final
+import datetime
+from typing import Any, Literal, cast, final
 from weakref import WeakValueDictionary
 
 import arrow
@@ -17,6 +18,7 @@ from typing_extensions import Self, override
 
 from monty import constants
 from monty.aiohttp_session import AiohttpTransport, CachingClientSession, get_cache_backend, session_args_for_proxy
+from monty.components import app_emoji_syncing
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.github_client import GitHubClient
@@ -423,3 +425,96 @@ class Monty(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
+
+    async def sync_app_emojis(self, *, force_local_backend: bool | None = None, sha: str | None = None) -> None:
+        """Sync the application's emojis with those from the GitHub repository."""
+        # check if an update is needed
+        if not constants.Client.git_sha and force_local_backend is not False:
+            backend = app_emoji_syncing.LocalBackend(
+                emoji_directory=constants.Client.app_emoji_directory,
+            )
+        else:
+            backend = app_emoji_syncing.GitHubBackend(
+                github_client=self.github,
+                user=constants.Client.git_repo_user,
+                repo=constants.Client.git_repo_name,
+                emoji_directory=constants.Client.app_emoji_directory,
+                sha=sha or constants.Client.git_ref,
+            )
+
+        # This is used to check if the source of an emoji MAY HAVE changed since last sync
+        # such that we can skip comparing emojis that definitely have not changed.
+        # For instance, if we have 50 emojis, we don't need to fetch and load the contents of all 50
+        # if their timestamp is older than the last changed date of the source.
+        # If an emoji is newer than the last changed date, we have to check it.
+        # This is a rudimentary check, but it lessens some unnecessary fetches and comparisons.
+        last_changed = await backend.get_last_changed_date()
+
+        hardcoded_emojis: dict[str, disnake.PartialEmoji] = {
+            field.default.name: field.default for _attr, field in constants.AppEmojisCls.model_fields.items()
+        }
+
+        existing_app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        self.app_emojis = existing_app_emojis | {}
+
+        async def _creator(
+            bot: "Monty" = self,
+            *,
+            emoji_name: str,
+            existing: disnake.Emoji | None = None,
+            last_changed: datetime.datetime = last_changed,
+        ) -> disnake.Emoji | None | bool:
+            if existing and existing.created_at >= last_changed:
+                return None
+            try:
+                raw_emoji = await backend.get_emoji_content(emoji_name)
+            except app_emoji_syncing.EmojiContentNotFoundError:
+                if emoji_name in hardcoded_emojis:
+                    hardcoded_emojis.pop(emoji_name)
+                raise
+            if existing:
+                r = await bot.http_session.get(existing.url)
+                data = await r.read()
+                if data == raw_emoji:
+                    return None
+
+                await existing.delete()
+
+            return await bot.create_application_emoji(name=emoji_name, image=raw_emoji)
+
+        async def _delete(emoji: disnake.Emoji) -> Literal[False]:
+            await emoji.delete()
+            return False
+
+        coros = []
+        for emoji_name, emoji in (hardcoded_emojis | existing_app_emojis).items():
+            if isinstance(emoji, disnake.Emoji) and emoji_name not in hardcoded_emojis:
+                # emoji no longer exists in the repo, delete it
+                coros.append(_delete(emoji))
+                continue
+            coros.append(_creator(emoji_name=emoji_name, existing=emoji if isinstance(emoji, disnake.Emoji) else None))
+
+        results: list[disnake.Emoji | Literal[False] | None | BaseException] = await asyncio.gather(
+            *coros, return_exceptions=True
+        )
+
+        for result, emoji in zip(results, (hardcoded_emojis | existing_app_emojis).values(), strict=True):
+            if isinstance(result, BaseException):
+                log.error("Error occurred while updating/deleting emoji %s: %s", emoji.name, result)
+            elif result is None:
+                log.debug("No changes made to emoji %s", emoji.name)
+            elif result is True:
+                log.info("Successfully updated emoji %s", emoji.name)
+            elif result is False:
+                log.info("Successfully deleted emoji %s", emoji.name)
+            else:
+                log.info("Successfully created emoji %s", emoji.name)
+            if isinstance(emoji, disnake.Emoji):
+                self.app_emojis[emoji.name] = result if isinstance(result, disnake.Emoji) else emoji
+
+        # update the cached emojis to be their full objects
+        # self.app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        for emoji_attr, partial_emoji in constants.AppEmojis:
+            if partial_emoji.name not in self.app_emojis:
+                continue
+            setattr(constants.AppEmojis, emoji_attr, self.app_emojis[partial_emoji.name])
