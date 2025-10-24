@@ -14,8 +14,6 @@ __all__ = (
     "DocMarkdownConverter",
     "remove_codeblocks",
 )
-# taken from version 0.6.1 of markdownify
-WHITESPACE_RE = re.compile(r"[\r\n\s\t ]+")
 
 
 CODE_BLOCK_RE = re.compile(
@@ -35,20 +33,18 @@ def remove_codeblocks(content: str) -> str:
 class DocMarkdownConverter(MarkdownConverter):
     """Subclass markdownify's MarkdownCoverter to provide custom conversion methods."""
 
-    def __init__(self, *, page_url: str, **options) -> None:
-        super().__init__(**options)
+    def __init__(self, *, page_url: str, **options):
+        # Reflow text to avoid unwanted line breaks.
+        default_options = {"wrap": True, "wrap_width": None}
+
+        super().__init__(**default_options | options)
         self.page_url = page_url
 
-    # overwritten to use our regex from version 0.6.1
-    def process_text(self, text: str | None) -> Any:
-        """Process the text, using our custom regex."""
-        return self.escape(WHITESPACE_RE.sub(" ", text or ""))
-
-    def convert_img(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_img(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Remove images from the parsed contents, we don't want them."""
         return ""
 
-    def convert_li(self, el: Tag, text: str, convert_as_inline: bool) -> str:
+    def convert_li(self, el: Tag, text: str, parent_tags: set[str]) -> str:
         """Fix markdownify's erroneous indexing in ol tags."""
         parent = el.parent
         if parent is not None and parent.name == "ol":
@@ -65,40 +61,42 @@ class DocMarkdownConverter(MarkdownConverter):
             bullet = bullets[depth % len(bullets)]
         return f"{bullet} {text}\n"
 
-    def convert_hn(self, _n: int, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def _convert_hn(self, n: int, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Convert h tags to bold text with ** instead of adding #."""
-        if convert_as_inline:
+        if "_inline" in parent_tags:
             return text
         return f"**{text}**\n\n"
 
-    def convert_code(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_code(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Undo `markdownify`s underscore escaping."""
         return f"`{text}`".replace("\\", "")
 
-    def convert_pre(self, el: Tag, text: str, convert_as_inline: bool) -> str:
+    def convert_pre(self, el: Tag, text: str, parent_tags: set[str]) -> str:  # pyright: ignore[reportIncompatibleMethodOverride] # bug in pyright
         """Wrap any codeblocks in `py` for syntax highlighting."""
         code = "".join(el.strings)
         return f"```py\n{code}```"
 
-    def convert_a(self, el: Tag, text: str, convert_as_inline: bool) -> str:
+    def convert_a(self, el: Tag, text: str, parent_tags: set[str]) -> str:
         """Resolve relative URLs to `self.page_url`."""
         href = el["href"]
         assert isinstance(href, str)
         el["href"] = urljoin(self.page_url, href)
-        return super().convert_a(el, text, convert_as_inline)
+        # Discord doesn't handle titles properly, showing links with them as raw text.
+        el["title"] = ""
+        return super().convert_a(el, text, parent_tags)
 
-    def convert_p(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
+    def convert_p(self, el: PageElement, text: str, parent_tags: set[str]) -> str:
         """Include only one newline instead of two when the parent is a li tag."""
-        if convert_as_inline:
+        if "_inline" in parent_tags:
             return text
 
         parent = el.parent
         if parent is not None and parent.name == "li":
             return f"{text}\n"
-        return super().convert_p(el, text, convert_as_inline)
+        return super().convert_p(el, text, parent_tags)
 
-    def convert_hr(self, el: PageElement, text: str, convert_as_inline: bool) -> str:
-        """Convert hr tags to nothing. This is because later versions added this method."""
+    def convert_hr(self, el: PageElement, text: str, parent_tags: set[str]) -> str:  # pyright: ignore[reportIncompatibleMethodOverride] # bug in pyright
+        """Ignore `hr` tag."""
         return ""
 
 
