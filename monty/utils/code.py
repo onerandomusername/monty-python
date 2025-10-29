@@ -45,6 +45,9 @@ def prepare_input(code: str, *, require_fenced: bool = False) -> str | None:
         if len(blocks) > 1:
             code = "\n".join(block.group("code") for block in blocks)
             info = "several code blocks"
+        elif len(match) > 1:
+            code = "\n".join(block.group("code") for block in match)
+            info = "several code blocks"
         else:
             match = match[0] if len(blocks) == 0 else blocks[0]
             code, block, lang, delim = match.group("code", "block", "lang", "delim")

@@ -2,7 +2,7 @@ import logging
 import re
 import textwrap
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 from urllib.parse import quote_plus
 from urllib.parse import unquote as urlunquote
 
@@ -14,6 +14,7 @@ from aiohttp import ClientResponseError
 from disnake.ext import commands
 
 from monty.bot import Monty
+from monty.events import MessageContext, MontyEvent
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.helpers import EXPAND_BUTTON_PREFIX, block_url_traversal, decode_github_link
@@ -301,11 +302,26 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         # Returns an empty codeblock if the snippet is empty
         return f"{ret}```\n```"
 
-    async def _parse_snippets(self, content: str) -> str:
-        """Parse message content and return a string with a code block for each URL found."""
-        all_snippets = []
+    @overload
+    async def _parse_snippets(self, *, content: str) -> str: ...
+    @overload
+    async def _parse_snippets(self, *, context: MessageContext) -> str: ...
 
-        content = remove_codeblocks(content)
+    async def _parse_snippets(self, *, content: str | None = None, context: MessageContext | None = None) -> str:
+        """Parse message content and return a string with a code block for each URL found."""
+        if context and content:
+            msg = "Provide either content or context, not both."
+            raise ValueError(msg)
+
+        if context:
+            content = "\n".join(context.urls)
+        elif content:
+            content = remove_codeblocks(content)
+        else:
+            msg = "Either content or context must be provided."
+            raise ValueError(msg)
+
+        all_snippets: list[tuple[int, str]] = []
 
         for pattern, handler in self.pattern_handlers:
             for match in pattern.finditer(content):
@@ -335,12 +351,9 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         # Sorts the list of snippets by their match index and joins them into a single message
         return "\n".join(m[1] for m in sorted(all_snippets))
 
-    @commands.Cog.listener()
-    async def on_message(self, message: disnake.Message) -> None:
+    @commands.Cog.listener(MontyEvent.monty_message_processed.value)
+    async def on_message(self, message: disnake.Message, context: MessageContext) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        if message.author.bot:
-            return
-
         if not message.guild:
             return
 
@@ -354,7 +367,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         if not my_perms.send_messages:
             return
 
-        message_to_send = await self._parse_snippets(message.content)
+        message_to_send = await self._parse_snippets(content=context.text)
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
@@ -380,7 +393,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
         custom_id = inter.data.custom_id[len(EXPAND_BUTTON_PREFIX) :]
         link = decode_github_link(custom_id)
-        snippet = await self._parse_snippets(link)
+        snippet = await self._parse_snippets(content=link)
 
         def disable_button() -> disnake.ui.View:
             view = disnake.ui.View.from_message(inter.message)
