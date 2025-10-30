@@ -346,9 +346,8 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         return "\n".join(m[1] for m in sorted(all_snippets))
 
     @commands.Cog.listener(MontyEvent.monty_message_processed.value)
-    async def on_message(self, context: MessageContext) -> None:
+    async def on_message(self, message: disnake.Message, context: MessageContext) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
-        message = context.message
         if not message.guild:
             return
 
@@ -362,7 +361,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         if not my_perms.send_messages:
             return
 
-        message_to_send = await self._parse_snippets(message.content)
+        message_to_send = await self._parse_snippets(content=context.text)
         destination = message.channel
 
         if 0 < len(message_to_send) <= 2000 and message_to_send.count("\n") <= 27:
@@ -388,7 +387,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
 
         custom_id = inter.data.custom_id[len(EXPAND_BUTTON_PREFIX) :]
         link = decode_github_link(custom_id)
-        snippet = await self._parse_snippets(link)
+        snippet = await self._parse_snippets(content=link)
 
         def disable_button() -> disnake.ui.View:
             view = disnake.ui.View.from_message(inter.message)
