@@ -10,7 +10,6 @@ import disnake
 import disnake.utils
 import ghretos
 import githubkit
-import githubkit.exception
 import githubkit.rest
 import mistune
 
@@ -286,7 +285,37 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
         return container
 
 
+class IssueCommentRenderer(GitHubRenderer[githubkit.rest.IssueComment, ghretos.IssueComment]):
+    def render_ogp(self, obj: githubkit.rest.IssueComment, *, context: ghretos.IssueComment) -> disnake.Embed:
+        embed = disnake.Embed(
+            url=obj.html_url,
+            colour=GITHUB_COLOUR,
+            description="",
+            timestamp=obj.created_at,
+        )
+
+        if obj.user:
+            name = obj.user.name or obj.user.login
+            embed.set_author(
+                name=name,
+                url=obj.user.html_url,
+                icon_url=obj.user.avatar_url,
+            )
+
+        if obj.body:
+            body = self.render_markdown(obj.body, repo_url=context.repo.html_url, limit=350)
+            embed.description = body
+        else:
+            embed.description = "*No description provided.*"
+
+        embed.set_footer(text=f"Comment on {context.repo.full_name}#{context.number}")
+
+        return embed
+
+
 HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
     ghretos.Issue: IssueRenderer,
     ghretos.PullRequest: IssueRenderer,
+    ghretos.IssueComment: IssueCommentRenderer,
+    ghretos.PullRequestComment: IssueCommentRenderer,
 }
