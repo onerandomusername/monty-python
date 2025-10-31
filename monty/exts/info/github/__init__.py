@@ -1,5 +1,7 @@
 import random
 import re
+from collections.abc import Sequence
+from typing import Literal
 
 import attrs
 import cachingutils
@@ -97,7 +99,7 @@ class GithubInfo(
                 headers={"Accept": "application/vnd.github.full+json"},
             )
             return r.parsed_data
-        if isinstance(obj, ghretos.IssueComment):
+        if isinstance(obj, (ghretos.IssueComment, ghretos.PullRequestComment)):
             r = await self.bot.github.rest.issues.async_get_comment(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
@@ -155,6 +157,50 @@ class GithubInfo(
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
+    async def get_embeds(
+        self,
+        resources: Sequence[ghretos.GitHubResource],
+        *,
+        size: Literal[github_handlers.InfoSize.OGP] = github_handlers.InfoSize.OGP,
+    ) -> list[disnake.Embed]:
+        """Get embeds for a list of GitHub resources."""
+        embeds: list[disnake.Embed] = []
+        for match in resources:
+            # premptively check supported types:
+            handler = github_handlers.HANDLER_MAPPING.get(type(match))
+            if handler is None:
+                continue
+            # TODO: handle errors on this fetch method
+            resource_data = await self.fetch_resource(match)
+            if resource_data is None:
+                continue
+
+            # Run resource validation
+            if html_url := getattr(resource_data, "html_url", None):
+                # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
+                reparsed = ghretos.parse_url(html_url)
+                valid: bool = True
+                if reparsed is None or (
+                    type(reparsed) is not type(match)
+                    and hasattr(reparsed, "number")
+                    and hasattr(match, "number")
+                    and getattr(reparsed, "number", None) != getattr(match, "number", None)
+                ):
+                    valid = False
+                # Specially handle pulls being issues
+                if hasattr(reparsed, "number") and getattr(reparsed, "number", None) != getattr(match, "number", None):
+                    valid = False
+                if not valid:
+                    log.warning(
+                        "GitHub resource fetch returned mismatched data: expected %r, got %r",
+                        match,
+                        reparsed,
+                    )
+                    continue  # skip invalid data
+            embeds.append(handler().render(resource_data, context=match, size=size))
+
+        return embeds
+
     @commands.Cog.listener("on_" + MontyEvent.monty_message_processed.value)
     async def on_message_automatic_issue_link(
         self,
@@ -186,22 +232,13 @@ class GithubInfo(
                 )
             return
 
-        embeds: list = []
-        for match in matches:
-            # premptively check supported types:
-            handler = github_handlers.HANDLER_MAPPING.get(type(match))
-            if handler is None:
-                continue
-            # TODO: handle errors on this fetch method
-            resource_data = await self.fetch_resource(match)
-            if resource_data is None:
-                continue
-
-            embeds.append(handler().render_ogp(resource_data, context=match))
-
+        embeds = await self.get_embeds(
+            list(matches.keys()),
+            size=github_handlers.InfoSize.OGP,
+        )
         if not embeds:
             return
-        # there are matches, so suppress embeds
+
         if isinstance(message, disnake.Message):
             scheduling.create_task(
                 suppress_embeds(
