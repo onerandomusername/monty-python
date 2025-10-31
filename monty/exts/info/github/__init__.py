@@ -1,36 +1,20 @@
-import base64
-import enum
-import itertools
 import random
 import re
-from dataclasses import dataclass
-from datetime import timezone
-from typing import Any, NamedTuple
-from urllib.parse import quote_plus
 
 import attrs
 import cachingutils
 import disnake
 import ghretos
 import githubkit
-import githubkit.exception
-import mistune
-import msgpack
-import yarl
 from disnake.ext import commands
 
 import monty.utils.services
 from monty import constants
 from monty.bot import Monty
-from monty.constants import Feature
-from monty.errors import MontyCommandError
 from monty.events import MessageContext, MontyEvent
 from monty.log import get_logger
-from monty.utils import responses, scheduling
-from monty.utils.extensions import invoke_help_command
-from monty.utils.helpers import fromisoformat, get_num_suffix, suppress_links
-from monty.utils.markdown import DiscordRenderer, remove_codeblocks
-from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
+from monty.utils import scheduling
+from monty.utils.messages import DeleteButton, suppress_embeds
 
 from . import _handlers as github_handlers
 
@@ -70,21 +54,6 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = """
 log = get_logger(__name__)
 
 
-class RenderContext(NamedTuple):
-    """Context provided to the rendering method."""
-
-    user: str
-    repo: str | None = None
-
-    @property
-    def html_url(self) -> str:
-        """Provide the html_url to whatever this ends up targetting."""
-        url = f"https://github.com/{self.user}/"
-        if self.repo:
-            url += f"{self.repo}/"
-        return url
-
-
 class GithubInfo(
     commands.Cog,
     name="GitHub Information",
@@ -117,39 +86,43 @@ class GithubInfo(
         data = r.json()
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
-    def render_github_markdown(self, body: str, *, context: RenderContext | None = None, limit: int = 2700) -> str:
-        """Render GitHub Flavored Markdown to Discord flavoured markdown."""
-        url_prefix = context and context.html_url
-        markdown = mistune.create_markdown(
-            escape=False,
-            renderer=DiscordRenderer(repo=url_prefix),
-            plugins=[
-                "strikethrough",
-                "task_lists",
-                "url",
-            ],
-        )
-        body = markdown(body) or ""
-
-        if len(body) > limit:
-            return body[: limit - 3] + "..."
-
-        return body
-
     async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel | None:
         """Fetch a GitHub resource."""
-        if type(obj) is ghretos.Issue:
+        # Both issues and PRs are handled by the issues endpoint, because PRs are Issues.
+        if isinstance(obj, (ghretos.Issue, ghretos.PullRequest)):
             r = await self.bot.github.rest.issues.async_get(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
                 issue_number=obj.number,
+                headers={"Accept": "application/vnd.github.full+json"},
             )
             return r.parsed_data
-        if type(obj) is ghretos.PullRequest:
-            r = await self.bot.github.rest.pulls.async_get(
+        if isinstance(obj, ghretos.IssueComment):
+            r = await self.bot.github.rest.issues.async_get_comment(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
-                pull_number=obj.number,
+                comment_id=obj.comment_id,
+                headers={"Accept": "application/vnd.github.full+json"},
+            )
+            return r.parsed_data
+        if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
+            r = await self.bot.github.rest.issues.async_get_event(
+                owner=obj.repo.owner,
+                repo=obj.repo.name,
+                event_id=obj.event_id,
+            )
+            return r.parsed_data
+        if isinstance(obj, ghretos.Commit):
+            r = await self.bot.github.rest.repos.async_get_commit(
+                owner=obj.repo.owner,
+                repo=obj.repo.name,
+                ref=obj.sha,
+            )
+            return r.parsed_data
+        if isinstance(obj, ghretos.Repo):
+            r = await self.bot.github.rest.repos.async_get(
+                owner=obj.owner,
+                repo=obj.name,
             )
             return r.parsed_data
 
@@ -193,11 +166,11 @@ class GithubInfo(
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        matches = []
+        matches: dict[ghretos.GitHubResource, None] = {}
         for url in context.urls:
             match = ghretos.parse_url(url)
-            if match is not None and isinstance(match, ghretos.Issue):
-                matches.append(match)
+            if match is not None:
+                matches.setdefault(match, None)
 
         if not matches:
             return
@@ -213,36 +186,51 @@ class GithubInfo(
                 )
             return
 
-        components: list = []
+        embeds: list = []
         for match in matches:
             # premptively check supported types:
             handler = github_handlers.HANDLER_MAPPING.get(type(match))
             if handler is None:
                 continue
+            # TODO: handle errors on this fetch method
             resource_data = await self.fetch_resource(match)
             if resource_data is None:
                 continue
 
-            components.append(handler().render_ogp(resource_data))
+            embeds.append(handler().render_ogp(resource_data, context=match))
 
-        if not components:
+        if not embeds:
             return
+        # there are matches, so suppress embeds
+        if isinstance(message, disnake.Message):
+            scheduling.create_task(
+                suppress_embeds(
+                    bot=self.bot,
+                    message=message,
+                )
+            )
+
+        components = []
         components.append(
             disnake.ui.ActionRow(
                 DeleteButton(
-                    allow_manage_messages=False,
-                    initial_message=message if isinstance(message, disnake.Message) else None,
+                    allow_manage_messages=True,
                     user=message.author,
                 )
             )
         )
         if isinstance(message, disnake.Message):
-            await message.channel.send(
+            await message.reply(
+                embeds=embeds,
                 components=components,
+                fail_if_not_exists=False,
+                allowed_mentions=disnake.AllowedMentions.none(),
             )
         elif isinstance(message, disnake.ApplicationCommandInteraction):
             await message.response.send_message(
+                embeds=embeds,
                 components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
             )
 
 
