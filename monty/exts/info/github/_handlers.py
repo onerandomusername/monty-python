@@ -21,6 +21,8 @@ from monty.utils.markdown import DiscordRenderer
 T = TypeVar("T", bound=githubkit.GitHubModel)
 V = TypeVar("V", bound=ghretos.GitHubResource)
 
+GITHUB_COLOUR = disnake.Colour(0xFFFFFF)
+
 
 class VisualStyleState(NamedTuple):
     emoji: str
@@ -225,12 +227,9 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
         return content
 
     def render_ogp(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> disnake.Embed:
-        emoji, colour = self._get_visual_style_state(obj)
         embed = disnake.Embed(
-            title=f"{emoji} [{context.repo.full_name}#{obj.number}] {obj.title}",
             url=obj.html_url,
-            colour=colour,
-            description="",
+            colour=GITHUB_COLOUR,
             timestamp=obj.created_at,
         )
 
