@@ -46,6 +46,7 @@ dependencies = [
     # markers from https://github.com/MagicStack/uvloop/blob/74f4c96d3fc5281b1820491d2568de771ea7851b/setup.py#L7-L8
     "uvloop>=0.22.1 ; sys_platform != 'cli' and sys_platform != 'cygwin' and sys_platform != 'win32'",
     "yarl<2.0.0,>=1.17.2",
+    "ghretos",
 ]
 
 [dependency-groups]
@@ -186,3 +187,6 @@ reportUnnecessaryTypeIgnoreComment = false
 
 [tool.mdformat]
 wrap = 80
+
+[tool.uv.sources]
+ghretos = { path = "../ghretos", editable = true }
