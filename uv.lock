@@ -1824,7 +1824,7 @@ requires-dist = [
     { name = "cachingutils", git = "https://github.com/onerandomusername/cachingutils.git?rev=vcokltfre%2Ffeat%2Fv2" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = "~=0.4.5" },
     { name = "disnake", git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
-    { name = "githubkit", specifier = ">=0.13.4" },
+    { name = "githubkit", specifier = ">=0.13.5" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-aiohttp", specifier = ">=0.1.9" },
     { name = "lxml", specifier = ">=5.4.0,<6.0.0" },

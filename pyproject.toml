@@ -23,7 +23,7 @@ dependencies = [
     "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
     "colorama~=0.4.5; sys_platform == \"win32\"",
     "disnake @ git+https://github.com/DisnakeDev/disnake.git@master",
-    "githubkit>=0.13.4",
+    "githubkit>=0.13.5",
     "httpx>=0.28.1",
     "httpx-aiohttp>=0.1.9",
     "lxml<6.0.0,>=5.4.0",
