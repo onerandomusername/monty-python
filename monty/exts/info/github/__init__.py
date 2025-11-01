@@ -1,3 +1,4 @@
+import asyncio
 import operator
 import random
 import re
@@ -197,16 +198,33 @@ class GithubInfo(
         """Get embeds for a list of GitHub resources."""
         embeds: list[disnake.Embed] = []
         tiny_content: list[str] = []
-        for match, size in resources.items():
+
+        coros = []
+        for match in resources:
             # premptively check supported types:
             handler = github_handlers.HANDLER_MAPPING.get(type(match))
             if handler is None:
+                # append a useless coro to keep the order correct
+                coros.append(asyncio.sleep(0))
                 continue
-            # TODO: handle errors on this fetch method
-            resource_data = await self.fetch_resource(match)
-            if resource_data is None:
+            coros.append(self.fetch_resource(match))
+
+        # TODO: handle errors on this fetch method
+        fut = await asyncio.gather(*coros, return_exceptions=True)
+
+        for resource_data, (match, size) in zip(fut, resources.items(), strict=True):
+            if isinstance(resource_data, BaseException):
+                log.warning(
+                    "GitHub resource fetch for %r resulted in an exception: %r",
+                    match,
+                    resource_data,
+                )
+                continue
+            # Bypass the useless coro results
+            if not resource_data:
                 continue
 
+            handler = github_handlers.HANDLER_MAPPING.get(type(match))
             # Run resource validation
             if html_url := getattr(resource_data, "html_url", None):
                 # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
