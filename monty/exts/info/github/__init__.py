@@ -451,7 +451,7 @@ class GithubInfo(
                 )
                 expand_button = disnake.ui.Button(
                     label="Show More",
-                    style=disnake.ButtonStyle.secondary,
+                    style=disnake.ButtonStyle.primary,
                     custom_id=expand_custom_id,
                 )
                 components[-1].append_item(expand_button)
