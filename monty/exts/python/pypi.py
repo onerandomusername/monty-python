@@ -206,7 +206,7 @@ class PyPI(
 
         # Summary could be completely empty, or just whitespace.
         if (summary := info.get("summary")) and not summary.isspace():
-            short_about = disnake.utils.escape_markdown(info["summary"])
+            short_about = disnake.utils.escape_markdown(summary)
         else:
             short_about = "*No summary provided.*"
 
