@@ -204,9 +204,10 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
 
     def render_tiny(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
+        resource_type = "issue" if not obj.pull_request else "pull request"
         return (
-            f"{emoji} Issue in {obj.repository.full_name if obj.repository else ''}"
-            f"#{obj.number} - [{obj.title}](<{obj.html_url}>)"
+            f"{emoji} {resource_type.capitalize()} [`{context.repo.full_name}#{obj.number}`](<{obj.html_url}>) - "
+            f"{obj.title}"
         )
 
     def render_compact(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
@@ -227,6 +228,7 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
 
     def render_ogp(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> disnake.Embed:
         embed = disnake.Embed(
+            title=f"[{context.repo.full_name}#{obj.number}] - {obj.title}",
             url=obj.html_url,
             colour=GITHUB_COLOUR,
             timestamp=obj.created_at,
@@ -246,7 +248,7 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
         else:
             embed.description = "*No description provided.*"
 
-        embed.set_footer(text="Created at")
+        embed.set_footer(text="Created", icon_url=constants.Icons.github_avatar_url)
 
         return embed
 
@@ -285,8 +287,18 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
         return container
 
 
-class IssueCommentRenderer(GitHubRenderer[githubkit.rest.IssueComment, ghretos.IssueComment]):
-    def render_ogp(self, obj: githubkit.rest.IssueComment, *, context: ghretos.IssueComment) -> disnake.Embed:
+class IssueCommentRenderer(
+    GitHubRenderer[
+        githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment,
+        ghretos.IssueComment | ghretos.PullRequestComment | ghretos.PullRequestReviewComment,
+    ]
+):
+    def render_ogp(
+        self,
+        obj: githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment,
+        *,
+        context: ghretos.IssueComment | ghretos.PullRequestComment | ghretos.PullRequestReviewComment,
+    ) -> disnake.Embed:
         embed = disnake.Embed(
             url=obj.html_url,
             colour=GITHUB_COLOUR,
@@ -318,4 +330,5 @@ HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
     ghretos.PullRequest: IssueRenderer,
     ghretos.IssueComment: IssueCommentRenderer,
     ghretos.PullRequestComment: IssueCommentRenderer,
+    ghretos.PullRequestReviewComment: IssueCommentRenderer,
 }

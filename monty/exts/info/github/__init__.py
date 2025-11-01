@@ -1,7 +1,7 @@
 import random
 import re
-from collections.abc import Sequence
-from typing import Literal
+from collections.abc import Mapping
+from typing import Any
 
 import attrs
 import cachingutils
@@ -107,6 +107,14 @@ class GithubInfo(
                 headers={"Accept": "application/vnd.github.full+json"},
             )
             return r.parsed_data
+        if isinstance(obj, (ghretos.PullRequestReviewComment)):
+            r = await self.bot.github.rest.pulls.async_get_review_comment(
+                owner=obj.repo.owner,
+                repo=obj.repo.name,
+                comment_id=obj.comment_id,
+                headers={"Accept": "application/vnd.github.full+json"},
+            )
+            return r.parsed_data
         if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
             r = await self.bot.github.rest.issues.async_get_event(
                 owner=obj.repo.owner,
@@ -157,15 +165,14 @@ class GithubInfo(
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
-    async def get_embeds(
+    async def get_reply(
         self,
-        resources: Sequence[ghretos.GitHubResource],
-        *,
-        size: Literal[github_handlers.InfoSize.OGP] = github_handlers.InfoSize.OGP,
-    ) -> list[disnake.Embed]:
+        resources: Mapping[ghretos.GitHubResource, github_handlers.InfoSize],
+    ) -> dict[str, Any]:
         """Get embeds for a list of GitHub resources."""
         embeds: list[disnake.Embed] = []
-        for match in resources:
+        tiny_content: list[str] = []
+        for match, size in resources.items():
             # premptively check supported types:
             handler = github_handlers.HANDLER_MAPPING.get(type(match))
             if handler is None:
@@ -197,9 +204,19 @@ class GithubInfo(
                         reparsed,
                     )
                     continue  # skip invalid data
-            embeds.append(handler().render(resource_data, context=match, size=size))
+            match size:
+                case github_handlers.InfoSize.OGP:
+                    embeds.append(handler().render(resource_data, context=match, size=size))
+                case github_handlers.InfoSize.TINY:
+                    tiny_content.append(handler().render(resource_data, context=match, size=size))
 
-        return embeds
+        resp = {}
+        if tiny_content:
+            content = "\n".join(tiny_content)
+            resp["content"] = content
+        if embeds:
+            resp["embeds"] = embeds
+        return resp
 
     @commands.Cog.listener("on_" + MontyEvent.monty_message_processed.value)
     async def on_message_automatic_issue_link(
@@ -212,11 +229,17 @@ class GithubInfo(
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
-        matches: dict[ghretos.GitHubResource, None] = {}
+        # Use a dict to deduplicate matches, but keep the original insertion order.
+        matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
+        # parse all of the shorthand first
+        for segment in context.text.split():
+            match = ghretos.parse_shorthand(segment)
+            if match is not None:
+                matches[match] = github_handlers.InfoSize.TINY
         for url in context.urls:
             match = ghretos.parse_url(url)
             if match is not None:
-                matches.setdefault(match, None)
+                matches[match] = github_handlers.InfoSize.OGP
 
         if not matches:
             return
@@ -232,11 +255,10 @@ class GithubInfo(
                 )
             return
 
-        embeds = await self.get_embeds(
-            list(matches.keys()),
-            size=github_handlers.InfoSize.OGP,
+        data = await self.get_reply(
+            matches,
         )
-        if not embeds:
+        if not data:
             return
 
         if isinstance(message, disnake.Message):
@@ -258,14 +280,14 @@ class GithubInfo(
         )
         if isinstance(message, disnake.Message):
             await message.reply(
-                embeds=embeds,
+                **data,
                 components=components,
                 fail_if_not_exists=False,
                 allowed_mentions=disnake.AllowedMentions.none(),
             )
         elif isinstance(message, disnake.ApplicationCommandInteraction):
             await message.response.send_message(
-                embeds=embeds,
+                **data,
                 components=components,
                 allowed_mentions=disnake.AllowedMentions.none(),
             )
