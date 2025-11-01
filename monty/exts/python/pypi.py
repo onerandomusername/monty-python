@@ -203,15 +203,12 @@ class PyPI(
         components[0].children.append(
             disnake.ui.TextDisplay(f"### [{info['name']} v{info['version']}]({info['package_url']})")
         )
-        short_about = ""
-
-        summary = disnake.utils.escape_markdown(info["summary"])
 
         # Summary could be completely empty, or just whitespace.
-        if summary and not summary.isspace():
-            short_about += f"{summary}"
+        if (summary := info.get("summary")) and not summary.isspace():
+            short_about = disnake.utils.escape_markdown(summary)
         else:
-            short_about += "*No summary provided.*"
+            short_about = "*No summary provided.*"
 
         # add some padding
         if not with_description:
