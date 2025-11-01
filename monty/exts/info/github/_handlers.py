@@ -16,6 +16,8 @@ import mistune
 from monty import constants
 from monty.utils.markdown import DiscordRenderer
 
+from . import graphql_models
+
 
 T = TypeVar("T", bound=githubkit.GitHubModel)
 V = TypeVar("V", bound=ghretos.GitHubResource)
@@ -330,15 +332,21 @@ class NumberableRenderer(
 
 class IssueCommentRenderer(
     GitHubRenderer[
-        githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment,
-        ghretos.IssueComment | ghretos.PullRequestComment | ghretos.PullRequestReviewComment,
+        githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment | graphql_models.DiscussionComment,
+        ghretos.IssueComment
+        | ghretos.PullRequestComment
+        | ghretos.PullRequestReviewComment
+        | ghretos.DiscussionComment,
     ]
 ):
     def render_ogp(
         self,
-        obj: githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment,
+        obj: githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment | graphql_models.DiscussionComment,
         *,
-        context: ghretos.IssueComment | ghretos.PullRequestComment | ghretos.PullRequestReviewComment,
+        context: ghretos.IssueComment
+        | ghretos.PullRequestComment
+        | ghretos.PullRequestReviewComment
+        | ghretos.DiscussionComment,
     ) -> disnake.Embed:
         embed = disnake.Embed(
             url=obj.html_url,
@@ -374,4 +382,5 @@ HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
     ghretos.IssueComment: IssueCommentRenderer,
     ghretos.PullRequestComment: IssueCommentRenderer,
     ghretos.PullRequestReviewComment: IssueCommentRenderer,
+    ghretos.DiscussionComment: IssueCommentRenderer,
 }
