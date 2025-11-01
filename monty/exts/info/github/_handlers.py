@@ -93,9 +93,13 @@ class GitHubRenderer(Generic[T, V]):
     @overload
     def render(self, obj: T, *, size: Literal[InfoSize.OGP], context: V) -> disnake.Embed: ...
     @overload
-    def render(self, obj: T, *, size: Literal[InfoSize.FULL], context: V) -> disnake.ui.Container: ...
+    def render(
+        self, obj: T, *, size: Literal[InfoSize.FULL], context: V
+    ) -> tuple[str, list[disnake.ui.TextDisplay]]: ...
 
-    def render(self, obj: T, *, size: InfoSize, context: V) -> str | disnake.ui.Container | disnake.Embed:
+    def render(
+        self, obj: T, *, size: InfoSize, context: V
+    ) -> str | disnake.ui.Container | disnake.Embed | tuple[str, list[disnake.ui.TextDisplay]]:
         """Render a GitHub object as a Disnake embed."""
         match size:
             case InfoSize.TINY:
@@ -151,7 +155,7 @@ class GitHubRenderer(Generic[T, V]):
         raise NotImplementedError
 
     @abstractmethod
-    def render_full(self, obj: T, *, context: V) -> disnake.ui.Container:
+    def render_full(self, obj: T, *, context: V) -> tuple[str, list[disnake.ui.TextDisplay]]:
         """Render a full version of the GitHub object."""
         raise NotImplementedError
 
@@ -162,6 +166,10 @@ class GitHubRenderer(Generic[T, V]):
 class NumberableRenderer(
     GitHubRenderer[githubkit.rest.Issue | githubkit.rest.Discussion, ghretos.Issue | ghretos.NumberedResource]
 ):
+    def __init__(self) -> None:
+        super().__init__()
+        self._limit = 350
+
     @staticmethod
     def _get_visual_style_state(obj: githubkit.rest.Issue | githubkit.rest.Discussion) -> VisualStyleState:
         if isinstance(obj, githubkit.rest.Discussion):
@@ -282,7 +290,7 @@ class NumberableRenderer(
             )
 
         if obj.body:
-            body = self.render_markdown(obj.body, repo_url=context.repo.html_url, limit=350)
+            body = self.render_markdown(obj.body, repo_url=context.repo.html_url, limit=self._limit)
             embed.description = body
         else:
             embed.description = "*No description provided.*"
@@ -317,7 +325,7 @@ class NumberableRenderer(
                 text_display_added = True
 
         if obj.body:
-            body = self.render_markdown(obj.body, repo_url=context.repo.html_url, limit=350)
+            body = self.render_markdown(obj.body, repo_url=context.repo.html_url, limit=self._limit)
             text_display.content += f"\n{body}\n"
 
         text_display.content += (
@@ -329,6 +337,22 @@ class NumberableRenderer(
             container.children.append(text_display)
 
         return container
+
+    def render_full(
+        self,
+        obj: githubkit.rest.Issue | githubkit.rest.Discussion,
+        *,
+        context: ghretos.Issue | ghretos.NumberedResource,
+    ) -> tuple[str, list[disnake.ui.TextDisplay]]:
+        old_limit = self._limit
+        self._limit = 3700
+        try:
+            cv2 = self.render_ogp_cv2(obj, context=context)
+            return obj.title, [
+                comp for comp in disnake.ui.walk_components([cv2]) if isinstance(comp, disnake.ui.TextDisplay)
+            ]
+        finally:
+            self._limit = old_limit
 
 
 class IssueCommentRenderer(
