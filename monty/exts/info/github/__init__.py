@@ -9,6 +9,8 @@ import cachingutils
 import disnake
 import ghretos
 import githubkit
+import githubkit.exception
+import githubkit.rest
 from disnake.ext import commands
 
 import monty.utils.services
@@ -91,15 +93,25 @@ class GithubInfo(
 
     async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel | None:
         """Fetch a GitHub resource."""
+        # TODO: add repo exists validation before fetching multiple resources from one repo?
+        # This would reduce wasted requests on private repos, and keep discussions from making many extra requests.
+        try_discussion: bool = False
+
         # Both issues and PRs are handled by the issues endpoint, because PRs are Issues.
-        if isinstance(obj, (ghretos.Issue, ghretos.PullRequest)):
-            r = await self.bot.github.rest.issues.async_get(
-                owner=obj.repo.owner,
-                repo=obj.repo.name,
-                issue_number=obj.number,
-                headers={"Accept": "application/vnd.github.full+json"},
-            )
-            return r.parsed_data
+        if isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource)):
+            try:
+                r = await self.bot.github.rest.issues.async_get(
+                    owner=obj.repo.owner,
+                    repo=obj.repo.name,
+                    issue_number=obj.number,
+                    headers={"Accept": "application/vnd.github.full+json"},
+                )
+            except githubkit.exception.RequestFailed as e:
+                if e.response.status_code != 404:
+                    raise
+                try_discussion = True
+            else:
+                return r.parsed_data
         if isinstance(obj, (ghretos.IssueComment, ghretos.PullRequestComment)):
             r = await self.bot.github.rest.issues.async_get_comment(
                 owner=obj.repo.owner,
@@ -114,6 +126,18 @@ class GithubInfo(
                 repo=obj.repo.name,
                 comment_id=obj.comment_id,
                 headers={"Accept": "application/vnd.github.full+json"},
+            )
+            return r.parsed_data
+        if (
+            try_discussion and isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource))
+        ) or isinstance(obj, ghretos.Discussion):
+            url = f"/repos/{obj.repo.owner}/{obj.repo.name}/discussions/{obj.number}"
+
+            r = await self.bot.github.arequest(
+                "GET",
+                url,
+                headers={"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
+                response_model=githubkit.rest.Discussion,
             )
             return r.parsed_data
         if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
