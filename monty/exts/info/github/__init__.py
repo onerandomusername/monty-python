@@ -68,8 +68,8 @@ class GithubInfo(
     commands.Cog,
     name="GitHub Information",
     slash_command_attrs={
-        "context": disnake.InteractionContextTypes(guild=True),
-        "install_types": disnake.ApplicationInstallTypes(guild=True),
+        "contexts": disnake.InteractionContextTypes(guild=True, private_channel=True),
+        "install_types": disnake.ApplicationInstallTypes(guild=True, user=True),
     },
 ):
     """Fetches info from GitHub."""
@@ -311,10 +311,67 @@ class GithubInfo(
             resp["embeds"] = embeds
         return resp
 
+    @commands.slash_command(name="github", description="Fetch GitHub information.")
+    async def github_group(self, inter: disnake.ApplicationCommandInteraction) -> None:
+        """Group for GitHub related commands."""
+
+    @github_group.sub_command(name="info", description="Fetch GitHub information.")
+    async def github_info(self, inter: disnake.ApplicationCommandInteraction, arg: str) -> None:
+        """Fetch GitHub information.
+
+        Parameters
+        ----------
+        arg: str
+            The GitHub resource(s) to fetch information about. Can be a URL or shorthand like
+        """
+        context = MessageContext(arg)
+        matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
+
+        for segment in context.text.split():
+            match = ghretos.parse_shorthand(segment)
+            if match is not None:
+                matches[match] = github_handlers.InfoSize.OGP
+        for url in context.urls:
+            match = ghretos.parse_url(url)
+            if match is not None:
+                matches[match] = github_handlers.InfoSize.OGP
+
+        if not matches:
+            await inter.response.send_message(
+                f"{constants.Emojis.decline} No GitHub resources found in input.",
+                ephemeral=True,
+            )
+            return
+
+        def sort_key(item: ghretos.GitHubResource) -> tuple:
+            try:
+                return tuple(operator.attrgetter("repo.owner", "repo.name", "number")(item))
+            except AttributeError:
+                return ("", "", 0)
+
+        matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
+
+        data = await self.get_reply(matches)
+
+        components = []
+        components.append(
+            disnake.ui.ActionRow(
+                DeleteButton(
+                    allow_manage_messages=True,
+                    user=inter.author,
+                )
+            )
+        )
+        await inter.response.send_message(
+            **data,
+            components=components,
+            allowed_mentions=disnake.AllowedMentions.none(),
+        )
+
     @commands.Cog.listener("on_" + MontyEvent.monty_message_processed.value)
     async def on_message_automatic_issue_link(
         self,
-        message: disnake.Message | disnake.ApplicationCommandInteraction,
+        message: disnake.Message,
         context: MessageContext,
     ) -> None:
         """
