@@ -203,7 +203,7 @@ class InternalEval(commands.Cog):
         title: str,
         language: str,
         display_colour: int | disnake.Colour | None = None,
-    ) -> tuple[disnake.ui.Container | list[Any], disnake.File | None]:
+    ) -> tuple[disnake.ui.Container | list[Any] | None, disnake.File | None]:
         """Get a UI component for a given segment of text."""
         file = None
         file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
@@ -212,16 +212,12 @@ class InternalEval(commands.Cog):
             file_tuple = self.maybe_file(content, prefix="output", suffix="txt")
             language = "py"
         if file_tuple:
-            filename, file = file_tuple
-            container = disnake.ui.Container(
-                disnake.ui.TextDisplay(f"Output too long, sent as file `{filename}`."),
-                disnake.ui.File(f"attachment://{filename}"),
-            )
+            _, file = file_tuple
+            return None, file
         elif content.strip():
             container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n```{language}\n{content}\n```"))
         else:
             container = disnake.ui.Container(disnake.ui.TextDisplay(f"**{title}:**\n*No output.*"))
-
         if display_colour is None:
             display_colour = constants.Colours.python_yellow
         if isinstance(display_colour, int):
@@ -340,14 +336,16 @@ class InternalEval(commands.Cog):
             delete_contexts = (ctx.message, None)
         else:
             delete_contexts = (None,)
-        response.components += [
+        delete_components = [
             disnake.ui.ActionRow(
                 *[DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m) for m in delete_contexts]
             )
         ]
-        await ctx.send(
-            allowed_mentions=disnake.AllowedMentions.none(), components=response.components, files=response.files
-        )
+        if response.components:
+            response.components += delete_components
+            await ctx.send(allowed_mentions=disnake.AllowedMentions.none(), components=response.components)
+        if response.files:
+            await ctx.send(files=response.files, components=delete_components)
 
     @commands.command(name="repl", hidden=True)
     async def repl(self, ctx: commands.Context) -> None:
@@ -436,7 +434,7 @@ class InternalEval(commands.Cog):
                     delete_contexts = (msg, None)
                 else:
                     delete_contexts = (None,)
-                response.components += [
+                delete_components = [
                     disnake.ui.ActionRow(
                         *[
                             DeleteButton(ctx.author.id, allow_manage_messages=False, initial_message=m)
@@ -444,12 +442,14 @@ class InternalEval(commands.Cog):
                         ]
                     )
                 ]
-                await ctx.reply(
-                    allowed_mentions=disnake.AllowedMentions.none(),
-                    components=response.components,
-                    files=response.files,
-                    fail_if_not_exists=False,
-                )
+                if response.components:
+                    response.components += delete_components
+                    await ctx.send(
+                        allowed_mentions=disnake.AllowedMentions.none(),
+                        components=response.components,
+                    )
+                if response.files:
+                    await ctx.send(files=response.files, components=delete_components)
                 local_vars = result.local_vars
 
     async def cog_check(self, ctx: commands.Context) -> bool:
