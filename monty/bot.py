@@ -104,7 +104,7 @@ class Monty(commands.Bot):
 
         transport = AiohttpTransport(client=http_session)
         self.httpx = httpx.AsyncClient(transport=transport)
-        self.github = GitHubClient(constants.Auth.github, transport=transport)
+        self.github = GitHubClient(constants.Auth.github, async_transport=transport)
 
     async def get_self_invite_perms(self) -> disnake.Permissions:
         """Sets the internal invite_permissions and fetches them."""
