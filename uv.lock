@@ -1092,7 +1092,7 @@ wheels = [
 [[package]]
 name = "ghretos"
 version = "0.0.1a1"
-source = { git = "https://github.com/onerandomusername/ghretos#07b380b0a50ef6aa7c52fb83a16a051344873268" }
+source = { git = "https://github.com/onerandomusername/ghretos#6ddd384d46ec57d7d1b6cf9ed838a9737bc0490b" }
 dependencies = [
     { name = "yarl" },
 ]

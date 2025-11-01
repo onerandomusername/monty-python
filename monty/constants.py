@@ -400,6 +400,7 @@ class Feature(enum.Enum):
     "Controls whether or not GitHub Discussions are automatically linked. Requires GITHUB_ISSUE_LINKS to be enabled."
     GITHUB_ISSUE_LINKS = "GITHUB_EXPAND_ISSUE_LINKS"
     "Controls whether or not GitHub embeds are replaced with Monty's Embeds."
+    # Deprecated, NO-OP
     GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
     "Controls whether or not GitHub Embeds are expanded to show more information. Requires GITHUB_ISSUE_LINKS."
     GLOBAL_SOURCE = "GLOBAL_SOURCE_COMMAND"

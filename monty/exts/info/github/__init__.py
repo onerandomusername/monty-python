@@ -19,6 +19,7 @@ from disnake.ext import commands
 import monty.utils.services
 from monty import constants
 from monty.bot import Monty
+from monty.database import GuildConfig
 from monty.events import MessageContext, MontyEvent
 from monty.log import get_logger
 from monty.utils import scheduling
@@ -311,6 +312,33 @@ class GithubInfo(
             resp["embeds"] = embeds
         return resp
 
+    async def get_matcher_settings(self, guild_id: int, config: GuildConfig) -> ghretos.MatcherSettings:
+        """Get matcher settings based on guild configuration."""
+        matcher_settings = ghretos.MatcherSettings.none()
+        discussions_allowed: bool = False
+        if config.github_issue_linking:
+            matcher_settings.shorthand = True
+            matcher_settings.short_numberables = True
+            if await self.bot.guild_has_feature(guild_id, constants.Feature.GITHUB_ISSUE_LINKS):
+                matcher_settings.issues = True
+                matcher_settings.pull_requests = True
+            if discussions_allowed := await self.bot.guild_has_feature(guild_id, constants.Feature.GITHUB_DISCUSSIONS):
+                matcher_settings.discussions = True
+
+        if config.github_comment_linking and await self.bot.guild_has_feature(
+            guild_id, constants.Feature.GITHUB_COMMENT_LINKS
+        ):
+            matcher_settings.issue_comments = True
+            matcher_settings.pull_request_comments = True
+            matcher_settings.pull_request_review_comments = True
+            matcher_settings.pull_request_reviews = True
+            if discussions_allowed or (
+                discussions_allowed := await self.bot.guild_has_feature(guild_id, constants.Feature.GITHUB_DISCUSSIONS)
+            ):
+                matcher_settings.discussion_comments = True
+
+        return matcher_settings
+
     @commands.slash_command(name="github", description="Fetch GitHub information.")
     async def github_group(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Group for GitHub related commands."""
@@ -417,15 +445,29 @@ class GithubInfo(
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
+        if not message.guild:
+            return
+        # in order to support shorthand, we need to check guild configuration
+        guild_config = await self.bot.ensure_guild_config(message.guild.id)
+
+        matcher_settings = await self.get_matcher_settings(message.guild.id, guild_config)
+
         # Use a dict to deduplicate matches, but keep the original insertion order.
         matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
         # parse all of the shorthand first
         for segment in context.text.split():
-            match = ghretos.parse_shorthand(segment)
+            match = ghretos.parse_shorthand(
+                segment,
+                default_user=guild_config.github_issues_org,
+                settings=matcher_settings,
+            )
             if match is not None:
                 matches[match] = github_handlers.InfoSize.TINY
         for url in context.urls:
-            match = ghretos.parse_url(url)
+            match = ghretos.parse_url(
+                url,
+                settings=matcher_settings,
+            )
             if match is not None:
                 matches[match] = github_handlers.InfoSize.OGP
 
