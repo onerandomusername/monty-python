@@ -951,7 +951,7 @@ wheels = [
 
 [[package]]
 name = "githubkit"
-version = "0.13.4"
+version = "0.13.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -960,9 +960,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/44/4575a24a10c747eb8b0ad06495162bd983d395b9b984bacbd70f843641fb/githubkit-0.13.4.tar.gz", hash = "sha256:ce7ab396ab80f059724bd3b26775b0266ff9b84c926b83a298bbdc1527015fbd", size = 2265860, upload-time = "2025-10-07T15:19:50.212Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/c2/4cdff48431a373bfa9e01c1ccfdb2f1b8f3fd27860a3be4001b0122d4a26/githubkit-0.13.5.tar.gz", hash = "sha256:d47f1aea19473a8aaef6a6413debfa420740f0207de42d32e98758cb6728fb12", size = 2286056, upload-time = "2025-10-25T16:12:42.415Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/7f/4a55e0b23589964c43a05edbd93857fdeaa472de998caeb775df5d1df98b/githubkit-0.13.4-py3-none-any.whl", hash = "sha256:60a7066a9e2ee9ade07d7fd128d13cd6287bafa1283e4eda3bdd3cc087df229f", size = 5973735, upload-time = "2025-10-07T15:19:48.651Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/45/c765290bf71f32c545829495924b2ecf058166385dec8af3c108bdc6617f/githubkit-0.13.5-py3-none-any.whl", hash = "sha256:665d67f90258044980585cc71e1e19d78e755b0efea69728520373cfc8d28f86", size = 6046859, upload-time = "2025-10-25T16:12:40.625Z" },
 ]
 
 [[package]]
@@ -1824,7 +1824,7 @@ requires-dist = [
     { name = "cachingutils", git = "https://github.com/onerandomusername/cachingutils.git?rev=vcokltfre%2Ffeat%2Fv2" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = "~=0.4.5" },
     { name = "disnake", git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
-    { name = "githubkit", specifier = ">=0.13.4" },
+    { name = "githubkit", specifier = ">=0.13.5" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-aiohttp", specifier = ">=0.1.9" },
     { name = "lxml", specifier = ">=5.4.0,<6.0.0" },
