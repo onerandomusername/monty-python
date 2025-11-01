@@ -1092,7 +1092,7 @@ wheels = [
 [[package]]
 name = "ghretos"
 version = "0.0.1a1"
-source = { git = "https://github.com/onerandomusername/ghretos#6ddd384d46ec57d7d1b6cf9ed838a9737bc0490b" }
+source = { git = "https://github.com/onerandomusername/ghretos?rev=main#6ddd384d46ec57d7d1b6cf9ed838a9737bc0490b" }
 dependencies = [
     { name = "yarl" },
 ]
@@ -2078,7 +2078,7 @@ requires-dist = [
     { name = "cachingutils", git = "https://github.com/onerandomusername/cachingutils.git?rev=vcokltfre%2Ffeat%2Fv2" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = "~=0.4.5" },
     { name = "disnake", extras = ["speed"], git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
-    { name = "ghretos", git = "https://github.com/onerandomusername/ghretos" },
+    { name = "ghretos", git = "https://github.com/onerandomusername/ghretos?rev=main" },
     { name = "githubkit", specifier = ">=0.13.5" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-aiohttp", specifier = ">=0.1.9" },

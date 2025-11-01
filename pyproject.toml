@@ -22,6 +22,7 @@ dependencies = [
     "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
     "colorama~=0.4.5; sys_platform == \"win32\"",
     "disnake[speed] @ git+https://github.com/DisnakeDev/disnake.git@master",
+    "ghretos @ git+https://github.com/onerandomusername/ghretos@main",
     "githubkit>=0.13.5",
     "httpx>=0.28.1",
     "httpx-aiohttp>=0.1.9",
@@ -46,7 +47,6 @@ dependencies = [
     # markers from https://github.com/MagicStack/uvloop/blob/74f4c96d3fc5281b1820491d2568de771ea7851b/setup.py#L7-L8
     "uvloop>=0.22.1 ; sys_platform != 'cli' and sys_platform != 'cygwin' and sys_platform != 'win32'",
     "yarl<2.0.0,>=1.17.2",
-    "ghretos",
 ]
 
 [dependency-groups]
@@ -187,6 +187,3 @@ reportUnnecessaryTypeIgnoreComment = false
 
 [tool.mdformat]
 wrap = 80
-
-[tool.uv.sources]
-ghretos = { git = "https://github.com/onerandomusername/ghretos" }
