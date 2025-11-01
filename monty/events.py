@@ -34,8 +34,7 @@ class MessageContext:
     @functools.cached_property
     def urls(self) -> list[str]:
         """Return the URLs found in the message."""
-        text = self.text
-        return list(extract_urls(text))
+        return list(extract_urls(self.text))
 
     @classmethod
     def from_message_inter(
