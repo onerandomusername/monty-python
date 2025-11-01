@@ -156,9 +156,23 @@ class GitHubRenderer(Generic[T, V]):
 # region: concrete renderers
 
 
-class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
+class NumberableRenderer(
+    GitHubRenderer[githubkit.rest.Issue | githubkit.rest.Discussion, ghretos.Issue | ghretos.NumberedResource]
+):
     @staticmethod
-    def _get_visual_style_state(obj: githubkit.rest.Issue) -> VisualStyleState:
+    def _get_visual_style_state(obj: githubkit.rest.Issue | githubkit.rest.Discussion) -> VisualStyleState:
+        if isinstance(obj, githubkit.rest.Discussion):
+            if obj.answer_chosen_at:
+                emoji = constants.Emojis.discussion_answered
+                colour = constants.Colours.soft_green
+            else:
+                emoji = constants.Emojis.issue_draft
+                colour = disnake.Colour.greyple()
+
+            if not isinstance(colour, disnake.Colour):
+                colour = disnake.Colour(colour)
+
+            return VisualStyleState(emoji=emoji, colour=colour)
         if obj.pull_request:
             if obj.pull_request.merged_at:
                 emoji = constants.Emojis.pull_request_merged
@@ -202,9 +216,17 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
 
         return VisualStyleState(emoji=emoji, colour=colour)
 
-    def render_tiny(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
+    def render_tiny(
+        self,
+        obj: githubkit.rest.Issue | githubkit.rest.Discussion,
+        *,
+        context: ghretos.Issue | ghretos.NumberedResource,
+    ) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
-        resource_type = "issue" if not obj.pull_request else "pull request"
+        if isinstance(obj, githubkit.rest.Discussion):
+            resource_type = "discussion"
+        else:
+            resource_type = "issue" if not obj.pull_request else "pull request"
         text = (
             f"{emoji} {resource_type.capitalize()} [`{context.repo.full_name}#{obj.number}` - "
             f"{obj.title}](<{obj.html_url}>)"
@@ -213,7 +235,12 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
             text += f" by [{obj.user.name or obj.user.login}](<{obj.user.html_url}>)"
         return text
 
-    def render_compact(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
+    def render_compact(
+        self,
+        obj: githubkit.rest.Issue | githubkit.rest.Discussion,
+        *,
+        context: ghretos.Issue | ghretos.NumberedResource,
+    ) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
         content = f"## {emoji}"
 
@@ -229,7 +256,12 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
 
         return content
 
-    def render_ogp(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> disnake.Embed:
+    def render_ogp(
+        self,
+        obj: githubkit.rest.Issue | githubkit.rest.Discussion,
+        *,
+        context: ghretos.Issue | ghretos.NumberedResource,
+    ) -> disnake.Embed:
         emoji, colour = self._get_visual_style_state(obj)
         embed = disnake.Embed(
             title=f"{emoji} [{context.repo.full_name}#{obj.number}] - {obj.title}",
@@ -256,7 +288,12 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
 
         return embed
 
-    def render_ogp_cv2(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> disnake.ui.Container:
+    def render_ogp_cv2(
+        self,
+        obj: githubkit.rest.Issue | githubkit.rest.Discussion,
+        *,
+        context: ghretos.Issue | ghretos.NumberedResource,
+    ) -> disnake.ui.Container:
         emoji, colour = self._get_visual_style_state(obj)
         container = disnake.ui.Container()
         text_display = disnake.ui.TextDisplay("")
@@ -330,8 +367,10 @@ class IssueCommentRenderer(
 
 
 HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
-    ghretos.Issue: IssueRenderer,
-    ghretos.PullRequest: IssueRenderer,
+    ghretos.Issue: NumberableRenderer,
+    ghretos.PullRequest: NumberableRenderer,
+    ghretos.Discussion: NumberableRenderer,
+    ghretos.NumberedResource: NumberableRenderer,
     ghretos.IssueComment: IssueCommentRenderer,
     ghretos.PullRequestComment: IssueCommentRenderer,
     ghretos.PullRequestReviewComment: IssueCommentRenderer,
