@@ -472,6 +472,8 @@ class GithubInfo(
 
         Listener to retrieve issue(s) from a GitHub repository using automatic linking if matching <org>/<repo>#<issue>.
         """
+        if not message.guild:
+            return
         # in order to support shorthand, we need to check guild configuration
         guild_config = await self.bot.ensure_guild_config(message.guild.id)
 
