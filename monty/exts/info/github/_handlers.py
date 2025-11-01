@@ -12,6 +12,7 @@ import ghretos
 import githubkit
 import githubkit.rest
 import mistune
+import yarl
 
 from monty import constants
 from monty.utils.markdown import DiscordRenderer
@@ -339,6 +340,29 @@ class IssueCommentRenderer(
         | ghretos.DiscussionComment,
     ]
 ):
+    # TODO(onerandomusername): implement backlinks on issue/discussion/pull comments
+    def _get_html_url(
+        self,
+        obj: githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment | graphql_models.DiscussionComment,
+        context: ghretos.IssueComment
+        | ghretos.PullRequestComment
+        | ghretos.PullRequestReviewComment
+        | ghretos.DiscussionComment,
+    ) -> str:
+        if not isinstance(obj, githubkit.rest.PullRequestReviewComment):
+            return obj.html_url
+
+        if not isinstance(context, ghretos.PullRequestReviewComment):
+            msg = "Mismatched context for PullRequestReviewComment"
+            raise ValueError(msg)
+
+        url = yarl.URL(obj.html_url)
+        if context.files_page:
+            return str((url / "files").with_fragment(f"r{context.comment_id}"))
+        elif context.commit_page and context.sha:
+            return str((url / "commits" / context.sha).with_fragment(f"r{obj.id}"))
+        return obj.html_url
+
     def render_ogp(
         self,
         obj: githubkit.rest.IssueComment | githubkit.rest.PullRequestReviewComment | graphql_models.DiscussionComment,
