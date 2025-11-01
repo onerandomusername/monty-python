@@ -290,6 +290,9 @@ class GithubInfo(
                         reparsed,
                     )
                     continue  # skip invalid data
+
+                match = reparsed  # use the reparsed version for more accurate data
+
             match size:
                 case github_handlers.InfoSize.OGP:
                     embeds.append(handler(limit=limit).render(resource_data, context=match, size=size))
