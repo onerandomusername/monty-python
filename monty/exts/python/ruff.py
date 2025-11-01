@@ -107,6 +107,11 @@ class Rule:
             sections.append((name, content))
         return sections
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Create a Rule from a dictionary."""
+        return cls(**{a.name: data[a.name] for a in attrs.fields(cls)})
+
 
 class Ruff(
     commands.Cog,
@@ -154,7 +159,7 @@ class Ruff(
 
         new_rules = dict[str, Rule]()
         for unparsed_rule in raw_rules:
-            parsed_rule = Rule(**unparsed_rule)
+            parsed_rule = Rule.from_dict(unparsed_rule)
             new_rules[parsed_rule.code] = parsed_rule
 
         self.rules.clear()
