@@ -345,7 +345,7 @@ class NumberableRenderer(
     ) -> tuple[str, list[disnake.ui.TextDisplay]]:
         old_limit = self._limit
         if not self._limit:
-            self._limit = 3700
+            self._limit = 3600
         try:
             cv2 = self.render_ogp_cv2(obj, context=context)
             return obj.title, [

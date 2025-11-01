@@ -230,7 +230,7 @@ class GithubInfo(
 
         resource_data = await self.fetch_resource(resource)
 
-        return handler().render(resource_data, context=resource, size=github_handlers.InfoSize.FULL)
+        return handler(limit=3600).render(resource_data, context=resource, size=github_handlers.InfoSize.FULL)
 
     async def get_reply(
         self,
@@ -353,7 +353,7 @@ class GithubInfo(
 
         matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
 
-        data = await self.get_reply(matches, limit=850)
+        data = await self.get_reply(matches, limit=650)
 
         if not data:
             await inter.response.send_message(
@@ -382,6 +382,7 @@ class GithubInfo(
                         ghretos.Issue,
                         ghretos.PullRequest,
                         ghretos.Discussion,
+                        ghretos.NumberedResource,
                     ),
                 )
                 and (embeds := data.get("embeds"))
