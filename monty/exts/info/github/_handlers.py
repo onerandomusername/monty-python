@@ -205,10 +205,13 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
     def render_tiny(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
         resource_type = "issue" if not obj.pull_request else "pull request"
-        return (
-            f"{emoji} {resource_type.capitalize()} [`{context.repo.full_name}#{obj.number}`](<{obj.html_url}>) - "
-            f"{obj.title}"
+        text = (
+            f"{emoji} {resource_type.capitalize()} [`{context.repo.full_name}#{obj.number}` - "
+            f"{obj.title}](<{obj.html_url}>)"
         )
+        if obj.user:
+            text += f" by [{obj.user.name or obj.user.login}](<{obj.user.html_url}>)"
+        return text
 
     def render_compact(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
@@ -227,10 +230,11 @@ class IssueRenderer(GitHubRenderer[githubkit.rest.Issue, ghretos.Issue]):
         return content
 
     def render_ogp(self, obj: githubkit.rest.Issue, *, context: ghretos.Issue) -> disnake.Embed:
+        emoji, colour = self._get_visual_style_state(obj)
         embed = disnake.Embed(
-            title=f"[{context.repo.full_name}#{obj.number}] - {obj.title}",
+            title=f"{emoji} [{context.repo.full_name}#{obj.number}] - {obj.title}",
             url=obj.html_url,
-            colour=GITHUB_COLOUR,
+            colour=colour,
             timestamp=obj.created_at,
         )
 
