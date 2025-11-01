@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import operator
 import random
 import re
@@ -12,6 +13,7 @@ import ghretos
 import githubkit
 import githubkit.exception
 import githubkit.rest
+import msgpack
 from disnake.ext import commands
 
 import monty.utils.services
@@ -23,6 +25,7 @@ from monty.utils import scheduling
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 from . import _handlers as github_handlers
+from . import graphql_models
 
 
 # Maximum number of issues in one message
@@ -92,6 +95,23 @@ class GithubInfo(
         data = r.json()
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
+    def _format_github_global_id(self, prefix: str, *ids: int, template: int = 0) -> str:
+        # This is not documented, but is at least the current format as of writing this comment.
+        # These IDs are supposed to be treated as opaque strings, but fetching specific resources like
+        # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
+        packed = msgpack.packb(
+            [
+                # template index; global IDs of a specific type *can* have multiple different templates
+                # (i.e. sets of variables that follow); in almost all cases, this is 0
+                template,
+                # resource IDs, variable amount depending on global ID type
+                *ids,
+            ]
+        )
+        encoded = base64.urlsafe_b64encode(packed).decode()
+        encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
+        return f"{prefix}_{encoded}"
+
     async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel | None:
         """Fetch a GitHub resource."""
         # TODO: add repo exists validation before fetching multiple resources from one repo?
@@ -148,6 +168,13 @@ class GithubInfo(
                 event_id=obj.event_id,
             )
             return r.parsed_data
+        if isinstance(obj, ghretos.DiscussionComment):
+            r = await self.bot.github.graphql.arequest(
+                DISCUSSION_COMMENT_GRAPHQL_QUERY,
+                variables={"id": self._format_github_global_id("DC", 0, obj.comment_id)},
+            )
+            return graphql_models.DiscussionComment(**r["node"])
+
         if isinstance(obj, ghretos.Commit):
             r = await self.bot.github.rest.repos.async_get_commit(
                 owner=obj.repo.owner,
