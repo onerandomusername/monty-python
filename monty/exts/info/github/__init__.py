@@ -1,3 +1,4 @@
+import operator
 import random
 import re
 from collections.abc import Mapping
@@ -239,8 +240,17 @@ class GithubInfo(
 
         resp = {}
         if tiny_content:
-            content = "\n".join(tiny_content)
-            resp["content"] = content
+            title = ""
+            if embeds:
+                title += "GitHub quick links"
+            tiny_embed = disnake.Embed(
+                description="\n".join(tiny_content),
+                colour=github_handlers.GITHUB_COLOUR,
+            )
+            if title:
+                tiny_embed.set_author(name=title)
+            embeds.insert(0, tiny_embed)
+
         if embeds:
             resp["embeds"] = embeds
         return resp
@@ -281,6 +291,14 @@ class GithubInfo(
                     ephemeral=True,
                 )
             return
+
+        def sort_key(item: ghretos.GitHubResource) -> tuple:
+            try:
+                return tuple(operator.attrgetter("repo.owner", "repo.name", "number")(item))
+            except AttributeError:
+                return ("", "", 0)
+
+        matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
 
         data = await self.get_reply(
             matches,
