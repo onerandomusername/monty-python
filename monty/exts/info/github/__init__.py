@@ -247,11 +247,11 @@ class GithubInfo(
                     resource_data,
                 )
                 continue
-            # Bypass the useless coro results
-            if not resource_data:
+            # Reassert we have a handler
+            handler = github_handlers.HANDLER_MAPPING.get(type(match))
+            if not handler:
                 continue
 
-            handler = github_handlers.HANDLER_MAPPING.get(type(match))
             # Run resource validation
             if html_url := getattr(resource_data, "html_url", None):
                 # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
