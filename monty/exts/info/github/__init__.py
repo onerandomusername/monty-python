@@ -272,18 +272,13 @@ class GithubInfo(
             if html_url := getattr(resource_data, "html_url", None):
                 # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
                 reparsed = ghretos.parse_url(html_url)
-                valid: bool = True
                 if reparsed is None or (
                     type(reparsed) is not type(match)
-                    and hasattr(reparsed, "number")
-                    and hasattr(match, "number")
-                    and getattr(reparsed, "number", None) != getattr(match, "number", None)
+                    and not (
+                        isinstance(reparsed, (ghretos.Issue, ghretos.PullRequest, ghretos.Discussion))
+                        and isinstance(match, ghretos.NumberedResource)
+                    )
                 ):
-                    valid = False
-                # Specially handle pulls being issues
-                if hasattr(reparsed, "number") and getattr(reparsed, "number", None) != getattr(match, "number", None):
-                    valid = False
-                if not valid:
                     log.warning(
                         "GitHub resource fetch returned mismatched data: expected %r, got %r",
                         match,
