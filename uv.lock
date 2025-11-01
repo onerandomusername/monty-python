@@ -157,18 +157,18 @@ speedups = [
 
 [[package]]
 name = "aiohttp-client-cache"
-version = "0.14.1"
+version = "0.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "attrs" },
     { name = "itsdangerous" },
-    { name = "typing-extensions", marker = "python_full_version <= '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "url-normalize" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/5d/f57bab0b5e4854f8cbd323f4b09c84cd1767ed00836af6d62d0445e32242/aiohttp_client_cache-0.14.1.tar.gz", hash = "sha256:af5556f719814aca02db6384271069cec6a67be31a6b7d9437e0a6a9980a494f", size = 62795, upload-time = "2025-10-01T16:35:43.25Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/af/b8e2f6ce10f0f71d675386a785966532a3e72db6d67558bab533f9cdb94a/aiohttp_client_cache-0.14.2.tar.gz", hash = "sha256:d3f4b81204de9dce59894d9ecb9c77a8dfd633d73c920bbcf8a7370650656585", size = 63165, upload-time = "2025-10-30T16:47:32.649Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/c2/02632d658d92ba22e7d3b6721a30c36f7d85c58c0548592b55e5d885a035/aiohttp_client_cache-0.14.1-py3-none-any.whl", hash = "sha256:6c3c3c9e70c0f3ec3f0781df5d544b7c4583739ef05351eb82506e8ef4b4395a", size = 33583, upload-time = "2025-10-01T16:35:41.755Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/61/21e37e403942fb607cb93391ff2d7084318554332393e2cc5a9ba2ff7e7e/aiohttp_client_cache-0.14.2-py3-none-any.whl", hash = "sha256:5286d6c46fa822d0dec12d5110648de675050dcc4226e2f1e4fd162ea5f24fda", size = 33552, upload-time = "2025-10-30T16:47:31.128Z" },
 ]
 
 [[package]]
