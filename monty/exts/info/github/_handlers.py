@@ -267,7 +267,7 @@ class NumberableRenderer(
     ) -> disnake.Embed:
         emoji, colour = self._get_visual_style_state(obj)
         embed = disnake.Embed(
-            title=f"{emoji} [{context.repo.full_name}#{obj.number}] - {obj.title}",
+            title=f"{emoji} [{context.repo.full_name}#{obj.number}] {obj.title}",
             url=obj.html_url,
             colour=colour,
             timestamp=obj.created_at,
