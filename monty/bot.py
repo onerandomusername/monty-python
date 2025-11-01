@@ -1,6 +1,6 @@
 import asyncio
 import collections
-from typing import Any, cast, final
+from typing import Any, Literal, cast, final
 from weakref import WeakValueDictionary
 
 import arrow
@@ -17,6 +17,7 @@ from typing_extensions import Self, override
 
 from monty import constants
 from monty.aiohttp_session import AiohttpTransport, CachingClientSession, get_cache_backend, session_args_for_proxy
+from monty.components import app_emoji_syncing
 from monty.database import Feature, Guild, GuildConfig
 from monty.database.rollouts import Rollout
 from monty.github_client import GitHubClient
@@ -423,3 +424,92 @@ class Monty(commands.Bot):
 
         for alias in getattr(command, "root_aliases", ()):
             self.all_commands.pop(alias, None)
+
+    async def sync_app_emojis(self, *, force_local_backend: bool | None = None, sha: str | None = None) -> None:
+        """Sync the application's emojis with those from the GitHub repository."""
+        # check if an update is needed
+        if not constants.Client.git_sha and force_local_backend is not False:
+            backend = app_emoji_syncing.LocalGitBackend(
+                emoji_directory=constants.Client.app_emoji_directory,
+            )
+        else:
+            backend = app_emoji_syncing.GitHubBackend(
+                github_client=self.github,
+                user=constants.Client.git_repo_user,
+                repo=constants.Client.git_repo_name,
+                emoji_directory=constants.Client.app_emoji_directory,
+                # todo: set this based on the current git sha that's also on GitHub
+                # should not be the same as Client.version
+                sha=sha or constants.Client.git_ref,
+            )
+
+        last_changed = await backend.get_last_changed_date()
+
+        # we can assume that the app emojis we fetched match our internal enum
+        app_emojis_to_keep: dict[str, disnake.PartialEmoji] = {
+            emoji.name: emoji for _attr, emoji in constants.AppEmojis
+        }
+
+        existing_app_emojis = await self.fetch_application_emojis()
+
+        async def _creator(
+            self: "Monty" = self, *, emoji_name: str, existing: disnake.Emoji | None = None
+        ) -> disnake.Emoji:
+            try:
+                raw_emoji = await backend.get_emoji_content(emoji_name)
+            except app_emoji_syncing.EmojiContentNotFoundError:
+                if emoji_name in app_emojis_to_keep:
+                    app_emojis_to_keep.pop(emoji_name)
+                raise
+            if existing:
+                await existing.delete()
+            return await self.create_application_emoji(name=emoji_name, image=raw_emoji)
+
+        coros = []
+
+        async def noop_awaitable() -> Literal[False]:
+            return False
+
+        for emoji in existing_app_emojis:
+            if emoji.name not in app_emojis_to_keep:
+                coros.append(emoji.delete())
+                continue
+            # pop the app emoji
+            app_emojis_to_keep.pop(emoji.name)
+
+            if emoji.created_at >= last_changed:
+                # add a noop awaitable
+                coros.append(noop_awaitable())
+                continue
+
+            coros.append(_creator(emoji_name=emoji.name, existing=emoji))
+        results: list[disnake.Emoji | None | BaseException] = await asyncio.gather(*coros, return_exceptions=True)
+        for result, emoji in zip(results, existing_app_emojis, strict=True):
+            if isinstance(result, BaseException):
+                log.error("Error occurred while updating/deleting emoji %s: %s", emoji.name, result)
+            elif result is False:
+                log.debug("No changes made to emoji %s", emoji.name)
+            elif result:
+                log.info("Successfully updated emoji %s", emoji.name)
+            else:
+                log.info("Successfully deleted emoji %s", emoji.name)
+
+        coros = []
+        # add any new app emojis from the repo
+        for emoji_name in app_emojis_to_keep.copy():
+            coros.append(_creator(emoji_name=emoji_name))
+        results = await asyncio.gather(*coros, return_exceptions=True)
+        for emoji_name, result in zip(app_emojis_to_keep.copy(), results, strict=True):
+            if isinstance(result, Exception):
+                log.error("Error occurred while creating emoji: %s", result)
+
+                log.warning("Emoji content not found for %s, skipping creation.", emoji_name)
+                app_emojis_to_keep.pop(emoji_name)
+                continue
+
+        # update the cached emojis to be their full objects
+        self.app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        for emoji_attr, partial_emoji in constants.AppEmojis:
+            if partial_emoji.name not in self.app_emojis:
+                continue
+            setattr(constants.AppEmojis, emoji_attr, self.app_emojis[partial_emoji.name])
