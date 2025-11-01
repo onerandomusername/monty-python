@@ -32,7 +32,8 @@ from . import graphql_models
 MAXIMUM_ISSUES = 6
 
 
-EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v2:"
+EXPANDED_ISSUE_MODAL_CUSTOM_ID = "gh:issue-expanded-modal"
+EXPAND_ISSUE_CUSTOM_ID_PREFIX = "gh:issue-expand-v1:"
 EXPAND_ISSUE_CUSTOM_ID_FORMAT = EXPAND_ISSUE_CUSTOM_ID_PREFIX + r"{user_id}:{state}:{org}/{repo}#{num}"
 EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     re.escape(EXPAND_ISSUE_CUSTOM_ID_PREFIX)
@@ -218,6 +219,19 @@ class GithubInfo(
             components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
         )
 
+    async def get_full_reply(
+        self,
+        resource: ghretos.GitHubResource,
+    ) -> tuple[str, list[disnake.ui.TextDisplay]]:
+        """Get full text displays for a GitHub resource."""
+        handler = github_handlers.HANDLER_MAPPING.get(type(resource))
+        if handler is None:
+            return []
+
+        resource_data = await self.fetch_resource(resource)
+
+        return handler().render(resource_data, context=resource, size=github_handlers.InfoSize.FULL)
+
     async def get_reply(
         self,
         resources: Mapping[ghretos.GitHubResource, github_handlers.InfoSize],
@@ -378,6 +392,52 @@ class GithubInfo(
                 components=components,
                 allowed_mentions=disnake.AllowedMentions.none(),
             )
+
+    @commands.Cog.listener("on_button_click")
+    async def show_expanded_information(
+        self,
+        interaction: disnake.MessageInteraction,
+    ) -> None:
+        """Show expanded information for a GitHub issue."""
+        match = EXPAND_ISSUE_CUSTOM_ID_REGEX.match(interaction.data.custom_id)
+        if not match:
+            return
+
+        gh_resource = ghretos.parse_shorthand(f"{match.group('org')}/{match.group('repo')}#{match.group('number')}")
+        if gh_resource is None:
+            await interaction.response.send_message(
+                "Could not parse the GitHub resource to expand.",
+                ephemeral=True,
+            )
+            return
+
+        title, data = await self.get_full_reply(gh_resource)
+        if not data:
+            await interaction.response.send_message(
+                "Could not fetch the GitHub resource to expand or collapse.",
+                ephemeral=True,
+            )
+            return
+
+        title = getattr(getattr(gh_resource, "repo", None), "full_name", None) or ""
+        if title:
+            title += f"#{getattr(gh_resource, 'number', '')}"
+        if len(title) > 45:
+            title = title.split("/", 1)[1]
+        if len(title) > 45:
+            title = title[:42] + "..."
+        await interaction.response.send_modal(
+            title=title,
+            custom_id=EXPANDED_ISSUE_MODAL_CUSTOM_ID,
+            components=data,
+        )
+
+    @commands.Cog.listener("on_modal_submit")
+    async def handle_modal_submit(self, interaction: disnake.ModalInteraction) -> None:
+        """Handle the submission of the expanded issue modal."""
+        if interaction.custom_id != EXPANDED_ISSUE_MODAL_CUSTOM_ID:
+            return
+        await interaction.response.defer(with_message=False)
 
 
 def setup(bot: Monty) -> None:
