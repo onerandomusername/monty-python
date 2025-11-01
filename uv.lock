@@ -940,16 +940,10 @@ wheels = [
 [[package]]
 name = "ghretos"
 version = "0.0.1a1"
-source = { editable = "../ghretos" }
+source = { git = "https://github.com/onerandomusername/ghretos#07b380b0a50ef6aa7c52fb83a16a051344873268" }
 dependencies = [
     { name = "yarl" },
 ]
-
-[package.metadata]
-requires-dist = [{ name = "yarl", specifier = ">=1.0" }]
-
-[package.metadata.requires-dev]
-test = [{ name = "pytest", specifier = ">=8.4.2" }]
 
 [[package]]
 name = "gitdb"
@@ -1839,7 +1833,7 @@ requires-dist = [
     { name = "cachingutils", git = "https://github.com/onerandomusername/cachingutils.git?rev=vcokltfre%2Ffeat%2Fv2" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = "~=0.4.5" },
     { name = "disnake", git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
-    { name = "ghretos", editable = "../ghretos" },
+    { name = "ghretos", git = "https://github.com/onerandomusername/ghretos" },
     { name = "githubkit", specifier = ">=0.13.4" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-aiohttp", specifier = ">=0.1.9" },
