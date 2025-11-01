@@ -189,4 +189,4 @@ reportUnnecessaryTypeIgnoreComment = false
 wrap = 80
 
 [tool.uv.sources]
-ghretos = { path = "../ghretos", editable = true }
+ghretos = { git = "https://github.com/onerandomusername/ghretos" }
