@@ -235,6 +235,8 @@ class GithubInfo(
     async def get_reply(
         self,
         resources: Mapping[ghretos.GitHubResource, github_handlers.InfoSize],
+        *,
+        limit: int | None = None,
     ) -> dict[str, Any]:
         """Get embeds for a list of GitHub resources."""
         embeds: list[disnake.Embed] = []
@@ -290,7 +292,7 @@ class GithubInfo(
                     continue  # skip invalid data
             match size:
                 case github_handlers.InfoSize.OGP:
-                    embeds.append(handler().render(resource_data, context=match, size=size))
+                    embeds.append(handler(limit=limit).render(resource_data, context=match, size=size))
                 case github_handlers.InfoSize.TINY:
                     tiny_content.append(handler().render(resource_data, context=match, size=size))
 
@@ -351,9 +353,16 @@ class GithubInfo(
 
         matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
 
-        data = await self.get_reply(matches)
+        data = await self.get_reply(matches, limit=850)
 
-        components = []
+        if not data:
+            await inter.response.send_message(
+                f"{constants.Emojis.decline} Could not fetch any GitHub resources from input.",
+                ephemeral=True,
+            )
+            return
+
+        components: list[disnake.ui.ActionRow] = []
         components.append(
             disnake.ui.ActionRow(
                 DeleteButton(
@@ -362,6 +371,36 @@ class GithubInfo(
                 )
             )
         )
+        # add in a button to expand/collapse if there is exactly one issue/pr/discussion
+        # and it is not a comment.
+        if len(matches) == 1:
+            match = next(iter(matches.keys()))
+            if (
+                isinstance(
+                    match,
+                    (
+                        ghretos.Issue,
+                        ghretos.PullRequest,
+                        ghretos.Discussion,
+                    ),
+                )
+                and (embeds := data.get("embeds"))
+                and embeds[0].description.endswith("...")
+            ):
+                current_state = 0  # collapsed
+                expand_custom_id = EXPAND_ISSUE_CUSTOM_ID_FORMAT.format(
+                    user_id=inter.author.id,
+                    state=current_state,
+                    org=match.repo.owner,
+                    repo=match.repo.name,
+                    num=match.number,
+                )
+                expand_button = disnake.ui.Button(
+                    label="Show More",
+                    style=disnake.ButtonStyle.primary,
+                    custom_id=expand_custom_id,
+                )
+                components[-1].append_item(expand_button)
         await inter.response.send_message(
             **data,
             components=components,
