@@ -35,6 +35,12 @@ from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
 
+USERNAME_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9\-]{0,38}")
+REPO_RE = re.compile(
+    rf"(?:(?P<owner>{USERNAME_RE.pattern})\/)?"
+    r"(?P<repo>[\w\-\.]{1,100})"
+)
+
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
 AUTOMATIC_REGEX = re.compile(
@@ -285,7 +291,11 @@ class GithubInfo(
     @github_group.command(name="user", aliases=("userinfo",))
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
         """Fetches a user's GitHub information."""
-        username = block_url_traversal(username)
+        if not (match := USERNAME_RE.fullmatch(username)):
+            msg = f"`{username}` is not a valid GitHub username."
+            raise commands.BadArgument(msg)
+        username = match.group(0)
+
         async with ctx.typing():
             try:
                 resp = await self.bot.github.rest.users.async_get_by_username(username)
@@ -375,6 +385,11 @@ class GithubInfo(
             repo_name = "/".join(repository[:2])
         else:
             repo_name = ""
+
+        if not (match := REPO_RE.fullmatch(repo_name)):
+            msg = f"`{repo_name}` is not a valid GitHub repository name."
+            raise commands.BadArgument(msg)
+        repo_name = match.group(0)
 
         if not repo_name or repo_name.count("/") > 1:
             args = " ".join(repository[:2])
