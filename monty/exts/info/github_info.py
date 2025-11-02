@@ -27,7 +27,7 @@ from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import responses, scheduling
 from monty.utils.extensions import invoke_help_command
-from monty.utils.helpers import fromisoformat, get_num_suffix
+from monty.utils.helpers import block_url_traversal, fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
@@ -285,6 +285,7 @@ class GithubInfo(
     @github_group.command(name="user", aliases=("userinfo",))
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
         """Fetches a user's GitHub information."""
+        username = block_url_traversal(username)
         async with ctx.typing():
             try:
                 resp = await self.bot.github.rest.users.async_get_by_username(username)
@@ -382,11 +383,12 @@ class GithubInfo(
                 "The repository should look like `user/reponame` or `user reponame`"
                 + (f", not `{args}`." if "`" not in args and len(args) < 20 else ".")
             )
-            return
+
+        owner, repo = block_url_traversal(*repo_name.split("/", 1))
 
         async with ctx.typing():
             try:
-                resp = await self.bot.github.rest.repos.async_get(*repo_name.split("/", 1))
+                resp = await self.bot.github.rest.repos.async_get(owner, repo)
                 repo_data = resp.json()
             except githubkit.exception.RequestFailed:
                 # There won't be a message key if this repo exists
@@ -461,6 +463,7 @@ class GithubInfo(
         Returns IssueState on success, FetchError on failure.
         """
         json_data = None
+        user, repository = block_url_traversal(user, repository)
         if not is_discussion:  # not a discussion, or uncertain
             try:
                 r = await self.bot.github.rest.issues.async_get(user, repository, number)

@@ -16,7 +16,7 @@ from disnake.ext import commands
 from monty.bot import Monty
 from monty.log import get_logger
 from monty.utils import scheduling
-from monty.utils.helpers import EXPAND_BUTTON_PREFIX, decode_github_link
+from monty.utils.helpers import EXPAND_BUTTON_PREFIX, block_url_traversal, decode_github_link
 from monty.utils.markdown import remove_codeblocks
 from monty.utils.messages import DeleteButton, suppress_embeds
 
@@ -30,7 +30,8 @@ log = get_logger(__name__)
 
 # start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https?:\/\/github\.(?:com|dev)\/(?P<user>[a-zA-Z0-9-]+)\/(?P<repo>[a-zA-Z0-9-]+)\/(?:blob|tree)\/(?P<path>[^#>]+)(\?[^#>]+)?"
+    r"https?:\/\/github\.(?:com|dev)\/(?P<user>[a-zA-Z0-9-]+)\/(?P<repo>[a-zA-Z0-9-]+)\/(?:blob|tree)\/"
+    r"(?P<path>[^#>]+/[^#>]+)(\?[^#>]+)?"
     r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]"
     r"|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
 )
@@ -119,10 +120,14 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         repo: str,
         path: str,
         start_line: str,
-        end_line: str,
+        end_line: str | None,
         **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a GitHub repo."""
+        user, repo, start_line = block_url_traversal(user, repo, start_line)
+        if end_line:
+            end_line = block_url_traversal(end_line)
+
         # Search the GitHub API for the specified branch
         r = await self.bot.github.rest.repos.async_list_branches(user, repo, per_page=100)
         branches = r.json()
@@ -130,6 +135,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         tags = r.json()
         refs = branches + tags
         ref, encoded_file_path = self._find_ref(path, refs)
+        ref, encoded_file_path = block_url_traversal(ref, encoded_file_path)
 
         r = await self.bot.github.rest.repos.async_get_content(
             user,
@@ -156,6 +162,9 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a GitHub gist."""
+        gist_id, revision, file_path, start_line, end_line = block_url_traversal(
+            gist_id, revision, file_path, start_line, end_line
+        )
         if revision:
             endpoint = self.bot.github.rest.gists.async_get_revision(gist_id, revision)
         else:
@@ -186,20 +195,17 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         **kwargs: "NoReturn",
     ) -> str:
         """Fetches a snippet from a GitLab repo."""
-        enc_repo = quote_plus(repo)
-
+        repo, start_line, end_line = block_url_traversal(repo, start_line, end_line)
         # Searches the GitLab API for the specified branch
-        branches = await self._fetch_response(
-            f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/branches", "json"
-        )
-        tags = await self._fetch_response(f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/tags", "json")
+        branches = await self._fetch_response(f"https://gitlab.com/api/v4/projects/{repo}/repository/branches", "json")
+        tags = await self._fetch_response(f"https://gitlab.com/api/v4/projects/{repo}/repository/tags", "json")
         refs = branches + tags
         ref, file_path = self._find_ref(path, refs)
-        enc_ref = quote_plus(ref)
-        enc_file_path = quote_plus(file_path)
+        ref = quote_plus(ref)
+        path = quote_plus(file_path)
 
         file_contents = await self._fetch_response(
-            f"https://gitlab.com/api/v4/projects/{enc_repo}/repository/files/{enc_file_path}/raw?ref={enc_ref}",
+            f"https://gitlab.com/api/v4/projects/{repo}/repository/files/{path}/raw?ref={ref}",
             "text",
         )
         return self._snippet_to_codeblock(file_contents, file_path, start_line, end_line)

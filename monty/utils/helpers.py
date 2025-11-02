@@ -4,7 +4,7 @@ import asyncio
 import datetime
 import ssl
 from typing import TYPE_CHECKING, Any, TypeVar, overload
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import quote_plus, urlsplit, urlunsplit
 
 import base65536
 import dateutil.parser
@@ -74,6 +74,21 @@ def has_lines(string: str, count: int) -> bool:
 def pad_base64(data: str) -> str:
     """Return base64 `data` with padding characters to ensure its length is a multiple of 4."""
     return data + "=" * (-len(data) % 4)
+
+
+@overload
+def block_url_traversal(arg: str) -> str: ...
+
+
+@overload
+def block_url_traversal(*args: str) -> tuple[str, ...]: ...
+
+
+def block_url_traversal(arg: str, *args: str) -> str | tuple[str, ...]:
+    """Normalise a string for use in a URL by fixing slashes and escaping `/`."""
+    if not args:
+        return quote_plus(arg)
+    return tuple(quote_plus(a) for a in (arg, *args))
 
 
 EXPAND_BUTTON_PREFIX = "ghexp-v1:"
