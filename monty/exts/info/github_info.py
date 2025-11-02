@@ -546,7 +546,7 @@ class GithubInfo(
             elif reason == "completed":
                 emoji = constants.AppEmojis.issue_closed_completed
             else:
-                emoji = constants.AppEmojis.issue_closed
+                emoji = constants.AppEmojis.issue_closed_completed
 
         return IssueState(
             user,

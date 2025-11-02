@@ -466,12 +466,7 @@ class Monty(commands.Bot):
         ) -> disnake.Emoji | None | bool:
             if existing and existing.created_at >= last_changed:
                 return None
-            try:
-                raw_emoji = await backend.get_emoji_content(emoji_name)
-            except app_emoji_syncing.EmojiContentNotFoundError:
-                if emoji_name in hardcoded_emojis:
-                    hardcoded_emojis.pop(emoji_name)
-                raise
+            raw_emoji = await backend.get_emoji_content(emoji_name)
             if existing:
                 r = await bot.http_session.get(existing.url)
                 data = await r.read()

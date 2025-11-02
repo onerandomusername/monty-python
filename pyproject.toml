@@ -61,6 +61,7 @@ devlibs = [
     "fakeredis<3.0.0,>=2.29.0",
     "watchfiles<2.0.0,>=1.0.5",
     "python-dotenv<2.0.0,>=1.1.0",
+    "wand>=0.6.13",
 ]
 tools = [
     "poethepoet>=0.37.0",
