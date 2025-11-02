@@ -17,7 +17,7 @@ __all__ = (
 
 
 CODE_BLOCK_RE = re.compile(
-    r"(?P<delim>`{1,2})([^\n]+)(?P=delim)|```(.+?)```",
+    r"```(.+?)```|(?P<delim>`{1,2})([^\n]+?)(?P=delim)",
     re.DOTALL | re.MULTILINE,
 )
 
