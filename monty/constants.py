@@ -1,3 +1,4 @@
+import dataclasses
 import enum
 from collections.abc import Callable
 from typing import Annotated, ClassVar, Literal
@@ -92,6 +93,9 @@ class ClientCls(BaseSettings):
     # source and support
     git_sha: str | None = Field(None, validation_alias="GIT_SHA")
     git_repo: ClassVar[StrHttpUrl] = "https://github.com/onerandomusername/monty-python"
+    git_repo_user: str = "onerandomusername"
+    git_repo_name: str = "monty-python"
+    app_emoji_directory: str = "/monty/resources/emojis"
     support_server: ClassVar[str] = "mPscM4FjWB"
     # note that these are the default invite permissions,
     # But Monty fetches the ones configured in the developer portal and replace these
@@ -223,6 +227,15 @@ class ColoursCls(BaseModel):
     gold: int = 0xE6C200
 
 
+class GHColour(enum.Enum):
+    muted = 0x59636E
+    success = 0x6EB771
+    done = 0x8250DF
+    danger = 0xD1242F
+    attention = 0x9A6700
+    default = 0x1F2328
+
+
 ## DEPRECATED
 # TODO: Will be replaced in favour of application emojis
 class EmojisCls(BaseModel):
@@ -239,18 +252,6 @@ class EmojisCls(BaseModel):
     black: str = "<:black_format:928530654143066143>"
     upload: str = "\U0001f4dd"
     snekbox: str = "\U0001f40d"
-
-    # GitHub octicons
-    discussion_answered: str = "<:discussion_answered:979267343710584894>"
-    issue_open: str = "<:issue_open:882464248951877682>"
-    issue_closed: str = "<:issue_closed:882464248972865536>"
-    issue_closed_completed: str = "<:issue_closed_completed:979047130847117343>"
-    issue_closed_unplanned: str = "<:issue_closed_unplanned:979052245507276840>"
-    issue_draft: str = "<:issue_draft:882464249337774130>"
-    pull_request_open: str = "<:pull_open:882464248721182842>"
-    pull_request_closed: str = "<:pull_closed:882464248989638676>"
-    pull_request_draft: str = "<:pull_draft:882464249065136138>"
-    pull_request_merged: str = "<:pull_merged:882464249119645787>"
 
     number_emojis: dict[int, str] = {
         1: "\u0031\ufe0f\u20e3",
@@ -276,6 +277,111 @@ class EmojisCls(BaseModel):
 
     reddit_upvote: str = "<:reddit_upvote:882722837868195901>"
     reddit_comments: str = "<:reddit_comments:882722838153416705>"
+
+
+@dataclasses.dataclass(frozen=True)
+class Octicon:
+    name: str
+    color: GHColour
+    file_name: str | None = ""
+    size: str = "16"
+
+    def url(self) -> str:
+        return f"https://github.com/primer/octicons/raw/main/icons/{self.file_name or self.name}-{self.size}.svg"
+
+
+GITHUB_OCTICONS = {
+    Octicon(
+        name="gh-commit",
+        file_name="git-commit",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-discussion-answered",
+        file_name="issue-opened",
+        color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-discussion-closed",
+        file_name="discussion-closed",
+        color=GHColour.done,
+    ),
+    Octicon(
+        name="gh-discussion-comment",
+        file_name="comment-discussion",
+        color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-discussion-outdated",
+        file_name="discussion-outdated",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-discussion-duplicate",
+        file_name="discussion-duplicate",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-issue-open",
+        file_name="issue-opened",
+        color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-issue-closed-completed",
+        file_name="issue-closed",
+        color=GHColour.done,
+    ),
+    Octicon(
+        name="gh-issue-reopen",
+        file_name="issue-reopened",
+        color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-issue-draft",
+        file_name="issue-draft",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-issue-closed-unplanned",
+        file_name="skip",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-pull-request",
+        file_name="git-pull-request",
+        color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-pull-request-closed",
+        file_name="git-pull-request-closed",
+        color=GHColour.danger,
+    ),
+    Octicon(
+        name="gh-pull-request-draft",
+        file_name="git-pull-request-draft",
+        color=GHColour.muted,
+    ),
+    Octicon(
+        name="gh-merge",
+        file_name="git-merge",
+        color=GHColour.done,
+    ),
+}
+
+AppEmojiAnn = disnake.PartialEmoji | disnake.Emoji
+
+
+class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
+    # GitHub octicons
+    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_answered")
+    issue_open: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_open")
+    issue_closed_completed: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_completed")
+    issue_closed_unplanned: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_unplanned")
+    issue_draft: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_draft")
+    pull_request_open: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request")
+    pull_request_closed: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request_closed")
+    pull_request_draft: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request_draft")
+    pull_request_merged: AppEmojiAnn = disnake.PartialEmoji(name="gh_merge")
 
 
 # TODO: stash all icons as emojis
@@ -323,5 +429,6 @@ Monitoring = MonitoringCls()  # pyright: ignore[reportCallIssue]
 CodeBlock = CodeBlockCls()
 Colours = ColoursCls()
 Emojis = EmojisCls()  # pyright: ignore[reportCallIssue]
+AppEmojis = AppEmojisCls()
 Icons = IconsCls()
 Guilds = GuildsCls()

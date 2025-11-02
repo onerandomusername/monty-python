@@ -83,6 +83,14 @@ async def main() -> None:
         proxy=constants.Client.proxy,
     )
 
+    await bot.login(constants.Client.token or "")
+
+    # library doesn't set this until it connects to the gateway with connect()
+    appinfo = await bot.application_info()
+    bot._connection.application_id = appinfo.id
+
+    await bot.sync_app_emojis()
+
     try:
         bot.load_extensions()
     except Exception:
@@ -92,7 +100,7 @@ async def main() -> None:
 
     loop = asyncio.get_running_loop()
 
-    future: asyncio.Future = asyncio.ensure_future(bot.start(constants.Client.token or ""), loop=loop)
+    future: asyncio.Future = asyncio.ensure_future(bot.connect(), loop=loop)
 
     try:
         loop.add_signal_handler(signal.SIGINT, lambda: future.cancel())
