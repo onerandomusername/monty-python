@@ -23,8 +23,6 @@ from . import graphql_models
 T = TypeVar("T", bound=githubkit.GitHubModel)
 V = TypeVar("V", bound=ghretos.GitHubResource)
 
-GITHUB_COLOUR = disnake.Colour(0xFFFFFF)
-
 
 class VisualStyleState(NamedTuple):
     emoji: disnake.Emoji | disnake.PartialEmoji
@@ -395,9 +393,13 @@ class IssueCommentRenderer(
         | ghretos.PullRequestReviewComment
         | ghretos.DiscussionComment,
     ) -> disnake.Embed:
+        if isinstance(obj, githubkit.rest.PullRequestReviewComment):
+            colour = constants.GHColour.pull_comment
+        else:
+            colour = constants.GHColour.issue_comment
         embed = disnake.Embed(
             url=obj.html_url,
-            colour=GITHUB_COLOUR,
+            colour=colour,
             description="",
             timestamp=obj.created_at,
         )

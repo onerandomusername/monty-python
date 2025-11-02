@@ -240,6 +240,10 @@ class GHColour(int, enum.Enum):
     attention = 0x9A6700
     default = 0x1F2328
 
+    # These are used by Discord
+    issue_comment = 0xE68D60
+    pull_comment = 0xBFE5BF
+
 
 ## DEPRECATED
 # TODO: Will be replaced in favour of application emojis
