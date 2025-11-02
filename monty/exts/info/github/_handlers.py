@@ -27,7 +27,7 @@ GITHUB_COLOUR = disnake.Colour(0xFFFFFF)
 
 
 class VisualStyleState(NamedTuple):
-    emoji: str
+    emoji: disnake.Emoji | disnake.PartialEmoji
     colour: disnake.Colour
 
 
@@ -173,11 +173,11 @@ class NumberableRenderer(
     def _get_visual_style_state(obj: githubkit.rest.Issue | githubkit.rest.Discussion) -> VisualStyleState:
         if isinstance(obj, githubkit.rest.Discussion):
             if obj.answer_chosen_at:
-                emoji = constants.Emojis.discussion_answered
-                colour = constants.Colours.soft_green
+                emoji = constants.AppEmojis.discussion_answered
+                colour = constants.GHColour.success
             else:
-                emoji = constants.Emojis.issue_draft
-                colour = disnake.Colour.greyple()
+                emoji = constants.AppEmojis.issue_draft
+                colour = constants.GHColour.muted
 
             if not isinstance(colour, disnake.Colour):
                 colour = disnake.Colour(colour)
@@ -185,41 +185,40 @@ class NumberableRenderer(
             return VisualStyleState(emoji=emoji, colour=colour)
         if obj.pull_request:
             if obj.pull_request.merged_at:
-                emoji = constants.Emojis.pull_request_merged
-                colour = constants.Colours.purple
+                emoji = constants.AppEmojis.pull_request_merged
+                colour = constants.GHColour.done
             elif obj.draft is True:
-                emoji = constants.Emojis.pull_request_draft
-                colour = disnake.Colour.greyple()
+                emoji = constants.AppEmojis.pull_request_draft
+                colour = constants.GHColour.muted
             elif obj.state == "open":
-                emoji = constants.Emojis.pull_request_open
-                colour = constants.Colours.soft_green
+                emoji = constants.AppEmojis.pull_request_open
+                colour = constants.GHColour.success
             elif obj.state == "closed":
-                emoji = constants.Emojis.pull_request_closed
-                colour = constants.Colours.soft_red
+                emoji = constants.AppEmojis.pull_request_closed
+                colour = constants.GHColour.danger
             else:
                 # fall the emoji back to a state
-                emoji = constants.Emojis.pull_request_open
-                colour = constants.Colours.soft_green
+                emoji = constants.AppEmojis.pull_request_open
+                colour = constants.GHColour.success
         else:
             if obj.state == "closed":
                 if obj.state_reason == "not_planned":
-                    emoji = constants.Emojis.issue_closed_unplanned
-                    colour = disnake.Colour.greyple()
+                    emoji = constants.AppEmojis.issue_closed_unplanned
+                    colour = constants.GHColour.muted
                 else:
-                    emoji = constants.Emojis.issue_closed_completed
-                    colour = constants.Colours.purple
+                    emoji = constants.AppEmojis.issue_closed_completed
+                    colour = constants.GHColour.done
             elif obj.draft is True:
                 # not currently used by GitHub, but future planning
-                emoji = constants.Emojis.issue_draft
-                colour = disnake.Colour.greyple()
+                emoji = constants.AppEmojis.issue_draft
+                colour = constants.GHColour.muted
             elif obj.state == "open":
-                emoji = constants.Emojis.issue_open
-                colour = constants.Colours.soft_green
-
+                emoji = constants.AppEmojis.issue_open
+                colour = constants.GHColour.success
             else:
                 # fall the emoji back to a state
-                emoji = constants.Emojis.issue_open
-                colour = constants.Colours.soft_green
+                emoji = constants.AppEmojis.issue_open
+                colour = constants.GHColour.success
 
         if not isinstance(colour, disnake.Colour):
             colour = disnake.Colour(colour)
