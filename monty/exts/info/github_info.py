@@ -27,13 +27,19 @@ from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import responses, scheduling
 from monty.utils.extensions import invoke_help_command
-from monty.utils.helpers import fromisoformat, get_num_suffix
+from monty.utils.helpers import block_url_traversal, fromisoformat, get_num_suffix
 from monty.utils.markdown import DiscordRenderer, remove_codeblocks
 from monty.utils.messages import DeleteButton, extract_urls, suppress_embeds
 
 
 # Maximum number of issues in one message
 MAXIMUM_ISSUES = 6
+
+USERNAME_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9\-]{0,38}")
+REPO_RE = re.compile(
+    rf"(?:(?P<owner>{USERNAME_RE.pattern})\/)?"
+    r"(?P<repo>[\w\-\.]{1,100})"
+)
 
 # Regex used when looking for automatic linking in messages
 # regex101 of current regex https://regex101.com/r/V2ji8M/6
@@ -285,6 +291,11 @@ class GithubInfo(
     @github_group.command(name="user", aliases=("userinfo",))
     async def github_user_info(self, ctx: commands.Context, username: str) -> None:
         """Fetches a user's GitHub information."""
+        if not (match := USERNAME_RE.fullmatch(username)):
+            msg = f"`{username}` is not a valid GitHub username."
+            raise commands.BadArgument(msg)
+        username = match.group(0)
+
         async with ctx.typing():
             try:
                 resp = await self.bot.github.rest.users.async_get_by_username(username)
@@ -375,6 +386,11 @@ class GithubInfo(
         else:
             repo_name = ""
 
+        if not (match := REPO_RE.fullmatch(repo_name)):
+            msg = f"`{repo_name}` is not a valid GitHub repository name."
+            raise commands.BadArgument(msg)
+        repo_name = match.group(0)
+
         if not repo_name or repo_name.count("/") > 1:
             args = " ".join(repository[:2])
 
@@ -382,11 +398,12 @@ class GithubInfo(
                 "The repository should look like `user/reponame` or `user reponame`"
                 + (f", not `{args}`." if "`" not in args and len(args) < 20 else ".")
             )
-            return
+
+        owner, repo = block_url_traversal(*repo_name.split("/", 1))
 
         async with ctx.typing():
             try:
-                resp = await self.bot.github.rest.repos.async_get(*repo_name.split("/", 1))
+                resp = await self.bot.github.rest.repos.async_get(owner, repo)
                 repo_data = resp.json()
             except githubkit.exception.RequestFailed:
                 # There won't be a message key if this repo exists
@@ -461,6 +478,7 @@ class GithubInfo(
         Returns IssueState on success, FetchError on failure.
         """
         json_data = None
+        user, repository = block_url_traversal(user, repository)
         if not is_discussion:  # not a discussion, or uncertain
             try:
                 r = await self.bot.github.rest.issues.async_get(user, repository, number)

@@ -151,6 +151,10 @@ class PyPI(
 
     async def fetch_package(self, package: str) -> dict[str, Any] | None:
         """Fetch a package from PyPI."""
+        if characters := self.check_characters(package):
+            msg = f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
+            raise MontyCommandError(msg)
+
         async with self.bot.http_session.get(JSON_URL.format(package=package), headers=PYPI_API_HEADERS) as response:
             if response.status == 200 and response.content_type == "application/json":
                 return await response.json()
@@ -265,9 +269,6 @@ class PyPI(
         embed.set_thumbnail(url=PYPI_ICON)
 
         defer_task = None
-        if characters := self.check_characters(package):
-            msg = f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
-            raise MontyCommandError(msg)
 
         response_json = await self.fetch_package(package)
         if not response_json:
