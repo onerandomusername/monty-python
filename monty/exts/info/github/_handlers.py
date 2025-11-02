@@ -173,9 +173,17 @@ class NumberableRenderer(
             if obj.answer_chosen_at:
                 emoji = constants.AppEmojis.discussion_answered
                 colour = constants.GHColour.success
+            elif obj.state == "closed":
+                if obj.state_reason == "duplicate":
+                    emoji = constants.AppEmojis.discussion_duplicate
+                    colour = constants.GHColour.muted
+                else:
+                    emoji = constants.AppEmojis.discussion_closed
+                    colour = constants.GHColour.done
             else:
-                emoji = constants.AppEmojis.issue_draft
-                colour = constants.GHColour.muted
+                # fall the emoji back to a state
+                emoji = constants.AppEmojis.discussion_generic
+                colour = constants.GHColour.success
 
             if not isinstance(colour, disnake.Colour):
                 colour = disnake.Colour(colour)
