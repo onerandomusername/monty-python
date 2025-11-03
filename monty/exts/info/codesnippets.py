@@ -351,7 +351,7 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         # Sorts the list of snippets by their match index and joins them into a single message
         return "\n".join(m[1] for m in sorted(all_snippets))
 
-    @commands.Cog.listener(MontyEvent.monty_message_processed.value)
+    @commands.Cog.listener("on_" + MontyEvent.monty_message_processed.value)
     async def on_message(self, message: disnake.Message, context: MessageContext) -> None:
         """Checks if the message has a snippet link, removes the embed, then sends the snippet contents."""
         if not message.guild:
