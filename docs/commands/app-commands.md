@@ -246,16 +246,16 @@ bots.
 
 Fetches info from GitHub.
 
-### `github`
+### `github info`
 
-- `arg` (`string`) (required) Can be a org/repo#number, a link to an issue or
-    issue comment, and more.
+- `arg` (`string`) (required) The GitHub resource(s) to fetch information about.
+    Can be a URL or shorthand like
 
-View information about an issue, pull, discussion, or comment on GitHub.
+Fetch GitHub information.
 
 **Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
 
-**Installable as:** `Guild`
+**Installable as:** `Guild`, `User`
 
 ## Guild Config
 

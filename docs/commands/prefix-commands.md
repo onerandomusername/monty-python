@@ -141,29 +141,19 @@ Management commands for bot features.
 
 Fetches info from GitHub.
 
-### `github [user_or_repo=]`
+### `github [args...]`
 
-*Commands for finding information related to GitHub.*
+*Group for GitHub related commands.*
 
-**Can also use:** `gh`, `git`
+**Can also use:** `gh`
 
-### `github issue <numbers> <repo> [user=None]`
+### `github repo <user_and_repo> [repo=]`
 
-*Command to retrieve issue(s) from a GitHub repository.*
+*Fetch GitHub repository information.*
 
-**Can also use:** `github pr`, `github pull`
+### `github user <user>`
 
-### `github repository [repository...]`
-
-*Fetches a repositories' GitHub information.*
-
-**Can also use:** `github repo`, `repo`
-
-### `github user <username>`
-
-*Fetches a user's GitHub information.*
-
-**Can also use:** `github userinfo`
+*Fetch GitHub user information.*
 
 ## Help
 
