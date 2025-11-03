@@ -48,4 +48,4 @@ if __name__ == "__main__":
     octicons = fetch_octicons()
     DIRECTORY.mkdir(parents=True, exist_ok=True)
     for name, data in octicons.items():
-        _ = (DIRECTORY / f"{name.replace('-', '_')}.png").write_bytes(data)
+        _ = (DIRECTORY / f"{name}.png").write_bytes(data)

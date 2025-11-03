@@ -486,11 +486,13 @@ class Monty(commands.Bot):
 
         coros = []
         for emoji_name, emoji in (hardcoded_emojis | existing_app_emojis).items():
-            if isinstance(emoji, disnake.Emoji) and emoji_name not in hardcoded_emojis:
-                # emoji no longer exists in the repo, delete it
-                coros.append(_delete(emoji))
-                continue
-            coros.append(_creator(emoji_name=emoji_name, existing=emoji if isinstance(emoji, disnake.Emoji) else None))
+            if isinstance(emoji, disnake.Emoji):
+                if emoji_name in hardcoded_emojis:
+                    coros.append(_creator(emoji_name=emoji_name, existing=emoji))
+                else:  # This is where the check goes if we should skip deleting an existing emoji.
+                    coros.append(_delete(emoji))
+            else:
+                coros.append(_creator(emoji_name=emoji_name, existing=None))
 
         results: list[disnake.Emoji | Literal[False] | None | BaseException] = await asyncio.gather(
             *coros, return_exceptions=True

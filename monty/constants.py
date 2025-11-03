@@ -292,6 +292,9 @@ class Octicon(disnake.PartialEmoji):
     animated: bool = False
     id: int | None = None
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "name", self.name.replace("-", "_"))
+
     @property
     def slug(self) -> str:
         return f"{self.file_name or self.name}-{self.size}"
