@@ -4,7 +4,7 @@ import pathlib
 from wand.color import Color
 from wand.image import Image
 
-from monty.constants import GITHUB_OCTICONS, Client, GHColour
+from monty.constants import AppEmojisCls, Client, GHColour, Octicon
 
 
 DIRECTORY = pathlib.Path(Client.app_emoji_directory.lstrip("\\/"))
@@ -34,7 +34,10 @@ def convert_svg_to_png(data: bytes, colour: GHColour) -> bytes:
 def fetch_octicons() -> dict[str, bytes]:
     """Fetch the octicons from GitHub and convert them to PNG format."""
     octicons_data: dict[str, bytes] = {}
-    for octicon in GITHUB_OCTICONS:
+    for field in AppEmojisCls.model_fields.values():
+        octicon = field.default
+        if not isinstance(octicon, Octicon):
+            continue
         png_data = convert_svg_to_png(octicon.icon().svg.encode(), octicon.color)
         octicons_data[octicon.name] = png_data
         log.info("Fetched and converted octicon %s as %s", octicon.slug, octicon.name)

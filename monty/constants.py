@@ -283,12 +283,14 @@ class EmojisCls(BaseModel):
     reddit_comments: str = "<:reddit_comments:882722838153416705>"
 
 
-@dataclasses.dataclass(frozen=True)
-class Octicon:
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class Octicon(disnake.PartialEmoji):
     name: str
     color: GHColour
     size: Literal[16, 24] = 16
     file_name: str | None = ""
+    animated: bool = False
+    id: int | None = None
 
     @property
     def slug(self) -> str:
@@ -304,107 +306,75 @@ class Octicon:
         return icon
 
 
-GITHUB_OCTICONS = {
-    Octicon(
-        name="gh-commit",
-        file_name="git-commit",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-discussion-open-answered",
-        file_name="discussion-closed",
-        color=GHColour.success,
-    ),
-    Octicon(
-        name="gh-discussion-closed",
-        file_name="discussion-closed",
-        color=GHColour.done,
-    ),
-    Octicon(
-        name="gh-discussion",
-        file_name="comment-discussion",
-        color=GHColour.success,
-    ),
-    Octicon(
-        name="gh-discussion-comment",
-        file_name="comment-discussion",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-discussion-outdated",
-        file_name="discussion-outdated",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-discussion-duplicate",
-        file_name="discussion-duplicate",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-issue-open",
-        file_name="issue-opened",
-        color=GHColour.success,
-    ),
-    Octicon(
-        name="gh-issue-closed-completed",
-        file_name="issue-closed",
-        color=GHColour.done,
-    ),
-    Octicon(
-        name="gh-issue-reopen",
-        file_name="issue-reopened",
-        color=GHColour.success,
-    ),
-    Octicon(
-        name="gh-issue-draft",
-        file_name="issue-draft",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-issue-closed-unplanned",
-        file_name="skip",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-pull-request",
-        file_name="git-pull-request",
-        color=GHColour.success,
-    ),
-    Octicon(
-        name="gh-pull-request-closed",
-        file_name="git-pull-request-closed",
-        color=GHColour.danger,
-    ),
-    Octicon(
-        name="gh-pull-request-draft",
-        file_name="git-pull-request-draft",
-        color=GHColour.muted,
-    ),
-    Octicon(
-        name="gh-merge",
-        file_name="git-merge",
-        color=GHColour.done,
-    ),
-}
-
 AppEmojiAnn = disnake.PartialEmoji | disnake.Emoji
 
 
 class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
-    # GitHub octicons
-    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_open_answered")
-    discussion_generic: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion")
-    discussion_closed: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_closed")
-    discussion_outdated: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_outdated")
-    discussion_duplicate: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_duplicate")
-    issue_open: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_open")
-    issue_closed_completed: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_completed")
-    issue_closed_unplanned: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_unplanned")
-    issue_draft: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_draft")
-    pull_request_open: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request")
-    pull_request_closed: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request_closed")
-    pull_request_draft: AppEmojiAnn = disnake.PartialEmoji(name="gh_pull_request_draft")
-    pull_request_merged: AppEmojiAnn = disnake.PartialEmoji(name="gh_merge")
+    discussion_answered: AppEmojiAnn = Octicon(
+        name="gh-discussion-open-answered",
+        file_name="discussion-closed",
+        color=GHColour.success,
+    )
+    discussion_generic: AppEmojiAnn = Octicon(
+        name="gh-discussion",
+        file_name="comment-discussion",
+        color=GHColour.success,
+    )
+    discussion_closed: AppEmojiAnn = Octicon(
+        name="gh-discussion-closed",
+        file_name="discussion-closed",
+        color=GHColour.done,
+    )
+    discussion_outdated: AppEmojiAnn = Octicon(
+        name="gh-discussion-outdated",
+        file_name="discussion-outdated",
+        color=GHColour.muted,
+    )
+    discussion_duplicate: AppEmojiAnn = Octicon(
+        name="gh-discussion-duplicate",
+        file_name="discussion-duplicate",
+        color=GHColour.muted,
+    )
+    issue_open: AppEmojiAnn = Octicon(
+        name="gh-issue-open",
+        file_name="issue-opened",
+        color=GHColour.success,
+    )
+    issue_closed_completed: AppEmojiAnn = Octicon(
+        name="gh-issue-closed-completed",
+        file_name="issue-closed",
+        color=GHColour.done,
+    )
+    issue_closed_unplanned: AppEmojiAnn = Octicon(
+        name="gh-issue-closed-unplanned",
+        file_name="skip",
+        color=GHColour.muted,
+    )
+    issue_draft: AppEmojiAnn = Octicon(
+        name="gh-issue-draft",
+        file_name="issue-draft",
+        color=GHColour.muted,
+    )
+    pull_request_open: AppEmojiAnn = Octicon(
+        name="gh-pull-request",
+        file_name="git-pull-request",
+        color=GHColour.success,
+    )
+    pull_request_closed: AppEmojiAnn = Octicon(
+        name="gh-pull-request-closed",
+        file_name="git-pull-request-closed",
+        color=GHColour.danger,
+    )
+    pull_request_draft: AppEmojiAnn = Octicon(
+        name="gh-pull-request-draft",
+        file_name="git-pull-request-draft",
+        color=GHColour.muted,
+    )
+    pull_request_merged: AppEmojiAnn = Octicon(
+        name="gh-merge",
+        file_name="git-merge",
+        color=GHColour.done,
+    )
 
 
 # TODO: stash all icons as emojis
