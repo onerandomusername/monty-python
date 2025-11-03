@@ -302,7 +302,7 @@ class GithubInfo(
                 title += "GitHub quick links"
             tiny_embed = disnake.Embed(
                 description="\n".join(tiny_content),
-                colour=github_handlers.GITHUB_COLOUR,
+                colour=constants.GHColour.success,
             )
             if title:
                 tiny_embed.set_author(name=title)
