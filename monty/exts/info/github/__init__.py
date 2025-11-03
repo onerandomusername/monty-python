@@ -263,11 +263,11 @@ class GithubInfo(
     async def get_full_reply(
         self,
         resource: ghretos.GitHubResource,
-    ) -> tuple[str, list[disnake.ui.TextDisplay]]:
+    ) -> tuple[str, list[disnake.ui.TextDisplay]] | None:
         """Get full text displays for a GitHub resource."""
         handler = github_handlers.HANDLER_MAPPING.get(type(resource))
         if handler is None:
-            return []
+            return None
 
         resource_data = await self.fetch_resource(resource)
 
@@ -717,13 +717,15 @@ class GithubInfo(
             )
             return
 
-        title, data = await self.get_full_reply(gh_resource)
-        if not data:
+        resp = await self.get_full_reply(gh_resource)
+        if not resp or not resp[1]:
             await interaction.response.send_message(
                 "Could not fetch the GitHub resource to expand or collapse.",
                 ephemeral=True,
             )
             return
+
+        _title, data = resp
 
         title = getattr(getattr(gh_resource, "repo", None), "full_name", None) or ""
         if title:
