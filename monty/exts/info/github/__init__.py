@@ -298,6 +298,12 @@ class GithubInfo(
 
         for resource_data, (match, size) in zip(fut, resources.items(), strict=True):
             if isinstance(resource_data, BaseException):
+                if (
+                    isinstance(resource_data, githubkit.exception.RequestFailed)
+                    and resource_data.response.status_code == 404
+                ):
+                    log.info("GitHub resource %r not found (404).", match)
+                    continue
                 log.warning(
                     "GitHub resource fetch for %r resulted in an exception: %r",
                     match,
@@ -451,7 +457,13 @@ class GithubInfo(
             )
             return
         context = ghretos.User(login=user)
-        obj = await self.fetch_resource(context)
+        try:
+            obj = await self.fetch_resource(context)
+        except githubkit.exception.RequestFailed as e:
+            if e.response.status_code == 404:
+                msg = "GitHub user not found."
+                raise commands.UserInputError(msg) from e
+            raise
         components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
         components.append(github_handlers.UserRenderer().render_ogp_cv2(obj, context=context))
         components.append(
@@ -478,7 +490,13 @@ class GithubInfo(
             raise commands.UserInputError(msg)
 
         context = ghretos.Repo(owner=user, name=repo)
-        obj = await self.fetch_resource(context)
+        try:
+            obj = await self.fetch_resource(context)
+        except githubkit.exception.RequestFailed as e:
+            if e.response.status_code == 404:
+                msg = "GitHub repository not found."
+                raise commands.UserInputError(msg) from e
+            raise
         components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
         components.append(github_handlers.RepoRenderer().render_ogp_cv2(obj, context=context))
         components.append(
