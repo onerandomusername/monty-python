@@ -25,7 +25,7 @@ V = TypeVar("V", bound=ghretos.GitHubResource)
 
 
 class VisualStyleState(NamedTuple):
-    emoji: disnake.Emoji | disnake.PartialEmoji
+    emoji: constants.AppEmojiAnn
     colour: disnake.Colour
 
 
@@ -271,16 +271,25 @@ class NumberableRenderer(
     @staticmethod
     def _get_visual_style_state(obj: githubkit.rest.Issue | githubkit.rest.Discussion) -> VisualStyleState:
         if isinstance(obj, githubkit.rest.Discussion):
-            if obj.answer_chosen_at:
-                emoji = constants.AppEmojis.discussion_answered
-                colour = constants.GHColour.success
-            elif obj.state == "closed":
+            if obj.state == "closed":
                 if obj.state_reason == "duplicate":
                     emoji = constants.AppEmojis.discussion_duplicate
                     colour = constants.GHColour.muted
+                elif obj.state_reason == "outdated":
+                    emoji = constants.AppEmojis.discussion_outdated
+                    colour = constants.GHColour.muted
+                elif obj.state_reason == "resolved":
+                    emoji = constants.AppEmojis.discussion_closed
+                    colour = constants.GHColour.done
                 else:
                     emoji = constants.AppEmojis.discussion_closed
                     colour = constants.GHColour.done
+            elif obj.answer_html_url is not None:
+                emoji = constants.AppEmojis.discussion_answered
+                colour = constants.GHColour.success
+            elif obj.state == "open":
+                emoji = constants.AppEmojis.discussion_generic
+                colour = constants.GHColour.success
             else:
                 # fall the emoji back to a state
                 emoji = constants.AppEmojis.discussion_generic
