@@ -7,7 +7,7 @@ from wand.image import Image
 from monty.constants import GITHUB_OCTICONS, Client, GHColour
 
 
-DIRECTORY = pathlib.Path(Client.app_emoji_directory)
+DIRECTORY = pathlib.Path(Client.app_emoji_directory.lstrip("\\/"))
 
 
 def convert_svg_to_png(data: bytes, colour: GHColour) -> bytes:
@@ -15,18 +15,17 @@ def convert_svg_to_png(data: bytes, colour: GHColour) -> bytes:
     with Image(
         blob=data,
         format="svg",
-        height=256,
-        width=256,
-        resolution=512,
+        height=128,
+        width=128,
         background=Color("transparent"),
     ) as img:
-        img.format = "png"
-        img_colour = Color(f"#{colour.value:06X}")
         img.opaque_paint(
             target=Color("black"),
-            fill=img_colour,
+            fill=Color(f"#{colour.value:06X}"),
             fuzz=img.quantum_range * 0.05,
         )
+        img.format = "apng"
+        img.strip()
         return img.make_blob()
 
 
@@ -44,5 +43,6 @@ def fetch_octicons() -> dict[str, bytes]:
 
 if __name__ == "__main__":
     octicons = fetch_octicons()
+    DIRECTORY.mkdir(parents=True, exist_ok=True)
     for name, data in octicons.items():
         _ = (DIRECTORY / f"{name.replace('-', '_')}.png").write_bytes(data)

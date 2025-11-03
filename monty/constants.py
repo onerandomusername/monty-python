@@ -227,7 +227,7 @@ class ColoursCls(BaseModel):
     gold: int = 0xE6C200
 
 
-class GHColour(enum.Enum):
+class GHColour(int, enum.Enum):
     muted = 0x59636E
     success = 0x6EB771
     done = 0x8250DF
@@ -283,8 +283,8 @@ class EmojisCls(BaseModel):
 class Octicon:
     name: str
     color: GHColour
+    size: Literal[16, 24] = 16
     file_name: str | None = ""
-    size: str = "16"
 
     def url(self) -> str:
         return f"https://github.com/primer/octicons/raw/main/icons/{self.file_name or self.name}-{self.size}.svg"
@@ -297,8 +297,8 @@ GITHUB_OCTICONS = {
         color=GHColour.muted,
     ),
     Octicon(
-        name="gh-discussion-answered",
-        file_name="issue-opened",
+        name="gh-discussion-open-answered",
+        file_name="discussion-closed",
         color=GHColour.success,
     ),
     Octicon(
@@ -307,9 +307,14 @@ GITHUB_OCTICONS = {
         color=GHColour.done,
     ),
     Octicon(
-        name="gh-discussion-comment",
+        name="gh-discussion",
         file_name="comment-discussion",
         color=GHColour.success,
+    ),
+    Octicon(
+        name="gh-discussion-comment",
+        file_name="comment-discussion",
+        color=GHColour.muted,
     ),
     Octicon(
         name="gh-discussion-outdated",
@@ -373,7 +378,11 @@ AppEmojiAnn = disnake.PartialEmoji | disnake.Emoji
 
 class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
     # GitHub octicons
-    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_answered")
+    discussion_answered: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_open_answered")
+    discussion_generic: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion")
+    discussion_closed: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_closed")
+    discussion_outdated: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_outdated")
+    discussion_duplicate: AppEmojiAnn = disnake.PartialEmoji(name="gh_discussion_duplicate")
     issue_open: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_open")
     issue_closed_completed: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_completed")
     issue_closed_unplanned: AppEmojiAnn = disnake.PartialEmoji(name="gh_issue_closed_unplanned")

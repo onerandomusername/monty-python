@@ -463,7 +463,7 @@ class Monty(commands.Bot):
             emoji_name: str,
             existing: disnake.Emoji | None = None,
             last_changed: datetime.datetime = last_changed,
-        ) -> disnake.Emoji | None | bool:
+        ) -> disnake.Emoji | None:
             if existing and existing.created_at >= last_changed:
                 return None
             raw_emoji = await backend.get_emoji_content(emoji_name)
@@ -473,8 +473,11 @@ class Monty(commands.Bot):
                 if data == raw_emoji:
                     return None
 
-                await existing.delete()
-
+                try:
+                    await existing.delete()
+                except disnake.DiscordException as e:
+                    # it already was deleted
+                    log.warning("Could not delete existing emoji %s: %s", existing.name, e)
             return await bot.create_application_emoji(name=emoji_name, image=raw_emoji)
 
         async def _delete(emoji: disnake.Emoji) -> Literal[False]:
@@ -498,17 +501,21 @@ class Monty(commands.Bot):
                 log.error("Error occurred while updating/deleting emoji %s: %s", emoji.name, result)
             elif result is None:
                 log.debug("No changes made to emoji %s", emoji.name)
-            elif result is True:
-                log.info("Successfully updated emoji %s", emoji.name)
             elif result is False:
                 log.info("Successfully deleted emoji %s", emoji.name)
+            elif isinstance(result, disnake.Emoji):
+                log.info(
+                    'Successfully %s emoji "%s" with ID %s',
+                    "created" if emoji.name not in existing_app_emojis else "updated",
+                    result.name,
+                    result.id,
+                )
+                # update the cached emojis to be their full objects
+                self.app_emojis[emoji.name] = result
             else:
-                log.info("Successfully created emoji %s", emoji.name)
-            if isinstance(emoji, disnake.Emoji):
-                self.app_emojis[emoji.name] = result if isinstance(result, disnake.Emoji) else emoji
+                log.error("Unexpected result type %s for emoji %s", type(result), emoji.name)
 
         # update the cached emojis to be their full objects
-        # self.app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
         for emoji_attr, partial_emoji in constants.AppEmojis:
             if partial_emoji.name not in self.app_emojis:
                 continue

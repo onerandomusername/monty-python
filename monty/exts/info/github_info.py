@@ -76,6 +76,9 @@ DISCUSSION_GRAPHQL_QUERY = """
                 html_url: url
                 title
                 body
+                closed
+                stateReason
+                isAnswered
                 created_at: createdAt
                 user: author {
                     login
@@ -533,10 +536,23 @@ class GithubInfo(
                 emoji = constants.AppEmojis.pull_request_open
         elif is_discussion:
             issue_url = json_data["html_url"]
-            if json_data.get("answer"):
+            if json_data.get("closed"):
+                reason = (json_data.get("stateReason") or "").lower()
+                if reason == "duplicate":
+                    emoji = constants.AppEmojis.discussion_duplicate
+                elif reason == "outdated":
+                    emoji = constants.AppEmojis.discussion_outdated
+                elif reason == "resolved":
+                    emoji = constants.AppEmojis.discussion_closed
+                else:
+                    emoji = constants.AppEmojis.discussion_closed
+            elif json_data.get("isAnswered"):
                 emoji = constants.AppEmojis.discussion_answered
+            elif json_data.get("state") == "open":
+                emoji = constants.AppEmojis.discussion_generic
             else:
-                emoji = constants.AppEmojis.issue_draft
+                # fall the emoji back to a state
+                emoji = constants.AppEmojis.discussion_generic
         else:
             # this is a definite issue and not a pull request, and should be treated as such
             if json_data.get("state") == "open":
