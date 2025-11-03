@@ -1,7 +1,7 @@
 import dataclasses
 import enum
 from collections.abc import Callable
-from typing import Annotated, ClassVar, Literal
+from typing import TYPE_CHECKING, Annotated, ClassVar, Literal
 
 import disnake
 import pydantic
@@ -10,6 +10,10 @@ from disnake.ext import commands
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings as PydanticBaseSettings
 from pydantic_settings import SettingsConfigDict
+
+
+if TYPE_CHECKING:
+    import octicons_pack
 
 
 __all__ = (  # noqa: RUF022
@@ -286,8 +290,18 @@ class Octicon:
     size: Literal[16, 24] = 16
     file_name: str | None = ""
 
-    def url(self) -> str:
-        return f"https://github.com/primer/octicons/raw/main/icons/{self.file_name or self.name}-{self.size}.svg"
+    @property
+    def slug(self) -> str:
+        return f"{self.file_name or self.name}-{self.size}"
+
+    def icon(self) -> "octicons_pack.Icon":
+        import octicons_pack
+
+        icon = octicons_pack.get_icon(self.slug)
+        if not icon:
+            msg = f"Octicon '{self.file_name or self.name}' with size {self.size} not found."
+            raise ValueError(msg)
+        return icon
 
 
 GITHUB_OCTICONS = {

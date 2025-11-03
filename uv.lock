@@ -1773,6 +1773,7 @@ dev = [
 ]
 devlibs = [
     { name = "fakeredis" },
+    { name = "octicons-pack" },
     { name = "python-dotenv" },
     { name = "wand" },
     { name = "watchfiles" },
@@ -1874,6 +1875,7 @@ dev = [
 ]
 devlibs = [
     { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
+    { name = "octicons-pack", specifier = ">=19.19.0" },
     { name = "python-dotenv", specifier = ">=1.1.0,<2.0.0" },
     { name = "wand", specifier = ">=0.6.13" },
     { name = "watchfiles", specifier = ">=1.0.5,<2.0.0" },
@@ -2159,6 +2161,28 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3d/3e/16440c5a2c1e867a862479cf7d11d05d0e0f2bb133de3921cb3ed6e37e57/nox-2025.10.16.tar.gz", hash = "sha256:fca1e7504384dbc91dddef3fec45d04572f23c882a87241e2c793b77fe1c9259", size = 4030246, upload-time = "2025-10-17T01:53:07.458Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6f/68/f4a9cd43dcd6cf9138e0fb39b3b8f17a82b121e8c26499d864e64c329cd0/nox-2025.10.16-py3-none-any.whl", hash = "sha256:b4ef28709d5fb0d964ccc987c8863f76ed860700fabd04ad557252df3562a7e5", size = 74405, upload-time = "2025-10-17T01:53:05.792Z" },
+]
+
+[[package]]
+name = "octicons-pack"
+version = "19.19.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/ed/05d421adb3177f365dab334433b9622697b412e407323a8f744be67f3f18/octicons_pack-19.19.0.tar.gz", hash = "sha256:c963077a5ee76b6a169221aaa598210364704dd997061f69c5122efb1ec34d29", size = 141764, upload-time = "2025-10-09T17:10:14.559Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/8e/4bd07650abc00e51aeb519f8de2dde65f3fac11cc98adde788d5751c60e9/octicons_pack-19.19.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:392b21156941ca3b5562cf8bf7d8499126021bccb27b7c64550070c21d0c76e2", size = 497229, upload-time = "2025-10-09T17:09:54.034Z" },
+    { url = "https://files.pythonhosted.org/packages/df/1e/8064dfe62ef43ed9f36d4bb867cc4d31275fa3de697db2daff65bb643e9a/octicons_pack-19.19.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:51201e523a2ef9be7a8cc6032a202db25f3dde276d5909f660bdeac609cefb7b", size = 486106, upload-time = "2025-10-09T17:09:55.757Z" },
+    { url = "https://files.pythonhosted.org/packages/55/69/4e8d4c1979534a804321954e060e892ad95f225d7a3879aee569d6c350b5/octicons_pack-19.19.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:dfe2e1fde06a32312932e137f756b07028069c94a69046c26c80d551b6df3b8b", size = 543143, upload-time = "2025-10-09T17:09:57.331Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/50/734e987d10e42572a4a300ebf7d3e09f91b1d1199005db098641001f0118/octicons_pack-19.19.0-cp39-abi3-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:54766310e21a5b942cf22899bfa041cd10eb75329b689248fe5551883cf10374", size = 543487, upload-time = "2025-10-09T17:09:58.498Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/12/1d693293731efa4b754064a556479d89a5e70b6e15aacf206b5aaf42cd2c/octicons_pack-19.19.0-cp39-abi3-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:1d6b3c27661358d455ae877d33dde6be4b62676b7720b85956a8433ffeb7b281", size = 661889, upload-time = "2025-10-09T17:10:00.103Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/4b/239341c0911e832879ae5af07e13043d2448bed8ecd53d8d44fe7d3be5b0/octicons_pack-19.19.0-cp39-abi3-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:737879339a61be5f7f8bd46dc0fcf7ee0a1e41988d3399c88ad4c0dbe8350b81", size = 562333, upload-time = "2025-10-09T17:10:01.317Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/6b/948ac02a8cd47448eb48fb2eba6abc0931a50dd517caaf3a7877c8408eae/octicons_pack-19.19.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dceae3eab3a11cd7fa244e674a2382eb4f2ccb2dd3c183145781216d8b0aa3f9", size = 525403, upload-time = "2025-10-09T17:10:02.816Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/b4/3e51af04756828bebd96940e43136c2f61d5553c7e54e462acf8efd50d53/octicons_pack-19.19.0-cp39-abi3-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:96c699819ae9c8c2d5c23baef7108fe0f55fb431447674df230402593145521a", size = 539168, upload-time = "2025-10-09T17:10:04.226Z" },
+    { url = "https://files.pythonhosted.org/packages/75/8b/d1379d95bee00882110f6f8f34a500bcba3c14ef68c2f65285027e7f20b8/octicons_pack-19.19.0-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:952005ba5615ff4aedd036853e418e8d2fa448a582f26cfaf468b2d6a63ddef9", size = 723463, upload-time = "2025-10-09T17:10:05.768Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/7f/be1ee70b39cbb844fb62ad7d8530cf9c9ef05d6741a087e63457604505b1/octicons_pack-19.19.0-cp39-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:bd1d9fa0a92fa10f61001598757393d55efe1481ce673ad88209975d04178f8b", size = 811376, upload-time = "2025-10-09T17:10:07.639Z" },
+    { url = "https://files.pythonhosted.org/packages/46/c3/40abc32e47ac9492af94f08051118327265a816fc457404899d3f8f174d8/octicons_pack-19.19.0-cp39-abi3-musllinux_1_2_i686.whl", hash = "sha256:ea6849727297c1d04dd0074aadfb154bbb0f7955ca30c0e66155b969018ab420", size = 720398, upload-time = "2025-10-09T17:10:09.066Z" },
+    { url = "https://files.pythonhosted.org/packages/77/8b/0251ef46bc2ebcf967290d484a86adc8bfe2e166229deddc0846e2a8f938/octicons_pack-19.19.0-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:401173b007e9c1089076e6e03b643df9c545fd0ce0e61bd8fe2cfed97cb28de5", size = 699532, upload-time = "2025-10-09T17:10:10.546Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/b4/1a30a630d84fa15b4259b0c740bbc8583847adcbc400d2c3006831bc3b85/octicons_pack-19.19.0-cp39-abi3-win32.whl", hash = "sha256:96f71cbc93eb533d9c74ceb27dd438f85469c2fa1e73f1789c9aa6399ac0af46", size = 389029, upload-time = "2025-10-09T17:10:12.016Z" },
+    { url = "https://files.pythonhosted.org/packages/77/1d/29e016ad4f373a63fefd9cff140ba6b6fae68932c66395c1bf0f28b59500/octicons_pack-19.19.0-cp39-abi3-win_amd64.whl", hash = "sha256:305ee717fe29c6b4b4fecbef80dd04529f3cb0b8e021a19448cbb3de5fe4348f", size = 394632, upload-time = "2025-10-09T17:10:13.534Z" },
 ]
 
 [[package]]

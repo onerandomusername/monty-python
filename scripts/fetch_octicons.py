@@ -1,6 +1,6 @@
+import logging
 import pathlib
 
-import httpx
 from wand.color import Color
 from wand.image import Image
 
@@ -8,6 +8,8 @@ from monty.constants import GITHUB_OCTICONS, Client, GHColour
 
 
 DIRECTORY = pathlib.Path(Client.app_emoji_directory.lstrip("\\/"))
+
+log = logging.getLogger(__name__)
 
 
 def convert_svg_to_png(data: bytes, colour: GHColour) -> bytes:
@@ -32,12 +34,10 @@ def convert_svg_to_png(data: bytes, colour: GHColour) -> bytes:
 def fetch_octicons() -> dict[str, bytes]:
     """Fetch the octicons from GitHub and convert them to PNG format."""
     octicons_data: dict[str, bytes] = {}
-    with httpx.Client(follow_redirects=True) as client:
-        for octicon in GITHUB_OCTICONS:
-            response = client.get(octicon.url())
-            response.raise_for_status()
-            png_data = convert_svg_to_png(response.content, octicon.color)
-            octicons_data[octicon.name] = png_data
+    for octicon in GITHUB_OCTICONS:
+        png_data = convert_svg_to_png(octicon.icon().svg.encode(), octicon.color)
+        octicons_data[octicon.name] = png_data
+        log.info("Fetched and converted octicon %s as %s", octicon.slug, octicon.name)
     return octicons_data
 
 
