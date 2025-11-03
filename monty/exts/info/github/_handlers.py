@@ -164,6 +164,107 @@ class GitHubRenderer(Generic[T, V]):
 # region: concrete renderers
 
 
+class UserRenderer(GitHubRenderer[githubkit.rest.PublicUser, ghretos.User]):
+    def render_tiny(
+        self,
+        obj: githubkit.rest.PublicUser,
+        *,
+        context: ghretos.User,
+    ) -> str:
+        return f"👤 [{obj.login}](<{obj.html_url}>)"
+
+    def render_ogp(self, obj: githubkit.rest.PublicUser, *, context: ghretos.User) -> disnake.Embed:
+        embed = disnake.Embed(
+            title=obj.name or obj.login,
+            url=obj.html_url,
+            description=obj.bio,
+            color=disnake.Color(0),
+        )
+        embed.set_thumbnail(url=obj.avatar_url)
+        return embed
+
+    def render_ogp_cv2(self, obj: githubkit.rest.PublicUser, *, context: ghretos.User) -> disnake.ui.Container:
+        container = disnake.ui.Container()
+        text_display = disnake.ui.TextDisplay("")
+        text_display.content = f"## [{obj.name or obj.login}](<{obj.html_url}>)\n\n"
+        if obj.bio:
+            text_display.content += f"{obj.bio}\n"
+        container.children.append(text_display)
+        section = disnake.ui.Section(accessory=disnake.ui.Thumbnail(obj.avatar_url))
+        container.children.append(section)
+        section.children.append(disnake.ui.TextDisplay(f"**Public Repos:** {obj.public_repos}"))
+        section.children.append(disnake.ui.TextDisplay(f"**Followers:** {obj.followers}"))
+        section.children.append(disnake.ui.TextDisplay(f"**Following:** {obj.following}"))
+
+        return container
+
+    def render_full(
+        self,
+        obj: githubkit.rest.PublicUser,
+        *,
+        context: ghretos.User,
+    ) -> tuple[str, list[disnake.ui.TextDisplay]]:
+        # For simplicity, we will just return the OGP embed as a text display
+        text_display = disnake.ui.TextDisplay("")
+        text_display.content = f"## [{obj.name}](<{obj.html_url}>)\n\n"
+        if obj.bio:
+            text_display.content += f"{obj.bio}\n"
+        if obj.location:
+            text_display.content += f"**Location:** {obj.location}\n"
+        if obj.blog:
+            text_display.content += f"**Blog:** {obj.blog}\n"
+        if obj.company:
+            text_display.content += f"**Company:** {obj.company}\n"
+        text_display.content += f"**Public Repos:** {obj.public_repos}\n"
+        text_display.content += f"**Followers:** {obj.followers}\n"
+        text_display.content += f"**Following:** {obj.following}\n"
+        return obj.name or obj.login, [text_display]
+
+
+class RepoRenderer(GitHubRenderer[githubkit.rest.Repository, ghretos.Repo]):
+    def render_tiny(
+        self,
+        obj: githubkit.rest.Repository,
+        *,
+        context: ghretos.Repo,
+    ) -> str:
+        return f"📦 [{obj.name}](<{obj.html_url}>)"
+
+    def render_ogp_cv2(self, obj: githubkit.rest.Repository, *, context: ghretos.Repo) -> disnake.ui.Container:
+        container = disnake.ui.Container()
+        text_display = disnake.ui.TextDisplay("")
+        text_display.content = f"## [{obj.name}](<{obj.html_url}>)\n\n"
+        if obj.description:
+            text_display.content += f"{obj.description}\n"
+        container.children.append(text_display)
+        if obj.owner:
+            section = disnake.ui.Section(accessory=disnake.ui.Thumbnail(obj.owner.avatar_url))
+        else:
+            section = disnake.ui.Section(accessory=disnake.ui.Thumbnail(constants.Icons.github_avatar_url))
+        container.children.append(section)
+        section.children.append(disnake.ui.TextDisplay(f"**Stars:** {obj.stargazers_count}"))
+        section.children.append(disnake.ui.TextDisplay(f"**Forks:** {obj.forks_count}"))
+        section.children.append(disnake.ui.TextDisplay(f"**Open Issues:** {obj.open_issues_count}"))
+
+        return container
+
+    def render_full(
+        self,
+        obj: githubkit.rest.Repository,
+        *,
+        context: ghretos.Repo,
+    ) -> tuple[str, list[disnake.ui.TextDisplay]]:
+        text_display = disnake.ui.TextDisplay("")
+        text_display.content = f"## [{obj.full_name}](<{obj.html_url}>)\n\n"
+        if obj.description:
+            text_display.content += f"{obj.description}\n"
+        text_display.content += f"**Stars:** {obj.stargazers_count}\n"
+        text_display.content += f"**Forks:** {obj.forks_count}\n"
+        text_display.content += f"**Open Issues:** {obj.open_issues_count}\n"
+        text_display.content += f"**Watchers:** {obj.watchers_count}\n"
+        return obj.full_name, [text_display]
+
+
 class NumberableRenderer(
     GitHubRenderer[githubkit.rest.Issue | githubkit.rest.Discussion, ghretos.Issue | ghretos.NumberedResource]
 ):
@@ -432,6 +533,7 @@ class IssueCommentRenderer(
 
 
 HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
+    # Autolinked objects
     ghretos.Issue: NumberableRenderer,
     ghretos.PullRequest: NumberableRenderer,
     ghretos.Discussion: NumberableRenderer,

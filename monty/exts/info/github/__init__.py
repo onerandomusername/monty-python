@@ -4,7 +4,7 @@ import operator
 import random
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, overload
 
 import attrs
 import cachingutils
@@ -114,7 +114,38 @@ class GithubInfo(
         encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
         return f"{prefix}_{encoded}"
 
-    async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel | None:
+    @overload
+    async def fetch_resource(self, obj: ghretos.User) -> githubkit.rest.PublicUser: ...
+
+    @overload
+    async def fetch_resource(self, obj: ghretos.Repo) -> githubkit.rest.Repository: ...
+
+    @overload
+    async def fetch_resource(self, obj: ghretos.Issue) -> githubkit.rest.Issue: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.PullRequest) -> githubkit.rest.Issue: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.IssueComment) -> githubkit.rest.IssueComment: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.PullRequestComment) -> githubkit.rest.IssueComment: ...
+    @overload
+    async def fetch_resource(
+        self, obj: ghretos.PullRequestReviewComment
+    ) -> githubkit.rest.PullRequestReviewComment: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.Discussion) -> githubkit.rest.Discussion: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.DiscussionComment) -> graphql_models.DiscussionComment: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.IssueEvent) -> githubkit.rest.IssueEvent: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.PullRequestEvent) -> githubkit.rest.IssueEvent: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.Commit) -> githubkit.rest.Commit: ...
+    @overload
+    async def fetch_resource(self, obj: ghretos.Repo) -> githubkit.rest.Repository: ...
+
+    async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel:
         """Fetch a GitHub resource."""
         # TODO: add repo exists validation before fetching multiple resources from one repo?
         # This would reduce wasted requests on private repos, and keep discussions from making many extra requests.
@@ -191,7 +222,16 @@ class GithubInfo(
             )
             return r.parsed_data
 
-        return None  # Type is not yet supported
+        if isinstance(obj, ghretos.User):
+            r = await self.bot.github.rest.users.async_get_by_username(username=obj.login)
+            data = r.parsed_data
+            # Even though we use a token with no additional scopes, validate that we CERTAINLY only have public data.
+            if data.user_view_type != "public":
+                msg = "User is not public"
+                raise ValueError(msg)
+            return data
+
+        raise NotImplementedError  # Type is not yet supported
 
     # @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
 
@@ -339,12 +379,119 @@ class GithubInfo(
 
         return matcher_settings
 
+    @commands.group(
+        name="github", description="Fetch GitHub information.", aliases=("gh",), invoke_without_command=True
+    )
+    async def github_group(self, ctx: commands.Context, *args) -> None:
+        """Group for GitHub related commands."""
+        # Shortcut user:
+        # Intentionally match 2 on the args here
+        # Allow messages such as !github username extra words
+        # but also support !github username repo
+        if len(args) != 2 and re.fullmatch(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,38})$", args[0]):
+            await self.github_user(ctx, args[0])
+            return
+        settings = ghretos.MatcherSettings.none()
+        # enable what we have handlers for
+        settings.shorthand = True
+        settings.short_repo = True
+        resource = ghretos.parse_shorthand(" ".join(args))
+
+        if isinstance(resource, ghretos.User):
+            await self.github_user(ctx, resource.login)
+            return
+        if isinstance(resource, ghretos.Repo):
+            await self.github_repo(ctx, resource.full_name)
+            return
+        if isinstance(resource, tuple(github_handlers.HANDLER_MAPPING.keys())):
+            data = await self.get_reply({resource: github_handlers.InfoSize.OGP}, limit=850)
+            if data:
+                components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
+                components.append(
+                    disnake.ui.ActionRow(
+                        DeleteButton(
+                            allow_manage_messages=True,
+                            user=ctx.author,
+                            initial_message=ctx.message,
+                        )
+                    )
+                )
+                await ctx.reply(
+                    components=components,
+                    fail_if_not_exists=False,
+                    allowed_mentions=disnake.AllowedMentions.none(),
+                    **data,
+                )
+                return
+
+        await ctx.send(
+            f"{constants.Emojis.decline} Could not parse GitHub resource from input.",
+            components=DeleteButton(
+                allow_manage_messages=True,
+                user=ctx.author,
+                initial_message=ctx.message,
+            ),
+        )
+        return
+
+    @github_group.command(name="user", description="Fetch GitHub user information.")
+    async def github_user(self, ctx: commands.Context, user: str) -> None:
+        """Fetch GitHub user information."""
+        # validate the user
+        if not re.fullmatch(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,38})$", user):
+            await ctx.send(
+                f"{constants.Emojis.decline} Invalid GitHub username.",
+                components=[
+                    DeleteButton(
+                        allow_manage_messages=True,
+                        user=ctx.author,
+                        initial_message=ctx.message,
+                    )
+                ],
+            )
+            return
+        context = ghretos.User(login=user)
+        obj = await self.fetch_resource(context)
+        components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
+        components.append(github_handlers.UserRenderer().render_ogp_cv2(obj, context=context))
+        components.append(
+            disnake.ui.ActionRow(DeleteButton(allow_manage_messages=True, user=ctx.author, initial_message=ctx.message))
+        )
+        await ctx.send(components=components)
+
+    @github_group.command(name="repo", description="Fetch GitHub repository information.")
+    async def github_repo(self, ctx: commands.Context, user_and_repo: str, repo: str = "") -> None:
+        """Fetch GitHub repository information."""
+        # validate the repo
+        if user_and_repo.count("/") == 1 and not repo:
+            user, repo = user_and_repo.split("/", 1)
+        else:
+            user = user_and_repo
+        if not repo:
+            msg = "Repository name is required."
+            raise commands.UserInputError(msg)
+        if not re.fullmatch(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,38})$", user):
+            msg = "Invalid GitHub username."
+            raise commands.UserInputError(msg)
+        if not re.fullmatch(r"^[\w\-\.]{1,100}$", repo):
+            msg = "Invalid GitHub repository name."
+            raise commands.UserInputError(msg)
+
+        context = ghretos.Repo(owner=user, name=repo)
+        obj = await self.fetch_resource(context)
+        components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
+        components.append(github_handlers.RepoRenderer().render_ogp_cv2(obj, context=context))
+        components.append(
+            disnake.ui.ActionRow(DeleteButton(allow_manage_messages=True, user=ctx.author, initial_message=ctx.message))
+        )
+        await ctx.send(components=components)
+
     @commands.slash_command(name="github", description="Fetch GitHub information.")
-    async def github_group(self, inter: disnake.ApplicationCommandInteraction) -> None:
+    async def slash_github_group(self, inter: disnake.ApplicationCommandInteraction) -> None:
         """Group for GitHub related commands."""
 
-    @github_group.sub_command(name="info", description="Fetch GitHub information.")
-    async def github_info(self, inter: disnake.ApplicationCommandInteraction, arg: str) -> None:
+    @slash_github_group.sub_command(name="info", description="Fetch GitHub information.")
+    async def slash_github_info(self, inter: disnake.ApplicationCommandInteraction, arg: str) -> None:
         """Fetch GitHub information.
 
         Parameters
@@ -447,6 +594,10 @@ class GithubInfo(
         """
         if not message.guild:
             return
+        command_context = await self.bot.get_context(message)
+        if command_context.command and command_context.command.cog is self:
+            return  # do not auto-link in own commands
+
         # in order to support shorthand, we need to check guild configuration
         guild_config = await self.bot.ensure_guild_config(message.guild.id)
 
