@@ -333,6 +333,11 @@ class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
         file_name="discussion-closed",
         color=GHColour.done,
     )
+    discussion_closed_unresolved: AppEmojiAnn = Octicon(
+        name="gh-discussion-closed-unresolved",
+        file_name="comment-discussion",
+        color=GHColour.muted,
+    )
     discussion_outdated: AppEmojiAnn = Octicon(
         name="gh-discussion-outdated",
         file_name="discussion-outdated",
@@ -353,8 +358,18 @@ class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
         file_name="issue-closed",
         color=GHColour.done,
     )
+    issue_closed_generic: AppEmojiAnn = Octicon(
+        name="gh-skip",
+        file_name="skip",
+        color=GHColour.muted,
+    )
     issue_closed_unplanned: AppEmojiAnn = Octicon(
-        name="gh-issue-closed-unplanned",
+        name="gh-skip",
+        file_name="skip",
+        color=GHColour.muted,
+    )
+    issue_closed_duplicate: AppEmojiAnn = Octicon(
+        name="gh-skip",
         file_name="skip",
         color=GHColour.muted,
     )

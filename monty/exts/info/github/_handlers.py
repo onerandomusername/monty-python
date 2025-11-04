@@ -271,73 +271,63 @@ class NumberableRenderer(
     @staticmethod
     def _get_visual_style_state(obj: githubkit.rest.Issue | githubkit.rest.Discussion) -> VisualStyleState:
         if isinstance(obj, githubkit.rest.Discussion):
-            if obj.state == "closed":
-                if obj.state_reason == "duplicate":
-                    emoji = constants.AppEmojis.discussion_duplicate
-                    colour = constants.GHColour.muted
-                elif obj.state_reason == "outdated":
-                    emoji = constants.AppEmojis.discussion_outdated
-                    colour = constants.GHColour.muted
-                elif obj.state_reason == "resolved":
-                    emoji = constants.AppEmojis.discussion_closed
-                    colour = constants.GHColour.done
-                else:
-                    emoji = constants.AppEmojis.discussion_closed
-                    colour = constants.GHColour.done
+            # Discussions have locked as a valid state too
+            # But state_reason only seems to appear if the discussion was ever closed
+            # State_reason can be "resolved", "outdated", "duplicate", or "reopened"
+            if obj.state_reason and obj.state_reason != "reopened":
+                match obj.state_reason:
+                    case "outdated":
+                        emoji = constants.AppEmojis.discussion_outdated
+                    case "resolved":
+                        emoji = constants.AppEmojis.discussion_closed
+                    case "duplicate":
+                        emoji = constants.AppEmojis.discussion_duplicate
+                    case _:
+                        # This code is currently unreachable but future-proofs against new state reasons
+                        emoji = constants.AppEmojis.discussion_closed_unresolved
             elif obj.answer_html_url is not None:
                 emoji = constants.AppEmojis.discussion_answered
-                colour = constants.GHColour.success
-            elif obj.state == "open":
+            elif obj.state == "open" or obj.state_reason == "reopened":
                 emoji = constants.AppEmojis.discussion_generic
-                colour = constants.GHColour.success
             else:
                 # fall the emoji back to a state
                 emoji = constants.AppEmojis.discussion_generic
-                colour = constants.GHColour.success
 
-            if not isinstance(colour, disnake.Colour):
-                colour = disnake.Colour(colour)
+            colour = disnake.Colour(emoji.color if isinstance(emoji, constants.Octicon) else constants.GHColour.default)
 
             return VisualStyleState(emoji=emoji, colour=colour)
+
         if obj.pull_request:
             if obj.pull_request.merged_at:
                 emoji = constants.AppEmojis.pull_request_merged
-                colour = constants.GHColour.done
             elif obj.draft is True:
                 emoji = constants.AppEmojis.pull_request_draft
-                colour = constants.GHColour.muted
             elif obj.state == "open":
                 emoji = constants.AppEmojis.pull_request_open
-                colour = constants.GHColour.success
             elif obj.state == "closed":
                 emoji = constants.AppEmojis.pull_request_closed
-                colour = constants.GHColour.danger
             else:
                 # fall the emoji back to a state
                 emoji = constants.AppEmojis.pull_request_open
-                colour = constants.GHColour.success
         else:
             if obj.state == "closed":
                 if obj.state_reason == "not_planned":
                     emoji = constants.AppEmojis.issue_closed_unplanned
-                    colour = constants.GHColour.muted
-                else:
+                elif obj.state_reason == "duplicate":
+                    emoji = constants.AppEmojis.issue_closed_duplicate
+                elif obj.state_reason == "completed":
                     emoji = constants.AppEmojis.issue_closed_completed
-                    colour = constants.GHColour.done
+                else:
+                    emoji = constants.AppEmojis.issue_closed_generic
             elif obj.draft is True:
-                # not currently used by GitHub, but future planning
                 emoji = constants.AppEmojis.issue_draft
-                colour = constants.GHColour.muted
             elif obj.state == "open":
                 emoji = constants.AppEmojis.issue_open
-                colour = constants.GHColour.success
             else:
                 # fall the emoji back to a state
                 emoji = constants.AppEmojis.issue_open
-                colour = constants.GHColour.success
 
-        if not isinstance(colour, disnake.Colour):
-            colour = disnake.Colour(colour)
+        colour = disnake.Colour(emoji.color if isinstance(emoji, constants.Octicon) else constants.GHColour.default)
 
         return VisualStyleState(emoji=emoji, colour=colour)
 
