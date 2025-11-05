@@ -53,6 +53,7 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = """
                 created_at: createdAt
                 user: author {
                     login
+                    type
                     html_url: url
                     avatar_url: avatarUrl
                 }

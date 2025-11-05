@@ -6,6 +6,7 @@ import githubkit
 class DiscussionCommentUser(githubkit.GitHubModel):
     """Response model for user discussion comments."""
 
+    type: str
     login: str
     html_url: str
     avatar_url: str
@@ -19,4 +20,4 @@ class DiscussionComment(githubkit.GitHubModel):
     body: str
     created_at: datetime.datetime
     html_url: str
-    user: DiscussionCommentUser
+    user: DiscussionCommentUser | None

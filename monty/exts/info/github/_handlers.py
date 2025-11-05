@@ -83,6 +83,44 @@ def titlize_issue(issue: githubkit.rest.Issue) -> str:
     return f"{issue.repository.full_name}#{issue.number} {issue.title}"
 
 
+def is_mannequin_user(
+    user: githubkit.rest.SimpleUser | githubkit.rest.DiscussionPropUser | graphql_models.DiscussionCommentUser,
+) -> bool:
+    return bool(user.type and user.type.casefold() == "mannequin")
+
+
+def get_user_display_name(
+    user: githubkit.rest.SimpleUser | githubkit.rest.DiscussionPropUser | graphql_models.DiscussionCommentUser,
+    *,
+    include_login_alias: bool = False,
+    include_html_url: bool = False,
+    include_mannequin_tag: bool = True,
+) -> str:
+    name = user.name
+    if is_mannequin_user(user) and user.html_url:
+        # Workaround an API issue where in some cases login is a UUID for mannequins
+        # and the display name is in the html_url
+        # If the url points to ghost, the login value is good.
+        name = yarl.URL(user.html_url).name
+        if name == "ghost":
+            name = None
+        return (name or user.login) + (" (mannequin)" if include_mannequin_tag else "")
+    user_string = name or user.login
+    if include_html_url and user.html_url:
+        user_string = f"[{user_string}](<{user.html_url}>)"
+    if include_login_alias and name and name.casefold() != user.login.casefold():
+        user_string += f" (`{user.login}`)"
+    return user_string
+
+
+def get_user_html_url(
+    user: githubkit.rest.SimpleUser | githubkit.rest.DiscussionPropUser | graphql_models.DiscussionCommentUser,
+) -> str | None:
+    if is_mannequin_user(user):
+        return None
+    return user.html_url or None
+
+
 class GitHubRenderer(Generic[T, V]):
     def __init__(self, *, limit: int | None = None) -> None:
         self._limit = limit
@@ -347,7 +385,11 @@ class NumberableRenderer(
             f"{obj.title}](<{obj.html_url}>)"
         )
         if obj.user:
-            text += f" by [{obj.user.name or obj.user.login}](<{obj.user.html_url}>)"
+            user_html_url = get_user_html_url(obj.user)
+            if user_html_url:
+                text += f" by [{get_user_display_name(obj.user)}](<{user_html_url}>)"
+            else:
+                text += f" by `{get_user_display_name(obj.user)}`"
         return text
 
     def render_compact(
@@ -364,9 +406,7 @@ class NumberableRenderer(
         content += f" - [{obj.title}](<{obj.html_url}>)\n"
 
         if obj.user:
-            content += f"Authored by [{obj.user.name}](<{obj.user.html_url}>)"
-            if obj.user.name and obj.user.login.casefold() != obj.user.name.casefold():
-                content += f" (`{obj.user.login}`)"
+            content += "Authored by " + get_user_display_name(obj.user, include_html_url=True, include_login_alias=True)
             content += "\n"
 
         return content
@@ -386,10 +426,9 @@ class NumberableRenderer(
         )
 
         if obj.user:
-            name = obj.user.name or obj.user.login
             embed.set_author(
-                name=name,
-                url=obj.user.html_url,
+                name=get_user_display_name(obj.user, include_login_alias=True),
+                url=get_user_html_url(obj.user),
                 icon_url=obj.user.avatar_url,
             )
 
@@ -417,11 +456,9 @@ class NumberableRenderer(
         text_display.content = f"### {emoji} [[{context.repo.full_name}#{obj.number}] {obj.title}](<{obj.html_url}>)"
 
         if obj.user:
-            name = obj.user.name or obj.user.login
-            text_display.content += f"\n-# *Authored by [{name}](<{obj.user.html_url}>)"
-            if obj.user.name and obj.user.login.casefold() != name.casefold():
-                text_display.content += f" (`{obj.user.login}`)"
-            text_display.content += "*\n"
+            name = get_user_display_name(obj.user, include_login_alias=True, include_html_url=True)
+            text_display.content += f"\n-# *Authored by {name}*\n"
+
             if obj.user.avatar_url:
                 section = disnake.ui.Section(accessory=disnake.ui.Thumbnail(obj.user.avatar_url))
                 section.children.append(text_display)
@@ -513,10 +550,9 @@ class IssueCommentRenderer(
         )
 
         if obj.user:
-            name = obj.user.name or obj.user.login
             embed.set_author(
-                name=name,
-                url=obj.user.html_url,
+                name=get_user_display_name(obj.user),
+                url=get_user_html_url(obj.user),
                 icon_url=obj.user.avatar_url,
             )
 
