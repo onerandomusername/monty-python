@@ -155,6 +155,11 @@ class GithubInfo(
         # This would reduce wasted requests on private repos, and keep discussions from making many extra requests.
         try_discussion: bool = False
 
+        headers = {
+            "Accept": "application/vnd.github.full+json",
+            "Cache-Control": "max-age=14400",
+        }
+
         # Both issues and PRs are handled by the issues endpoint, because PRs are Issues.
         if isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource)):
             try:
@@ -162,7 +167,7 @@ class GithubInfo(
                     owner=obj.repo.owner,
                     repo=obj.repo.name,
                     issue_number=obj.number,
-                    headers={"Accept": "application/vnd.github.full+json"},
+                    headers=headers,
                 )
             except githubkit.exception.RequestFailed as e:
                 if e.response.status_code != 404:
@@ -175,7 +180,7 @@ class GithubInfo(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
                 comment_id=obj.comment_id,
-                headers={"Accept": "application/vnd.github.full+json"},
+                headers=headers,
             )
             return r.parsed_data
         if isinstance(obj, (ghretos.PullRequestReviewComment)):
@@ -183,7 +188,7 @@ class GithubInfo(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
                 comment_id=obj.comment_id,
-                headers={"Accept": "application/vnd.github.full+json"},
+                headers=headers,
             )
             return r.parsed_data
         if (
@@ -194,7 +199,7 @@ class GithubInfo(
                 r = await self.bot.github.arequest(
                     "GET",
                     url,
-                    headers={"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
+                    headers=headers | {"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
                     response_model=githubkit.rest.Discussion,
                 )
             except githubkit.exception.RequestFailed as e:
@@ -204,7 +209,7 @@ class GithubInfo(
                     owner=obj.repo.owner,
                     repo=obj.repo.name,
                     issue_number=obj.number,
-                    headers={"Accept": "application/vnd.github.full+json"},
+                    headers=headers,
                 )
             return r.parsed_data
         if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
@@ -212,6 +217,7 @@ class GithubInfo(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
                 event_id=obj.event_id,
+                headers=headers,
             )
             return r.parsed_data
         if isinstance(obj, ghretos.DiscussionComment):
@@ -226,17 +232,22 @@ class GithubInfo(
                 owner=obj.repo.owner,
                 repo=obj.repo.name,
                 ref=obj.sha,
+                headers=headers,
             )
             return r.parsed_data
         if isinstance(obj, ghretos.Repo):
             r = await self.bot.github.rest.repos.async_get(
                 owner=obj.owner,
                 repo=obj.name,
+                headers=headers,
             )
             return r.parsed_data
 
         if isinstance(obj, ghretos.User):
-            r = await self.bot.github.rest.users.async_get_by_username(username=obj.login)
+            r = await self.bot.github.rest.users.async_get_by_username(
+                username=obj.login,
+                headers=headers,
+            )
             data = r.parsed_data
             # Even though we use a token with no additional scopes, validate that we CERTAINLY only have public data.
             if data.user_view_type != "public":
