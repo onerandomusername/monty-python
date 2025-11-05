@@ -443,6 +443,9 @@ class NumberableRenderer(
             timestamp=obj.created_at,
         )
 
+        if embed.title and len(embed.title) > 256:
+            embed.title = embed.title[:255] + "\u2026"
+
         if obj.user:
             embed.set_author(
                 name=get_user_display_name(obj.user, include_login_alias=True),
