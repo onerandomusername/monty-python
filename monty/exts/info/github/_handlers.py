@@ -79,8 +79,8 @@ class InfoSize(enum.Enum):
 
 def titlize_issue(issue: githubkit.rest.Issue) -> str:
     if not issue.repository:
-        return f"#{issue.number} {issue.title}"
-    return f"{issue.repository.full_name}#{issue.number} {issue.title}"
+        return f"#{issue.number} {issue.title.strip()}"
+    return f"{issue.repository.full_name}#{issue.number} {issue.title.strip}"
 
 
 def is_mannequin_user(
@@ -396,7 +396,7 @@ class NumberableRenderer(
             name += f"{context.repo.name}"
         name += f"#{obj.number}"
 
-        text = f"{emoji} {resource_type.capitalize()}[`{name}` - {obj.title}](<{obj.html_url}>)"
+        text = f"{emoji} {resource_type.capitalize()}[`{name}` - {obj.title.strip()}](<{obj.html_url}>)"
         if obj.user:
             user_html_url = get_user_html_url(obj.user)
             if user_html_url:
@@ -421,7 +421,7 @@ class NumberableRenderer(
                 content += f"{context.repo.owner}/"
             content += f"{context.repo.name}"
         content += f"#{obj.number}"
-        content += f" - [{obj.title}](<{obj.html_url}>)\n"
+        content += f" - [{obj.title.strip()}](<{obj.html_url}>)\n"
 
         if obj.user:
             content += "Authored by " + get_user_display_name(obj.user, include_html_url=True, include_login_alias=True)
@@ -437,7 +437,7 @@ class NumberableRenderer(
     ) -> disnake.Embed:
         emoji, colour = self._get_visual_style_state(obj)
         embed = disnake.Embed(
-            title=f"{emoji} [{context.repo.full_name}#{obj.number}] {obj.title}",
+            title=f"{emoji} [{context.repo.full_name}#{obj.number}] {obj.title.strip()}",
             url=obj.html_url,
             colour=colour,
             timestamp=obj.created_at,
@@ -471,7 +471,9 @@ class NumberableRenderer(
         text_display = disnake.ui.TextDisplay("")
         text_display_added: bool = False
         container.accent_colour = colour
-        text_display.content = f"### {emoji} [[{context.repo.full_name}#{obj.number}] {obj.title}](<{obj.html_url}>)"
+        text_display.content = (
+            f"### {emoji} [[{context.repo.full_name}#{obj.number}] {obj.title.strip()}](<{obj.html_url}>)"
+        )
 
         if obj.user:
             name = get_user_display_name(obj.user, include_login_alias=True, include_html_url=True)
