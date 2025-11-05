@@ -157,7 +157,6 @@ class GithubInfo(
 
         headers = {
             "Accept": "application/vnd.github.full+json",
-            "Cache-Control": "max-age=14400",
         }
 
         # Both issues and PRs are handled by the issues endpoint, because PRs are Issues.
