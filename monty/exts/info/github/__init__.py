@@ -233,33 +233,6 @@ class GithubInfo(
 
         raise NotImplementedError  # Type is not yet supported
 
-    # @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
-
-    @commands.is_owner()
-    async def ratelimits_command(self, ctx: commands.Context, refresh: bool = False) -> None:
-        """Check the current RateLimits connected to GitHub."""
-        embed = disnake.Embed(title="GitHub Ratelimits")
-        if refresh:
-            await self._fetch_and_update_ratelimits()
-
-        use_inline = len(monty.utils.services.GITHUB_RATELIMITS) <= 18  # 25 fields, 3 per line, 1 for the seperator.
-        for i, (resource_name, rate_limit) in enumerate(monty.utils.services.GITHUB_RATELIMITS.items()):
-            embed_value = ""
-            for name, value in attrs.asdict(rate_limit).items():
-                embed_value += f"**`{name}`**: {value}\n"
-            embed.add_field(name=resource_name, value=embed_value, inline=use_inline)
-
-            # add a "newline" after every 3 fields
-            if use_inline and i % 3 == 2:
-                embed.add_field("", "", inline=False)
-
-        if len(embed.fields) == 0 or random.randint(0, 3) == 0:
-            embed.set_footer(text="GitHub moment.")
-        await ctx.send(
-            embed=embed,
-            components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
-        )
-
     async def get_full_reply(
         self,
         resource: ghretos.GitHubResource,
@@ -503,6 +476,32 @@ class GithubInfo(
             disnake.ui.ActionRow(DeleteButton(allow_manage_messages=True, user=ctx.author, initial_message=ctx.message))
         )
         await ctx.send(components=components)
+
+    @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
+    @commands.is_owner()
+    async def ratelimits_command(self, ctx: commands.Context, refresh: bool = False) -> None:
+        """Check the current RateLimits connected to GitHub."""
+        embed = disnake.Embed(title="GitHub Ratelimits")
+        if refresh:
+            await self._fetch_and_update_ratelimits()
+
+        use_inline = len(monty.utils.services.GITHUB_RATELIMITS) <= 18  # 25 fields, 3 per line, 1 for the seperator.
+        for i, (resource_name, rate_limit) in enumerate(monty.utils.services.GITHUB_RATELIMITS.items()):
+            embed_value = ""
+            for name, value in attrs.asdict(rate_limit).items():
+                embed_value += f"**`{name}`**: {value}\n"
+            embed.add_field(name=resource_name, value=embed_value, inline=use_inline)
+
+            # add a "newline" after every 3 fields
+            if use_inline and i % 3 == 2:
+                embed.add_field("", "", inline=False)
+
+        if len(embed.fields) == 0 or random.randint(0, 3) == 0:
+            embed.set_footer(text="GitHub moment.")
+        await ctx.send(
+            embed=embed,
+            components=DeleteButton(allow_manage_messages=False, initial_message=ctx.message, user=ctx.author),
+        )
 
     @commands.slash_command(name="github", description="Fetch GitHub information.")
     async def slash_github_group(self, inter: disnake.ApplicationCommandInteraction) -> None:
