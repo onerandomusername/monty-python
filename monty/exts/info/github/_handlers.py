@@ -374,16 +374,29 @@ class NumberableRenderer(
         obj: githubkit.rest.Issue | githubkit.rest.Discussion,
         *,
         context: ghretos.Issue | ghretos.NumberedResource,
+        include_owner: bool = True,
+        include_repo: bool = True,
+        include_resource_type: bool = False,
     ) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
-        if isinstance(obj, githubkit.rest.Discussion):
+        if not include_resource_type:
+            resource_type = ""
+        elif isinstance(obj, githubkit.rest.Discussion):
             resource_type = "discussion"
         else:
             resource_type = "issue" if not obj.pull_request else "pull request"
-        text = (
-            f"{emoji} {resource_type.capitalize()} [`{context.repo.full_name}#{obj.number}` - "
-            f"{obj.title}](<{obj.html_url}>)"
-        )
+
+        if resource_type:
+            resource_type += " "
+
+        name = ""
+        if include_repo:
+            if include_owner:
+                name += f"{context.repo.owner}/"
+            name += f"{context.repo.name}"
+        name += f"#{obj.number}"
+
+        text = f"{emoji} {resource_type.capitalize()}[`{name}` - {obj.title}](<{obj.html_url}>)"
         if obj.user:
             user_html_url = get_user_html_url(obj.user)
             if user_html_url:
@@ -397,11 +410,16 @@ class NumberableRenderer(
         obj: githubkit.rest.Issue | githubkit.rest.Discussion,
         *,
         context: ghretos.Issue | ghretos.NumberedResource,
+        include_owner: bool = True,
+        include_repo: bool = True,
     ) -> str:
         emoji, _colour = self._get_visual_style_state(obj)
         content = f"## {emoji}"
 
-        content += f"{context.repo.full_name}"
+        if include_repo:
+            if include_owner:
+                content += f"{context.repo.owner}/"
+            content += f"{context.repo.name}"
         content += f"#{obj.number}"
         content += f" - [{obj.title}](<{obj.html_url}>)\n"
 

@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import functools
 import operator
 import random
 import re
@@ -282,6 +283,10 @@ class GithubInfo(
         # TODO: handle errors on this fetch method
         fut = await asyncio.gather(*coros, return_exceptions=True)
 
+        tiny_callables = []
+
+        repo: str | bool | None = None
+        owner: str | None | bool = None
         for resource_data, (match, size) in zip(fut, resources.items(), strict=True):
             if isinstance(resource_data, BaseException):
                 if (
@@ -301,6 +306,17 @@ class GithubInfo(
             if not handler:
                 continue
 
+            if match_repo := getattr(match, "repo", None):
+                if repo is None:
+                    repo = match_repo.name
+                if repo != match_repo.name:
+                    repo = True  # multiple repos
+                if owner is not True:
+                    if owner is None:
+                        owner = match_repo.owner
+                    if owner != match_repo.owner:
+                        owner = True  # multiple owners
+
             # Run resource validation
             if html_url := getattr(resource_data, "html_url", None):
                 # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
@@ -319,13 +335,40 @@ class GithubInfo(
                     )
                     continue  # skip invalid data
 
+                if match_repo := getattr(reparsed, "repo", None):
+                    if repo is None:
+                        repo = match_repo.name
+                    if repo != match_repo.name:
+                        repo = True  # multiple repos
+                    if owner is not True:
+                        if owner is None:
+                            owner = match_repo.owner
+                        if owner != match_repo.owner:
+                            owner = True  # multiple owners
+
                 match = reparsed  # use the reparsed version for more accurate data
 
             match size:
                 case github_handlers.InfoSize.OGP:
                     embeds.append(handler(limit=limit).render(resource_data, context=match, size=size))
                 case github_handlers.InfoSize.TINY:
-                    tiny_content.append(handler().render(resource_data, context=match, size=size))
+                    method = functools.partial(handler(limit=limit).render_tiny, resource_data, context=match)
+                    tiny_callables.append(method)
+
+        if tiny_callables:
+            if owner is True:
+                repo = True
+            else:
+                owner = False
+            if repo is not True:
+                repo = False
+            tiny_content.extend(
+                tiny_callable(
+                    include_repo=repo,
+                    include_owner=owner,
+                )
+                for tiny_callable in tiny_callables
+            )
 
         resp = {}
         if tiny_content:
