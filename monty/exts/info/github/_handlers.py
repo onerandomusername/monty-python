@@ -80,7 +80,7 @@ class InfoSize(enum.Enum):
 def titlize_issue(issue: githubkit.rest.Issue) -> str:
     if not issue.repository:
         return f"#{issue.number} {issue.title.strip()}"
-    return f"{issue.repository.full_name}#{issue.number} {issue.title.strip}"
+    return f"{issue.repository.full_name}#{issue.number} {issue.title.strip()}"
 
 
 def is_mannequin_user(
