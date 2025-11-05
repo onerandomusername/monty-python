@@ -122,9 +122,9 @@ class GithubInfo(
     async def fetch_resource(self, obj: ghretos.Repo) -> githubkit.rest.Repository: ...
 
     @overload
-    async def fetch_resource(self, obj: ghretos.Issue) -> githubkit.rest.Issue: ...
+    async def fetch_resource(self, obj: ghretos.Issue) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
     @overload
-    async def fetch_resource(self, obj: ghretos.PullRequest) -> githubkit.rest.Issue: ...
+    async def fetch_resource(self, obj: ghretos.PullRequest) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
     @overload
     async def fetch_resource(self, obj: ghretos.IssueComment) -> githubkit.rest.IssueComment: ...
     @overload
@@ -134,7 +134,7 @@ class GithubInfo(
         self, obj: ghretos.PullRequestReviewComment
     ) -> githubkit.rest.PullRequestReviewComment: ...
     @overload
-    async def fetch_resource(self, obj: ghretos.Discussion) -> githubkit.rest.Discussion: ...
+    async def fetch_resource(self, obj: ghretos.Discussion) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
     @overload
     async def fetch_resource(self, obj: ghretos.DiscussionComment) -> graphql_models.DiscussionComment: ...
     @overload
@@ -189,13 +189,22 @@ class GithubInfo(
             try_discussion and isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource))
         ) or isinstance(obj, ghretos.Discussion):
             url = f"/repos/{obj.repo.owner}/{obj.repo.name}/discussions/{obj.number}"
-
-            r = await self.bot.github.arequest(
-                "GET",
-                url,
-                headers={"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
-                response_model=githubkit.rest.Discussion,
-            )
+            try:
+                r = await self.bot.github.arequest(
+                    "GET",
+                    url,
+                    headers={"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
+                    response_model=githubkit.rest.Discussion,
+                )
+            except githubkit.exception.RequestFailed as e:
+                if try_discussion or e.response.status_code != 404:
+                    raise
+                r = await self.bot.github.rest.issues.async_get(
+                    owner=obj.repo.owner,
+                    repo=obj.repo.name,
+                    issue_number=obj.number,
+                    headers={"Accept": "application/vnd.github.full+json"},
+                )
             return r.parsed_data
         if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
             r = await self.bot.github.rest.issues.async_get_event(
@@ -254,6 +263,7 @@ class GithubInfo(
         resources: Mapping[ghretos.GitHubResource, github_handlers.InfoSize],
         *,
         limit: int | None = None,
+        settings: ghretos.MatcherSettings | None = None,
     ) -> dict[str, Any]:
         """Get embeds for a list of GitHub resources."""
         embeds: list[disnake.Embed] = []
@@ -294,13 +304,13 @@ class GithubInfo(
             # Run resource validation
             if html_url := getattr(resource_data, "html_url", None):
                 # Run the html_url through ghretos and match the resource type and ID again to ensure correctness.
-                reparsed = ghretos.parse_url(html_url)
-                if reparsed is None or (
-                    type(reparsed) is not type(match)
-                    and not (
-                        isinstance(reparsed, (ghretos.Issue, ghretos.PullRequest, ghretos.Discussion))
-                        and isinstance(match, ghretos.NumberedResource)
-                    )
+                if settings:
+                    reparsed = ghretos.parse_url(html_url, settings=settings)
+                else:
+                    reparsed = ghretos.parse_url(html_url)
+
+                if reparsed is None or not isinstance(
+                    reparsed, github_handlers.GITHUB_LINK_TRAVERSAL_EQUALS.get(type(match), type(match))
                 ):
                     log.warning(
                         "GitHub resource fetch returned mismatched data: expected %r, got %r",
@@ -334,9 +344,32 @@ class GithubInfo(
             resp["embeds"] = embeds
         return resp
 
-    async def get_matcher_settings(self, guild_id: int, config: GuildConfig) -> ghretos.MatcherSettings:
-        """Get matcher settings based on guild configuration."""
+    def _get_base_matcher_settings(self) -> ghretos.MatcherSettings:
         matcher_settings = ghretos.MatcherSettings.none()
+        matcher_settings.require_strict_type = False
+        return matcher_settings
+
+    def get_command_matcher_settings(self) -> ghretos.MatcherSettings:
+        """Get matcher settings for command usage.
+
+        These are every type which has handlers.
+        """
+        matcher_settings = self._get_base_matcher_settings()
+        matcher_settings.shorthand = True
+        matcher_settings.short_numberables = True
+        matcher_settings.issues = True
+        matcher_settings.pull_requests = True
+        matcher_settings.issue_comments = True
+        matcher_settings.pull_request_comments = True
+        matcher_settings.pull_request_review_comments = True
+        matcher_settings.pull_request_reviews = True
+        matcher_settings.discussions = True
+        matcher_settings.discussion_comments = True
+        return matcher_settings
+
+    async def get_auto_responder_matcher_settings(self, guild_id: int, config: GuildConfig) -> ghretos.MatcherSettings:
+        """Get matcher settings based on guild configuration."""
+        matcher_settings = self._get_base_matcher_settings()
         discussions_allowed: bool = False
         if config.github_issue_linking:
             matcher_settings.shorthand = True
@@ -377,7 +410,7 @@ class GithubInfo(
         # enable what we have handlers for
         settings.shorthand = True
         settings.short_repo = True
-        resource = ghretos.parse_shorthand(" ".join(args))
+        resource = ghretos.parse_shorthand(" ".join(args), settings=settings)
 
         if isinstance(resource, ghretos.User):
             await self.github_user(ctx, resource.login)
@@ -522,12 +555,13 @@ class GithubInfo(
         context = MessageContext(arg)
         matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
 
+        settings = self.get_command_matcher_settings()
         for segment in context.text.split():
-            match = ghretos.parse_shorthand(segment)
+            match = ghretos.parse_shorthand(segment, settings=settings)
             if match is not None:
                 matches[match] = github_handlers.InfoSize.OGP
         for url in context.urls:
-            match = ghretos.parse_url(url)
+            match = ghretos.parse_url(url, settings=settings)
             if match is not None:
                 matches[match] = github_handlers.InfoSize.OGP
 
@@ -546,7 +580,7 @@ class GithubInfo(
 
         matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
 
-        data = await self.get_reply(matches, limit=650)
+        data = await self.get_reply(matches, limit=650, settings=settings)
 
         if not data:
             await inter.response.send_message(
@@ -621,7 +655,7 @@ class GithubInfo(
         # in order to support shorthand, we need to check guild configuration
         guild_config = await self.bot.ensure_guild_config(message.guild.id)
 
-        matcher_settings = await self.get_matcher_settings(message.guild.id, guild_config)
+        matcher_settings = await self.get_auto_responder_matcher_settings(message.guild.id, guild_config)
 
         # Use a dict to deduplicate matches, but keep the original insertion order.
         matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
@@ -711,7 +745,11 @@ class GithubInfo(
         if not match:
             return
 
-        gh_resource = ghretos.parse_shorthand(f"{match.group('org')}/{match.group('repo')}#{match.group('number')}")
+        settings = self.get_command_matcher_settings()
+
+        gh_resource = ghretos.parse_shorthand(
+            f"{match.group('org')}/{match.group('repo')}#{match.group('number')}", settings=settings
+        )
         if gh_resource is None:
             await interaction.response.send_message(
                 "Could not parse the GitHub resource to expand.",

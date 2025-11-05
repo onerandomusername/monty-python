@@ -578,3 +578,20 @@ HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
     ghretos.PullRequestReviewComment: IssueCommentRenderer,
     ghretos.DiscussionComment: IssueCommentRenderer,
 }
+
+# GitHub supports url redirects on the frontend side for certain resources.
+# This mapping defines which resources can be reached from other resources.
+# This mapping only exists for validation AFTER fetching.
+GITHUB_LINK_TRAVERSAL_EQUALS: dict[type[ghretos.GitHubResource], tuple[type[ghretos.GitHubResource], ...]] = {
+    ghretos.Issue: (ghretos.Discussion, ghretos.Issue, ghretos.PullRequest),
+    ghretos.PullRequest: (ghretos.Discussion, ghretos.Issue, ghretos.PullRequest),
+    ghretos.Discussion: (ghretos.Issue, ghretos.Discussion, ghretos.PullRequest),
+    ghretos.NumberedResource: (ghretos.Issue, ghretos.Discussion, ghretos.PullRequest),
+    ghretos.IssueComment: (ghretos.IssueComment, ghretos.PullRequestComment),
+    ghretos.PullRequestComment: (ghretos.IssueComment, ghretos.PullRequestComment),
+}
+
+# assert the mapping is correct
+assert all(x in y for x, y in GITHUB_LINK_TRAVERSAL_EQUALS.items() if x is not ghretos.NumberedResource), (
+    "Link traversal mapping is incomplete!"
+)
