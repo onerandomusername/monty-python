@@ -300,6 +300,7 @@ class GithubInfo(
 
         repo: str | bool | None = None
         owner: str | None | bool = None
+        actual_parsed_resources = set[ghretos.GitHubResource]()
         for resource_data, (match, size) in zip(fut, resources.items(), strict=True):
             if isinstance(resource_data, BaseException):
                 if (
@@ -361,6 +362,10 @@ class GithubInfo(
 
                 match = reparsed  # use the reparsed version for more accurate data
 
+            if match in actual_parsed_resources:
+                continue
+            actual_parsed_resources.add(match)
+
             match size:
                 case github_handlers.InfoSize.OGP:
                     embeds.append(handler(limit=limit).render(resource_data, context=match, size=size))
@@ -386,11 +391,12 @@ class GithubInfo(
         resp = {}
         if tiny_content:
             title = ""
-            # This removes any duplicates that might have slipped through from an issue moving repos
-            # Because these all start with an emoji, we split after the first space and sort there
-            tiny_content = sorted(
-                set(tiny_content), key=lambda s: ((s.split(" ", 1)[1]) if s.startswith(("<", ":")) else s).casefold()
-            )
+            # Sort all of the tiny content by resource name.
+            # We split after the first space as they all start with an emoji
+            # TODO(onerandomusername): this relies on implementation details and should be sorted
+            # above with the ghretos objects.
+            # Iterate over the results from the fetchers and remove duplicates there
+            tiny_content.sort(key=lambda s: ((s.split(" ", 1)[1]) if s.startswith(("<", ":")) else s).casefold())
             if embeds:
                 title += "GitHub quick links"
             tiny_embed = disnake.Embed(
@@ -480,7 +486,7 @@ class GithubInfo(
             await self.github_repo(ctx, resource.full_name)
             return
         if isinstance(resource, tuple(github_handlers.HANDLER_MAPPING.keys())):
-            data = await self.get_reply({resource: github_handlers.InfoSize.OGP}, limit=850)
+            data = await self.get_reply({resource: github_handlers.InfoSize.OGP}, limit=850, settings=settings)
             if data:
                 components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
                 components.append(
@@ -763,6 +769,7 @@ class GithubInfo(
 
         data = await self.get_reply(
             matches,
+            settings=matcher_settings,
         )
         if not data:
             return
