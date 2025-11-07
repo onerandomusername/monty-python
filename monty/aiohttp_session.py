@@ -14,6 +14,7 @@ from aiohttp_client_cache.session import CachedSession
 from monty import constants
 from monty.log import get_logger
 from monty.utils import helpers
+from monty.utils.services import update_github_ratelimits_on_request
 
 
 if TYPE_CHECKING:
@@ -31,7 +32,10 @@ async def _on_request_end(
     trace_config_ctx: SimpleNamespace,
     params: aiohttp.TraceRequestEndParams,
 ) -> None:
-    """Log all aiohttp requests on request end."""
+    """Log all aiohttp requests on request end.
+
+    If the request was to api.github.com, update the github headers.
+    """
     resp = params.response
     aiohttp_log.info(
         "[{status!s} {reason!s}] {method!s} {url!s} ({content_type!s})".format(
@@ -42,6 +46,8 @@ async def _on_request_end(
             content_type=resp.content_type,
         )
     )
+    if resp.url.host == "api.github.com":
+        update_github_ratelimits_on_request(resp)
 
 
 class SessionArgs(TypedDict):

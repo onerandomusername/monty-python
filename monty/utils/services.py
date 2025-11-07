@@ -4,7 +4,6 @@ from aiohttp import ClientConnectorError
 from attrs import define
 
 from monty import constants
-from monty.bot import Monty
 from monty.errors import APIError
 from monty.log import get_logger
 
@@ -12,6 +11,8 @@ from monty.log import get_logger
 if typing.TYPE_CHECKING:
     import aiohttp
     from githubkit.versions.latest import types as github_types
+
+    from monty.bot import Monty
 
 log = get_logger(__name__)
 
@@ -38,7 +39,7 @@ class GitHubRateLimit:
 GITHUB_RATELIMITS: dict[str, GitHubRateLimit] = {}
 
 
-async def send_to_paste_service(bot: Monty, contents: str, *, extension: str = "") -> str | None:
+async def send_to_paste_service(bot: "Monty", contents: str, *, extension: str = "") -> str | None:
     """
     Upload `contents` to the paste service.
 
