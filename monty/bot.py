@@ -454,7 +454,9 @@ class Monty(commands.Bot):
             field.default.name: field.default for _attr, field in constants.AppEmojisCls.model_fields.items()
         }
 
-        existing_app_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        existing_app_emojis = {}
+        for existing_emoji in await self.fetch_application_emojis():
+            existing_app_emojis[existing_emoji.name] = existing_emoji
         self.app_emojis = existing_app_emojis | {}
 
         async def _creator(
@@ -512,13 +514,13 @@ class Monty(commands.Bot):
                     result.name,
                     result.id,
                 )
-                # update the cached emojis to be their full objects
                 self.app_emojis[emoji.name] = result
             else:
                 log.error("Unexpected result type %s for emoji %s", type(result), emoji.name)
 
-        # update the cached emojis to be their full objects
+        # update the cached emojis to have their IDs
         for emoji_attr, partial_emoji in constants.AppEmojis:
             if partial_emoji.name not in self.app_emojis:
                 continue
-            setattr(constants.AppEmojis, emoji_attr, self.app_emojis[partial_emoji.name])
+            emoji: disnake.PartialEmoji = getattr(constants.AppEmojis, emoji_attr)
+            object.__setattr__(emoji, "id", self.app_emojis[partial_emoji.name].id)
