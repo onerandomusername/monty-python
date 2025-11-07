@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import socket
 import sys
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -7,6 +8,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 import aiohttp
 import httpx_aiohttp
 from aiohttp_client_cache.backends.redis import RedisBackend
+from aiohttp_client_cache.response import CachedResponse
 from aiohttp_client_cache.session import CachedSession
 
 from monty import constants
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
 
     import redis.asyncio
     from aiohttp.tracing import TraceConfig
-    from aiohttp_client_cache.response import CachedResponse
 
 aiohttp_log = get_logger("monty.http")
 cache_logger = get_logger("monty.http.caching")
@@ -62,6 +63,22 @@ def session_args_for_proxy(proxy: str | None) -> SessionArgs:
     return {"proxy": proxy or None, "connector": connector}
 
 
+def filter_caching(response: CachedResponse | aiohttp.ClientResponse) -> bool:
+    """Filter function for aiohttp_client_cache to determine if a response should be cached."""
+    # cache 404 and 410 for only two hours
+    if not isinstance(response, CachedResponse):
+        return True
+    if response.status == 200:
+        return True
+    delta = datetime.datetime.utcnow() - response.created_at  # noqa: DTZ003
+    match response.status:
+        case 404:
+            return delta <= datetime.timedelta(minutes=30)
+        case 410:
+            return delta <= datetime.timedelta(days=1)
+    return True
+
+
 def get_cache_backend(redis: redis.asyncio.Redis) -> RedisBackend:
     """Get the cache backend for aiohttp_client_cache."""
     return RedisBackend(
@@ -70,7 +87,9 @@ def get_cache_backend(redis: redis.asyncio.Redis) -> RedisBackend:
         # We default to revalidating, so this just prevents ballooning.
         expire_after=60 * 60 * 24 * 7,  # hold requests for one week.
         cache_control=True,
+        allowed_codes=(200, 404, 410),
         connection=redis,
+        filter_fn=filter_caching,
     )
 
 
