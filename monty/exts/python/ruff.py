@@ -284,8 +284,9 @@ class Ruff(
                     linter_obj = linter_candidate
                     break
                 if linter_candidate.categories:
+                    prefix = linter_candidate.prefix.lower()
                     for category in linter_candidate.categories:
-                        if category.prefix.lower() == normalised_linter:
+                        if prefix + category.prefix.lower() == normalised_linter:
                             linter_obj = linter_candidate
                             break
                     if linter_obj:
