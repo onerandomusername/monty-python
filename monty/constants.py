@@ -232,7 +232,7 @@ class ColoursCls(BaseModel):
 
 
 class GHColour(int, enum.Enum):
-    muted = 0x59636E
+    muted = 0x848D97
     success = 0x6EB771
     done = 0x8250DF
     danger = 0xD1242F
