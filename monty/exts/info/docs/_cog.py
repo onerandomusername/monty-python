@@ -590,7 +590,7 @@ class DocCog(
         pypi: PyPI | None
         if (pypi := cast("PyPI | None", self.bot.get_cog("PyPI"))) is None:
             return False, None
-        if pypi.check_characters(package):
+        if pypi.invalid_characters(package):
             return False, None
         if strip:
             package = package.split(".")[0]
@@ -875,7 +875,7 @@ class DocCog(
             await inter.send("Sorry, I'm unable to process this at the moment!", ephemeral=True)
             return
 
-        if characters := pypi.check_characters(package):
+        if characters := pypi.invalid_characters(package):
             await inter.send(
                 f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'",
                 ephemeral=True,

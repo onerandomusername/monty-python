@@ -40,6 +40,8 @@ TIMEDELTA_REGEX = re.compile(
     r"$",
 )
 
+NOT_PYPI_PACKAGE_REGEX = re.compile(r"[^-_.a-zA-Z0-9]+")
+
 
 def str_timedelta_from_now(human: str, /) -> timedelta | None:
     """Convert a string to a timedelta relative to the current time."""

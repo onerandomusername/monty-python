@@ -25,6 +25,7 @@ from monty.errors import MontyCommandError
 from monty.log import get_logger
 from monty.utils import responses
 from monty.utils.caching import redis_cache
+from monty.utils.converters import NOT_PYPI_PACKAGE_REGEX
 from monty.utils.helpers import fromisoformat, maybe_defer, utcnow
 from monty.utils.html_parsing import _get_truncated_description
 from monty.utils.markdown import DocMarkdownConverter
@@ -43,7 +44,6 @@ PYPI_ICON = "https://github.com/pypa/warehouse/raw/main/warehouse/static/images/
 
 PYPI_COLOURS = itertools.cycle((Colours.yellow, Colours.blue, Colours.white))
 MAX_CACHE = 15
-ILLEGAL_CHARACTERS = re.compile(r"[^-_.a-zA-Z0-9]+")
 MAX_RESULTS = 15
 
 log = get_logger(__name__)
@@ -96,9 +96,9 @@ class PyPI(
         self.fetch_package_list.cancel()
 
     @staticmethod
-    def check_characters(package: str) -> re.Match | None:
+    def invalid_characters(package: str) -> re.Match | None:
         """Check if the package is valid."""
-        return re.search(ILLEGAL_CHARACTERS, package)
+        return re.search(NOT_PYPI_PACKAGE_REGEX, package)
 
     @redis_cache(
         "pypi-package-list",
@@ -151,7 +151,7 @@ class PyPI(
 
     async def fetch_package(self, package: str) -> dict[str, Any] | None:
         """Fetch a package from PyPI."""
-        if characters := self.check_characters(package):
+        if characters := self.invalid_characters(package):
             msg = f"Illegal character(s) passed into command: '{disnake.utils.escape_markdown(characters.group(0))}'"
             raise MontyCommandError(msg)
 

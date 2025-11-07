@@ -424,6 +424,16 @@ Search PyPI for a package.
 
 Cog for getting information about Ruff and other rules.
 
+### `ruff linter`
+
+- `linter` (`string`) (required) The linter to get information about
+
+Provide information about a specific linter from ruff.
+
+**Usable in:** `Guilds`, `Bot DMs`, `Private Channels`
+
+**Installable as:** `Guild`, `User`
+
 ### `ruff rule`
 
 - `rule` (`string`) (required) The rule to get information about
