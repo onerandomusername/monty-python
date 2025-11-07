@@ -346,7 +346,7 @@ class GithubInfo(
                     )
                     continue  # skip invalid data
 
-                if match_repo := getattr(reparsed, "repo", None):
+                if match != reparsed and (match_repo := getattr(reparsed, "repo", None)):
                     if repo is None:
                         repo = match_repo.name.casefold()
                     if repo != match_repo.name.casefold():
