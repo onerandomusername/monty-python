@@ -63,6 +63,7 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = """
     }
 """
 
+repo_name_number_getter = operator.attrgetter("repo.owner", "repo.name", "number")
 
 log = get_logger(__name__)
 
@@ -745,9 +746,11 @@ class GithubInfo(
 
         def sort_key(item: ghretos.GitHubResource) -> tuple:
             try:
-                return tuple(operator.attrgetter("repo.owner", "repo.name", "number")(item))
+                result = repo_name_number_getter(item)
             except AttributeError:
                 return ("", "", 0)
+            owner, repo, number = result
+            return owner.casefold(), repo.casefold(), number
 
         matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
 
