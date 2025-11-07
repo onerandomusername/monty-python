@@ -319,13 +319,13 @@ class GithubInfo(
 
             if match_repo := getattr(match, "repo", None):
                 if repo is None:
-                    repo = match_repo.name
-                if repo != match_repo.name:
+                    repo = match_repo.name.casefold()
+                if repo != match_repo.name.casefold():
                     repo = True  # multiple repos
                 if owner is not True:
                     if owner is None:
-                        owner = match_repo.owner
-                    if owner != match_repo.owner:
+                        owner = match_repo.owner.casefold()
+                    if owner != match_repo.owner.casefold():
                         owner = True  # multiple owners
 
             # Run resource validation
@@ -348,13 +348,13 @@ class GithubInfo(
 
                 if match_repo := getattr(reparsed, "repo", None):
                     if repo is None:
-                        repo = match_repo.name
-                    if repo != match_repo.name:
+                        repo = match_repo.name.casefold()
+                    if repo != match_repo.name.casefold():
                         repo = True  # multiple repos
                     if owner is not True:
                         if owner is None:
-                            owner = match_repo.owner
-                        if owner != match_repo.owner:
+                            owner = match_repo.owner.casefold()
+                        if owner != match_repo.owner.casefold():
                             owner = True  # multiple owners
 
                 match = reparsed  # use the reparsed version for more accurate data
