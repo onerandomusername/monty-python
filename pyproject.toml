@@ -51,11 +51,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    {include-group = "tools"},
-    {include-group = "typing"},
-    {include-group = "docs"},
-    {include-group = "mdformat"},
-    {include-group = "ruff"},
+    { include-group = "devlibs" },
+    { include-group = "docs" },
+    { include-group = "mdformat" },
+    { include-group = "tools" },
+    { include-group = "typing" },
 ]
 devlibs = [
     "fakeredis<3.0.0,>=2.29.0",
@@ -63,22 +63,6 @@ devlibs = [
     "python-dotenv<2.0.0,>=1.1.0",
     "wand>=0.6.13",
     "octicons-pack>=19.19.0",
-]
-tools = [
-    "poethepoet>=0.37.0",
-    "prek>=0.2.1,<0.3",
-    { include-group = "ruff" },
-    { include-group = "nox" }
-]
-ruff = [
-    "ruff==0.14.4",
-]
-nox = [
-    "nox>=2025.5.1",
-]
-typing = [
-    "basedpyright>=1.31.6",
-    "msgpack-types<1.0.0,>=0.5.0",
 ]
 docs = [
     "mkdocs<2.0.0,>=1.6.1",
@@ -97,15 +81,22 @@ mdformat = [
     "mdformat-tables<2.0.0,>=1.0.0",
     "mdformat-frontmatter<3.0.0,>=2.0.8",
 ]
+nox = ["nox>=2025.5.1"]
+ruff = ["ruff==0.14.4"]
+tools = [
+    "poethepoet>=0.37.0",
+    "prek>=0.2.1,<0.3",
+    { include-group = "ruff" },
+    { include-group = "nox" },
+]
+typing = ["basedpyright>=1.31.6", "msgpack-types<1.0.0,>=0.5.0"]
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
 
 [tool.ruff.lint]
-select = [
-"ALL"
-]
+select = ["ALL"]
 ignore = [
     # flake8-commas
     "COM",
@@ -132,7 +123,9 @@ ignore = [
     "ANN204",
     "ANN206",
     "ANN401",
-    "S110", # try-except-pass
+
+    # try-except-pass
+    "S110",
 
     # temporarily disabled
     "C901", # mccabe
@@ -150,14 +143,15 @@ ignore = [
     "PLC",
     "PLR",
     "PLW",
-    "RET505", "RET506",
+    "RET505",
+    "RET506",
     "RUF012",
-    "SIM105", "SIM108",
+    "SIM105",
+    "SIM108",
     "SLF",
     "TD",
     "TRY",
 ]
-
 
 
 [tool.ruff.lint.per-file-ignores]

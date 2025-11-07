@@ -1762,6 +1762,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "basedpyright" },
+    { name = "fakeredis" },
     { name = "markdown-gfm-admonition" },
     { name = "mdformat" },
     { name = "mdformat-frontmatter" },
@@ -1777,9 +1778,13 @@ dev = [
     { name = "mkdocs-material", extra = ["imaging"] },
     { name = "msgpack-types" },
     { name = "nox" },
+    { name = "octicons-pack" },
     { name = "poethepoet" },
     { name = "prek" },
+    { name = "python-dotenv" },
     { name = "ruff" },
+    { name = "wand" },
+    { name = "watchfiles" },
 ]
 devlibs = [
     { name = "fakeredis" },
@@ -1864,6 +1869,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "basedpyright", specifier = ">=1.31.6" },
+    { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
     { name = "markdown-gfm-admonition", specifier = ">=0.1.1,<1.0.0" },
     { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.8,<3.0.0" },
@@ -1879,9 +1885,13 @@ dev = [
     { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.6.20,<10.0.0" },
     { name = "msgpack-types", specifier = ">=0.5.0,<1.0.0" },
     { name = "nox", specifier = ">=2025.5.1" },
+    { name = "octicons-pack", specifier = ">=19.19.0" },
     { name = "poethepoet", specifier = ">=0.37.0" },
     { name = "prek", specifier = ">=0.2.1,<0.3" },
+    { name = "python-dotenv", specifier = ">=1.1.0,<2.0.0" },
     { name = "ruff", specifier = "==0.14.4" },
+    { name = "wand", specifier = ">=0.6.13" },
+    { name = "watchfiles", specifier = ">=1.0.5,<2.0.0" },
 ]
 devlibs = [
     { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
