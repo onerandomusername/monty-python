@@ -53,8 +53,8 @@ DISCUSSION_COMMENT_GRAPHQL_QUERY = """
                 body
                 created_at: createdAt
                 user: author {
+                    __typename
                     login
-                    type
                     html_url: url
                     avatar_url: avatarUrl
                 }
@@ -225,6 +225,8 @@ class GithubInfo(
                 DISCUSSION_COMMENT_GRAPHQL_QUERY,
                 variables={"id": self._format_github_global_id("DC", 0, obj.comment_id)},
             )
+            # Move `__typename` to `type` to fit the models
+            r["node"]["user"]["type"] = r["node"]["user"].pop("__typename")
             return graphql_models.DiscussionComment(**r["node"])
 
         if isinstance(obj, ghretos.Commit):
