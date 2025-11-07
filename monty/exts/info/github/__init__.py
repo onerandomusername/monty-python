@@ -384,6 +384,11 @@ class GithubInfo(
         resp = {}
         if tiny_content:
             title = ""
+            # This removes any duplicates that might have slipped through from an issue moving repos
+            # Because these all start with an emoji, we split after the first space and sort there
+            tiny_content = sorted(
+                set(tiny_content), key=lambda s: ((s.split(" ", 1)[1]) if s.startswith(("<", ":")) else s).casefold()
+            )
             if embeds:
                 title += "GitHub quick links"
             tiny_embed = disnake.Embed(
