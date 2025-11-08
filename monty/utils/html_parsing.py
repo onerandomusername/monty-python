@@ -179,7 +179,7 @@ def _get_truncated_description(
         if is_tag:
             element_markdown = markdown_converter.process_tag(element)
         else:
-            element_markdown = markdown_converter.process_text(element.text, set())
+            element_markdown = markdown_converter.process_text(element)
 
         rendered_length += element_length
         tag_end_index += len(element_markdown)
