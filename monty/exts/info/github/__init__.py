@@ -81,9 +81,9 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
 
-        self.autolink_cache: cachingutils.MemoryCache[int, tuple[disnake.Message, list[ghretos.GitHubResource]]] = (
-            cachingutils.MemoryCache(timeout=600)
-        )
+        self.autolink_cache: cachingutils.MemoryCache[
+            int, tuple[disnake.Message, dict[ghretos.GitHubResource, github_handlers.InfoSize]]
+        ] = cachingutils.MemoryCache(timeout=600)
 
     async def cog_load(self) -> None:
         """
@@ -461,6 +461,42 @@ class GithubInfo(
 
         return matcher_settings
 
+    async def parse_contents(
+        self, context: MessageContext, *, settings: ghretos.MatcherSettings, default_user: str | None = None
+    ) -> dict[ghretos.GitHubResource, github_handlers.InfoSize]:
+        """Parse message contents for GitHub resources."""
+        # Use a dict to deduplicate matches, but keep the original insertion order.
+        matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
+        # parse all of the shorthand first
+        for segment in context.text.split():
+            match = ghretos.parse_shorthand(
+                segment,
+                default_user=default_user,
+                settings=settings,
+            )
+            if match is not None:
+                matches[match] = github_handlers.InfoSize.TINY
+        for url in context.urls:
+            match = ghretos.parse_url(
+                url,
+                settings=settings,
+            )
+            if match is not None:
+                matches[match] = github_handlers.InfoSize.OGP
+
+        if not matches:
+            return {}
+
+        def sort_key(item: ghretos.GitHubResource) -> tuple:
+            try:
+                result = repo_name_number_getter(item)
+            except AttributeError:
+                return ("", "", 0)
+            owner, repo, number = result
+            return owner.casefold(), repo.casefold(), number
+
+        return dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
+
     @commands.group(
         name="github", description="Fetch GitHub information.", aliases=("gh",), invoke_without_command=True
     )
@@ -724,48 +760,18 @@ class GithubInfo(
 
         matcher_settings = await self.get_auto_responder_matcher_settings(message.guild.id, guild_config)
 
-        # Use a dict to deduplicate matches, but keep the original insertion order.
-        matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
-        # parse all of the shorthand first
-        for segment in context.text.split():
-            match = ghretos.parse_shorthand(
-                segment,
-                default_user=guild_config.github_issues_org,
-                settings=matcher_settings,
-            )
-            if match is not None:
-                matches[match] = github_handlers.InfoSize.TINY
-        for url in context.urls:
-            match = ghretos.parse_url(
-                url,
-                settings=matcher_settings,
-            )
-            if match is not None:
-                matches[match] = github_handlers.InfoSize.OGP
-
-        if not matches:
-            return
+        matches = await self.parse_contents(
+            context,
+            settings=matcher_settings,
+            default_user=guild_config.github_issues_org,
+        )
 
         if len(matches) > MAXIMUM_ISSUES:
-            if isinstance(message, disnake.Message):
-                await message.add_reaction(constants.Emojis.decline)
-            elif isinstance(message, disnake.ApplicationCommandInteraction):
-                await message.response.send_message(
-                    content=f"{constants.Emojis.decline} Too many issues found in message to "
-                    f"display (maximum {MAXIMUM_ISSUES}).",
-                    ephemeral=True,
-                )
-            return
-
-        def sort_key(item: ghretos.GitHubResource) -> tuple:
             try:
-                result = repo_name_number_getter(item)
-            except AttributeError:
-                return ("", "", 0)
-            owner, repo, number = result
-            return owner.casefold(), repo.casefold(), number
-
-        matches = dict(sorted(matches.items(), key=lambda item: sort_key(item[0])))
+                await message.add_reaction(constants.Emojis.decline)
+            except disnake.Forbidden:
+                pass
+            return
 
         data = await self.get_reply(
             matches,
@@ -774,13 +780,12 @@ class GithubInfo(
         if not data:
             return
 
-        if isinstance(message, disnake.Message):
-            scheduling.create_task(
-                suppress_embeds(
-                    bot=self.bot,
-                    message=message,
-                )
+        scheduling.create_task(
+            suppress_embeds(
+                bot=self.bot,
+                message=message,
             )
+        )
 
         components = []
         components.append(
@@ -791,19 +796,96 @@ class GithubInfo(
                 )
             )
         )
-        if isinstance(message, disnake.Message):
-            await message.reply(
-                **data,
-                components=components,
-                fail_if_not_exists=False,
-                allowed_mentions=disnake.AllowedMentions.none(),
+        sent_message = await message.reply(
+            **data,
+            components=components,
+            fail_if_not_exists=False,
+            allowed_mentions=disnake.AllowedMentions.none(),
+        )
+
+        self.autolink_cache.set(
+            message.id,
+            (sent_message, matches),
+        )
+
+    @commands.Cog.listener("on_message_edit")
+    async def on_message_edit_automatic_issue_link(self, before: disnake.Message, after: disnake.Message) -> None:
+        """Automatic issue linking on message edit."""
+        if not after.guild:
+            return
+        if before.content == after.content:
+            return  # no content change
+
+        cached = self.autolink_cache.get(after.id)
+        if cached is None:
+            return
+
+        sent_message, previous_matches = cached
+
+        context = MessageContext(after.content)
+
+        guild_config = await self.bot.ensure_guild_config(after.guild.id)
+        matcher_settings = await self.get_auto_responder_matcher_settings(after.guild.id, guild_config)
+        matches = await self.parse_contents(
+            context,
+            settings=matcher_settings,
+            default_user=guild_config.github_issues_org,
+        )
+
+        if matches == dict(previous_matches):
+            return  # no new matches
+
+        if len(matches) > MAXIMUM_ISSUES:
+            try:
+                await after.add_reaction(constants.Emojis.decline)
+            except disnake.Forbidden:
+                pass
+            return
+
+        data = await self.get_reply(
+            matches,
+            settings=matcher_settings,
+        )
+        if not data:
+            # delete the previous message and remove from cache
+            try:
+                await sent_message.delete()
+            except disnake.NotFound:
+                pass
+            try:
+                del self.autolink_cache[after.id]
+            except KeyError:
+                pass
+            return
+
+        if not before.flags.suppress_embeds:
+            scheduling.create_task(
+                suppress_embeds(
+                    bot=self.bot,
+                    message=after,
+                )
             )
-        elif isinstance(message, disnake.ApplicationCommandInteraction):
-            await message.response.send_message(
-                **data,
-                components=components,
-                allowed_mentions=disnake.AllowedMentions.none(),
+
+        components = []
+        components.append(
+            disnake.ui.ActionRow(
+                DeleteButton(
+                    allow_manage_messages=True,
+                    user=after.author,
+                )
             )
+        )
+        sent_message = await sent_message.edit(
+            **data,
+            components=components,
+            allowed_mentions=disnake.AllowedMentions.none(),
+        )
+
+        # update the cache with the new matches
+        self.autolink_cache.set(
+            after.id,
+            (sent_message, matches),
+        )
 
     @commands.Cog.listener("on_button_click")
     async def show_expanded_information(
