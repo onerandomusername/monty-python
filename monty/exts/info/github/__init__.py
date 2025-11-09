@@ -391,12 +391,6 @@ class GithubInfo(
         resp = {}
         if tiny_content:
             title = ""
-            # Sort all of the tiny content by resource name.
-            # We split after the first space as they all start with an emoji
-            # TODO(onerandomusername): this relies on implementation details and should be sorted
-            # above with the ghretos objects.
-            # Iterate over the results from the fetchers and remove duplicates there
-            tiny_content.sort(key=lambda s: ((s.split(" ", 1)[1]) if s.startswith(("<", ":")) else s).casefold())
             if embeds:
                 title += "GitHub quick links"
             tiny_embed = disnake.Embed(
