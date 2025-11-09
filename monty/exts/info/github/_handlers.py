@@ -338,12 +338,12 @@ class NumberableRenderer(
         if obj.pull_request:
             if obj.pull_request.merged_at:
                 emoji = constants.AppEmojis.pull_request_merged
+            elif obj.state == "closed":
+                emoji = constants.AppEmojis.pull_request_closed
             elif obj.draft is True:
                 emoji = constants.AppEmojis.pull_request_draft
             elif obj.state == "open":
                 emoji = constants.AppEmojis.pull_request_open
-            elif obj.state == "closed":
-                emoji = constants.AppEmojis.pull_request_closed
             else:
                 # fall the emoji back to a state
                 emoji = constants.AppEmojis.pull_request_open
