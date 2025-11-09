@@ -143,7 +143,7 @@ class ErrorHandler(
         )
         if isinstance(ctx, commands.Context):
             components.insert_item(0, DeleteButton(ctx.author, initial_message=ctx.message))
-            app_permissions = ctx.channel.permissions_for(ctx.me)  # pyright: ignore[reportArgumentType]
+            app_permissions = ctx.app_permissions
             if app_permissions.manage_messages:
                 send_error = functools.partial(
                     ctx.reply,
@@ -223,13 +223,9 @@ class ErrorHandler(
     ) -> None:
         """Handles bot missing permissing by dming the user if they have a permission which may be able to fix this."""
         embed = self.error_embed("Permissions Failure", str(error))
-        if isinstance(ctx, commands.Context):
-            app_permissions = ctx.channel.permissions_for(ctx.me)  # pyright: ignore[reportArgumentType]
-        else:
-            app_permissions = ctx.app_permissions
-        if app_permissions >= disnake.Permissions(send_messages=True, embed_links=True):
+        if ctx.app_permissions >= disnake.Permissions(send_messages=True, embed_links=True):
             await self.send_error(ctx, embeds=[embed])
-        elif app_permissions >= disnake.Permissions(send_messages=True):
+        elif ctx.app_permissions >= disnake.Permissions(send_messages=True):
             # make a message as similar to the embed, using as few permissions as possible
             # this is the only place we send a standard message instead of an embed
             # so no helper methods are necessary

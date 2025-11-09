@@ -183,8 +183,7 @@ class Bookmark(
         ]
         kwargs = {}
         if isinstance(ctx, commands.Context):
-            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
-            if ctx.channel == target_message.channel and app_permissions.read_message_history:
+            if ctx.channel == target_message.channel and ctx.app_permissions.read_message_history:
                 kwargs["reference"] = target_message.to_reference(fail_if_not_exists=False)
 
             allowed_mentions = disnake.AllowedMentions.none()
@@ -278,7 +277,7 @@ class Bookmark(
             if isinstance(ctx, disnake.Interaction):
                 await ctx.send(embed=result, ephemeral=True)
             else:
-                app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
+                app_permissions = ctx.app_permissions
                 if app_permissions.read_message_history:
                     components = DeleteButton(ctx.author, initial_message=ctx.message)
                     await ctx.reply(embed=result, fail_if_not_exists=False, components=components)

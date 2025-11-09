@@ -336,7 +336,7 @@ class InternalEval(commands.Cog):
         if not response.components and not response.files:
             return
 
-        if ctx.guild is not None and ctx.channel.permissions_for(ctx.guild.me).manage_messages:
+        if ctx.app_permissions.manage_messages:
             delete_contexts = (ctx.message, None)
         else:
             delete_contexts = (None,)
@@ -432,7 +432,7 @@ class InternalEval(commands.Cog):
                 if not response.components and not response.files:
                     continue
 
-                if msg.guild is not None and msg.channel.permissions_for(msg.guild.me).manage_messages:
+                if ctx.app_permissions.manage_messages:
                     delete_contexts = (msg, None)
                 else:
                     delete_contexts = (None,)
