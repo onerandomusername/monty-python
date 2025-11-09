@@ -755,6 +755,10 @@ class GithubInfo(
         if command_context.command and command_context.command.cog is self:
             return  # do not auto-link in own commands
 
+        app_permissions = message.channel.permissions_for(message.guild.me)
+        if not app_permissions.send_messages:
+            return  # bot cannot send messages in this channel
+
         # in order to support shorthand, we need to check guild configuration
         guild_config = await self.bot.ensure_guild_config(message.guild.id)
 
@@ -767,10 +771,11 @@ class GithubInfo(
         )
 
         if len(matches) > MAXIMUM_ISSUES:
-            try:
-                await message.add_reaction(constants.Emojis.decline)
-            except disnake.Forbidden:
-                pass
+            if app_permissions.add_reactions:
+                try:
+                    await message.add_reaction(constants.Emojis.decline)
+                except disnake.Forbidden:
+                    pass
             return
 
         data = await self.get_reply(
@@ -780,12 +785,13 @@ class GithubInfo(
         if not data:
             return
 
-        scheduling.create_task(
-            suppress_embeds(
-                bot=self.bot,
-                message=message,
+        if app_permissions.manage_messages and not message.flags.suppress_embeds:
+            scheduling.create_task(
+                suppress_embeds(
+                    bot=self.bot,
+                    message=message,
+                )
             )
-        )
 
         components = []
         components.append(
@@ -820,6 +826,8 @@ class GithubInfo(
         if cached is None:
             return
 
+        app_permissions = after.channel.permissions_for(after.guild.me)
+
         sent_message, previous_matches = cached
 
         context = MessageContext(after.content)
@@ -836,10 +844,11 @@ class GithubInfo(
             return  # no new matches
 
         if len(matches) > MAXIMUM_ISSUES:
-            try:
-                await after.add_reaction(constants.Emojis.decline)
-            except disnake.Forbidden:
-                pass
+            if app_permissions.add_reactions:
+                try:
+                    await after.add_reaction(constants.Emojis.decline)
+                except disnake.Forbidden:
+                    pass
             return
 
         data = await self.get_reply(
@@ -847,18 +856,9 @@ class GithubInfo(
             settings=matcher_settings,
         )
         if not data:
-            # delete the previous message and remove from cache
-            try:
-                await sent_message.delete()
-            except disnake.NotFound:
-                pass
-            try:
-                del self.autolink_cache[after.id]
-            except KeyError:
-                pass
             return
 
-        if not before.flags.suppress_embeds:
+        if app_permissions.manage_messages and not before.flags.suppress_embeds:
             scheduling.create_task(
                 suppress_embeds(
                     bot=self.bot,
