@@ -86,12 +86,7 @@ class GithubInfo(
         ] = cachingutils.MemoryCache(timeout=600)
 
     async def cog_load(self) -> None:
-        """
-        Run initial fetch commands upon loading.
-
-        Sync the Ratelimit object, and more.
-        Fetch the graphQL schema from GitHub.
-        """
+        """Sync the ratelimit cache upon cog load."""
         await self._fetch_and_update_ratelimits()
 
     async def _fetch_and_update_ratelimits(self) -> None:
