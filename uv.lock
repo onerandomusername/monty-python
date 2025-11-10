@@ -951,7 +951,7 @@ wheels = [
 
 [[package]]
 name = "githubkit"
-version = "0.13.5"
+version = "0.13.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -960,9 +960,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/c2/4cdff48431a373bfa9e01c1ccfdb2f1b8f3fd27860a3be4001b0122d4a26/githubkit-0.13.5.tar.gz", hash = "sha256:d47f1aea19473a8aaef6a6413debfa420740f0207de42d32e98758cb6728fb12", size = 2286056, upload-time = "2025-10-25T16:12:42.415Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/74/a61ac8110585951a21bdc0ca39b0a41cd069a5c6d9e3a0cf607519fe30d2/githubkit-0.13.6.tar.gz", hash = "sha256:77f8f59bedbd503d1b581e5a93d993416467ee534f8ce7bd36e75282a8f51785", size = 2621144, upload-time = "2025-11-09T10:06:10.691Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c2/45/c765290bf71f32c545829495924b2ecf058166385dec8af3c108bdc6617f/githubkit-0.13.5-py3-none-any.whl", hash = "sha256:665d67f90258044980585cc71e1e19d78e755b0efea69728520373cfc8d28f86", size = 6046859, upload-time = "2025-10-25T16:12:40.625Z" },
+    { url = "https://files.pythonhosted.org/packages/22/16/6c87f4ba88af118712e90e90b949708b6296aa75fedf4fa3d8c54fb73a09/githubkit-0.13.6-py3-none-any.whl", hash = "sha256:8fe3c93365d04039479db347b122ffedc3812e74ea2a3f6e745f2d0039e727e2", size = 6360763, upload-time = "2025-11-09T10:06:09.126Z" },
 ]
 
 [[package]]
