@@ -9,7 +9,6 @@ from typing import Any, NamedTuple
 from urllib.parse import quote_plus
 
 import cachingutils
-import cachingutils.redis
 import disnake
 import githubkit
 import githubkit.exception
