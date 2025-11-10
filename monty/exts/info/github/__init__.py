@@ -617,6 +617,11 @@ class GithubInfo(
         for i, (resource_name, rate_limit) in enumerate(monty.utils.services.GITHUB_RATELIMITS.items()):
             embed_value = ""
             for name, value in attrs.asdict(rate_limit).items():
+                if name == "reset":
+                    value = f"<t:{value}:R>"
+                else:
+                    value = f"`{value}`"
+
                 embed_value += f"**`{name}`**: {value}\n"
             embed.add_field(name=resource_name, value=embed_value, inline=use_inline)
 
