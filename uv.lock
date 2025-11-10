@@ -771,8 +771,8 @@ wheels = [
 
 [[package]]
 name = "disnake"
-version = "2.12.0a4825+g0ee7ec43"
-source = { git = "https://github.com/DisnakeDev/disnake.git?rev=master#0ee7ec434ffb3fdc34cd398ed25765611e2576f3" }
+version = "2.12.0a4864+gd231d638"
+source = { git = "https://github.com/DisnakeDev/disnake.git?rev=master#d231d6386fa2b05c7a03c22b1013dce88ff1f024" }
 dependencies = [
     { name = "aiohttp" },
     { name = "typing-extensions" },

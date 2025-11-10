@@ -321,8 +321,7 @@ class Snekbox(
                 pass
 
             # if we have permissions, delete the user's reaction
-            app_permissions = ctx.channel.permissions_for(ctx.me)  # type: ignore
-            if app_permissions.manage_messages:
+            if ctx.app_permissions.manage_messages:
                 try:
                     await ctx.message.clear_reaction(REEVAL_EMOJI)
                 except disnake.Forbidden:

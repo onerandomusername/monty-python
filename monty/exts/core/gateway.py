@@ -52,9 +52,7 @@ class GatewayLog(commands.Cog):
             DeleteButton(
                 ctx.author.id,
                 allow_manage_messages=False,
-                initial_message=(
-                    ctx.message if ctx.guild and ctx.channel.permissions_for(ctx.guild.me).manage_messages else None
-                ),
+                initial_message=(ctx.message if ctx.app_permissions.manage_messages else None),
             ),
         ]
         await ctx.send(components=components, allowed_mentions=disnake.AllowedMentions.none())
