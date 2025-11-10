@@ -23,7 +23,7 @@ from monty.bot import Monty
 from monty.database import GuildConfig
 from monty.events import MessageContext, MontyEvent
 from monty.log import get_logger
-from monty.utils import scheduling
+from monty.utils import responses, scheduling
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 from . import _handlers as github_handlers
@@ -765,11 +765,16 @@ class GithubInfo(
         )
 
         if len(matches) > MAXIMUM_ISSUES:
-            if app_permissions.add_reactions:
-                try:
-                    await message.add_reaction(constants.Emojis.decline)
-                except disnake.Forbidden:
-                    pass
+            embed = disnake.Embed(
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
+                description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
+            )
+            sent_message = await message.channel.send(embed=embed)
+            self.autolink_cache.set(
+                message.id,
+                (sent_message, matches),
+            )
             return
 
         data = await self.get_reply(
@@ -838,11 +843,16 @@ class GithubInfo(
             return  # no new matches
 
         if len(matches) > MAXIMUM_ISSUES:
-            if app_permissions.add_reactions:
-                try:
-                    await after.add_reaction(constants.Emojis.decline)
-                except disnake.Forbidden:
-                    pass
+            embed = disnake.Embed(
+                title=random.choice(responses.USER_INPUT_ERROR_REPLIES),
+                color=responses.DEFAULT_FAILURE_COLOUR,
+                description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
+            )
+            sent_message = await sent_message.edit(embed=embed)
+            self.autolink_cache.set(
+                after.id,
+                (sent_message, matches),
+            )
             return
 
         data = await self.get_reply(
@@ -861,6 +871,10 @@ class GithubInfo(
             )
 
         components = []
+        if "components" in data:
+            components.extend(data["components"])
+            data.pop("components")
+
         components.append(
             disnake.ui.ActionRow(
                 DeleteButton(
