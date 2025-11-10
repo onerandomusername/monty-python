@@ -8,7 +8,6 @@ from datetime import timezone
 from typing import Any, NamedTuple
 from urllib.parse import quote_plus
 
-import attrs
 import cachingutils
 import cachingutils.redis
 import disnake
@@ -712,8 +711,10 @@ class GithubInfo(
         use_inline = len(monty.utils.services.GITHUB_RATELIMITS) <= 18  # 25 fields, 3 per line, 1 for the seperator.
         for i, (resource_name, rate_limit) in enumerate(monty.utils.services.GITHUB_RATELIMITS.items()):
             embed_value = ""
-            for name, value in attrs.asdict(rate_limit).items():
-                embed_value += f"**`{name}`**: {value}\n"
+            embed_value += f"**`limit`**: `{rate_limit.limit}`\n"
+            embed_value += f"**`remaining`**: `{rate_limit.remaining}`\n"
+            embed_value += f"**`reset`**: <t:{rate_limit.reset}:R>\n"
+            embed_value += f"**`used`**: `{rate_limit.used}`\n"
             embed.add_field(name=resource_name, value=embed_value, inline=use_inline)
 
             # add a "newline" after every 3 fields
