@@ -20,6 +20,7 @@ from monty.database import GuildConfig
 from monty.events import MessageContext, MontyEvent
 from monty.log import get_logger
 from monty.utils import responses, scheduling
+from monty.utils.extensions import invoke_help_command
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 from . import _handlers as github_handlers
@@ -317,6 +318,10 @@ class GithubInfo(
     )
     async def github_group(self, ctx: commands.Context, *args) -> None:
         """Group for GitHub related commands."""
+        if not args:
+            await invoke_help_command(ctx)
+            return
+
         # Shortcut user:
         # Intentionally match 2 on the args here
         # Allow messages such as !github username extra words
