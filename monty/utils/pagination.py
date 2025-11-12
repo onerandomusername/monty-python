@@ -5,7 +5,7 @@ from typing import cast
 import disnake
 from disnake.ext import commands
 
-from monty.constants import Emojis
+from monty import constants
 from monty.log import get_logger
 from monty.utils import scheduling
 from monty.utils.messages import DeleteButton
@@ -15,7 +15,7 @@ FIRST_EMOJI = "\u23ee"  # [:track_previous:]
 LEFT_EMOJI = "\u2b05"  # [:arrow_left:]
 RIGHT_EMOJI = "\u27a1"  # [:arrow_right:]
 LAST_EMOJI = "\u23ed"  # [:track_next:]
-DELETE_EMOJI = Emojis.trashcan  # [:trashcan:]
+DELETE_EMOJI = constants.Emojis.trashcan  # [:trashcan:]
 CUSTOM_ID_PREFIX = "paginator_page_"
 PAGINATION_EMOJI: dict[str, str] = {
     "first": FIRST_EMOJI,

@@ -1,7 +1,8 @@
 import dataclasses
 import enum
+import sys
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Annotated, ClassVar, Literal
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal
 
 import disnake
 import pydantic
@@ -412,19 +413,53 @@ class GuildsCls(BaseModel):
     nextcord: int = 881118111967883295
 
 
-## compatibility with configuration before pydantic. Replace the definitions
-# with themselves and have global instances.
-# theoretically temporary
-Client = ClientCls()  # pyright: ignore[reportCallIssue]
-Database = DatabaseCls()  # pyright: ignore[reportCallIssue]
-Redis = RedisCls()
-Stats = StatsCls()  # pyright: ignore[reportCallIssue]
-Auth = AuthCls()  # pyright: ignore[reportCallIssue]
-Endpoints = EndpointsCls()  # pyright: ignore[reportCallIssue]
-Monitoring = MonitoringCls()  # pyright: ignore[reportCallIssue]
-CodeBlock = CodeBlockCls()
-Colours = ColoursCls()
-Emojis = EmojisCls()  # pyright: ignore[reportCallIssue]
-AppEmojis = AppEmojisCls()
-Icons = IconsCls()
-Guilds = GuildsCls()
+LAZY_DEFINED = {
+    "Client": ClientCls,
+    "Database": DatabaseCls,
+    "Redis": RedisCls,
+    "Stats": StatsCls,
+    "Auth": AuthCls,
+    "Endpoints": EndpointsCls,
+    "Monitoring": MonitoringCls,
+    "CodeBlock": CodeBlockCls,
+    "Colours": ColoursCls,
+    "Emojis": EmojisCls,
+    "AppEmojis": AppEmojisCls,
+    "Icons": IconsCls,
+    "Guilds": GuildsCls,
+}
+
+if TYPE_CHECKING:
+    Client: ClientCls
+    Database: DatabaseCls
+    Redis: RedisCls
+    Stats: StatsCls
+    Auth: AuthCls
+    Endpoints: EndpointsCls
+    Monitoring: MonitoringCls
+    CodeBlock: CodeBlockCls
+    Colours: ColoursCls
+    Emojis: EmojisCls
+    AppEmojis: AppEmojisCls
+    Icons: IconsCls
+    Guilds: GuildsCls
+
+
+## Use a lazy getattr pattern to allow for importing without defining all objects
+def __getattr__(name: str) -> Any:
+    if name in globals():
+        return globals()[name]
+    if name in LAZY_DEFINED:
+        cls = LAZY_DEFINED[name]
+        instance = cls()  # pyright: ignore[reportCallIssue]
+        globals()[name] = instance
+        return instance
+    msg = f"module '{__name__}' has no attribute '{name}'"
+    raise AttributeError(msg)
+
+
+def validate_config() -> None:
+    """Force initialization of all lazy defined configuration objects."""
+    self = sys.modules[__name__]
+    for name in LAZY_DEFINED:
+        _ = getattr(self, name)
