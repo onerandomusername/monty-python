@@ -118,6 +118,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    constants.validate_config()
     disnake.Embed.set_default_colour(constants.Colours.python_yellow)
     monkey_patches.patch_typing()
     monkey_patches.patch_inter_send()

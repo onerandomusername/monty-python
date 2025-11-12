@@ -3,9 +3,9 @@ from typing import Final
 import disnake
 from disnake import Locale
 
+from monty import constants
 from monty.config import validators
 from monty.config.models import Category, ConfigAttrMetadata, FreeResponseMetadata, SelectGroup, SelectOptionMetadata
-from monty.constants import Feature
 
 
 __all__ = (
@@ -77,7 +77,7 @@ METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
         type=bool,
         category=Category.GitHub,
         name="Comment Linking",
-        depends_on_features=(Feature.GITHUB_COMMENT_LINKS,),
+        depends_on_features=(constants.Feature.GITHUB_COMMENT_LINKS,),
         description="Automatically expand a GitHub comment link. Requires GitHub Issue Linking to have an effect.",
         requires_bot=True,
         select_option=SelectOptionMetadata(
