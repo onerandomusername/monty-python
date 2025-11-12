@@ -28,8 +28,10 @@ def walk_extensions() -> Generator[tuple[str, "ExtMetadata"], None, None]:
     def on_error(name: str) -> NoReturn:
         raise ImportError(name=name)  # pragma: no cover
 
+    skip_modules: set[str] = set()
+
     for module in pkgutil.walk_packages(exts.__path__, f"{exts.__name__}.", onerror=on_error):
-        if unqualify(module.name).startswith("_"):
+        if unqualify(module.name).startswith("_") or module.name in skip_modules:
             # Ignore module/package names starting with an underscore.
             continue
 
@@ -37,6 +39,11 @@ def walk_extensions() -> Generator[tuple[str, "ExtMetadata"], None, None]:
         if not inspect.isfunction(getattr(imported, "setup", None)):
             # If it lacks a setup function, it's not an extension.
             continue
+
+        # This check only excludes init files which add an extension.
+        if module.name.endswith(".__init__"):
+            # Add all submodules to skip list to avoid re-processing.
+            skip_modules.add(module.name)
 
         ext_metadata = getattr(imported, "EXT_METADATA", None)
         if ext_metadata is not None:
