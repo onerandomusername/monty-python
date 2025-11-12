@@ -1,19 +1,16 @@
 import asyncio
-import base64
 import functools
 import operator
 import random
 import re
 from collections.abc import Mapping
-from typing import Any, overload
+from typing import Any
 
 import cachingutils
 import disnake
 import ghretos
 import githubkit
 import githubkit.exception
-import githubkit.rest
-import msgpack
 from disnake.ext import commands
 
 import monty.utils.services
@@ -26,7 +23,7 @@ from monty.utils import responses, scheduling
 from monty.utils.messages import DeleteButton, suppress_embeds
 
 from . import _handlers as github_handlers
-from . import graphql_models
+from .client import GitHubFetcher
 
 
 # Maximum number of issues in one message
@@ -42,25 +39,6 @@ EXPAND_ISSUE_CUSTOM_ID_REGEX = re.compile(
     + r"(?P<user_id>[0-9]+):(?P<current_state>0|1):"
     r"(?P<org>[a-zA-Z0-9][a-zA-Z0-9\-]{1,39})\/(?P<repo>[\w\-\.]{1,100})#(?P<number>[0-9]+)"
 )
-
-DISCUSSION_COMMENT_GRAPHQL_QUERY = """
-    query getDiscussionComment($id: ID!) {
-        node(id: $id) {
-            ... on DiscussionComment {
-                id
-                html_url: url
-                body
-                created_at: createdAt
-                user: author {
-                    __typename
-                    login
-                    html_url: url
-                    avatar_url: avatarUrl
-                }
-            }
-        }
-    }
-"""
 
 repo_name_number_getter = operator.attrgetter("repo.owner", "repo.name", "number")
 
@@ -79,6 +57,7 @@ class GithubInfo(
 
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
+        self.client: GitHubFetcher = GitHubFetcher(bot.github)
 
         self.autolink_cache: cachingutils.MemoryCache[
             int, tuple[disnake.Message, dict[ghretos.GitHubResource, github_handlers.InfoSize]]
@@ -94,164 +73,12 @@ class GithubInfo(
         data = r.json()
         monty.utils.services.update_github_ratelimits_from_ratelimit_page(data)
 
-    def _format_github_global_id(self, prefix: str, *ids: int, template: int = 0) -> str:
-        # This is not documented, but is at least the current format as of writing this comment.
-        # These IDs are supposed to be treated as opaque strings, but fetching specific resources like
-        # issue/discussion comments via graphql is a huge pain otherwise when only knowing the integer ID
-        packed = msgpack.packb(
-            [
-                # template index; global IDs of a specific type *can* have multiple different templates
-                # (i.e. sets of variables that follow); in almost all cases, this is 0
-                template,
-                # resource IDs, variable amount depending on global ID type
-                *ids,
-            ]
-        )
-        encoded = base64.urlsafe_b64encode(packed).decode()
-        encoded = encoded.rstrip("=")  # this isn't necessary, but github generates these IDs without padding
-        return f"{prefix}_{encoded}"
-
-    @overload
-    async def fetch_resource(self, obj: ghretos.User) -> githubkit.rest.PublicUser: ...
-
-    @overload
-    async def fetch_resource(self, obj: ghretos.Repo) -> githubkit.rest.Repository: ...
-
-    @overload
-    async def fetch_resource(self, obj: ghretos.Issue) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.PullRequest) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.IssueComment) -> githubkit.rest.IssueComment: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.PullRequestComment) -> githubkit.rest.IssueComment: ...
-    @overload
     async def fetch_resource(
-        self, obj: ghretos.PullRequestReviewComment
-    ) -> githubkit.rest.PullRequestReviewComment: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.Discussion) -> githubkit.rest.Issue | githubkit.rest.Discussion: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.DiscussionComment) -> graphql_models.DiscussionComment: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.IssueEvent) -> githubkit.rest.IssueEvent: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.PullRequestEvent) -> githubkit.rest.IssueEvent: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.Commit) -> githubkit.rest.Commit: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.Repo) -> githubkit.rest.Repository: ...
-    @overload
-    async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel: ...
-
-    async def fetch_resource(self, obj: ghretos.GitHubResource) -> githubkit.GitHubModel:
+        self,
+        resource: ghretos.GitHubResource,
+    ) -> githubkit.GitHubModel:
         """Fetch a GitHub resource."""
-        # TODO: add repo exists validation before fetching multiple resources from one repo?
-        # This would reduce wasted requests on private repos, and keep discussions from making many extra requests.
-        try_discussion: bool = False
-
-        headers = {
-            "Accept": "application/vnd.github.full+json",
-        }
-
-        # Both issues and PRs are handled by the issues endpoint, because PRs are Issues.
-        if isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource)):
-            try:
-                r = await self.bot.github.rest.issues.async_get(
-                    owner=obj.repo.owner,
-                    repo=obj.repo.name,
-                    issue_number=obj.number,
-                    headers=headers,
-                )
-            except githubkit.exception.RequestFailed as e:
-                if e.response.status_code != 404:
-                    raise
-                try_discussion = True
-            else:
-                return r.parsed_data
-        if isinstance(obj, (ghretos.IssueComment, ghretos.PullRequestComment)):
-            r = await self.bot.github.rest.issues.async_get_comment(
-                owner=obj.repo.owner,
-                repo=obj.repo.name,
-                comment_id=obj.comment_id,
-                headers=headers,
-            )
-            return r.parsed_data
-        if isinstance(obj, (ghretos.PullRequestReviewComment)):
-            r = await self.bot.github.rest.pulls.async_get_review_comment(
-                owner=obj.repo.owner,
-                repo=obj.repo.name,
-                comment_id=obj.comment_id,
-                headers=headers,
-            )
-            return r.parsed_data
-        if (
-            try_discussion and isinstance(obj, (ghretos.Issue, ghretos.PullRequest, ghretos.NumberedResource))
-        ) or isinstance(obj, ghretos.Discussion):
-            url = f"/repos/{obj.repo.owner}/{obj.repo.name}/discussions/{obj.number}"
-            try:
-                r = await self.bot.github.arequest(
-                    "GET",
-                    url,
-                    headers=headers | {"X-GitHub-Api-Version": self.bot.github.rest.meta._REST_API_VERSION},
-                    response_model=githubkit.rest.Discussion,
-                )
-            except githubkit.exception.RequestFailed as e:
-                if try_discussion or e.response.status_code != 404:
-                    raise
-                r = await self.bot.github.rest.issues.async_get(
-                    owner=obj.repo.owner,
-                    repo=obj.repo.name,
-                    issue_number=obj.number,
-                    headers=headers,
-                )
-            return r.parsed_data
-        if isinstance(obj, (ghretos.IssueEvent, ghretos.PullRequestEvent)):
-            r = await self.bot.github.rest.issues.async_get_event(
-                owner=obj.repo.owner,
-                repo=obj.repo.name,
-                event_id=obj.event_id,
-                headers=headers,
-            )
-            return r.parsed_data
-        if isinstance(obj, ghretos.DiscussionComment):
-            r = await self.bot.github.graphql.arequest(
-                DISCUSSION_COMMENT_GRAPHQL_QUERY,
-                variables={"id": self._format_github_global_id("DC", 0, obj.comment_id)},
-            )
-            # Move `__typename` to `type` to fit the models
-            r["node"]["user"]["type"] = r["node"]["user"].pop("__typename")
-            return graphql_models.DiscussionComment(**r["node"])
-
-        if isinstance(obj, ghretos.Commit):
-            r = await self.bot.github.rest.repos.async_get_commit(
-                owner=obj.repo.owner,
-                repo=obj.repo.name,
-                ref=obj.sha,
-                headers=headers,
-            )
-            return r.parsed_data
-        if isinstance(obj, ghretos.Repo):
-            r = await self.bot.github.rest.repos.async_get(
-                owner=obj.owner,
-                repo=obj.name,
-                headers=headers,
-            )
-            return r.parsed_data
-
-        if isinstance(obj, ghretos.User):
-            r = await self.bot.github.rest.users.async_get_by_username(
-                username=obj.login,
-                headers=headers,
-            )
-            data = r.parsed_data
-            # Even though we use a token with no additional scopes, validate that we CERTAINLY only have public data.
-            if data.user_view_type != "public":
-                msg = "User is not public"
-                raise ValueError(msg)
-            return data
-
-        raise NotImplementedError  # Type is not yet supported
+        return await self.client.fetch_resource(resource)
 
     async def get_full_reply(
         self,
@@ -558,7 +385,7 @@ class GithubInfo(
             return
         context = ghretos.User(login=user)
         try:
-            obj = await self.fetch_resource(context)
+            obj = await self.client.fetch_user(username=user)
         except githubkit.exception.RequestFailed as e:
             if e.response.status_code == 404:
                 msg = "GitHub user not found."
@@ -591,7 +418,7 @@ class GithubInfo(
 
         context = ghretos.Repo(owner=user, name=repo)
         try:
-            obj = await self.fetch_resource(context)
+            obj = await self.client.fetch_repo(owner=user, repo=repo)
         except githubkit.exception.RequestFailed as e:
             if e.response.status_code == 404:
                 msg = "GitHub repository not found."

@@ -259,16 +259,18 @@ class UserRenderer(GitHubRenderer[githubkit.rest.PublicUser, ghretos.User]):
         return obj.name or obj.login, [text_display]
 
 
-class RepoRenderer(GitHubRenderer[githubkit.rest.Repository, ghretos.Repo]):
+class RepoRenderer(GitHubRenderer[githubkit.rest.Repository | githubkit.rest.FullRepository, ghretos.Repo]):
     def render_tiny(
         self,
-        obj: githubkit.rest.Repository,
+        obj: githubkit.rest.Repository | githubkit.rest.FullRepository,
         *,
         context: ghretos.Repo,
     ) -> str:
         return f"📦 [{obj.name}](<{obj.html_url}>)"
 
-    def render_ogp_cv2(self, obj: githubkit.rest.Repository, *, context: ghretos.Repo) -> disnake.ui.Container:
+    def render_ogp_cv2(
+        self, obj: githubkit.rest.Repository | githubkit.rest.FullRepository, *, context: ghretos.Repo
+    ) -> disnake.ui.Container:
         container = disnake.ui.Container()
         text_display = disnake.ui.TextDisplay("")
         text_display.content = f"## [{obj.name}](<{obj.html_url}>)\n\n"
@@ -288,7 +290,7 @@ class RepoRenderer(GitHubRenderer[githubkit.rest.Repository, ghretos.Repo]):
 
     def render_full(
         self,
-        obj: githubkit.rest.Repository,
+        obj: githubkit.rest.Repository | githubkit.rest.FullRepository,
         *,
         context: ghretos.Repo,
     ) -> tuple[str, list[disnake.ui.TextDisplay]]:
