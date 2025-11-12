@@ -200,7 +200,7 @@ class GitHubFetcher:
                 return await self.fetch_pull_request(owner=obj.repo.owner, repo=obj.repo.name, issue_number=obj.number)
             case ghretos.Discussion():
                 return await self.fetch_discussion(
-                    owner=obj.repo.owner, repo=obj.repo.owner, discussion_number=obj.number
+                    owner=obj.repo.owner, repo=obj.repo.name, discussion_number=obj.number
                 )
             case ghretos.IssueComment():
                 return await self.fetch_issue_comment(
