@@ -104,7 +104,7 @@ jobs:
           version: 'latest'
 
       - name: Authenticate with Kubernetes
-        uses: azure/k8s-set-context@212a19233d93f03eceaac31ae5a1d1acf650b6ef # v4.0.1
+        uses: azure/k8s-set-context@ae59a723ba9abe7a9655538854a025448dbab4aa # v4.0.2
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBECONFIG }}
