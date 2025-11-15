@@ -99,7 +99,7 @@ class Configuration(
     @commands.Cog.listener("on_guild_remove")
     async def remove_config_on_guild_remove(self, guild: disnake.Guild) -> None:
         """Delete the config as soon as we leave a guild."""
-        async with self.bot.db.begin() as session:
+        async with self.bot.db_engine.begin() as session:
             stmt = sa.delete(GuildConfig).where(GuildConfig.id == guild.id, GuildConfig.guild_id == guild.id)
             result = await session.execute(stmt)
             if result.rowcount != 1:
