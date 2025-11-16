@@ -31,10 +31,13 @@ log = get_logger(__name__)
 
 # start_char, line_delimiter, and end_char are currently unused.
 GITHUB_RE = re.compile(
-    r"https?:\/\/github\.(?:com|dev)\/(?P<user>[a-zA-Z0-9-]+)\/(?P<repo>[a-zA-Z0-9-]+)\/(?:blob|tree)\/"
-    r"(?P<path>[^#>]+/[^#>]+)(\?[^#>]+)?"
-    r"(?:(#L(?P<L>L)?(?P<start_line>\d+)(?(L)C(?P<start_char>\d+))(?:(?P<line_delimiter>[-~\:]"
-    r"|(\.\.))L(?P<end_line>\d+)(?(L)C(?P<end_char>\d+)))?))"
+    r"""
+    https?:\/\/github\.(?:com|dev)\/(?P<user>[a-zA-Z0-9-]+)\/(?P<repo>[a-zA-Z0-9-_.]+)\/(?:blob|tree)\/
+    (?P<path>[^#>]+\/[^#>]+)(\?[^#>]+)?
+    (?:(\#L+(?P<start_line>\d+)(?P<C>C(?P<start_char>\d+))?(?:(?P<line_delimiter>[-~\:]
+    |(\.\.))L(?P<end_line>\d+)(?(C)C(?P<end_char>\d+))?)?))
+    """,
+    flags=re.VERBOSE,
 )
 
 GITHUB_GIST_RE = re.compile(
@@ -136,7 +139,6 @@ class CodeSnippets(commands.Cog, name="Code Snippets"):
         tags = r.json()
         refs = branches + tags
         ref, encoded_file_path = self._find_ref(path, refs)
-        ref, encoded_file_path = block_url_traversal(ref, encoded_file_path)
 
         r = await self.bot.github.rest.repos.async_get_content(
             user,
