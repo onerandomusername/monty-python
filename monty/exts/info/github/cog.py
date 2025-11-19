@@ -437,32 +437,19 @@ class GithubInfo(
                 )
                 return
 
-        await ctx.send(
-            f"{constants.Emojis.decline} Could not parse GitHub resource from input.",
-            components=DeleteButton(
-                allow_manage_messages=True,
-                user=ctx.author,
-                initial_message=ctx.message,
-            ),
-        )
-        return
+        msg = "Could not parse a valid GitHub resource from input."
+        raise commands.BadArgument(msg)
 
     @github_group.command(name="user", description="Fetch GitHub user information.")
     async def github_user(self, ctx: commands.Context, user: str) -> None:
         """Fetch GitHub user information."""
         # validate the user
         if not re.fullmatch(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,38})$", user):
-            await ctx.send(
-                f"{constants.Emojis.decline} Invalid GitHub username.",
-                components=[
-                    DeleteButton(
-                        allow_manage_messages=True,
-                        user=ctx.author,
-                        initial_message=ctx.message,
-                    )
-                ],
+            msg = (
+                "Invalid GitHub username. Usernames must be 1-39 characters long, "
+                "and can only contain alphanumeric characters or hyphens."
             )
-            return
+            raise commands.BadArgument(msg)
         context = ghretos.User(login=user)
         try:
             obj = await self.client.fetch_user(username=user)
