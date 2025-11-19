@@ -81,7 +81,7 @@ mdformat = [
     "mdformat-frontmatter<3.0.0,>=2.0.8",
 ]
 nox = ["nox>=2025.5.1"]
-ruff = ["ruff==0.14.4"]
+ruff = ["ruff==0.14.5"]
 tools = [
     "poethepoet>=0.37.0",
     "prek>=0.2.1,<0.3",
