@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import gzip
 import json
 import operator
 import pathlib
@@ -115,6 +116,31 @@ class GithubInfo(
         """Resolve the owner of a GitHub repository."""
         if repo.owner:
             return repo
+        if default_user:
+            # Check if the repo exists under the default user first
+            response = await self.bot.http_session.cache.get_response(
+                self.bot.http_session.cache.create_key(
+                    "GET", f"https://api.github.com/repos/{default_user}/{repo.name}"
+                )
+            )
+            if response:
+                if response.status == 200:
+                    repo_json = await response.read()
+                    if response.headers.get("Content-Encoding") == "gzip":
+                        try:
+                            repo_json = gzip.decompress(repo_json)
+                        except Exception:
+                            pass
+                    repo_data = githubkit.rest.FullRepository.model_validate_json(repo_json.decode())
+                    return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
+                if response != 404:
+                    try:
+                        repo_data = await self.client.fetch_repo(owner=default_user, repo=repo.name)
+                        return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
+                    except githubkit.exception.RequestFailed as e:
+                        if e.response.status_code != 404:
+                            raise
+
         if repo.name in self.short_repos:
             return ghretos.Repo(
                 owner=self.short_repos[repo.name]["owner"],
@@ -126,8 +152,6 @@ class GithubInfo(
                 break
 
         else:
-            # TODO: Check if the repository belongs to the default user before returning
-            # Fallback to the default user if provided
             if default_user:
                 return ghretos.Repo(owner=default_user, name=repo.name)
             msg = "GitHub repository not found."
