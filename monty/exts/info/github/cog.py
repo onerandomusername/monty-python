@@ -123,23 +123,22 @@ class GithubInfo(
                     "GET", f"https://api.github.com/repos/{default_user}/{repo.name}"
                 )
             )
-            if response:
-                if response.status == 200:
-                    repo_json = await response.read()
-                    if response.headers.get("Content-Encoding") == "gzip":
-                        try:
-                            repo_json = gzip.decompress(repo_json)
-                        except Exception:
-                            pass
-                    repo_data = githubkit.rest.FullRepository.model_validate_json(repo_json.decode())
-                    return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
-                if response != 404:
+            if response and response.status == 200:
+                repo_json = await response.read()
+                if response.headers.get("Content-Encoding") == "gzip":
                     try:
-                        repo_data = await self.client.fetch_repo(owner=default_user, repo=repo.name)
-                        return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
-                    except githubkit.exception.RequestFailed as e:
-                        if e.response.status_code != 404:
-                            raise
+                        repo_json = gzip.decompress(repo_json)
+                    except Exception:
+                        pass
+                repo_data = githubkit.rest.FullRepository.model_validate_json(repo_json.decode())
+                return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
+            elif not response or response.status != 404:
+                try:
+                    repo_data = await self.client.fetch_repo(owner=default_user, repo=repo.name)
+                    return ghretos.Repo(owner=repo_data.owner.login, name=repo_data.name)
+                except githubkit.exception.RequestFailed as e:
+                    if e.response.status_code != 404:
+                        raise
 
         if repo.name in self.short_repos:
             return ghretos.Repo(
