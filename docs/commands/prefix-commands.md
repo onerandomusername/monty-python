@@ -151,6 +151,8 @@ Fetches info from GitHub.
 
 *Fetch GitHub repository information.*
 
+**Can also use:** `github repo_info`, `github repository`
+
 ### `github user <user>`
 
 *Fetch GitHub user information.*

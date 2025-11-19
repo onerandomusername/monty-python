@@ -248,8 +248,8 @@ Fetches info from GitHub.
 
 ### `github info`
 
-- `arg` (`string`) (required) The GitHub resource(s) to fetch information about.
-    Can be a URL or shorthand like
+- `arg` (`string`) (required) The GitHub resource to view . Can be a URL or
+    shorthand like owner/repo#issue_number.
 
 Fetch GitHub information.
 
