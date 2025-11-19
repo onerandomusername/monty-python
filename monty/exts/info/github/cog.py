@@ -301,6 +301,9 @@ class GithubInfo(
         matcher_settings = self._get_base_matcher_settings()
         matcher_settings.shorthand = True
         matcher_settings.short_numberables = True
+        matcher_settings.short_repo = True
+        matcher_settings.short_bare_username = True
+
         matcher_settings.issues = True
         matcher_settings.pull_requests = True
         matcher_settings.issue_comments = True
@@ -469,11 +472,11 @@ class GithubInfo(
                 raise commands.UserInputError(msg) from e
             raise
         components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
-        components.append(github_handlers.UserRenderer().render_ogp_cv2(obj, context=context))
+        embed = github_handlers.UserRenderer().render_ogp(obj, context=context)
         components.append(
             disnake.ui.ActionRow(DeleteButton(allow_manage_messages=True, user=ctx.author, initial_message=ctx.message))
         )
-        await ctx.send(components=components)
+        await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="repo", aliases=("repository", "repo_info"))
     async def github_repo(self, ctx: commands.Context, user_and_repo: str, repo: str = "") -> None:
@@ -513,11 +516,11 @@ class GithubInfo(
             raise
 
         components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
-        components.append(github_handlers.RepoRenderer().render_ogp_cv2(obj, context=context))
+        embed = github_handlers.RepoRenderer().render_ogp(obj, context=context)
         components.append(
             disnake.ui.ActionRow(DeleteButton(allow_manage_messages=True, user=ctx.author, initial_message=ctx.message))
         )
-        await ctx.send(components=components)
+        await ctx.send(embed=embed, components=components)
 
     @github_group.command(name="ratelimit", aliases=("rl",), hidden=True)
     @commands.is_owner()

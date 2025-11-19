@@ -3,6 +3,7 @@
 import dataclasses
 import datetime
 import enum
+import re
 from abc import abstractmethod
 from typing import Generic, Literal, NamedTuple, TypeVar, overload
 
@@ -84,13 +85,19 @@ def titlize_issue(issue: githubkit.rest.Issue) -> str:
 
 
 def is_mannequin_user(
-    user: githubkit.rest.SimpleUser | githubkit.rest.DiscussionPropUser | graphql_models.DiscussionCommentUser,
+    user: githubkit.rest.SimpleUser
+    | githubkit.rest.PublicUser
+    | githubkit.rest.DiscussionPropUser
+    | graphql_models.DiscussionCommentUser,
 ) -> bool:
     return bool(user.type and user.type.casefold() == "mannequin")
 
 
 def get_user_display_name(
-    user: githubkit.rest.SimpleUser | githubkit.rest.DiscussionPropUser | graphql_models.DiscussionCommentUser,
+    user: githubkit.rest.SimpleUser
+    | githubkit.rest.PublicUser
+    | githubkit.rest.DiscussionPropUser
+    | graphql_models.DiscussionCommentUser,
     *,
     include_login_alias: bool = False,
     include_html_url: bool = False,
@@ -213,12 +220,50 @@ class UserRenderer(GitHubRenderer[githubkit.rest.PublicUser, ghretos.User]):
 
     def render_ogp(self, obj: githubkit.rest.PublicUser, *, context: ghretos.User) -> disnake.Embed:
         embed = disnake.Embed(
-            title=obj.name or obj.login,
+            title=f"`{obj.login}`'s GitHub profile info",
+            description=f"```{obj.bio}```\n" if obj.bio else "",
+            colour=disnake.Colour.blurple(),
             url=obj.html_url,
-            description=obj.bio,
-            color=disnake.Color(0),
+            timestamp=obj.created_at,
         )
         embed.set_thumbnail(url=obj.avatar_url)
+        embed.set_footer(text="Account created at")
+
+        if obj.type == "User":
+            embed.add_field(
+                name="Followers",
+                value=f"[{obj.followers}]({obj.html_url}?tab=followers)",
+                inline=True,
+            )
+            embed.add_field(
+                name="Following",
+                value=f"[{obj.following}]({obj.html_url}?tab=following)",
+                inline=True,
+            )
+        elif obj.type == "Organization":
+            embed.add_field(
+                name="Followers",
+                value=f"[{obj.followers}](https://github.com/orgs/{obj.login}/followerss)",
+                inline=True,
+            )
+
+        embed.add_field(
+            name="Public repos",
+            value=f"[{obj.public_repos}]({obj.html_url}?tab=repositories)",
+        )
+
+        if obj.type == "User":
+            embed.add_field(
+                name="Gists",
+                value=f"[{obj.public_gists}]({obj.html_url}/gists)",
+            )
+
+        if obj.blog:
+            blog = obj.blog
+            if not re.match(r"^https?:\/\/", blog):
+                blog = f"https://{blog}"
+            embed.add_field(name="Website", value=blog)
+
         return embed
 
     def render_ogp_cv2(self, obj: githubkit.rest.PublicUser, *, context: ghretos.User) -> disnake.ui.Container:
@@ -271,6 +316,53 @@ class RepoRenderer(
         context: ghretos.Repo,
     ) -> str:
         return f"📦 [{obj.name}](<{obj.html_url}>)"
+
+    def render_ogp(
+        self,
+        obj: githubkit.rest.Repository | githubkit.rest.FullRepository | githubkit.rest.RepoSearchResultItem,
+        *,
+        context: ghretos.Repo,
+    ) -> disnake.Embed:
+        html_url = obj.html_url
+        description = obj.description or ""
+        embed = disnake.Embed(
+            title=obj.name,
+            colour=disnake.Colour.blurple(),
+            url=html_url,
+        )
+
+        # If it's a fork, then it will have a parent key
+        if isinstance(obj, githubkit.rest.FullRepository) and obj.parent:
+            parent = obj.parent
+            description += f"\n\nForked from [{parent.full_name}]({parent.html_url})"
+
+        if repo_owner := obj.owner:
+            embed.set_author(
+                name=repo_owner.login,
+                url=repo_owner.html_url,
+                icon_url=repo_owner.avatar_url,
+            )
+
+        repo_created_at = obj.created_at and obj.created_at.strftime("%d/%m/%Y")
+        last_pushed = obj.pushed_at and obj.pushed_at.strftime("%d/%m/%Y at %H:%M")
+
+        embed.set_footer(
+            text=(
+                f"{obj.forks_count} ⑂ "
+                f"• {obj.stargazers_count} ⭐ "
+                f"• Created At {repo_created_at} "
+                f"• Last Commit {last_pushed}"
+            )
+        )
+
+        # mirrors have a mirror_url key. See google/skia as an example.
+        if obj.mirror_url:
+            mirror_url = obj.mirror_url
+            description += f"\n\nMirrored from <{mirror_url}>."
+
+        embed.description = description
+
+        return embed
 
     def render_ogp_cv2(
         self,
@@ -609,6 +701,9 @@ HANDLER_MAPPING: dict[type[ghretos.GitHubResource], type[GitHubRenderer]] = {
     ghretos.PullRequestComment: IssueCommentRenderer,
     ghretos.PullRequestReviewComment: IssueCommentRenderer,
     ghretos.DiscussionComment: IssueCommentRenderer,
+    # Non-autolinked
+    ghretos.User: UserRenderer,
+    ghretos.Repo: RepoRenderer,
 }
 
 # GitHub supports url redirects on the frontend side for certain resources.
