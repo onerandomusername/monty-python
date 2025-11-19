@@ -889,11 +889,18 @@ wheels = [
 
 [[package]]
 name = "disnake"
-version = "2.12.0a4866+gb325cc45"
-source = { git = "https://github.com/DisnakeDev/disnake.git?rev=master#b325cc45295c814df8aecec19663253f18e475d4" }
+version = "2.11.0a74+g5e3758de"
+source = { git = "https://github.com/DisnakeDev/disnake.git?rev=master#5e3758de2ab2be13fe0c1996d65b2007fa36a0d9" }
 dependencies = [
     { name = "aiohttp" },
     { name = "typing-extensions" },
+    { name = "yarl" },
+]
+
+[package.optional-dependencies]
+speed = [
+    { name = "aiohttp", extra = ["speedups"] },
+    { name = "orjson" },
 ]
 
 [[package]]
@@ -1945,8 +1952,7 @@ name = "monty"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
-    { name = "aiodns" },
-    { name = "aiohttp", extra = ["speedups"] },
+    { name = "aiohttp" },
     { name = "aiohttp-client-cache" },
     { name = "alembic" },
     { name = "arrow" },
@@ -1956,7 +1962,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "cachingutils" },
     { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "disnake" },
+    { name = "disnake", extra = ["speed"] },
     { name = "githubkit" },
     { name = "httpx" },
     { name = "httpx-aiohttp" },
@@ -2052,8 +2058,7 @@ typing = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiodns", specifier = "~=3.4" },
-    { name = "aiohttp", extras = ["speedups"], specifier = "~=3.13.0" },
+    { name = "aiohttp", specifier = "~=3.13.0" },
     { name = "aiohttp-client-cache", specifier = ">=0.14.1" },
     { name = "alembic", specifier = ">=1.15.2,<2.0.0" },
     { name = "arrow", specifier = "~=1.4.0" },
@@ -2063,7 +2068,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4,<5.0.0" },
     { name = "cachingutils", git = "https://github.com/onerandomusername/cachingutils.git?rev=vcokltfre%2Ffeat%2Fv2" },
     { name = "colorama", marker = "sys_platform == 'win32'", specifier = "~=0.4.5" },
-    { name = "disnake", git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
+    { name = "disnake", extras = ["speed"], git = "https://github.com/DisnakeDev/disnake.git?rev=master" },
     { name = "githubkit", specifier = ">=0.13.5" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-aiohttp", specifier = ">=0.1.9" },

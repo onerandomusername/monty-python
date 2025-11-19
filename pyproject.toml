@@ -11,9 +11,8 @@ name = "monty"
 version = "0.0.1"
 description = "Helpful bot for python, github, and discord things."
 dependencies = [
-    "aiodns~=3.4",
     "aiohttp-client-cache>=0.14.1",
-    "aiohttp[speedups]~=3.13.0",
+    "aiohttp~=3.13.0",
     "alembic<2.0.0,>=1.15.2",
     "arrow~=1.4.0",
     "asyncpg~=0.30.0",
@@ -22,7 +21,7 @@ dependencies = [
     "beautifulsoup4<5.0.0,>=4.13.4",
     "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
     "colorama~=0.4.5; sys_platform == \"win32\"",
-    "disnake @ git+https://github.com/DisnakeDev/disnake.git@master",
+    "disnake[speed] @ git+https://github.com/DisnakeDev/disnake.git@master",
     "githubkit>=0.13.5",
     "httpx>=0.28.1",
     "httpx-aiohttp>=0.1.9",
