@@ -1,17 +1,21 @@
 import asyncio
 import functools
+import json
 import operator
+import pathlib
 import random
 import re
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, TypedDict
 
 import cachingutils
 import disnake
 import ghretos
 import githubkit
 import githubkit.exception
+import githubkit.rest
 from disnake.ext import commands
+from typing_extensions import Protocol, Required, runtime_checkable
 
 import monty.utils.services
 from monty import constants
@@ -46,6 +50,20 @@ repo_name_number_getter = operator.attrgetter("repo.owner", "repo.name", "number
 log = get_logger(__name__)
 
 
+class GitHubShorthandAliases(TypedDict, total=False):
+    owner: Required[str]
+    repo: Required[str]
+    alias_for_issues: bool
+    """Whether this shorthand can be used for issues/PRs in addition to repos."""
+
+
+@runtime_checkable
+class ImplementsRepository(Protocol):
+    """Protocol for GitHub models that implement a repository."""
+
+    repo: ghretos.Repo
+
+
 class GithubInfo(
     commands.Cog,
     name="GitHub Information",
@@ -59,6 +77,15 @@ class GithubInfo(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.client: GitHubFetcher = GitHubFetcher(bot.github)
+        self.short_repos: dict[str, GitHubShorthandAliases] = json.loads(
+            pathlib.Path("monty/resources/repo_aliases.json").read_text()
+        )
+
+        # Validate casefold.
+        assert all(
+            repo == repo.casefold() and value.get("repo") and value.get("owner")
+            for repo, value in self.short_repos.items()
+        ), "Repository shorthand keys must be casefolded and include exactly one `/` in the data file."
 
         self.autolink_cache: cachingutils.MemoryCache[
             int, tuple[disnake.Message, dict[ghretos.GitHubResource, github_handlers.InfoSize]]
@@ -80,6 +107,40 @@ class GithubInfo(
     ) -> githubkit.GitHubModel:
         """Fetch a GitHub resource."""
         return await self.client.fetch_resource(resource)
+
+    async def resolve_repo(
+        self,
+        repo: ghretos.Repo,
+        *,
+        default_user: str | None = None,
+    ) -> ghretos.Repo:
+        """Resolve the owner of a GitHub repository."""
+        if repo.owner:
+            return repo
+        if repo.name in self.short_repos:
+            return ghretos.Repo(
+                owner=self.short_repos[repo.name]["owner"],
+                name=self.short_repos[repo.name]["repo"],
+            )
+        r = await self.bot.github.rest.search.async_repos(q=(repo.name + " is:public"), per_page=20, order="desc")
+        for repo_data in r.parsed_data.items:
+            if repo_data.name.casefold() == repo.name.casefold():
+                break
+
+        else:
+            # TODO: Check if the repository belongs to the default user before returning
+            # Fallback to the default user if provided
+            if default_user:
+                return ghretos.Repo(owner=default_user, name=repo.name)
+            msg = "GitHub repository not found."
+            raise commands.UserInputError(msg)
+
+        user, repo_name = repo_data.full_name.split("/", 1)
+
+        if not isinstance(repo_data, (githubkit.rest.RepoSearchResultItem)):
+            msg = "Could not resolve repository owner."
+            raise ValueError(msg)
+        return ghretos.Repo(owner=user, name=repo_name)
 
     async def get_full_reply(
         self,
@@ -142,15 +203,15 @@ class GithubInfo(
             if not handler:
                 continue
 
-            if match_repo := getattr(match, "repo", None):
+            if isinstance(match, ImplementsRepository):
                 if repo is None:
-                    repo = match_repo.name.casefold()
-                if repo != match_repo.name.casefold():
+                    repo = match.repo.name.casefold()
+                if repo != match.repo.name.casefold():
                     repo = True  # multiple repos
                 if owner is not True:
                     if owner is None:
-                        owner = match_repo.owner.casefold()
-                    if owner != match_repo.owner.casefold():
+                        owner = match.repo.owner.casefold()
+                    if owner != match.repo.owner.casefold():
                         owner = True  # multiple owners
 
             # Run resource validation
@@ -171,15 +232,15 @@ class GithubInfo(
                     )
                     continue  # skip invalid data
 
-                if match != reparsed and (match_repo := getattr(reparsed, "repo", None)):
+                if match != reparsed and isinstance(reparsed, ImplementsRepository):
                     if repo is None:
-                        repo = match_repo.name.casefold()
-                    if repo != match_repo.name.casefold():
+                        repo = reparsed.repo.name.casefold()
+                    if repo != reparsed.repo.name.casefold():
                         repo = True  # multiple repos
                     if owner is not True:
                         if owner is None:
-                            owner = match_repo.owner.casefold()
-                        if owner != match_repo.owner.casefold():
+                            owner = reparsed.repo.owner.casefold()
+                        if owner != reparsed.repo.owner.casefold():
                             owner = True  # multiple owners
 
                 match = reparsed  # use the reparsed version for more accurate data
@@ -287,11 +348,22 @@ class GithubInfo(
         for segment in context.text.split():
             match = ghretos.parse_shorthand(
                 segment,
-                default_user=default_user,
+                allow_optional_user=True,
                 settings=settings,
             )
-            if match is not None:
-                matches[match] = github_handlers.InfoSize.TINY
+            if match is None:
+                continue
+            # resolve the repo owner if needed
+            try:
+                if isinstance(match, ghretos.Repo) and not match.owner:
+                    match = await self.resolve_repo(match, default_user=default_user)
+                elif isinstance(match, ImplementsRepository) and not match.repo.owner:
+                    object.__setattr__(match, "repo", await self.resolve_repo(match.repo, default_user=default_user))
+            except commands.UserInputError:
+                continue
+
+            matches[match] = github_handlers.InfoSize.TINY
+
         for url in context.urls:
             match = ghretos.parse_url(
                 url,
@@ -403,23 +475,33 @@ class GithubInfo(
         )
         await ctx.send(components=components)
 
-    @github_group.command(name="repo", description="Fetch GitHub repository information.")
+    @github_group.command(name="repo", aliases=("repository", "repo_info"))
     async def github_repo(self, ctx: commands.Context, user_and_repo: str, repo: str = "") -> None:
         """Fetch GitHub repository information."""
         # validate the repo
+        await ctx.trigger_typing()
+        obj: githubkit.rest.FullRepository | githubkit.rest.RepoSearchResultItem | None = None
         if user_and_repo.count("/") == 1 and not repo:
             user, repo = user_and_repo.split("/", 1)
+        elif user_and_repo.count("/") > 1:
+            msg = "Invalid repository format. Please use `user/repo`."
+            raise commands.BadArgument(msg)
         else:
-            user = user_and_repo
+            repo = user_and_repo
+            # Resolve the user from the repo name when possible
+            repo_shorthand = await self.resolve_repo(ghretos.Repo(owner="", name=repo))
+            user = repo_shorthand.owner
+            repo = repo_shorthand.name
+
         if not repo:
             msg = "Repository name is required."
-            raise commands.UserInputError(msg)
+            raise commands.BadArgument(msg)
         if not re.fullmatch(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,38})$", user):
             msg = "Invalid GitHub username."
-            raise commands.UserInputError(msg)
+            raise commands.BadArgument(msg)
         if not re.fullmatch(r"^[\w\-\.]{1,100}$", repo):
             msg = "Invalid GitHub repository name."
-            raise commands.UserInputError(msg)
+            raise commands.BadArgument(msg)
 
         context = ghretos.Repo(owner=user, name=repo)
         try:
@@ -427,8 +509,9 @@ class GithubInfo(
         except githubkit.exception.RequestFailed as e:
             if e.response.status_code == 404:
                 msg = "GitHub repository not found."
-                raise commands.UserInputError(msg) from e
+                raise commands.BadArgument(msg) from e
             raise
+
         components: list[disnake.ui.Container | disnake.ui.ActionRow] = []
         components.append(github_handlers.RepoRenderer().render_ogp_cv2(obj, context=context))
         components.append(
@@ -475,15 +558,19 @@ class GithubInfo(
         Parameters
         ----------
         arg: str
-            The GitHub resource(s) to fetch information about. Can be a URL or shorthand like
+            The GitHub resource to view . Can be a URL or shorthand like owner/repo#issue_number.
         """
         context = MessageContext(arg)
         matches: dict[ghretos.GitHubResource, github_handlers.InfoSize] = {}
 
         settings = self.get_command_matcher_settings()
         for segment in context.text.split():
-            match = ghretos.parse_shorthand(segment, settings=settings)
+            match = ghretos.parse_shorthand(segment, settings=settings, allow_optional_user=True)
             if match is not None:
+                if isinstance(match, ghretos.Repo) and not match.owner:
+                    match = await self.resolve_repo(match)
+                elif isinstance(match, ImplementsRepository) and not match.repo.owner:
+                    object.__setattr__(match, "repo", await self.resolve_repo(match.repo))
                 matches[match] = github_handlers.InfoSize.OGP
         for url in context.urls:
             match = ghretos.parse_url(url, settings=settings)
@@ -491,11 +578,8 @@ class GithubInfo(
                 matches[match] = github_handlers.InfoSize.OGP
 
         if not matches:
-            await inter.response.send_message(
-                f"{constants.Emojis.decline} No GitHub resources found in input.",
-                ephemeral=True,
-            )
-            return
+            msg = "Could not parse any GitHub resources from input. Provide either a GitHub URL or supported shorthand."
+            raise commands.BadArgument(msg)
 
         def sort_key(item: ghretos.GitHubResource) -> tuple:
             try:
@@ -508,11 +592,11 @@ class GithubInfo(
         data = await self.get_reply(matches, limit=650, settings=settings)
 
         if not data:
-            await inter.response.send_message(
-                f"{constants.Emojis.decline} Could not fetch any GitHub resources from input.",
-                ephemeral=True,
+            msg = (
+                "Could not fetch information for the provided GitHub resources. "
+                "Please check your input and be sure they exist."
             )
-            return
+            raise commands.BadArgument(msg)
 
         components: list[disnake.ui.ActionRow] = []
         components.append(

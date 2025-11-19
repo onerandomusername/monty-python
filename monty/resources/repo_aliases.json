@@ -1,0 +1,22 @@
+{
+    "k8s": {
+        "owner": "kubernetes",
+        "repo": "kubernetes",
+        "alias_for_issues": true
+    },
+    "python": {
+        "owner": "python",
+        "repo": "cpython",
+        "alias_for_issues": true
+    },
+    "monty": {
+        "owner": "onerandomusername",
+        "repo": "monty-python",
+        "alias_for_issues": false
+    },
+    "monty-python": {
+        "owner": "onerandomusername",
+        "repo": "monty-python",
+        "alias_for_issues": true
+    }
+}
