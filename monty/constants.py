@@ -240,6 +240,10 @@ class GHColour(int, enum.Enum):
     attention = 0x9A6700
     default = 0x1F2328
 
+    # These are used by Discord
+    issue_comment = 0xE68D60
+    pull_comment = 0xBFE5BF
+
 
 ## DEPRECATED
 # TODO: Will be replaced in favour of application emojis
@@ -329,6 +333,11 @@ class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
         file_name="discussion-closed",
         color=GHColour.done,
     )
+    discussion_closed_unresolved: AppEmojiAnn = Octicon(
+        name="gh-discussion-closed-unresolved",
+        file_name="comment-discussion",
+        color=GHColour.muted,
+    )
     discussion_outdated: AppEmojiAnn = Octicon(
         name="gh-discussion-outdated",
         file_name="discussion-outdated",
@@ -349,8 +358,18 @@ class AppEmojisCls(BaseModel, arbitrary_types_allowed=True):
         file_name="issue-closed",
         color=GHColour.done,
     )
+    issue_closed_generic: AppEmojiAnn = Octicon(
+        name="gh-skip",
+        file_name="skip",
+        color=GHColour.muted,
+    )
     issue_closed_unplanned: AppEmojiAnn = Octicon(
-        name="gh-issue-closed-unplanned",
+        name="gh-skip",
+        file_name="skip",
+        color=GHColour.muted,
+    )
+    issue_closed_duplicate: AppEmojiAnn = Octicon(
+        name="gh-skip",
         file_name="skip",
         color=GHColour.muted,
     )
@@ -395,9 +414,14 @@ class Feature(enum.Enum):
     DISCORD_TOKEN_REMOVER = "DISCORD_BOT_TOKEN_FILTER"  # noqa: S105
     DISCORD_WEBHOOK_REMOVER = "DISCORD_WEBHOOK_FILTER"
     GITHUB_COMMENT_LINKS = "GITHUB_EXPAND_COMMENT_LINKS"
+    "Controls whether or not GitHub comment links are expanded into embeds. Requires GITHUB_ISSUE_LINKS to be enabled."
     GITHUB_DISCUSSIONS = "GITHUB_AUTOLINK_DISCUSSIONS"
-    GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+    "Controls whether or not GitHub Discussions are automatically linked. Requires GITHUB_ISSUE_LINKS to be enabled."
     GITHUB_ISSUE_LINKS = "GITHUB_EXPAND_ISSUE_LINKS"
+    "Controls whether or not GitHub embeds are replaced with Monty's Embeds."
+    # Deprecated, NO-OP
+    GITHUB_ISSUE_EXPAND = "GITHUB_AUTOLINK_ISSUE_SHOW_DESCRIPTION"
+    "Controls whether or not GitHub Embeds are expanded to show more information. Requires GITHUB_ISSUE_LINKS."
     GLOBAL_SOURCE = "GLOBAL_SOURCE_COMMAND"
     INLINE_DOCS = "INLINE_DOCUMENTATION"
     INLINE_EVALULATION = "INLINE_EVALULATION"

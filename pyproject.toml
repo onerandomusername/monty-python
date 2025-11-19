@@ -22,6 +22,7 @@ dependencies = [
     "cachingutils @ git+https://github.com/onerandomusername/cachingutils.git@vcokltfre/feat/v2",
     "colorama~=0.4.5; sys_platform == \"win32\"",
     "disnake[speed] @ git+https://github.com/DisnakeDev/disnake.git@master",
+    "ghretos @ git+https://github.com/onerandomusername/ghretos@main",
     "githubkit>=0.13.5",
     "httpx>=0.28.1",
     "httpx-aiohttp>=0.1.9",

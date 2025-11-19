@@ -1,0 +1,30 @@
+{
+    "k8s": {
+        "owner": "kubernetes",
+        "repo": "kubernetes"
+    },
+    "python": {
+        "owner": "python",
+        "repo": "cpython"
+    },
+    "monty": {
+        "owner": "onerandomusername",
+        "repo": "monty-python"
+    },
+    "monty-python": {
+        "owner": "onerandomusername",
+        "repo": "monty-python"
+    },
+    "community": {
+        "owner": "community",
+        "repo": "community"
+    },
+    "cloudflare": {
+        "owner": "cloudflare",
+        "repo": "cloudflare-docs"
+    },
+    "discord": {
+        "owner": "discord",
+        "repo": "discord-api-docs"
+    }
+}
