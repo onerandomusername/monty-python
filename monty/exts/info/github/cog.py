@@ -53,8 +53,6 @@ log = get_logger(__name__)
 class GitHubShorthandAliases(TypedDict, total=False):
     owner: Required[str]
     repo: Required[str]
-    alias_for_issues: bool
-    """Whether this shorthand can be used for issues/PRs in addition to repos."""
 
 
 @runtime_checkable
