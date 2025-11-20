@@ -44,7 +44,7 @@ METADATA: Final[dict[str, ConfigAttrMetadata]] = dict(  # noqa: C408
     ),
     git_file_expansions=ConfigAttrMetadata(
         type=bool,
-        categories={Category.GitHub, Category.General},
+        category=Category.GitHub,
         name="GitHub/GitLab/BitBucket File Expansions",
         description="Whether to automatically expand links to specific lines for GitHub, GitLab, and BitBucket",
         long_description=(
