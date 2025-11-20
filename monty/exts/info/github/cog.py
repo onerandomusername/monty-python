@@ -492,15 +492,21 @@ class GithubInfo(
         # validate the repo
         await ctx.trigger_typing()
         obj: githubkit.rest.FullRepository | githubkit.rest.RepoSearchResultItem | None = None
-        if user_and_repo.count("/") == 1 and not repo:
+        if user_and_repo.count("/") == 1:
             user, repo = user_and_repo.split("/", 1)
-        elif user_and_repo.count("/") > 1:
-            msg = "Invalid repository format. Please use `user/repo`."
+        elif (user_and_repo + repo).count("/") > 1:
+            msg = (
+                "Invalid repository format. Please use `user/repo`. \n"
+                "If you're feeling lucky, you can also provide a bare repository"
+                " name such as 'rust' to get the most popular repository matching that name."
+            )
             raise commands.BadArgument(msg)
+        elif user_and_repo and repo:
+            user = user_and_repo
+            repo = repo
         else:
-            repo = user_and_repo
-            # Resolve the user from the repo name when possible
-            repo_shorthand = await self.resolve_repo(ghretos.Repo(owner="", name=repo))
+            # Treat the first argument as the repo name only
+            repo_shorthand = await self.resolve_repo(ghretos.Repo(owner="", name=user_and_repo))
             user = repo_shorthand.owner
             repo = repo_shorthand.name
 
