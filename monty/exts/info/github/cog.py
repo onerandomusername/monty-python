@@ -752,7 +752,10 @@ class GithubInfo(
 
         cached = self.autolink_cache.get(after.id)
         if cached is None:
-            return
+            # Check if it was the most recent message sent in the channel, if so, go ahead and process it.
+            if after.channel.last_message_id != after.id:
+                return
+            cached = (None, {})
 
         app_permissions = after.channel.permissions_for(after.guild.me)
 
@@ -777,7 +780,10 @@ class GithubInfo(
                 color=responses.DEFAULT_FAILURE_COLOUR,
                 description=f"Too many issues/PRs! (maximum of {MAXIMUM_ISSUES})",
             )
-            sent_message = await sent_message.edit(embed=embed)
+            if sent_message is None:
+                sent_message = await after.channel.send(embed=embed)
+            else:
+                sent_message = await sent_message.edit(embed=embed)
             self.autolink_cache.set(
                 after.id,
                 (sent_message, matches),
@@ -812,11 +818,19 @@ class GithubInfo(
                 )
             )
         )
-        sent_message = await sent_message.edit(
-            **data,
-            components=components,
-            allowed_mentions=disnake.AllowedMentions.none(),
-        )
+        if sent_message is None:
+            sent_message = await after.reply(
+                **data,
+                components=components,
+                fail_if_not_exists=False,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
+        else:
+            sent_message = await sent_message.edit(
+                **data,
+                components=components,
+                allowed_mentions=disnake.AllowedMentions.none(),
+            )
 
         # update the cache with the new matches
         self.autolink_cache.set(
