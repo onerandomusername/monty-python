@@ -2125,7 +2125,7 @@ dev = [
     { name = "basedpyright", specifier = ">=1.31.6" },
     { name = "fakeredis", specifier = ">=2.29.0,<3.0.0" },
     { name = "markdown-gfm-admonition", specifier = ">=0.1.1,<1.0.0" },
-    { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
+    { name = "mdformat", specifier = ">=0.7.22,<2.0.0" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.8,<3.0.0" },
     { name = "mdformat-gfm", specifier = ">=0.4.1,<1.0.0" },
     { name = "mdformat-gfm-alerts", specifier = ">=2.0.0,<3.0.0" },
@@ -2161,7 +2161,7 @@ docs = [
     { name = "mkdocs-material", extras = ["imaging"], specifier = ">=9.6.20,<10.0.0" },
 ]
 mdformat = [
-    { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
+    { name = "mdformat", specifier = ">=0.7.22,<2.0.0" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.8,<3.0.0" },
     { name = "mdformat-gfm", specifier = ">=0.4.1,<1.0.0" },
     { name = "mdformat-gfm-alerts", specifier = ">=2.0.0,<3.0.0" },
