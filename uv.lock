@@ -1751,17 +1751,17 @@ wheels = [
 
 [[package]]
 name = "mdformat-gfm"
-version = "0.4.1"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown-it-py" },
     { name = "mdformat" },
-    { name = "mdformat-tables" },
     { name = "mdit-py-plugins" },
+    { name = "wcwidth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e5/db/873bad63b36e390a33bc0cf7222442010997d3ccf29a1889f24d28fdeddd/mdformat_gfm-0.4.1.tar.gz", hash = "sha256:e189e728e50cfb15746abc6b3178ca0e2bebbb7a8d3d98fbc9e24bc1a4c65564", size = 7528, upload-time = "2024-12-13T09:21:27.212Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/6f/a626ebb142a290474401b67e2d61e73ce096bf7798ee22dfe6270f924b3f/mdformat_gfm-1.0.0.tar.gz", hash = "sha256:d1d49a409a6acb774ce7635c72d69178df7dce1dc8cdd10e19f78e8e57b72623", size = 10112, upload-time = "2025-10-16T09:12:22.402Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/ba/3d4c680a2582593b8ba568ab60b119d93542fa39d757d65aae3c4f357e29/mdformat_gfm-0.4.1-py3-none-any.whl", hash = "sha256:63c92cfa5102f55779d4e04b16a79a6a5171e658c6c479175c0955fb4ca78dde", size = 8750, upload-time = "2024-12-13T09:21:25.158Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/18/6bc2189b744dd383cad03764f41f30352b1278d2205096f77a29c0b327ad/mdformat_gfm-1.0.0-py3-none-any.whl", hash = "sha256:7305a50efd2a140d7c83505b58e3ac5df2b09e293f9bbe72f6c7bee8c678b005", size = 10970, upload-time = "2025-10-16T09:12:21.276Z" },
 ]
 
 [[package]]
@@ -2127,7 +2127,7 @@ dev = [
     { name = "markdown-gfm-admonition", specifier = ">=0.1.1,<1.0.0" },
     { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.8,<3.0.0" },
-    { name = "mdformat-gfm", specifier = ">=0.4.1,<1.0.0" },
+    { name = "mdformat-gfm", specifier = ">=0.4.1,<2.0.0" },
     { name = "mdformat-gfm-alerts", specifier = ">=2.0.0,<3.0.0" },
     { name = "mdformat-mkdocs", specifier = ">=4.4.1,<5.0.0" },
     { name = "mdformat-pyproject", specifier = ">=0.0.2,<1.0.0" },
@@ -2163,7 +2163,7 @@ docs = [
 mdformat = [
     { name = "mdformat", specifier = ">=0.7.22,<1.0.0" },
     { name = "mdformat-frontmatter", specifier = ">=2.0.8,<3.0.0" },
-    { name = "mdformat-gfm", specifier = ">=0.4.1,<1.0.0" },
+    { name = "mdformat-gfm", specifier = ">=0.4.1,<2.0.0" },
     { name = "mdformat-gfm-alerts", specifier = ">=2.0.0,<3.0.0" },
     { name = "mdformat-mkdocs", specifier = ">=4.4.1,<5.0.0" },
     { name = "mdformat-pyproject", specifier = ">=0.0.2,<1.0.0" },
