@@ -42,7 +42,7 @@ dependencies = [
     "rich>=14.1.0,<15.0.0",
     "sentry-sdk<3.0.0,>=2.28.0",
     "SQLAlchemy[asyncio]~=2.0.41",
-    "statsd<4.0.0,>=3.3.0",
+    "statsd>=3.3.0,<5.0.0",
     "typing-extensions>=4.15.0",
     # markers from https://github.com/MagicStack/uvloop/blob/74f4c96d3fc5281b1820491d2568de771ea7851b/setup.py#L7-L8
     "uvloop>=0.22.1 ; sys_platform != 'cli' and sys_platform != 'cygwin' and sys_platform != 'win32'",
