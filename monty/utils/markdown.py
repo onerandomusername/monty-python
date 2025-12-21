@@ -1,15 +1,20 @@
+import itertools
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
+import mistune.renderers._list
 import mistune.renderers.markdown
 from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
-from mistune import Markdown
 from mistune.core import BlockState
 from typing_extensions import override
 
 from monty import constants
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 __all__ = (
@@ -28,8 +33,6 @@ CODE_BLOCK_RE = re.compile(
 
 # references should be preceded by a non-word character (or element start)
 GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.IGNORECASE)
-
-TASK_LIST_ITEM_RE = re.compile(r"\[[ x]\]\s+", re.IGNORECASE)
 
 
 def remove_codeblocks(content: str) -> str:
@@ -111,6 +114,7 @@ class DiscordRenderer(mistune.renderers.markdown.MarkdownRenderer):
     """Custom renderer for markdown to discord compatible markdown."""
 
     def __init__(self, repo: str | None = None) -> None:
+        super().__init__()
         self._repo = (repo or "").rstrip("/")
 
     @override
@@ -212,39 +216,56 @@ class DiscordRenderer(mistune.renderers.markdown.MarkdownRenderer):
 
         return delim + text + delim
 
-    @staticmethod
-    def hook_list_pre_render(md: Markdown, state: BlockState) -> None:
-        """Mistune hook to render task list items (e.g. `- [x] stuff`) as emojis.
+    @override
+    def list(self, token: RenderToken, state: BlockState) -> str:
+        """Render lists for Discord's (relatively limited subset of) markdown.
 
-        This is essentially a smaller patched version of the builtin task_lists plugin,
-        which unfortunately does not work with `MarkdownRenderer`.
-        See https://github.com/lepture/mistune/issues/340.
+        This includes:
+        - For ordered lists, enforce 1. instead of 1)
+        - For unordered lists, enforce - instead of * or +
+          - Discord technically supports *, but might as well use - for all of them
+        - Always use "tight" list spacing, Discord does not render loose list items properly
 
-        Should be registered using `md.before_render_hooks.append(f)`.
+        Moreover, this renders list items with the generic token renderer instead of directly
+        calling into list_item(), which allows custom list items (such as `task_list_item`)
+        to work (unlike the builtin list renderer :( ).
         """
+        prefix_gen: Iterator[str]
+        if token["attrs"]["ordered"]:
+            start = token["attrs"].get("start", 1)
+            prefix_gen = (f"{i}. " for i in itertools.count(start))
+        else:
+            prefix_gen = itertools.repeat("- ")
 
-        def rewrite_item(token: RenderToken) -> None:
-            # this runs before the inline tokenizer/renderer, so we still have plain `block_text` tokens
-            if (
-                (children := token["children"])
-                and (text := children[0].get("text"))
-                and (match := TASK_LIST_ITEM_RE.match(text))
-            ):
-                # trim task list marker
-                text = text[match.end() :]
+        text = ""
+        for child, prefix in zip(token["children"], prefix_gen, strict=False):
+            child = {**child, "parent": {"leading": prefix}}
+            text += self.render_token(child, state)
 
-                # get corresponding emoji
-                checked = "x" in match[0].lower()
-                emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
+        # if this is a nested list, strip trailing newlines
+        if token.get("parent"):
+            text = text.rstrip()
+        return text + "\n"
 
-                # update item text
-                children[0]["text"] = emoji + " " + text
+    def list_item(self, token: RenderToken, state: BlockState) -> str:
+        """Render a single list item.
 
-        def recurse(tokens: list[RenderToken]) -> None:
-            for tok in tokens:
-                if tok["type"] == "list_item":
-                    rewrite_item(tok)
-                if children := tok.get("children"):
-                    recurse(children)
+        See `list()` above for details.
+        """
+        for child in token["children"]:
+            # force tight list
+            if child["type"] == "paragraph":
+                child["type"] = "block_text"
 
-        recurse(state.tokens)
+        return mistune.renderers._list._render_list_item(self, token["parent"], token, state)
+
+    def task_list_item(self, token: RenderToken, state: BlockState) -> str:
+        """Render a task list item, e.g. `- [x] stuff`."""
+        checked: bool = token["attrs"]["checked"]
+        emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
+
+        prefix = {"type": "text", "raw": f"{emoji} "}
+        token["children"].insert(0, prefix)
+
+        # treat this like a normal list item now
+        return self.list_item(token, state)
