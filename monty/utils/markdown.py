@@ -206,11 +206,3 @@ class DiscordRenderer(mistune.renderers.markdown.MarkdownRenderer):
             text = f" {text} "
 
         return delim + text + delim
-
-    # FIXME: restore this, plugin rendering changed significantly
-    # # def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
-    # def task_list_item(self, token: RenderToken, state: BlockState) -> str:
-    #     """Convert task list options to emoji."""
-    #     checked: bool = token["attrs"]["checked"]
-    #     emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
-    #     return self.list_item(emoji + " " + text, level=level)
