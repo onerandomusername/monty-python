@@ -5,8 +5,11 @@ from urllib.parse import urljoin
 import mistune.renderers.markdown
 from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
+from mistune import Markdown
 from mistune.core import BlockState
 from typing_extensions import override
+
+from monty import constants
 
 
 __all__ = (
@@ -25,6 +28,8 @@ CODE_BLOCK_RE = re.compile(
 
 # references should be preceded by a non-word character (or element start)
 GH_ISSUE_RE = re.compile(r"(?:^|(?<=\W))(?:#|GH-)(\d+)\b", re.IGNORECASE)
+
+TASK_LIST_ITEM_RE = re.compile(r"\[[ x]\]\s+", re.IGNORECASE)
 
 
 def remove_codeblocks(content: str) -> str:
@@ -206,3 +211,40 @@ class DiscordRenderer(mistune.renderers.markdown.MarkdownRenderer):
             text = f" {text} "
 
         return delim + text + delim
+
+    @staticmethod
+    def hook_list_pre_render(md: Markdown, state: BlockState) -> None:
+        """Mistune hook to render task list items (e.g. `- [x] stuff`) as emojis.
+
+        This is essentially a smaller patched version of the builtin task_lists plugin,
+        which unfortunately does not work with `MarkdownRenderer`.
+        See https://github.com/lepture/mistune/issues/340.
+
+        Should be registered using `md.before_render_hooks.append(f)`.
+        """
+
+        def rewrite_item(token: RenderToken) -> None:
+            # this runs before the inline tokenizer/renderer, so we still have plain `block_text` tokens
+            if (
+                (children := token["children"])
+                and (text := children[0].get("text"))
+                and (match := TASK_LIST_ITEM_RE.match(text))
+            ):
+                # trim task list marker
+                text = text[match.end() :]
+
+                # get corresponding emoji
+                checked = "x" in match[0].lower()
+                emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
+
+                # update item text
+                children[0]["text"] = emoji + " " + text
+
+        def recurse(tokens: list[RenderToken]) -> None:
+            for tok in tokens:
+                if tok["type"] == "list_item":
+                    rewrite_item(tok)
+                if children := tok.get("children"):
+                    recurse(children)
+
+        recurse(state.tokens)

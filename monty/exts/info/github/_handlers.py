@@ -167,10 +167,11 @@ class GitHubRenderer(Generic[T, V]):
             renderer=DiscordRenderer(repo=repo_url),
             plugins=[
                 "strikethrough",
-                "task_lists",
                 "url",
             ],
         )
+        markdown.before_render_hooks.append(DiscordRenderer.hook_list_pre_render)
+
         # this will always be str, unless renderer above is set to None
         body = cast("str", markdown(body))
 
