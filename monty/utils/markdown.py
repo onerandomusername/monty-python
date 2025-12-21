@@ -2,11 +2,11 @@ import re
 from typing import Any
 from urllib.parse import urljoin
 
-import mistune.renderers
+import mistune.renderers.markdown
 from bs4.element import PageElement, Tag
 from markdownify import MarkdownConverter
-
-from monty import constants
+from mistune.core import BlockState
+from typing_extensions import override
 
 
 __all__ = (
@@ -14,6 +14,8 @@ __all__ = (
     "DocMarkdownConverter",
     "remove_codeblocks",
 )
+
+RenderToken = dict[str, Any]
 
 
 CODE_BLOCK_RE = re.compile(
@@ -100,155 +102,115 @@ class DocMarkdownConverter(MarkdownConverter):
         return ""
 
 
-# TODO: this will be expanded over time as necessary
-class DiscordRenderer(mistune.renderers.BaseRenderer):
-    """Custom renderer for markdown to discord compatiable markdown."""
+class DiscordRenderer(mistune.renderers.markdown.MarkdownRenderer):
+    """Custom renderer for markdown to discord compatible markdown."""
 
     def __init__(self, repo: str | None = None) -> None:
         self._repo = (repo or "").rstrip("/")
 
-    def text(self, text: str) -> str:
+    @override
+    def text(self, token: RenderToken, state: BlockState) -> str:
         """Replace GitHub links with their expanded versions."""
+        text: str = token["raw"]
         if self._repo:
             # TODO: expand this to all different varieties of automatic links
+            # FIXME: this shouldn't expand shorthands inside []() links
             # if a repository is provided we replace all snippets with the correct thing
             def replacement(match: re.Match[str]) -> str:
-                return self.link(self._repo + "/issues/" + match[1], text=match[0])
+                full, num = match[0], match[1]
+                url = f"{self._repo}/issues/{num}"
+                # NOTE: until the above fixme is resolved, we can't use self.link here,
+                # since it would recurse indefinitely.
+                return f"[{full}]({url})"
 
             text = GH_ISSUE_RE.sub(replacement, text)
         return text
 
-    def link(self, link: str, text: str | None = None, title: str | None = None) -> str:
-        """Properly format a link."""
-        if text or title:
-            if not text:
-                text = link
-            if title:
-                paran = f'({link} "{title}")'
-            else:
-                paran = f"({link})"
-            return f"[{text}]{paran}"
-        else:
-            return link
+    # Discord renders links regardless of whether it's `link` or `<link>`
+    @override
+    def link(self, token: RenderToken, state: BlockState) -> str:
+        """Format links, removing unnecessary angle brackets."""
+        s = super().link(token, state)
+        if s.startswith("<") and s.endswith(">"):
+            s = s[1:-1]
+        return s
 
-    def image(self, src: str, alt: str | None = None, title: str | None = None) -> str:
-        """Return a link to the provided image."""
-        return "!" + self.link(src, text="image", title=alt)
-
-    def emphasis(self, text: str) -> str:
-        """Return italiced text."""
-        return f"*{text}*"
-
-    def strong(self, text: str) -> str:
-        """Return bold text."""
-        return f"**{text}**"
-
-    def strikethrough(self, text: str) -> str:
+    # provided by plugin, so not part of base MarkdownRenderer
+    def strikethrough(self, token: RenderToken, state: BlockState) -> str:
         """Return crossed-out text."""
+        text = self.render_children(token, state)
         return f"~~{text}~~"
 
-    def heading(self, text: str, level: int) -> str:
+    @override
+    def heading(self, token: RenderToken, state: BlockState) -> str:
         """Format the heading normally if it's large enough, or underline it."""
+        level: int = token["attrs"]["level"]
+        text = self.render_children(token, state)
         if level in (1, 2, 3):
             return "#" * level + f" {text.strip()}\n"
         else:
+            # TODO: consider `-# __text__` for level 5 (smallest) headings?
             return f"__{text}__\n"
 
-    def newline(self) -> str:
-        """No op."""
+    @override
+    def inline_html(self, token: RenderToken, state: BlockState) -> str:
+        """No op, Discord doesn't render HTML."""
         return ""
 
-    # this is for forced breaks like `text  \ntext`; Discord
-    def linebreak(self) -> str:
-        """Return a new line."""
-        return "\n"
-
-    def inline_html(self, html: str) -> str:
-        """No op."""
+    @override
+    def thematic_break(self, token: RenderToken, state: BlockState) -> str:
+        """No op, Discord doesn't render breaks as horizontal rules."""
         return ""
 
-    def thematic_break(self) -> str:
-        """No op."""
-        return ""
+    # Block code can be fenced by 3+ backticks or 3+ tildes, or be an indented block.
+    # Discord only renders code blocks with exactly 3 backticks, so we have to force this format.
+    @override
+    def block_code(self, token: RenderToken, state: BlockState) -> str:
+        """Put code in a codeblock with triple backticks."""
+        code: str = token["raw"]
+        info: str | None = token.get("attrs", {}).get("info")
 
-    def block_text(self, text: str) -> str:
-        """Return text in lists as-is."""
-        return text + "\n"
-
-    def block_code(self, code: str, info: str | None = None) -> str:
-        """Put the code in a codeblock."""
         md = "```"
-        if info is not None:
-            info = info.strip()
         if info:
-            lang = info.split(None, 1)[0]
-            md += lang
+            lang = info.strip().split(None, 1)[0]
+            if lang:
+                md += lang
         md += "\n"
+
         return md + code.replace("`" * 3, "`\u200b" * 3) + "\n```\n"
 
-    def block_quote(self, text: str) -> str:
-        """Quote the provided text."""
-        if text:
-            return "> " + "> ".join(text.rstrip().splitlines(keepends=True)) + "\n\n"
+    @override
+    def block_html(self, token: RenderToken, state: BlockState) -> str:
+        """No op, Discord doesn't render HTML."""
         return ""
 
-    def block_html(self, html: str) -> str:
+    @override
+    def block_error(self, token: RenderToken, state: BlockState) -> str:
         """No op."""
         return ""
 
-    def block_error(self, html: str) -> str:
-        """No op."""
-        return ""
-
-    def codespan(self, text: str) -> str:
+    # Codespans can be delimited with two backticks as well, which allows having
+    # single backticks in the contents.
+    # Additionally, the delimiters may include one space, e.g. "`` text ``", for text that starts/ends
+    # with a backtick. Mistune strips these spaces, but we need them to avoid breaking formatting.
+    # Discord renders these spaces (even though they shouldn't), but it's better than no formatting at all.
+    # TODO: instead of spaces, we could use \u200b?
+    @override
+    def codespan(self, token: RenderToken, state: BlockState) -> str:
         """Return the text in a codeblock."""
-        char = "``" if "`" in text else "`"
-        return char + text + char
+        text: str = token["raw"]
 
-    def paragraph(self, text: str) -> str:
-        """Return a paragraph with a newline postceeding."""
-        return f"{text}\n\n"
+        delim = "``" if "`" in text else "`"
 
-    def list(self, text: str, ordered: bool, level: int, start: Any = None) -> str:
-        """Return the unedited list."""
-        # TODO: figure out how this should actually work
-        if level == 1:
-            return text.lstrip("\n") + "\n"
-        return text
+        if text.startswith("`") or text.endswith("`"):
+            text = f" {text} "
 
-    def list_item(self, text: str, level: int) -> str:
-        """Show the list, indented to its proper level."""
-        lines = text.rstrip().splitlines()
+        return delim + text + delim
 
-        prefix = "- "
-        result: list[str] = [prefix + lines[0]]
-
-        # just add one level of indentation; any outer lists will indent this again as needed
-        indent = " " * len(prefix)
-        in_codeblock = "```" in lines[0]
-        for line in lines[1:]:
-            if not line.strip():
-                # whitespace-only lines can be rendered as empty
-                result.append("")
-                continue
-
-            if in_codeblock:
-                # don't indent lines inside codeblocks
-                result.append(line)
-            else:
-                result.append(indent + line)
-
-            # check this at the end, since the first codeblock line should generally be indented
-            if "```" in line:
-                in_codeblock = not in_codeblock
-
-        return "\n".join(result) + "\n"
-
-    def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
-        """Convert task list options to emoji."""
-        emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
-        return self.list_item(emoji + " " + text, level=level)
-
-    def finalize(self, data: Any) -> str:
-        """Finalize the data."""
-        return "".join(data)
+    # FIXME: restore this, plugin rendering changed significantly
+    # # def task_list_item(self, text: Any, level: int, checked: bool = False, **attrs) -> str:
+    # def task_list_item(self, token: RenderToken, state: BlockState) -> str:
+    #     """Convert task list options to emoji."""
+    #     checked: bool = token["attrs"]["checked"]
+    #     emoji = constants.Emojis.confirmation if checked else constants.Emojis.no_choice_light
+    #     return self.list_item(emoji + " " + text, level=level)
