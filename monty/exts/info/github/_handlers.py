@@ -5,7 +5,7 @@ import datetime
 import enum
 import re
 from abc import abstractmethod
-from typing import Generic, Literal, NamedTuple, TypeVar, overload
+from typing import Generic, Literal, NamedTuple, TypeVar, cast, overload
 
 import disnake
 import disnake.utils
@@ -171,7 +171,8 @@ class GitHubRenderer(Generic[T, V]):
                 "url",
             ],
         )
-        body = markdown(body) or ""
+        # this will always be str, unless renderer above is set to None
+        body = cast("str", markdown(body))
 
         body = body.strip()
 
