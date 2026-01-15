@@ -1,8 +1,10 @@
 import random
+from html.parser import HTMLParser
 from typing import Any, TypedDict
 
 import disnake
 from disnake.ext import commands, tasks
+from rapidfuzz import process
 from typing_extensions import NotRequired
 
 from monty.bot import Monty
@@ -29,6 +31,40 @@ class XkcdDict(TypedDict):
     safe_title: str
     extra_parts: NotRequired[dict[str, Any]]
 
+# I'm sure there is a better way to do any of this, but this worked
+class ComicParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.comic = False
+        self.list_of_comics = False
+        self.comics: dict[str, str] = {}
+        self.number = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a" and self.list_of_comics:
+            self.comic = True
+            self.number = None
+            for attr in attrs:
+                if attr[0] == "href":
+                    self.number = attr[1].strip("/")
+        if (
+            tag == "div"
+            and len(attrs) > 0
+            and attrs[0][0] == "id"
+            and attrs[0][1] == "middleContainer"
+        ):
+            self.list_of_comics = True
+
+    def handle_data(self, data):
+        if not self.comic:
+            return
+        self.comics[data.strip()] = self.number
+
+    def handle_endtag(self, tag):
+        if self.comic and tag == "a":
+            self.comic = False
+        if self.list_of_comics and tag == "div":
+            self.list_of_comics = False
 
 class XKCD(
     commands.Cog,
@@ -42,6 +78,7 @@ class XKCD(
     def __init__(self, bot: Monty) -> None:
         self.bot = bot
         self.latest_comic_info: XkcdDict | None = None
+        self.comics: dict[str, str] | None = None
         self.get_latest_comic_info.start()
 
     def cog_unload(self) -> None:
@@ -56,6 +93,13 @@ class XKCD(
                 self.latest_comic_info = await resp.json()
             else:
                 log.debug(f"Failed to get latest XKCD comic information. Status code {resp.status}")
+        async with self.bot.http_session.get(f"{BASE_URL}/archive") as resp:
+            if resp.status == 200:
+                parser = ComicParser()
+                parser.feed(resp.text) # parse /archive for all comic titles and comic number
+                self.comics = parser.comics
+            else:
+                log.debug(f"Failed to get latest list of XKCD comics. Status code {resp.status}")
 
     @commands.slash_command(name="xkcd")
     async def xkcd(self, _: disnake.ApplicationCommandInteraction) -> None:
@@ -141,6 +185,17 @@ class XKCD(
                 )
 
         await self.send_xkcd(inter, info)
+
+    @number.autocomplete("comic")
+    async def number_autocomplete(self, _: disnake.CommandInteraction, query: str) -> list[disnake.OptionChoice]:
+        """Autocomplete names of XKCD comics when searching for number."""
+        searches = process.extract(query, self.comics.keys(), limit=5)
+        return [
+                # Probably shouldn't be returning value as a str, but I am.
+                disnake.OptionChoice(name=comic, value=self.comics[comic])
+                for comic
+                in [res[0] for res in searches]
+            ]
 
     @xkcd.sub_command()
     async def random(self, inter: disnake.ApplicationCommandInteraction) -> None:
