@@ -43,7 +43,7 @@ class Category(enum.Enum):
     General = CategoryMetadata(
         name="General",
         description="General bot configuration options.",
-        emoji="⚙️",
+        emoji="⚙",
         button=CategoryButtonMetadata(
             label="Edit General",
         ),
